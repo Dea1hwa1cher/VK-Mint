@@ -20,7 +20,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://repo1.maven.org/maven2/")
         maven("https://jitpack.io")
     }
 }

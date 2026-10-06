@@ -1777,14 +1777,6 @@ data class AudioCatalogSection(
     val nextFrom: String? = null,
 )
 
-/** Результат audio.getPlaylistById — плейлист + треки + owner info. */
-data class PlaylistDetails(
-    val playlist: AudioPlaylist,
-    val tracks: List<Track> = emptyList(),
-    val ownerName: String? = null,
-    val ownerPhoto: String? = null,
-)
-
 /**
  * Результат audio.searchArtists (расширенный поиск с табами).
  *
@@ -1798,13 +1790,6 @@ data class AudioSearchResult(
     val artists: List<AudioArtist> = emptyList(),
     val playlists: List<AudioPlaylist> = emptyList(),
     val nextFrom: String? = null,
-)
-
-/** Dislike статус трека (audio.addDislike/removeDislike). */
-data class AudioDislikeStatus(
-    val trackId: Long,
-    val ownerId: Long,
-    val isDisliked: Boolean,
 )
 
 // ════════════════════════════════════════════════════════════════════

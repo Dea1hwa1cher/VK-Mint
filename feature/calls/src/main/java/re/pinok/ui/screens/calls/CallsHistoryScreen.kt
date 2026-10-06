@@ -57,6 +57,10 @@ import re.pinok.feature.calls.LocalCallsDeps
 import re.pinok.feature.calls.CallsDependencies
 import re.pinok.util.AppLog
 
+@Deprecated(
+    message = "Заменён секцией CallsHistorySection внутри CallsMainScreen (#CALLS-SNAP)",
+    replaceWith = ReplaceWith("CallsHistorySection", "re.pinok.ui.screens.calls.CallsHistorySection")
+)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CallsHistoryScreen(

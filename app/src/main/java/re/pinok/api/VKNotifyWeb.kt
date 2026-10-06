@@ -3,8 +3,6 @@ package re.pinok.api
 import re.pinok.data.model.SettingsParam
 import re.pinok.data.model.SettingsSection
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody

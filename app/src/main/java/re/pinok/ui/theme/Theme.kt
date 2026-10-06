@@ -247,8 +247,3 @@ private fun scaleTypography(src: Typography, scalePercent: Int): Typography {
     )
 }
 
-/** Read the current accent color from any composable. */
-object SovaTheme {
-    val accent: Color
-        @Composable get() = LocalSovaAccent.current
-}
