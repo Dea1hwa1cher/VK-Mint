@@ -55,6 +55,8 @@ import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import re.pinok.media.StoryVideoDownloadManager
 import re.pinok.util.AppLog
+import re.pinok.util.toDurationString
+import re.pinok.util.toOfflineDownloadedAtString
 
 /**
  * Fix #111: Экран офлайн-просмотра скачанной видео-истории.
@@ -360,21 +362,6 @@ fun StoryOfflinePlayerScreen(
     }
 }
 
-private fun formatMs(ms: Long): String {
-    val s = (ms / 1000).coerceAtLeast(0)
-    val m = s / 60
-    val sec = s % 60
-    return "%d:%02d".format(m, sec)
-}
+private fun formatMs(ms: Long): String = ms.toDurationString()
 
-private fun formatStoryOfflineDate(timestampMs: Long): String {
-    if (timestampMs == 0L) return ""
-    val now = System.currentTimeMillis()
-    val diff = (now - timestampMs) / 1000
-    return when {
-        diff < 60 -> "только что"
-        diff < 3600 -> "${diff / 60} мин назад"
-        diff < 86400 -> "${diff / 3600} ч назад"
-        else -> "${diff / 86400} д назад"
-    }
-}
+private fun formatStoryOfflineDate(timestampMs: Long): String = timestampMs.toOfflineDownloadedAtString()

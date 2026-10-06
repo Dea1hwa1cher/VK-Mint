@@ -62,6 +62,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import re.pinok.SovaApp
 import re.pinok.auth.AuthActivity
+import re.pinok.auth.OAuthTokenUtils
 import re.pinok.updater.UpdaterManager
 import re.pinok.locker.LockerActivity
 import re.pinok.ui.components.DraggableLogFab
@@ -1478,9 +1479,7 @@ class MainActivity : ComponentActivity() {
                                             if (cm.hasPrimaryClip()) {
                                                 val clip = cm.primaryClip
                                                 val text = clip?.getItemAt(0)?.coerceToText(this@MainActivity)?.toString()
-                                                if (text != null &&
-                                                    text.contains("access_token=", ignoreCase = true) &&
-                                                    text.contains("user_id=", ignoreCase = true)) {
+                                                if (text != null && OAuthTokenUtils.containsOAuthToken(text)) {
                                                     // Fix #DOUBLE-FLICKER (§41.23): запоминаем fingerprint
                                                     // ДО clearPrimaryClip — если очистка не сработает
                                                     // (permission/old Android), trySaveOAuthTokenFromClipboard
@@ -1871,9 +1870,7 @@ class MainActivity : ComponentActivity() {
             if (item == null) return false
             val text = item.coerceToText(this).toString()
             if (text.isBlank()) return false
-            // Быстрая проверка без парсинга — avoids substring allocation.
-            if (!text.contains("access_token=", ignoreCase = true)) return false
-            if (!text.contains("user_id=", ignoreCase = true)) return false
+            if (!OAuthTokenUtils.containsOAuthToken(text)) return false
             // Fix #DOUBLE-FLICKER: fingerprint-защита от повторного сохранения
             // того же токена (network flicker / logout + clearPrimaryClip failed).
             val fingerprint = text.hashCode()
@@ -2204,10 +2201,7 @@ class MainActivity : ComponentActivity() {
      * Ищет "access_token=" И "user_id=" в любом месте строки
      * (в fragment после #, в query после ?, или просто как параметры).
      */
-    private fun containsOAuthToken(text: String): Boolean {
-        return text.contains("access_token=", ignoreCase = true) &&
-            text.contains("user_id=", ignoreCase = true)
-    }
+    private fun containsOAuthToken(text: String): Boolean = OAuthTokenUtils.containsOAuthToken(text)
 
     /**
      * Fix #208: обработка ACTION_OPEN_CHAT из push-уведомления.
@@ -2366,24 +2360,7 @@ class MainActivity : ComponentActivity() {
      * Принимает полный URL, фрагмент, или просто параметры.
      * Возвращает строку вида "access_token=...&user_id=...&expires_in=...".
      */
-    private fun extractOAuthPayload(text: String): String? {
-        val trimmed = text.trim()
-        // Ищем "#" (fragment) — OAuth success redirect.
-        val hashIdx = trimmed.lastIndexOf('#')
-        if (hashIdx >= 0 && hashIdx < trimmed.length - 1) {
-            return trimmed.substring(hashIdx + 1)
-        }
-        // Ищем "?" (query) — на случай error-redirect.
-        val qIdx = trimmed.indexOf('?')
-        if (qIdx >= 0 && qIdx < trimmed.length - 1) {
-            return trimmed.substring(qIdx + 1)
-        }
-        // Нет ни # ни ? — возможно юзер вставил только "access_token=...&user_id=...".
-        if (trimmed.contains("access_token=")) {
-            return trimmed
-        }
-        return null
-    }
+    private fun extractOAuthPayload(text: String): String? = OAuthTokenUtils.extractOAuthPayload(text)
 
 }
 

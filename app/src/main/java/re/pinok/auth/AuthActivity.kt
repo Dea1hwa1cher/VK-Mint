@@ -394,40 +394,12 @@ class AuthActivity : ComponentActivity() {
      */
     private var lastProcessedClipFingerprint: Int = 0
 
-    private fun containsOAuthToken(text: String): Boolean {
-        return text.contains("access_token=", ignoreCase = true) &&
-            text.contains("user_id=", ignoreCase = true)
-    }
+    private fun containsOAuthToken(text: String): Boolean = OAuthTokenUtils.containsOAuthToken(text)
 
-    private fun extractOAuthPayload(text: String): String? {
-        val trimmed = text.trim()
-        val hashIdx = trimmed.lastIndexOf('#')
-        if (hashIdx >= 0 && hashIdx < trimmed.length - 1) {
-            return trimmed.substring(hashIdx + 1)
-        }
-        val qIdx = trimmed.indexOf('?')
-        if (qIdx >= 0 && qIdx < trimmed.length - 1) {
-            return trimmed.substring(qIdx + 1)
-        }
-        if (trimmed.contains("access_token=")) return trimmed
-        return null
-    }
+    private fun extractOAuthPayload(text: String): String? = OAuthTokenUtils.extractOAuthPayload(text)
 
     /** Возвращает (userId, accessToken) или null. */
-    private fun parsePayloadToToken(payload: String): Pair<Long, String>? {
-        try {
-            val params = payload.split("&").mapNotNull { pair ->
-                val parts = pair.split("=", limit = 2)
-                if (parts.size == 2) parts[0] to parts[1] else null
-            }.toMap()
-            val at = params["access_token"] ?: return null
-            val uid = params["user_id"]?.toLongOrNull() ?: return null
-            if (at.isBlank() || at.length < 10) return null
-            return uid to at
-        } catch (_: Exception) {
-            return null
-        }
-    }
+    private fun parsePayloadToToken(payload: String): Pair<Long, String>? = OAuthTokenUtils.parsePayloadToToken(payload)
 
     companion object {
         const val TAG = "AuthActivity"

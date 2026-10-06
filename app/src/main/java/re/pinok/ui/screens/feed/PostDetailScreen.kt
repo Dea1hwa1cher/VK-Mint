@@ -119,6 +119,7 @@ import re.pinok.ui.components.ShareSheet
 import re.pinok.ui.components.UnifiedAttachMenu
 import re.pinok.ui.components.buildVkAttachment
 import re.pinok.util.AppLog
+import re.pinok.util.toFileSizeString
 import re.pinok.ui.components.PendingPhotosBar
 import re.pinok.ui.components.PendingPhoto
 import re.pinok.ui.components.nextPendingPhotoId
@@ -2128,11 +2129,7 @@ private fun ReplyItem(
 }
 
 /** Fix #237: форматирование размера файла для чипа документа в комментарии. */
-private fun formatFileSize(bytes: Long): String {
-    if (bytes < 1024) return "$bytes Б"
-    if (bytes < 1024 * 1024) return DecimalFormat("#.#").format(bytes / 1024.0) + " КБ"
-    return DecimalFormat("#.#").format(bytes / (1024.0 * 1024.0)) + " МБ"
-}
+private fun formatFileSize(bytes: Long): String = bytes.toFileSizeString()
 
 /** Аудио-строка в детальном просмотре поста. */
 @Composable

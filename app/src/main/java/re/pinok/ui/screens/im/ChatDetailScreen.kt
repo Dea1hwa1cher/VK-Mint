@@ -257,6 +257,7 @@ import re.pinok.util.toChatDate
 import re.pinok.util.toDayKey
 import re.pinok.util.toMsgTime
 import re.pinok.util.toRecordingTimeString
+import re.pinok.util.toFileSizeString
 import androidx.activity.compose.rememberLauncherForActivityResult
 import java.io.File
 import java.text.SimpleDateFormat
@@ -719,6 +720,14 @@ fun ChatDetailScreen(
     var isPreviewingVoice by remember { mutableStateOf(false) }
     var previewProgress by remember { mutableFloatStateOf(0f) }
     var previewPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
+    val cleanUpPreviewPlayer: () -> Unit = {
+        previewPlayer?.let { p ->
+            try { p.setOnCompletionListener(null); p.setOnPreparedListener(null) } catch (_: Exception) {}
+            try { p.reset() } catch (_: Exception) {}
+            try { p.release() } catch (_: Exception) {}
+        }
+        previewPlayer = null
+    }
     // Fix #120: единый контроллер воспроизведения голосовых на весь чат.
     // Только одно голосовое играет одновременно — клик по другому останавливает текущее.
     val voicePlaybackController = remember { VoicePlaybackController() }
@@ -1175,13 +1184,7 @@ fun ChatDetailScreen(
         pendingVoiceDuration = 0
         isPreviewingVoice = false
         // Fix #118: останавливаем preview-плеер при отправке, иначе он
-        // продолжит играть фоном после отправки сообщения.
-        previewPlayer?.let { p ->
-            try { p.setOnCompletionListener(null); p.setOnPreparedListener(null) } catch (_: Exception) {}
-            try { p.reset() } catch (_: Exception) {}
-            try { p.release() } catch (_: Exception) {}
-        }
-        previewPlayer = null
+        cleanUpPreviewPlayer()
         sending = true
         app.appScope.launch {
             try {
@@ -1211,22 +1214,13 @@ fun ChatDetailScreen(
             // Fix #118: reset() перед release() очищает внутреннее состояние
             // MediaPlayer, иначе pending events → "mediaplayer went away with
             // unhandled events" в logcat. Также сбрасываем listeners.
-            previewPlayer?.let { p ->
-                try { p.setOnCompletionListener(null); p.setOnPreparedListener(null) } catch (_: Exception) {}
-                try { p.reset() } catch (_: Exception) {}
-                try { p.release() } catch (_: Exception) {}
-            }
-            previewPlayer = null
+            cleanUpPreviewPlayer()
             isPreviewingVoice = false
             previewProgress = 0f
             return
         }
         try {
-            previewPlayer?.let { p ->
-                try { p.setOnCompletionListener(null); p.setOnPreparedListener(null) } catch (_: Exception) {}
-                try { p.reset() } catch (_: Exception) {}
-                try { p.release() } catch (_: Exception) {}
-            }
+            cleanUpPreviewPlayer()
             val player = android.media.MediaPlayer()
             player.setDataSource(file.absolutePath)
             player.setOnPreparedListener { p ->
@@ -1252,12 +1246,7 @@ fun ChatDetailScreen(
         VoiceRecorder.cancelRecording()
         isRecording = false
         // Fix #118: освобождаем preview-плеер при cancel, иначе продолжит играть.
-        previewPlayer?.let { p ->
-            try { p.setOnCompletionListener(null); p.setOnPreparedListener(null) } catch (_: Exception) {}
-            try { p.reset() } catch (_: Exception) {}
-            try { p.release() } catch (_: Exception) {}
-        }
-        previewPlayer = null
+        cleanUpPreviewPlayer()
         pendingVoiceFile?.let { it.delete() }
         pendingVoiceFile = null
         pendingVoiceDuration = 0
@@ -1664,13 +1653,7 @@ fun ChatDetailScreen(
         onDispose {
             if (VoiceRecorder.isRecording()) VoiceRecorder.cancelRecording()
             // Fix #118: reset() перед release() + сброс listeners, иначе
-            // "mediaplayer went away with unhandled events" (logcat 18:26:16).
-            previewPlayer?.let { p ->
-                try { p.setOnCompletionListener(null); p.setOnPreparedListener(null) } catch (_: Exception) {}
-                try { p.reset() } catch (_: Exception) {}
-                try { p.release() } catch (_: Exception) {}
-            }
-            previewPlayer = null
+            cleanUpPreviewPlayer()
             pendingVoiceFile?.let { it.delete() }
             // Fix #120: освободить единый voice-плеер, иначе продолжит играть фоном.
             voicePlaybackController.dispose()
@@ -8614,11 +8597,7 @@ private fun DocAttachmentCard(
     }
 }
 
-private fun formatFileSize(bytes: Long): String {
-    if (bytes < 1024) return "$bytes Б"
-    if (bytes < 1024 * 1024) return DecimalFormat("#.#").format(bytes / 1024.0) + " КБ"
-    return DecimalFormat("#.#").format(bytes / (1024.0 * 1024.0)) + " МБ"
-}
+private fun formatFileSize(bytes: Long): String = bytes.toFileSizeString()
 
 /**
  * Fix #295 (round 2): блок «Пересланное сообщение» с полным содержимым.

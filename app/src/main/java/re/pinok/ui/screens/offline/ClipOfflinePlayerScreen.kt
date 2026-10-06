@@ -56,6 +56,8 @@ import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import re.pinok.media.ClipVideoDownloadManager
 import re.pinok.util.AppLog
+import re.pinok.util.toDurationString
+import re.pinok.util.toOfflineDownloadedAtString
 
 /**
  * §37.12 #330: Экран офлайн-просмотра скачанного клипа.
@@ -389,26 +391,6 @@ fun ClipOfflinePlayerScreen(
 
 private const val TAG = "ClipOfflinePlayer"
 
-/** Форматирование миллисекунд в M:SS (mirror StoryOfflinePlayerScreen.formatMs). */
-private fun formatMs(ms: Long): String {
-    val s = (ms / 1000).coerceAtLeast(0)
-    val m = s / 60
-    val sec = s % 60
-    return "%d:%02d".format(m, sec)
-}
+private fun formatMs(ms: Long): String = ms.toDurationString()
 
-/**
- * §37.12 #330: короткий human-readable «N д/ч/мин назад» для даты скачивания clip'а.
- * Mirror StoryOfflinePlayerScreen.formatStoryOfflineDate.
- */
-private fun formatDownloadedAtShort(timestampMs: Long): String {
-    if (timestampMs == 0L) return ""
-    val now = System.currentTimeMillis()
-    val diff = (now - timestampMs) / 1000
-    return when {
-        diff < 60 -> "только что"
-        diff < 3600 -> "${diff / 60} мин назад"
-        diff < 86400 -> "${diff / 3600} ч назад"
-        else -> "${diff / 86400} д назад"
-    }
-}
+private fun formatDownloadedAtShort(timestampMs: Long): String = timestampMs.toOfflineDownloadedAtString()

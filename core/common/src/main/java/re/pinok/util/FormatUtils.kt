@@ -1,5 +1,6 @@
 package re.pinok.util
 
+import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -17,15 +18,29 @@ import java.util.Locale
 
 /** Форматирование длительности трека: 195 → "3:15" */
 fun Int.toDurationString(): String {
-    val m = this / 60
-    val s = this % 60
+    val nonNeg = this.coerceAtLeast(0)
+    val m = nonNeg / 60
+    val s = nonNeg % 60
     return "%d:%02d".format(m, s)
 }
 
 /** Форматирование длительности из миллисекунд: 195000 → "3:15" */
 fun Long.toDurationString(): String {
-    val totalSec = (this / 1000).toInt()
+    val totalSec = (this / 1000).coerceAtLeast(0).toInt()
     return totalSec.toDurationString()
+}
+
+/** Короткое относительное время для скачанного офлайн-контента (timestamp в миллисекундах) */
+fun Long.toOfflineDownloadedAtString(): String {
+    if (this == 0L) return ""
+    val now = System.currentTimeMillis()
+    val diff = (now - this) / 1000
+    return when {
+        diff < 60 -> "только что"
+        diff < 3600 -> "${diff / 60} мин назад"
+        diff < 86400 -> "${diff / 3600} ч назад"
+        else -> "${diff / 86400} д назад"
+    }
 }
 
 /** Форматирование времени записи голосового: 90 → "1:30", 45 → "0:45" */
@@ -116,4 +131,13 @@ fun Int.toCountString(): String = when {
     this >= 1_000_000 -> String.format(Locale.US, "%.1fM", this / 1_000_000.0)
     this >= 1_000 -> String.format(Locale.US, "%.1fK", this / 1_000.0)
     else -> this.toString()
+}
+
+// ─── Размеры файлов ──────────────────────────────────────────
+
+/** Форматирование размера файла: 1024 -> "1 КБ", 1048576 -> "1 МБ" */
+fun Long.toFileSizeString(): String {
+    if (this < 1024) return "$this Б"
+    if (this < 1024 * 1024) return DecimalFormat("#.#").format(this / 1024.0) + " КБ"
+    return DecimalFormat("#.#").format(this / (1024.0 * 1024.0)) + " МБ"
 }
