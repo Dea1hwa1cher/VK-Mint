@@ -1,7 +1,7 @@
 package re.pinok.realtime
 
-// #CALLS-ZH2 (Task 6-a): JsonArray/JsonPrimitive/JsonNull — команды Ж6-Ж9 с массивами
-// и ЯВНЫМИ JSON null (record-start/update-rooms/activate-rooms/switch-room; Ж0 §4/§5/§8).
+import android.net.Uri
+import android.os.Build
 import com.google.gson.JsonArray
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
@@ -53,7 +53,8 @@ class CallSignalingClient(
         private const val PLATFORM = "android"
         private const val APP_VERSION = "2.0.0"
         private const val PROTOCOL_VERSION = "1"
-        private const val DEVICE = "HOTWAV Cyber 15"
+        private val DEVICE: String
+            get() = Build.MODEL?.takeIf { it.isNotBlank() } ?: "Android"
         private const val CAPABILITIES = "0"
 
         /** Команды (enum or из calls SDK). */
@@ -747,7 +748,7 @@ class CallSignalingClient(
         query.append("&platform=").append(PLATFORM)
         query.append("&appVersion=").append(APP_VERSION)
         query.append("&version=").append(PROTOCOL_VERSION)
-        query.append("&device=").append(DEVICE)
+        query.append("&device=").append(Uri.encode(DEVICE))
         query.append("&capabilities=").append(CAPABILITIES)
         query.append("&clientType=").append(ENTITY_TYPE_USER)
         peerId?.let { query.append("&peerId=").append(it) }

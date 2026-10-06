@@ -104,10 +104,21 @@ def find_dangerous_patterns(text):
                 in_kdoc = is_kdoc
                 i += 2
                 continue
+            # raw string literal """..."""
+            if text[i:i+3] == '"""':
+                i += 3
+                while i < n:
+                    if text[i:i+3] == '"""':
+                        i += 3
+                        break
+                    if text[i] == '\n':
+                        pos_line += 1
+                    i += 1
+                continue
             # string literal "..."
             if text[i] == '"':
                 i += 1
-                while i < n:
+                while i < n and text[i] != '\n':
                     if text[i] == '\\':
                         i += 2
                         continue
@@ -119,7 +130,7 @@ def find_dangerous_patterns(text):
             # char literal '...'
             if text[i] == "'":
                 i += 1
-                while i < n:
+                while i < n and text[i] != '\n':
                     if text[i] == '\\':
                         i += 2
                         continue
@@ -136,6 +147,10 @@ def find_dangerous_patterns(text):
 
 
 def main():
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     args = sys.argv[1:]
     if args and args[0] in ('-h', '--help'):
         print(__doc__)

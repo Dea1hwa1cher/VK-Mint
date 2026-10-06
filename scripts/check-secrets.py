@@ -60,7 +60,6 @@ def main():
     mod = load_mask_module()
 
     hits = []
-    seen_bodies = set()
     checked = 0
     for rel in tracked_text_files(root):
         path = os.path.join(root, rel)
@@ -73,11 +72,12 @@ def main():
             print("WARN: unreadable: %s (%s)" % (rel, e.__class__.__name__))
             continue
         checked += 1
+        seen_spans = set()
         for name, m in mod.iter_hits(text):
             span = (m.start(1), m.end(1))
-            if span in seen_bodies:
+            if span in seen_spans:
                 continue  # одно значение, пойманное несколькими паттернами
-            seen_bodies.add(span)
+            seen_spans.add(span)
             line = text.count("\n", 0, m.start()) + 1
             hits.append((rel, line, name))
 

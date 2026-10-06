@@ -131,8 +131,10 @@ def load_text(path):
 
 
 def write_text(path, text, encoding):
-    with open(path, "wb") as f:
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f:
         f.write(text.encode(encoding))
+    os.replace(tmp, path)
 
 
 def repo_root():
