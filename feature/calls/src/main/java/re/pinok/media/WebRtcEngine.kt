@@ -75,6 +75,8 @@ companion object {
     // createLocalAudioTrack применит его к свежему треку, а не «забудет» mute.
     @Volatile
     private var mutedState: Boolean = false
+    @Volatile
+    private var released: Boolean = false
     private val pendingRemoteIce = ConcurrentHashMap<String, MutableList<IceCandidate>>()
     /** #CALLS-AEC-TOGGLE: hardware AEC/NS (задаётся initialize; default true). */
     @Volatile
@@ -263,12 +265,15 @@ companion object {
     private var signalingHandler: Handler? = null
 
     private fun post(runnable: () -> Unit) {
+        if (released) return
         val h = signalingHandler
         if (h != null && h.looper.thread != Thread.currentThread()) {
             h.post(runnable)
-        } else {
+        } else if (h != null) {
+            // Already on signaling thread — run inline.
             runnable()
         }
+        // h == null after release — silently drop (no SIGABRT).
     }
 
     fun initialize(echoCancelEnabled: Boolean = true) {
@@ -593,7 +598,9 @@ companion object {
     }
 
     fun release() {
-        post {
+        released = true
+        val h = signalingHandler
+        val teardown = Runnable {
             // #CALLS-VIDEO-RX: полный teardown — видео-трек, затем (после factory) EGL.
             if (remoteVideoTrackRef != null) {
                 remoteVideoTrackRef = null
@@ -615,10 +622,16 @@ companion object {
             // #CALLS-VIDEO-RX: EGL-контекст освобождаем ПОСЛЕ factory (см. поле eglBase).
             eglBase?.release()
             eglBase = null
+            // Signaling thread shutdown — ПОСЛЕ всего teardown'а, как последний шаг.
+            signalingHandler = null
+            signalingThread?.quitSafely()
+            signalingThread = null
         }
-        signalingThread?.quitSafely()
-        signalingThread = null
-        signalingHandler = null
+        if (h != null && h.looper.thread != Thread.currentThread()) {
+            h.post(teardown)
+        } else {
+            teardown.run()
+        }
     }
 
     private fun ensureInitialized() { if (factory == null) initialize() }

@@ -56,7 +56,7 @@ object ConversationParamsDecoder {
                 if (di >= expectedLen) return out
                 out[di++] = src[si++]
             }
-            if (si >= src.size || di >= expectedLen) break
+            if (si + 1 >= src.size || di >= expectedLen) break
             val offset = (src[si].toInt() and 0xFF) or ((src[si + 1].toInt() and 0xFF) shl 8)
             si += 2
             var matchLen = token and 0x0F

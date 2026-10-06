@@ -198,13 +198,16 @@ private fun PhotoViewerIntern(
                             scope.launch {
                                 if (saving) return@launch
                                 saving = true
-                                val result = ImageSaver.save(context, ImageSaver.toMaxSize(url))
-                                val msg = when (result) {
-                                    is ImageSaver.Result.Ok -> "Сохранено в галерею"
-                                    is ImageSaver.Result.Err -> "Ошибка: ${result.message}"
+                                try {
+                                    val result = ImageSaver.save(context, ImageSaver.toMaxSize(url))
+                                    val msg = when (result) {
+                                        is ImageSaver.Result.Ok -> "Сохранено в галерею"
+                                        is ImageSaver.Result.Err -> "Ошибка: ${result.message}"
+                                    }
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                } finally {
+                                    saving = false
                                 }
-                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                saving = false
                             }
                         },
                         enabled = !saving,
