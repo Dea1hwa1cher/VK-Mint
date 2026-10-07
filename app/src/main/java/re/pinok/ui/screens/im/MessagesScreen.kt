@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -58,6 +59,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -1106,16 +1108,25 @@ fun MessagesScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("Поиск по чатам…", style = MaterialTheme.typography.bodySmall) },
+                            placeholder = { Text("Поиск по чатам…", style = MaterialTheme.typography.bodyMedium) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(24.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                unfocusedBorderColor = Color.Transparent,
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
                             ),
                             textStyle = MaterialTheme.typography.bodyMedium,
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Filled.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            },
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {
                                     IconButton(onClick = { searchQuery = "" }) {
@@ -2199,191 +2210,253 @@ private fun ChatCard(
         colors = CardDefaults.cardColors(
             containerColor = when {
                 isDragging -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                hasUnread -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                isPinned -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                isPinned -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                 else -> MaterialTheme.colorScheme.surface
             },
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Box {
-            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Fix #274: drag handle виден только у закреплённых чатов.
-                // Long-press на handle начинает перетаскивание (не конфликтует с
-                // combinedClickable на Card, т.к. handle — отдельный элемент).
-                if (isPinned && pinnedIndex >= 0) {
-                    Icon(
-                        imageVector = Icons.Filled.DragHandle,
-                        contentDescription = "Перетащить",
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .pointerInput(chat.peer.id) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        isDragging = true
-                                        localDragOffsetY = 0f
-                                    },
-                                    onDragEnd = {
-                                        isDragging = false
-                                        localDragOffsetY = 0f
-                                    },
-                                    onDragCancel = {
-                                        isDragging = false
-                                        localDragOffsetY = 0f
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        localDragOffsetY += dragAmount.y
-                                        // Fix #274: определяем целевой индекс для swap.
-                                        // Если |localDragOffsetY| > threshold, вызываем
-                                        // onDragSwap и корректируем offset (компенсируем
-                                        // высоту карточки, чтобы продолжить drag плавно).
-                                        val threshold = cardHeightPx * 0.6f
-                                        if (localDragOffsetY <= -threshold && currentPinnedIndex > 0) {
-                                            // Тащим вверх → swap с предыдущим.
-                                            onDragSwap(currentPinnedIndex, currentPinnedIndex - 1)
-                                            // После swap позиция карточки в списке сместилась на 1 вверх,
-                                            // поэтому добавляем cardHeightPx к offset (компенсация).
-                                            localDragOffsetY += cardHeightPx
-                                        } else if (localDragOffsetY >= threshold &&
-                                            currentPinnedIndex < currentPinnedListSize - 1) {
-                                            // Тащим вниз → swap со следующим.
-                                            onDragSwap(currentPinnedIndex, currentPinnedIndex + 1)
-                                            localDragOffsetY -= cardHeightPx
-                                        }
-                                    },
-                                )
-                            },
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                // Fix #283: avatar обёрнут в Box(BottomEnd) чтобы поверх угла
-                // показать online-индикатор (зелёная точка) для 1-1 диалогов.
-                Box(contentAlignment = Alignment.BottomEnd) {
-                    if (photo != null) {
-                        AsyncImage(model = photo, contentDescription = null,
-                            modifier = Modifier.size(48.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                    } else {
-                        Box(modifier = Modifier.size(48.dp).clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                            Text(text = title.take(1).uppercase(), style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        }
-                    }
-                    // Fix #283: online-индикатор — зелёная точка 10dp с surface-кольцом
-                    // (2dp) поверх нижнего-правого угла аватара. Только для type="user"
-                    // и chat.peer.online == true. VK-зелёный #4CAF50.
-                    // Fix #286: defensive guard — точка рисуется ТОЛЬКО для 1-1 диалогов
-                    // с пользователем (type=="user" && id>0). Группы (type="group",
-                    // id<0), чаты (type="chat", id>=2e9) и каналы — никогда не получают
-                    // точку, даже если online-флаг как-то утёк в Peer через merge/default.
-                    if (chat.peer.type == "user" && chat.peer.id > 0 && chat.peer.online == true) {
-                        Box(
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Fix #274: drag handle виден только у закреплённых чатов.
+                    if (isPinned && pinnedIndex >= 0) {
+                        Icon(
+                            imageVector = Icons.Filled.DragHandle,
+                            contentDescription = "Перетащить",
                             modifier = Modifier
-                                .size(14.dp)
+                                .size(24.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surface),
-                            contentAlignment = Alignment.Center,
-                        ) {
+                                .pointerInput(chat.peer.id) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = {
+                                            isDragging = true
+                                            localDragOffsetY = 0f
+                                        },
+                                        onDragEnd = {
+                                            isDragging = false
+                                            localDragOffsetY = 0f
+                                        },
+                                        onDragCancel = {
+                                            isDragging = false
+                                            localDragOffsetY = 0f
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            localDragOffsetY += dragAmount.y
+                                            val threshold = cardHeightPx * 0.6f
+                                            if (localDragOffsetY <= -threshold && currentPinnedIndex > 0) {
+                                                onDragSwap(currentPinnedIndex, currentPinnedIndex - 1)
+                                                localDragOffsetY += cardHeightPx
+                                            } else if (localDragOffsetY >= threshold &&
+                                                currentPinnedIndex < currentPinnedListSize - 1) {
+                                                onDragSwap(currentPinnedIndex, currentPinnedIndex + 1)
+                                                localDragOffsetY -= cardHeightPx
+                                            }
+                                        },
+                                    )
+                                },
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
+                    // Telegram MD3 Avatar: 54dp круг с онлайн-индикатором
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        if (photo != null) {
+                            AsyncImage(
+                                model = photo,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            val isSelfChat = chat.peer.id > 0 && chat.peer.title == "Избранное"
                             Box(
                                 modifier = Modifier
-                                    .size(10.dp)
+                                    .size(54.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF4CAF50)),
-                            )
+                                    .background(
+                                        if (isSelfChat) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.primaryContainer
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (isSelfChat) {
+                                    Icon(
+                                        Icons.Filled.Bookmark,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                } else {
+                                    Text(
+                                        text = title.take(1).uppercase(),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                }
+                            }
+                        }
+
+                        // Telegram Online dot
+                        if (chat.peer.type == "user" && chat.peer.id > 0 && chat.peer.online == true) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isPinned) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                                        else MaterialTheme.colorScheme.surface
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF4CAF50)),
+                                )
+                            }
                         }
                     }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(text = title, style = MaterialTheme.typography.titleSmall,
-                            fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Medium,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        // #IM-CHANNEL-FIX (56-b-6): маркер канала рядом с названием.
-                        // Карточка канала ничем не отличалась от диалога сообщества;
-                        // иконка «рупор» (Campaign, material-icons-extended — уже в
-                        // зависимостях :app, новых библиотек нет) даёт каналу
-                        // собственную идентичность (аналог online-точки, которая для
-                        // каналов исключена — Fix #286). 14dp — не меняет высоту карточки.
-                        if (chat.isChannel) {
-                            Icon(
-                                imageVector = Icons.Outlined.Campaign,
-                                contentDescription = "Канал",
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary,
+
+                    Spacer(modifier = Modifier.width(13.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        // Верхняя строка: Название + маркеры (канал, закреп, mute) + статус/время
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                                if (chat.isChannel) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.Outlined.Campaign,
+                                        contentDescription = "Канал",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                                if (isMuted) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        Icons.Outlined.NotificationsOff,
+                                        contentDescription = "Заглушено",
+                                        modifier = Modifier.size(15.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                                    )
+                                }
+                            }
+
+                            // Время и галочки прочтения исходящих (в стиле Telegram)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                if (showOutCheckmarks) {
+                                    Icon(
+                                        imageVector = if (lastOutRead) Icons.Filled.DoneAll else Icons.Filled.Done,
+                                        contentDescription = if (lastOutRead) "Прочитано" else "Отправлено",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (lastOutRead) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outline,
+                                    )
+                                }
+                                chat.lastMessage?.let { lm ->
+                                    Text(
+                                        text = lm.date.toMsgTime(),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = if (hasUnread) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outline,
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(3.dp))
+
+                        // Нижняя строка: сниппет сообщения + бейдж непрочитанных / pin
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = if (typingText != null) typingText else preview,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (typingText != null)
+                                    MaterialTheme.colorScheme.primary
+                                else if (hasUnread)
+                                    MaterialTheme.colorScheme.onSurface
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
-                        // Fix #274: pin-иконка рядом с названием (для закреплённых).
-                        if (isPinned) {
-                            Icon(
-                                imageVector = Icons.Filled.PushPin,
-                                contentDescription = "Закреплён",
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
-                        if (isMuted) {
-                            Icon(
-                                Icons.Outlined.NotificationsOff,
-                                contentDescription = "Заглушено",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.outline,
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                        }
-                        chat.lastMessage?.let { lm ->
-                            Text(text = lm.date.toMsgTime(), style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        // #TYPING-FIX: при живом typing пира показываем «печатает…»
-                        // (в беседах — имя печатающего) ВМЕСТО сниппета последнего
-                        // сообщения — как в VK web. Гашение по таймауту — в списке.
-                        // Не ломает подстановку превью: typingText == null → прежний
-                        // preview (текст/метка вложения/action-текст/«Вы: » префикс).
-                        Text(
-                            text = if (typingText != null) typingText else preview,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (typingText != null)
-                                MaterialTheme.colorScheme.primary
-                            else if (hasUnread)
-                                MaterialTheme.colorScheme.onSurface
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f))
-                        // Fix #282: read checkmarks для исходящего последнего сообщения.
-                        // ✓ (Done) — отправлено, но собеседник не прочитал (id > outRead).
-                        // ✓✓ (DoneAll, primary) — прочитано (id <= outRead).
-                        // Checkmarks и unread-badge взаимно исключают друг друга:
-                        // unread_count считает ВХОДЯЩИЕ непрочитанные → если он > 0,
-                        // последнее сообщение входящее (isOut=false) → checkmarks не рисуются.
-                        if (showOutCheckmarks) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = if (lastOutRead) Icons.Filled.DoneAll else Icons.Filled.Done,
-                                contentDescription = if (lastOutRead) "Прочитано" else "Отправлено",
-                                modifier = Modifier.size(16.dp),
-                                tint = if (lastOutRead) MaterialTheme.colorScheme.primary
-                                       else MaterialTheme.colorScheme.outline,
-                            )
-                        }
-                        if (hasUnread) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primary)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)) {
-                                Text(text = chat.unreadCount.toString(), style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+
+                            // Telegram MD3 Unread pill badge / Pin icon
+                            if (hasUnread) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (isMuted) MaterialTheme.colorScheme.surfaceVariant
+                                            else MaterialTheme.colorScheme.primary
+                                        )
+                                        .padding(horizontal = 7.dp, vertical = 2.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isMuted) MaterialTheme.colorScheme.onSurfaceVariant
+                                        else MaterialTheme.colorScheme.onPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
+                            } else if (isPinned) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(
+                                    imageVector = Icons.Filled.PushPin,
+                                    contentDescription = "Закреплён",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.outline,
+                                )
                             }
                         }
                     }
                 }
+
+                // Telegram Inset Divider между диалогами
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 80.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                    thickness = 0.5.dp,
+                )
             }
             // Fix #274: расширенное DropdownMenu — Закрепить/Открепить, Заглушить,
             // Отметить непрочитанным/прочитанным (как в нативном VK).

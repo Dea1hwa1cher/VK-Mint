@@ -64,9 +64,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Bookmark
@@ -136,9 +138,11 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -307,6 +311,30 @@ private val REACTION_EMOJIS = listOf(
     6 to "\u2753",         // ❓ Вопросы
     7 to "\uD83D\uDE2D",   // 😭 Плачу
 )
+
+/**
+ * Telegram-style distinct color palette for participant names in group chats.
+ * Generates a stable, vibrant, accessible color based on the user's ID.
+ */
+internal fun getTelegramSenderColor(userId: Long): Color {
+    val colors = listOf(
+        Color(0xFFE53935), // Red
+        Color(0xFFD81B60), // Pink
+        Color(0xFF8E24AA), // Purple
+        Color(0xFF5E35B1), // Deep Purple
+        Color(0xFF3949AB), // Indigo
+        Color(0xFF1E88E5), // Blue
+        Color(0xFF039BE5), // Light Blue
+        Color(0xFF00ACC1), // Cyan
+        Color(0xFF00897B), // Teal
+        Color(0xFF43A047), // Green
+        Color(0xFFFB8C00), // Orange
+        Color(0xFFF4511E), // Deep Orange
+    )
+    val index = (kotlin.math.abs(userId) % colors.size).toInt()
+    return colors[index]
+}
+
 
 // P0.1: typing indicator — VK resends typing events every ~4s while user keeps typing.
 // If no new event arrives within this window, we assume the user stopped typing.
@@ -3744,31 +3772,55 @@ fun ChatDetailScreen(
                             }
                         },
                     ) {
+                        val isSelfChat = peerId > 0 && currentTitle == "Избранное"
                         if (currentPhoto != null) {
                             AsyncImage(
                                 model = currentPhoto,
                                 contentDescription = null,
-                                modifier = Modifier.size(32.dp).clip(CircleShape),
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape),
                                 contentScale = ContentScale.Crop,
                             )
                             Spacer(modifier = Modifier.width(10.dp))
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelfChat) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.primaryContainer
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (isSelfChat) {
+                                    Icon(
+                                        Icons.Outlined.Bookmark,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                } else {
+                                    Text(
+                                        text = currentTitle.take(1).uppercase(),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
                         }
-                        // 32-b: имя + статус в Column — статус («онлайн»/«был(а) …»/
-                        // «печатает…») теперь ПОД именем, а не рядом с ним в Row.
+                        // Имя + статус собеседника в стиле Telegram
                         Column {
-                            // Fix #122: muted indicator остаётся В РЯДУ с именем —
-                            // перечёркнутый колокольчик, чтобы пользователь сразу
-                            // видел что уведомления выключены (как в нативном VK).
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = currentTitle,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    // weight(fill=false): имя занимает свободную ширину
-                                    // строки, но колокольчик не выдавливается за край —
-                                    // при длинном имени усекается само имя.
+                                    fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.weight(1f, fill = false),
                                 )
                                 if (muted) {
@@ -3776,38 +3828,22 @@ fun ChatDetailScreen(
                                     Icon(
                                         Icons.Outlined.NotificationsOff,
                                         contentDescription = "Уведомления выключены",
-                                        modifier = Modifier.size(16.dp),
+                                        modifier = Modifier.size(15.dp),
                                         tint = MaterialTheme.colorScheme.outline,
                                     )
                                 }
                             }
-                            // #60: online статус под именем.
-                            // P0.1: typing indicator имеет приоритет над online статусом.
                             val la = lastActivity
-                            // P0.1: resolve typing user names from chatProfiles (group chat)
-                            // or just use peerTitle (DM — only one user can be typing).
                             val typingIds = typingUsers.keys.toList()
                             val typingNames = typingIds.mapNotNull { uid ->
                                 val profile = chatProfiles[uid]
-                                if (profile == null) {
-                                    null
-                                } else {
-                                    val fullName = profile.fullName
-                                    if (fullName.isNotBlank()) fullName else null
-                                }
+                                if (profile == null) null
+                                else profile.fullName.takeIf { it.isNotBlank() }
                             }
                             val statusText = when {
-                                // #CHANNEL-WALL-MODE (Fix #393): в шапке канала — количество
-                                // подписчиков (снапшот 29-a: заголовок + «N подписчиков»);
-                                // typing/online для пиров-каналов не приходят.
                                 isChannel && channelSubscribers >= 0 -> subscribersLabel(channelSubscribers)
-                                // #IM-CHANNEL-FIX (56-b-4): подписчики ещё не загружены или
-                                // groupsGetById не удался (channelSubscribers=-1) — вместо
-                                // пустого подзаголовка честно показываем род канала
-                                // (VK web в этот момент показывает «Загружается...»).
                                 isChannel -> "Канал"
                                 typingEnabled && typingIds.isNotEmpty() && isGroupChat && typingNames.isNotEmpty() -> {
-                                    // Group chat: show up to 2 names, then "+N"
                                     when {
                                         typingNames.size == 1 -> "${typingNames[0]} печатает…"
                                         typingNames.size == 2 -> "${typingNames[0]} и ${typingNames[1]} печатают…"
@@ -3815,9 +3851,11 @@ fun ChatDetailScreen(
                                     }
                                 }
                                 typingEnabled && typingIds.isNotEmpty() -> "печатает…"
-                                la != null && la.online == 1 -> "онлайн"
-                                // 32-b: до 15 минут — относительное «был(а) N мин назад»,
-                                // дальше время/дата (формат formatLastSeenExtended ниже).
+                                isGroupChat -> {
+                                    val count = chatProfiles.size
+                                    if (count > 0) "$count участников" else "Групповой чат"
+                                }
+                                la != null && la.online == 1 -> "в сети"
                                 la != null && la.lastSeen > 0 ->
                                     formatLastSeenExtended(la.lastSeen, System.currentTimeMillis() / 1000)
                                 else -> ""
@@ -4306,25 +4344,119 @@ fun ChatDetailScreen(
                             .imePadding(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // Fix #200: поле ввода расширено — убраны 3 отдельные
-                        // кнопки (📎😀😐) слева от поля, заменены единым триггером
-                        // ➕ справа. Поле теперь занимает больше места (weight 1f
-                        // без конкуренции с 3 IconButton слева).
+                        // Telegram MD3: кнопка смайлов/стикеров слева
+                        IconButton(
+                            onClick = {
+                                keyboardController?.hide()
+                                if (showEmojiStickerPanel) {
+                                    showEmojiStickerPanel = false
+                                } else {
+                                    if (emojiStickerTab == 1 && stickerPacks.isEmpty()) {
+                                        loadStickers()
+                                    }
+                                    showEmojiStickerPanel = true
+                                }
+                            },
+                            enabled = !sending && !uploading,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.EmojiEmotions,
+                                contentDescription = "Смайлы и стикеры",
+                                tint = if (showEmojiStickerPanel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        // Telegram MD3: Pill поле ввода со скрепкой внутри
                         OutlinedTextField(
                             value = inputText,
                             onValueChange = { inputText = it },
                             modifier = Modifier.weight(1f),
                             placeholder = {
                                 Text(
-                                    if (editingMsgId != null) "Редактирование…" else "Сообщение…"
+                                    text = if (editingMsgId != null) "Редактирование…" else "Сообщение…",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 )
                             },
                             maxLines = 4,
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(24.dp),
                             colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent,
                                 cursorColor = MaterialTheme.colorScheme.primary,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
                             ),
+                            trailingIcon = {
+                                Box {
+                                    IconButton(
+                                        onClick = { showAttachMenu = true },
+                                        enabled = !sending && !uploading,
+                                    ) {
+                                        if (uploading) {
+                                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Outlined.AttachFile,
+                                                contentDescription = "Прикрепить файл",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                    UnifiedAttachMenu(
+                                        expanded = showAttachMenu,
+                                        onDismissRequest = { showAttachMenu = false },
+                                        onPhoto = {
+                                            val req = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                            if (multiFileEnabled) {
+                                                multiPhotoPickerLauncher.launch(req)
+                                            } else {
+                                                photoPickerLauncher.launch(req)
+                                            }
+                                        },
+                                        onCamera = {
+                                            val permission = Manifest.permission.CAMERA
+                                            if (ContextCompat.checkSelfPermission(ctx, permission) ==
+                                                android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                                val uri = createCameraImageUri(ctx)
+                                                if (uri != null) {
+                                                    cameraImageUri = uri
+                                                    onCameraLaunch(peerId, currentTitle, currentPhoto)
+                                                    cameraLauncher.launch(uri)
+                                                }
+                                            } else {
+                                                cameraPermissionLauncher.launch(permission)
+                                            }
+                                        },
+                                        onVideo = {
+                                            attachmentPickerTab = AttachmentPickerTab.Video
+                                            showAttachmentPicker = true
+                                        },
+                                        onAudio = {
+                                            attachmentPickerTab = AttachmentPickerTab.Music
+                                            showAttachmentPicker = true
+                                        },
+                                        onGift = {
+                                            attachmentPickerTab = AttachmentPickerTab.Gifts
+                                            showAttachmentPicker = true
+                                        },
+                                        onFile = {
+                                            multiFilePickerLauncher.launch(arrayOf("*/*"))
+                                        },
+                                        showPhotoFromVk = true,
+                                        onPhotoFromVk = {
+                                            attachmentPickerTab = AttachmentPickerTab.Photos
+                                            showAttachmentPicker = true
+                                        },
+                                        showFileFromVk = true,
+                                        onFileFromVk = {
+                                            attachmentPickerTab = AttachmentPickerTab.Docs
+                                            showAttachmentPicker = true
+                                        },
+                                        showGift = peerId > 0 && peerId < 2_000_000_000L,
+                                    )
+                                }
+                            },
                             keyboardOptions = KeyboardOptions(
                                 imeAction = ImeAction.Send,
                             ),
@@ -4332,151 +4464,59 @@ fun ChatDetailScreen(
                                 onSend = { doSend() },
                             ),
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        // Fix #200: единый триггер ➕ справа от поля — выпадающее
-                        // меню ВВЕРХ с 3 пунктами: Смайлы / Стикеры / Прикрепить.
-                        // При выборе Смайлы/Стикеры клавиатура скрывается
-                        // (keyboardController?.hide()), панель показывается ВМЕСТО
-                        // неё — снизу экрана, над панелью ввода. Закрыть панель —
-                        // кнопка «Закрыть» внутри самой панели.
-                        Box {
+
+                        // Telegram MD3: кнопка видеосообщения («кружок») рядом со Send/Mic
+                        val hasContent = inputText.isNotBlank() || editingMsgId != null || pendingFiles.isNotEmpty() || pendingPhotos.isNotEmpty()
+                        if (!hasContent) {
+                            Spacer(modifier = Modifier.width(4.dp))
                             IconButton(
-                                onClick = { showTriggerMenu = !showTriggerMenu },
+                                onClick = { onVideoMessage(peerId) },
                                 enabled = !sending && !uploading,
                             ) {
-                                if (uploading) {
-                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                                } else {
-                                    Icon(Icons.Outlined.Add, contentDescription = "Смайлы, стикеры, вложения")
-                                }
-                            }
-                            DropdownMenu(
-                                expanded = showTriggerMenu,
-                                onDismissRequest = { showTriggerMenu = false },
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("😀  Смайлы и стикеры") },
-                                    onClick = {
-                                        keyboardController?.hide()
-                                        // Fix #201: единая панель с табами. Если
-                                        // панель уже открыта — toggle (закрыть).
-                                        // Иначе открыть на текущей вкладке
-                                        // (emojiStickerTab сохраняется между сессиями).
-                                        if (showEmojiStickerPanel) {
-                                            showEmojiStickerPanel = false
-                                        } else {
-                                            // Auto-load стикеров, если открываем на табе стикеров.
-                                            if (emojiStickerTab == 1 && stickerPacks.isEmpty()) {
-                                                loadStickers()
-                                            }
-                                            showEmojiStickerPanel = true
-                                        }
-                                        showTriggerMenu = false
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("📎  Прикрепить файл") },
-                                    onClick = {
-                                        showAttachMenu = true
-                                        showTriggerMenu = false
-                                    },
+                                Icon(
+                                    Icons.Outlined.VideoFile,
+                                    contentDescription = "Видеосообщение (кружок)",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            // Единое меню «Прикрепить» — открывается из пункта
-                            // «Прикрепить файл» в триггер-меню ➕. Тот же компонент,
-                            // что в комментариях к постам и при создании поста.
-                            // Подарки доступны только в личных диалогах (peerId > 0
-                            // и < 2_000_000_000L) — gifts.send не работает в чатах.
-                            UnifiedAttachMenu(
-                                expanded = showAttachMenu,
-                                onDismissRequest = { showAttachMenu = false },
-                                onPhoto = {
-                                    val req = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    if (multiFileEnabled) {
-                                        multiPhotoPickerLauncher.launch(req)
-                                    } else {
-                                        photoPickerLauncher.launch(req)
-                                    }
-                                },
-                                onCamera = {
-                                    val permission = Manifest.permission.CAMERA
-                                    if (ContextCompat.checkSelfPermission(ctx, permission) ==
-                                        android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                        val uri = createCameraImageUri(ctx)
-                                        if (uri != null) {
-                                            cameraImageUri = uri
-                                            // Fix #132: сохраняем параметры чата для
-                                            // восстановления после process death.
-                                            onCameraLaunch(peerId, currentTitle, currentPhoto)
-                                            cameraLauncher.launch(uri)
-                                        }
-                                    } else {
-                                        cameraPermissionLauncher.launch(permission)
-                                    }
-                                },
-                                onVideo = {
-                                    attachmentPickerTab = AttachmentPickerTab.Video
-                                    showAttachmentPicker = true
-                                },
-                                onAudio = {
-                                    attachmentPickerTab = AttachmentPickerTab.Music
-                                    showAttachmentPicker = true
-                                },
-                                onGift = {
-                                    attachmentPickerTab = AttachmentPickerTab.Gifts
-                                    showAttachmentPicker = true
-                                },
-                                onFile = {
-                                    multiFilePickerLauncher.launch(arrayOf("*/*"))
-                                },
-                                // #ATTACH-UNIFY (P1.5): фото/файл «Из VK» — табы пикера;
-                                // выбор уходит сообщением через sendWithAttachment.
-                                showPhotoFromVk = true,
-                                onPhotoFromVk = {
-                                    attachmentPickerTab = AttachmentPickerTab.Photos
-                                    showAttachmentPicker = true
-                                },
-                                showFileFromVk = true,
-                                onFileFromVk = {
-                                    attachmentPickerTab = AttachmentPickerTab.Docs
-                                    showAttachmentPicker = true
-                                },
-                                // Подарки только в личных диалогах.
-                                showGift = peerId > 0 && peerId < 2_000_000_000L,
-                            )
                         }
+
                         Spacer(modifier = Modifier.width(4.dp))
-                        // #VM-3 волна 3: ПРЯМАЯ кнопка видео-сообщения («кружок»)
-                        // рядом с микрофоном — открывает рекордер VideoMessageCreateScreen.
-                        // Видима всегда (не только в режиме mic), следует флагу enabled
-                        // кнопок ввода (same как mic: !sending && !uploading).
-                        IconButton(
-                            onClick = { onVideoMessage(peerId) },
-                            enabled = !sending && !uploading,
-                        ) {
-                            Icon(
-                                Icons.Outlined.VideoFile,
-                                contentDescription = "Видеосообщение (кружок)",
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        // Sprint 3 #12: mic ↔ send toggle.
-                        // P3.6: dual button state machine (opt-in) — EDIT/LOADING/LIMIT/MIC/SUBMIT.
+                        // Telegram MD3: круглая акцентная кнопка действия (Send / Mic / Edit)
                         if (dualButtonEnabled) {
                             val sendState = when {
                                 editingMsgId != null -> SendButtonState.EDIT
                                 sending || uploading -> SendButtonState.LOADING
                                 inputText.length > MSG_TEXT_LIMIT -> SendButtonState.LIMIT
-                                inputText.isNotBlank() || pendingFiles.isNotEmpty() || pendingPhotos.isNotEmpty() -> SendButtonState.SUBMIT
+                                hasContent -> SendButtonState.SUBMIT
                                 else -> SendButtonState.MIC
                             }
                             when (sendState) {
-                                SendButtonState.EDIT -> IconButton(onClick = { doSend() }) {
+                                SendButtonState.EDIT -> FilledIconButton(
+                                    onClick = { doSend() },
+                                    shape = CircleShape,
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
+                                    modifier = Modifier.size(44.dp),
+                                ) {
                                     Icon(Icons.Outlined.Edit, contentDescription = "Сохранить")
                                 }
-                                SendButtonState.LOADING -> IconButton(onClick = {}, enabled = false) {
+                                SendButtonState.LOADING -> FilledIconButton(
+                                    onClick = {},
+                                    enabled = false,
+                                    shape = CircleShape,
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
+                                    modifier = Modifier.size(44.dp),
+                                ) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp), strokeWidth = 2.dp,
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary,
                                     )
                                 }
                                 SendButtonState.LIMIT -> IconButton(onClick = {}) {
@@ -4486,13 +4526,19 @@ fun ChatDetailScreen(
                                         tint = MaterialTheme.colorScheme.error,
                                     )
                                 }
-                                SendButtonState.SUBMIT -> IconButton(
+                                SendButtonState.SUBMIT -> FilledIconButton(
                                     onClick = { doSend() },
                                     enabled = !sending,
+                                    shape = CircleShape,
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
+                                    modifier = Modifier.size(44.dp),
                                 ) {
-                                    Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = "Отправить")
+                                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить")
                                 }
-                                SendButtonState.MIC -> IconButton(
+                                SendButtonState.MIC -> FilledIconButton(
                                     onClick = {
                                         val hasPermission = ContextCompat.checkSelfPermission(
                                             ctx, Manifest.permission.RECORD_AUDIO
@@ -4501,24 +4547,39 @@ fun ChatDetailScreen(
                                         else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                     },
                                     enabled = !sending && !uploading,
+                                    shape = CircleShape,
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
+                                    modifier = Modifier.size(44.dp),
                                 ) {
-                                    Icon(Icons.Filled.Mic, contentDescription = "Голосовое сообщение",
-                                        tint = MaterialTheme.colorScheme.primary)
+                                    Icon(Icons.Filled.Mic, contentDescription = "Голосовое сообщение")
                                 }
                             }
-                        } else if (inputText.isNotBlank() || editingMsgId != null || pendingFiles.isNotEmpty() || pendingPhotos.isNotEmpty()) {
-                            IconButton(
+                        } else if (hasContent) {
+                            FilledIconButton(
                                 onClick = { doSend() },
                                 enabled = !sending && !uploading,
+                                shape = CircleShape,
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                                modifier = Modifier.size(44.dp),
                             ) {
                                 if (sending || uploading) {
-                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                    )
                                 } else {
-                                    Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = "Отправить")
+                                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить")
                                 }
                             }
                         } else {
-                            IconButton(
+                            FilledIconButton(
                                 onClick = {
                                     val hasPermission = ContextCompat.checkSelfPermission(
                                         ctx, Manifest.permission.RECORD_AUDIO
@@ -4527,9 +4588,14 @@ fun ChatDetailScreen(
                                     else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                 },
                                 enabled = !sending && !uploading,
+                                shape = CircleShape,
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                                modifier = Modifier.size(44.dp),
                             ) {
-                                Icon(Icons.Filled.Mic, contentDescription = "Голосовое сообщение",
-                                    tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Filled.Mic, contentDescription = "Голосовое сообщение")
                             }
                         }
                     }
@@ -4918,16 +4984,19 @@ fun ChatDetailScreen(
                                         .padding(vertical = 8.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Text(
-                                        text = item.label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f),
+                                        shadowElevation = 0.5.dp,
+                                    ) {
+                                        Text(
+                                            text = item.label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
+                                        )
+                                    }
                                 }
                             }
                             ChatListItem.UnreadDivider -> {
@@ -6098,17 +6167,17 @@ private fun MessageBubble(
     val sel = LocalAttachmentSelection.current
     val isOut = message.isOut
     val bubbleColor = if (isOut) {
-        MaterialTheme.colorScheme.primary
+        MaterialTheme.colorScheme.primaryContainer
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
     }
     // P3.7: в bubble-less режиме текст всегда onSurface (нет яркого bubble-фона).
     val textColor = if (bubbleless) {
         MaterialTheme.colorScheme.onSurface
     } else if (isOut) {
-        MaterialTheme.colorScheme.onPrimary
+        MaterialTheme.colorScheme.onPrimaryContainer
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
+        MaterialTheme.colorScheme.onSurface
     }
     val time = message.date.toMsgTime()
     var lastClickTime by remember { mutableStateOf(0L) }
@@ -6245,38 +6314,40 @@ private fun MessageBubble(
             val senderProfile = profiles[message.fromId]
             val senderPhoto = senderProfile?.photo100 ?: senderProfile?.photo200
             val senderName = senderProfile?.let { "${it.firstName} ${it.lastName}".trim() } ?: ""
+            val senderColor = getTelegramSenderColor(message.fromId)
             Row(
-                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp),
+                modifier = Modifier.padding(start = 8.dp, bottom = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(if (senderPhoto == null) senderColor else MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (senderPhoto != null) {
                         AsyncImage(
                             model = senderPhoto,
                             contentDescription = senderName,
-                            modifier = Modifier.size(24.dp).clip(CircleShape),
+                            modifier = Modifier.size(28.dp).clip(CircleShape),
                         )
                     } else {
                         Text(
                             text = senderName.take(1).ifBlank { "?" }.uppercase(),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
                         )
                     }
                 }
                 if (senderName.isNotBlank()) {
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(
                         text = senderName,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = senderColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -6289,13 +6360,22 @@ private fun MessageBubble(
         // offset(y = -2.dp) — он разрешает отрицательные и визуально даёт тот же
         // эффект «сдвига вверх». Audit #S5-fix3.
         val groupTopOffset = if (isGrouped) (-2).dp else 0.dp
-        // P1.3 + P2.5: форма bubble (плоские top corners при группировке).
-        val bubbleShape = RoundedCornerShape(
-            topStart = if (isGrouped) 4.dp else 16.dp,
-            topEnd = if (isGrouped) 4.dp else 16.dp,
-            bottomEnd = if (isOut) 4.dp else 16.dp,
-            bottomStart = if (isOut) 16.dp else 4.dp,
-        )
+        // P1.3 + P2.5: форма bubble (Telegram MD3 скругления: хвост снизу 4dp, углы 18dp, группировка 6dp).
+        val bubbleShape = if (isOut) {
+            RoundedCornerShape(
+                topStart = 18.dp,
+                topEnd = if (isGrouped) 6.dp else 18.dp,
+                bottomEnd = 4.dp,
+                bottomStart = 18.dp,
+            )
+        } else {
+            RoundedCornerShape(
+                topStart = if (isGrouped) 6.dp else 18.dp,
+                topEnd = 18.dp,
+                bottomEnd = 18.dp,
+                bottomStart = 4.dp,
+            )
+        }
         // P3.7: bubble-less режим — flat layout (без Card/bubble), как m.vk.ru.
         // В bubble-less: нет clip/rounded, нет background для incoming, subtle tint для outgoing.
         val bubblelessShape = RoundedCornerShape(4.dp)
@@ -6412,12 +6492,19 @@ private fun MessageBubble(
                             }
                         } ?: if (reply.hasForwarded) "Пересланное сообщение" else "Пустое сообщение"
                     }
+                    val replyStripeColor = if (isOut) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        getTelegramSenderColor(reply.fromId)
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 4.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(textColor.copy(alpha = 0.1f))
+                            .padding(bottom = 6.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                (if (isOut) MaterialTheme.colorScheme.primary else replyStripeColor).copy(alpha = 0.10f)
+                            )
                             .combinedClickable(
                                 onClick = {
                                     // Fix #244: в selection mode — toggle, не открываем цель ответа.
@@ -6426,29 +6513,30 @@ private fun MessageBubble(
                                 },
                                 onLongClick = { sel?.onLongPress?.invoke() },
                             )
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                            .padding(horizontal = 8.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(2.dp)
-                                .height(24.dp)
-                                .background(textColor.copy(alpha = 0.5f))
+                                .width(3.dp)
+                                .height(28.dp)
+                                .clip(RoundedCornerShape(1.5.dp))
+                                .background(replyStripeColor)
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = replyAuthorName ?: "Ответ",
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Medium,
-                                color = textColor.copy(alpha = 0.85f),
+                                fontWeight = FontWeight.SemiBold,
+                                color = replyStripeColor,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
                                 text = replyPreviewText,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = textColor.copy(alpha = 0.7f),
+                                color = textColor.copy(alpha = 0.8f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -6897,21 +6985,24 @@ private fun MessageBubble(
                     )
                 }
                 Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.align(Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
-                        text = time + if (message.isEdited) " · изменено" else "",
+                        text = time + if (message.isEdited) " ред." else "",
                         style = MaterialTheme.typography.labelSmall,
-                        color = textColor.copy(alpha = 0.7f),
-                        fontSize = 10.sp,
+                        color = textColor.copy(alpha = 0.65f),
+                        fontSize = 11.sp,
                     )
                     // P2.6: read receipts — ✓ (отправлено) / ✓✓ (прочитано) для исходящих.
                     if (isOut && showReadReceipts && !message.isAction) {
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Icon(
                             imageVector = if (message.isRead) Icons.Filled.DoneAll else Icons.Filled.Done,
                             contentDescription = if (message.isRead) "Прочитано" else "Отправлено",
                             modifier = Modifier.size(14.dp),
-                            tint = textColor.copy(alpha = 0.7f),
+                            tint = if (message.isRead) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.65f),
                         )
                     }
                     // #ARCH-CONTAINERS 3.7-1: reactions в :core:data — захват ДО проверки.
@@ -8670,12 +8761,14 @@ private fun ForwardedMessageBlock(
             .padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
     ) {
         // Шапка: вертикальная полоска + имя автора + метка + время.
+        val fwdStripeColor = if (fwd.fromId != 0L) getTelegramSenderColor(fwd.fromId) else MaterialTheme.colorScheme.primary
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .width(2.dp)
+                    .width(3.dp)
                     .height(28.dp)
-                    .background(textColor.copy(alpha = 0.45f))
+                    .clip(RoundedCornerShape(1.5.dp))
+                    .background(fwdStripeColor)
             )
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -8683,7 +8776,7 @@ private fun ForwardedMessageBlock(
                     text = authorName ?: "Пересланное сообщение",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = textColor.copy(alpha = 0.95f),
+                    color = fwdStripeColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
