@@ -1063,18 +1063,9 @@ class MainActivity : ComponentActivity() {
                                 launchAuth(intent, reason = "boot-no-token")
                                 return@LaunchedEffect
                             }
-                            // #AUTH-FIRST-OPEN-GUEST (2026-09-23, требование юзера):
-                            // видимый экран входа при первом открытии УБРАН. Нет
-                            // silent-возможности (нет remixsid / silent исчерпан /
-                            // forceFull) → АВТОМАТИЧЕСКИ guest-режим: OfflineManagerScreen
-                            // + guest-drawer с кнопкой «Войти в аккаунт» (GuestDrawer).
-                            // Экран входа (AuthActivity → LandingScreen) показывается
-                            // ТОЛЬКО по этой кнопке (reason="drawer-login").
-                            lockerBootCheckDone = true // boot-решение принято: guest не требует локера
-                            isOfflineMode = true
-                            AppLog.i("MainActivity", "#AUTH-FIRST-OPEN-GUEST: no token, silent unavailable " +
-                                "(hasRemixsid=$hasRemixsid, silentFailCount=$silentFailCount/$MAX_SILENT_FAILURES, " +
-                                "forceFull=${app.forceFullReloginOnNextLaunch}) → auto-guest; login via drawer button")
+                            lockerBootCheckDone = true
+                            AppLog.i("MainActivity", "No token, launching AuthActivity")
+                            launchAuth(Intent(this@MainActivity, AuthActivity::class.java), reason = "boot-no-token")
                             return@LaunchedEffect
                         }
                         // Fix #380 #LOCKER-BOOT-SKIP: токен жив — boot-решение
@@ -1221,13 +1212,8 @@ class MainActivity : ComponentActivity() {
                         // обновляет lastAuthActivityLaunchMs + проверяет throttle (Fix #230).
                         launchAuth(intent, reason = "token-invalidation")
                     } else {
-                        // #AUTH-FIRST-OPEN-GUEST (2026-09-23): silent исчерпан/невозможен —
-                        // НЕ показываем экран логина автоматически. Юзер продолжает в
-                        // guest-режиме; вход — кнопка «Войти в аккаунт» в guest-drawer.
-                        isOfflineMode = true
-                        AppLog.i("MainActivity", "#AUTH-FIRST-OPEN-GUEST: token invalidated (tick=$tokenInvalidationTick), " +
-                            "silent unavailable (hasRemixsid=$hasRemixsid, silentFailCount=$silentFailCount/$MAX_SILENT_FAILURES, " +
-                            "forceFull=${app.forceFullReloginOnNextLaunch}) → guest mode, login via drawer button")
+                        AppLog.i("MainActivity", "Token invalidated (tick=$tokenInvalidationTick), launching AuthActivity")
+                        launchAuth(intent, reason = "token-invalidation")
                     }
                 }
 

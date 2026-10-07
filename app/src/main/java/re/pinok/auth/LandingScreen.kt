@@ -219,41 +219,6 @@ internal fun LandingScreen(
                 onCancel = onCancelTokenPaste,
             )
         }
-
-        // #34: Офлайн-режим — доступ к скачанным аудио/видео без авторизации.
-        // Заменяет бывшую кнопку «Отмена» (onCancel теперь не вызывается из
-        // LandingScreen — отмена происходит только системной кнопкой Back).
-        // onOfflineMode → setResult(RESULT_OFFLINE_MODE) → MainActivity
-        // показывает OfflineManagerScreen в guest-режиме.
-        //
-        // Fix #113: кнопка ВСЕГДА доступна (раньше enabled = !isLoading).
-        // При зависании входа (state==Loading) это единственный выход —
-        // пользователь может сразу уйти в офлайн без ожидания. Для отмены
-        // самого входа есть отдельная кнопка «Отмена входа» выше.
-        //
-        // Fix #198: приведён к единому стилю — FilledTonalButton. При loading
-        // подкрашивается primary (чтобы привлечь внимание к escape-hatch).
-        FilledTonalButton(
-            onClick = onOfflineMode,
-            enabled = true,
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = if (isLoading)
-                    MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = if (isLoading)
-                    MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.onSecondaryContainer,
-            ),
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.CloudOff,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text("Офлайн-режим", style = MaterialTheme.typography.titleMedium)
-        }
     }
 
     // Fix #194b: диалог подтверждения перед запуском внешнего браузера.

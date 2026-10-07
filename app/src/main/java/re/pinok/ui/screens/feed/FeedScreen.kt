@@ -215,8 +215,6 @@ fun FeedScreen(
     onUserClick: (Long) -> Unit = {},
     // Stories: навигация на StoryViewerScreen.
     onStoryViewerClick: () -> Unit = {},
-    // Офлайн-менеджер: кнопка «Офлайн» при отсутствии сети.
-    onOpenOfflineManager: () -> Unit = {},
     // #FEED-MENU-VKWEB (Fix #353): «Редактировать» из правого меню ленты →
     // «Скрытые источники» (Screen.FeedHidden, newsfeed.getBanned + unban,
     // IMP-FEED-2). Эквивалент web-акта al_settings.php?act=a_edit_owners_list.
@@ -1143,7 +1141,7 @@ fun FeedScreen(
             app.foregroundTicks.collect { tick ->
                 if (tick <= 0) return@collect
                 val hasError = errorText != null
-                if (hasError && posts.isEmpty() && !isOffline && !feedPrefs.privacyOfflineMode) {
+                if (hasError && posts.isEmpty() && !isOffline) {
                     AppLog.i("FeedScreen", "foregroundTick=$tick — лента с ошибкой и без постов, авто-reload (#DOZE-RESUME-RELOAD)")
                     reloadFeed()
                 }
@@ -1152,7 +1150,7 @@ fun FeedScreen(
         // (2) Восстановление сети, пока экран открыт с ошибкой — как в MusicScreen.
         var wasOnline = app.networkObserver.isOnline()
         app.networkObserver.isOnlineFlow.collect { online ->
-            if (online && !wasOnline && errorText != null && posts.isEmpty() && !feedPrefs.privacyOfflineMode) {
+            if (online && !wasOnline && errorText != null && posts.isEmpty()) {
                 AppLog.i("FeedScreen", "сеть восстановилась при открытой ошибке — авто-reload (#DOZE-RESUME-RELOAD)")
                 reloadFeed()
             }
@@ -1545,27 +1543,11 @@ fun FeedScreen(
     }
 
     if (errorText != null && posts.isEmpty()) {
-        // #38: показываем кнопку «Офлайн контент» не только при отсутствии интернета
-        // (networkObserver.isOnlineFlow), но и при auto-offline (privacyOfflineMode=true),
-        // который включается VKApiClient.callInternal после 3 сетевых неудач подряд.
-        val offlineRequested = isOffline || feedPrefs.privacyOfflineMode
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            ErrorView(
-                message = errorText,
-                onRetry = { reloadFeed() },
-                isOffline = isOffline,
-            )
-            if (offlineRequested) {
-                OutlinedButton(
-                    onClick = onOpenOfflineManager,
-                    modifier = Modifier.padding(bottom = 32.dp),
-                ) {
-                    Icon(Icons.Outlined.CloudOff, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Офлайн контент")
-                }
-            }
-        }
+        ErrorView(
+            message = errorText,
+            onRetry = { reloadFeed() },
+            isOffline = isOffline,
+        )
         return
     }
 

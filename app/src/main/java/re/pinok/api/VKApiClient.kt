@@ -198,13 +198,9 @@ class VKApiClient(
      */
     private val MAX_CAPTCHA_RETRIES = 3
 
-    // #AUTO-OFFLINE-REMOVAL (W41): авто-офлайн (#38) убран ПОЛНОСТЬЮ (запрос
-    // пользователя) — преф privacyOfflineMode больше никем не пишется, застрявший
-    // true из старых версий чистит миграция в SovaApp при старте. Офлайн = только
-    // реальное состояние сети (NetworkObserver): без сети — пусто/ошибка, с сетью —
-    // честные запросы. Репорт-история: застрявший преф переживал перезапуск →
-    // «офлайн-режим который нельзя выключить» после очистки кэша.
-    suspend fun isOffline(): Boolean = !networkObserver.isOnline()
+    // #OFFLINE-MODE-REMOVED: офлайн-режим полностью вырезан из приложения.
+    // Запросы никогда не блокируются искусственно.
+    suspend fun isOffline(): Boolean = false
 
     /**
      * #AUD-NET (2026-09-30): разрешён ли HQ (quality=hq) сейчас.

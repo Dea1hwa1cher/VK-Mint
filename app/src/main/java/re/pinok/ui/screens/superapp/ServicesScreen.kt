@@ -185,15 +185,6 @@ private val categories = listOf(
         title = "Возможности PinoK",
         items = listOf(
             ServiceItem(
-                title = "Офлайн-менеджер",
-                subtitle = "Скачанные треки и видео без сети",
-                icon = Icons.Default.CloudOff,
-                iconColor = Color(0xFF00897B),
-                iconBgColor = Color(0x2600897B),
-                screen = Screen.OfflineManager,
-                badge = "Offline",
-            ),
-            ServiceItem(
                 title = "Эквалайзер",
                 subtitle = "5 полос, бас, виртуализатор и пресеты",
                 icon = Icons.Default.Equalizer,
@@ -293,7 +284,7 @@ private fun HubHeader(onOpenSection: ((Screen) -> Unit)?) {
         Triple("Музыка", Icons.Default.LibraryMusic, Screen.Music),
         Triple("Видео", Icons.Default.PlayCircle, Screen.Video),
         Triple("Сообщества", Icons.Default.Group, Screen.Groups),
-        Triple("Офлайн", Icons.Default.CloudOff, Screen.OfflineManager),
+        Triple("Закладки", Icons.Default.Bookmark, Screen.Bookmarks),
         Triple("Друзья", Icons.Default.People, Screen.Friends),
         Triple("Эквалайзер", Icons.Default.Equalizer, Screen.Equalizer),
     )

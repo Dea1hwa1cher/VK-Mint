@@ -860,7 +860,7 @@ fun SovaNavHost(
     val drawerScreens: List<Screen> = listOf(
         Screen.Music, Screen.Video, Screen.Friends, Screen.Groups, Screen.Photos,
         Screen.Bookmarks, Screen.Documents, Screen.Search, Screen.Notifications,
-        Screen.Settings, Screen.Logs, Screen.OfflineManager,
+        Screen.Settings, Screen.Logs,
     )
 
     // ── Fix #337 / #PANELEDIT: редактор панелей ─────────────────────────
@@ -1277,24 +1277,8 @@ fun SovaNavHost(
                             }
                         }
                     }
-                    // Fix #337: фиксированный хвост drawer — всегда в этом порядке,
-                    // не редактируется пользователем: Офлайн → Настройки → Выйти.
+                    // Фиксированный хвост drawer: Настройки → Выйти из аккаунта → Выйти из приложения.
                     HorizontalDivider()
-                    NavigationDrawerItem(
-                        label = { Text(Screen.OfflineManager.title) },
-                        selected = currentRoute == Screen.OfflineManager.route,
-                        onClick = {
-                            nav.navigate(Screen.OfflineManager.route) {
-                                popUpTo(nav.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                            scope.launch { drawerState.close() }
-                        },
-                        icon = {
-                            Icon(Screen.OfflineManager.icon ?: Icons.Default.CloudOff, contentDescription = null)
-                        },
-                    )
                     NavigationDrawerItem(
                         label = { Text(Screen.Settings.title) },
                         selected = currentRoute == Screen.Settings.route,
@@ -1638,10 +1622,6 @@ fun SovaNavHost(
                         // Stories → StoryViewerScreen.
                         onStoryViewerClick = {
                             nav.navigate(Screen.StoryViewer.route)
-                        },
-                        // Офлайн-менеджер: при отсутствии сети.
-                        onOpenOfflineManager = {
-                            nav.navigate(Screen.OfflineManager.route)
                         },
                         // #FEED-MENU-VKWEB (Fix #353): «Редактировать» в правом меню
                         // ленты → «Скрытые источники» (Screen.FeedHidden) — тот же
@@ -3133,17 +3113,8 @@ composable(Screen.CallsHistory.route) {
     // #NET-SWITCH-POPUP (2026-08-03): popup при переключении сети.
     // Overlay поверх всего app (рядом с CaptchaDialog). Подписывается на
     // SovaApp.networkSwitchState + SovaPrefs.netSwitchPopupEnabled.
-    // Навигация на Screen.OfflineManager (offline-менеджер) из кнопки popup.
-    NetworkSwitchPopup(
-        onOpenOfflineManager = { nav.navigate(Screen.OfflineManager.route) },
-    )
-    // #NETWORK-RESILIENCE (2026-08-04): OfflineBanner — ненавязчивый persistent
-    // баннер внизу экрана. В отличие от NetworkSwitchPopup (модальный, default=off),
-    // этот баннер ВСЕГДА включён — это informational status, не прерывание.
-    // Слушает NetworkObserver.isOnlineFlow + networkSwitchState. Auto-dismiss
-    // при появлении сети. Тап → OfflineManager (offline state) / retry (failed).
-    // Размещён ПЕРЕД overlayVideo/overlayPhoto — full-screen video/photo должны
-    // перекрывать баннер (когда видео на весь экран, offline-статус не нужен).
+    NetworkSwitchPopup()
+    // Волна 43 #UPDATER-BANNER: баннер «доступна новая версия»
     androidx.compose.foundation.layout.Box(
         modifier = Modifier
             .align(Alignment.BottomCenter)
@@ -3151,18 +3122,7 @@ composable(Screen.CallsHistory.route) {
             .padding(bottom = 80.dp)  // поверх NavigationBar; если mini player виден — баннер чуть выше
             .padding(horizontal = 12.dp),
     ) {
-        // Волна 43 #UPDATER-BANNER: баннер «доступна новая версия» НАД
-        // офлайн-баннером (Column в одном Box — баннеры не спорят за позицию).
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            // #UPDATER-BANNER-DISMISS: тап по сообщению теперь просто скрывает
-            // баннер (см. KDoc UpdateBanner) — тап-переход во вкладку
-            // «Обновления» убран вместе с UpdateDeepLink; вкладка доступна
-            // через Настройки → «Обновления».
-            UpdateBanner()
-            OfflineBanner(
-                onOpenOfflineManager = { nav.navigate(Screen.OfflineManager.route) },
-            )
-        }
+        UpdateBanner()
     }
     if (showLogoutDialog) {
         // Fix #369: диалог-предупреждение перед ПОЛНЫМ logout. Confirm —

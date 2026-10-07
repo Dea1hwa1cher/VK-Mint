@@ -61,7 +61,7 @@ import re.pinok.util.NetworkSwitchState
  */
 @Composable
 fun NetworkSwitchPopup(
-    onOpenOfflineManager: () -> Unit,
+    onOpenOfflineManager: (() -> Unit)? = null,
 ) {
     val app = SovaApp.get()
     val state by app.networkSwitchState.collectAsState()
@@ -236,8 +236,7 @@ fun NetworkSwitchPopup(
                     TextButton(onClick = {
                         app.setNetworkSwitchState(NetworkSwitchState.Idle)
                         dismissed = null
-                        onOpenOfflineManager()
-                    }) { Text("Офлайн-менеджер") }
+                    }) { Text("Закрыть") }
                 }
                 NetworkSwitchState.Idle -> {}
             }
@@ -255,8 +254,7 @@ fun NetworkSwitchPopup(
                     TextButton(onClick = {
                         app.setNetworkSwitchState(NetworkSwitchState.Idle)
                         dismissed = null
-                        onOpenOfflineManager()
-                    }) { Text("Офлайн-менеджер") }
+                    }) { Text("Закрыть") }
                 }
                 NetworkSwitchState.Offline -> {
                     TextButton(onClick = { dismissed = state }) { Text("Закрыть") }

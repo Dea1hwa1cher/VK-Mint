@@ -73,11 +73,10 @@ import re.pinok.ui.navigation.Screen
 private val CANONICAL_PANEL_ITEMS: List<PanelItem> = PanelItems.all
 
 /**
- * Фиксированный «хвост» боковой панели (сверху-вниз): Офлайн → Настройки → Выйти.
+ * Фиксированный «хвост» боковой панели: Настройки → Выйти.
  * Не редактируется пользователем. Показывается в редакторе как info-блок.
  */
 private val SIDEBAR_FIXED_TAIL: List<Pair<String, ImageVector?>> = listOf(
-    Screen.OfflineManager.title to Screen.OfflineManager.icon,
     Screen.Settings.title to Screen.Settings.icon,
     "Выйти из приложения" to null,
 )
