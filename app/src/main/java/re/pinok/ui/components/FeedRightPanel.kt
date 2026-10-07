@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.RateReview
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -337,6 +338,35 @@ fun FeedRightPanel(
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontSize = 16.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+
+                        // «Настройки ленты» — быстрый переход в раздел «Лента» общих настроек
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .clickable {
+                                    AppLog.i("FeedRightPanel", "settings -> feed settings")
+                                    Screen.Settings.requestedTab = "FEED"
+                                    onNavigate(Screen.Settings)
+                                }
+                                .padding(horizontal = 20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Outlined.Settings,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Text(
+                                text = "Настройки ленты",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
                             )
                         }
                     }

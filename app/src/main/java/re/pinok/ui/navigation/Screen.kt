@@ -485,7 +485,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
         fun buildRoute(category: String = DEFAULT_CATEGORY): String =
             "notifications/${android.net.Uri.encode(category)}"
     }
-    object Settings      : Screen("settings",      "Настройки",    Icons.Default.Settings)
+    object Settings      : Screen("settings",      "Настройки",    Icons.Default.Settings) {
+        var requestedTab: String? = null
+    }
     object NotificationSettings : Screen("notification_settings", "Настройки уведомлений", Icons.Default.Notifications)
 
     /**

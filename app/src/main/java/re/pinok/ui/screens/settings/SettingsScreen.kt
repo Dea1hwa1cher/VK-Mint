@@ -174,7 +174,7 @@ import android.hardware.camera2.CameraManager
 //
 //  Вкладки:
 //    1. Интерфейс  — тема/акцент/шрифт/анимация/стикеры
-//    2. Новости    — реклама/репосты/промо
+//    2. Лента      — реклама/репосты/промо/фильтрация/карусель/истории
 //    3. Сообщения  — все msg* настройки (DNF, multi-select, swipe reply…)
 //    4. Музыка     — качество/фон/авто-кэш аудио/скачанные аудио
 //    5. Видео      — скачанные видео + путь
@@ -193,7 +193,7 @@ private enum class SettingsTab(
     val icon: ImageVector,
 ) {
     INTERFACE("Интерфейс", Icons.Outlined.Palette),
-    NEWS("Новости", Icons.Outlined.Newspaper),
+    FEED("Лента", Icons.Outlined.Newspaper),
     MESSAGES("Сообщения", Icons.AutoMirrored.Outlined.Chat),
     MUSIC("Музыка", Icons.Outlined.MusicNote),
     VIDEO("Видео", Icons.Outlined.VideoLibrary),
@@ -409,10 +409,24 @@ fun SettingsScreen(
             containerSections.forEach { add(SettingsPage.Container(it)) }
         }
     }
-    // #UPDATER-BANNER-DISMISS: тап-переход «баннер → вкладка Обновлений»
-    // (UpdateDeepLink) убран — тап по баннеру теперь просто скрывает его;
-    // пейджер всегда стартует с первой вкладки.
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { pages.size })
+    val initialPage = remember(pages) {
+        val req = re.pinok.ui.navigation.Screen.Settings.requestedTab
+        re.pinok.ui.navigation.Screen.Settings.requestedTab = null
+        if (req != null) {
+            val idx = pages.indexOfFirst {
+                it.key.equals("core:$req", ignoreCase = true) || it.label.equals(req, ignoreCase = true)
+            }
+            if (idx >= 0) idx else 0
+        } else {
+            0
+        }
+    }
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { pages.size })
+    LaunchedEffect(initialPage) {
+        if (initialPage > 0 && pagerState.currentPage != initialPage) {
+            pagerState.scrollToPage(initialPage)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         PrimaryScrollableTabRow(
@@ -439,7 +453,7 @@ fun SettingsScreen(
             when (val p = pages[page]) {
                 is SettingsPage.Core -> when (p.tab) {
                     SettingsTab.INTERFACE -> InterfaceTab(s, app, scope)
-                    SettingsTab.NEWS -> NewsTab(s, app, scope, onOpenHiddenSources)
+                    SettingsTab.FEED -> FeedTab(s, app, scope, onOpenHiddenSources)
                     SettingsTab.MESSAGES -> MessagesTab(s, app, scope)
                     SettingsTab.MUSIC -> MusicTab(s, app, scope, context)
                     SettingsTab.VIDEO -> VideoTab(s, app, scope, context)
@@ -1602,65 +1616,6 @@ private fun InterfaceTab(
             )
         }
 
-        item { SectionHeader("Лента") }
-        // #238: показ FAB «подняться в верх ленты» при прокрутке вниз.
-        // Default: true — FAB виден по умолчанию, пользователь может скрыть.
-        item {
-            ToggleRow(
-                title = "Кнопка «наверх» в ленте",
-                subtitle = "Плавающая стрелка для быстрого возврата к началу ленты",
-                checked = s.feedShowScrollFab,
-            ) { scope.launch { app.prefs.setFeedShowScrollFab(it) } }
-        }
-        // #STORY-TOGGLE: показ раздела «Истории» в ленте. Default: true.
-        item {
-            ToggleRow(
-                title = "История",
-                subtitle = "Показывать истории в ленте",
-                checked = s.storiesShown,
-            ) { scope.launch { app.prefs.setStoriesShown(it) } }
-        }
-        // P0.18 #STORY-HELP: блок-инструкция по жестам в полноэкранном
-        // просмотрщике историй. Показывается всегда, не зависит от storiesShown.
-        item {
-            Card {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(
-                        "Как пользоваться историями",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "• Удерживайте палец — пауза/воспроизведение\n" +
-                            "• Короткий тап — открыть контент (клипы, фото, пост, ссылку)\n" +
-                            "• Свайп влево/вправо — следующая/предыдущая история\n" +
-                            "• Тап по шапке — страница автора",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-        // P0.18 #STORY-SWIPE-HINTS: стрелки-подсказки свайпа в StoryViewer.
-        // Default: true. Показываются при первом открытии историй, исчезают
-        // после первого свайпа. Пользователь может выключить если мешают.
-        item {
-            ToggleRow(
-                title = "Подсказки свайпа в историях",
-                subtitle = "Показывать стрелки ← → при просмотре историй. " +
-                    "Исчезают после первого свайпа. Выключите если мешают.",
-                checked = s.storiesSwipeHints,
-            ) { scope.launch { app.prefs.setStoriesSwipeHints(it) } }
-        }
-        // #FEED-CAROUSEL (19-A, волна 18-γ) + #POST-CAROUSEL-EVERYWHERE (волна 22):
-        // ОДИН флаг управляет каруселью фото на ВСЕХ поверхностях — лента,
-        // сообщество, профиль, открытый пост. Default: true — как в VK web
-        // (photo_page_carousel / attachmentCarousel).
-        item {
-            FeedCarouselToggleRow(s = s, app = app, scope = scope)
-        }
-
         item { SectionHeader("Сеть") }
         // #NET-SWITCH-POPUP (2026-08-03): popup при переключении сети.
         // Управляет ТОЛЬКО видимостью popup. Логика переключения (grace period,
@@ -1679,11 +1634,11 @@ private fun InterfaceTab(
 }
 
 // ══════════════════════════════════════════════════════════════════════
-//  Tab: Новости
+//  Tab: Лента (консолидированные настройки ленты)
 // ══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun NewsTab(
+private fun FeedTab(
     s: SovaPrefs.Snapshot,
     app: SovaApp,
     scope: CoroutineScope,
@@ -1693,7 +1648,7 @@ private fun NewsTab(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { SectionHeader("Фильтрация ленты") }
+        item { SectionHeader("Фильтрация контента") }
         item { ToggleRow("Блокировка рекламы", s.newsAdsBlocked) { scope.launch { app.prefs.setNewsAdsBlocked(it) } } }
         item { ToggleRow("Скрывать репосты", s.newsRepostsHidden) { scope.launch { app.prefs.setNewsRepostsHidden(it) } } }
         item { ToggleRow("Скрывать промо", s.newsPromoHidden) { scope.launch { app.prefs.setNewsPromoHidden(it) } } }
@@ -1736,6 +1691,7 @@ private fun NewsTab(
                 }
             }
         }
+
         item { SectionHeader("Интерфейс ленты") }
         item {
             ToggleRow(
@@ -1743,6 +1699,92 @@ private fun NewsTab(
                 subtitle = "Выпадающий список разделов (Все/Реакции/Фото/Друзья/Поиск)",
                 checked = s.feedShowFilter,
             ) { scope.launch { app.prefs.setFeedShowFilter(it) } }
+        }
+        // #238: показ FAB «подняться в верх ленты» при прокрутке вниз.
+        // Default: true — FAB виден по умолчанию, пользователь может скрыть.
+        item {
+            ToggleRow(
+                title = "Кнопка «наверх» в ленте",
+                subtitle = "Плавающая стрелка для быстрого возврата к началу ленты",
+                checked = s.feedShowScrollFab,
+            ) { scope.launch { app.prefs.setFeedShowScrollFab(it) } }
+        }
+        // #FEED-CAROUSEL (19-A, волна 18-γ) + #POST-CAROUSEL-EVERYWHERE (волна 22):
+        // ОДИН флаг управляет каруселью фото на ВСЕХ поверхностях — лента,
+        // сообщество, профиль, открытый пост. Default: true — как в VK web
+        // (photo_page_carousel / attachmentCarousel).
+        item {
+            FeedCarouselToggleRow(s = s, app = app, scope = scope)
+        }
+
+        item { SectionHeader("Истории") }
+        // #STORY-TOGGLE: показ раздела «Истории» в ленте. Default: true.
+        item {
+            ToggleRow(
+                title = "Показывать истории",
+                subtitle = "Отображение блока историй над лентой",
+                checked = s.storiesShown,
+            ) { scope.launch { app.prefs.setStoriesShown(it) } }
+        }
+        // P0.18 #STORY-SWIPE-HINTS: стрелки-подсказки свайпа в StoryViewer.
+        // Default: true. Показываются при первом открытии историй, исчезают
+        // после первого свайпа. Пользователь может выключить если мешают.
+        item {
+            ToggleRow(
+                title = "Подсказки свайпа в историях",
+                subtitle = "Показывать стрелки ← → при просмотре историй. " +
+                    "Исчезают после первого свайпа. Выключите если мешают.",
+                checked = s.storiesSwipeHints,
+            ) { scope.launch { app.prefs.setStoriesSwipeHints(it) } }
+        }
+        // Авто-кэш историй и лимит дискового пространства
+        item {
+            ToggleRow(
+                title = "Авто-кэш историй",
+                subtitle = "При включении истории автоматически скачиваются при просмотре — " +
+                    "доступны офлайн до истечения 24ч TTL",
+                checked = s.autoCacheStories,
+            ) { scope.launch { app.prefs.setAutoCacheStories(it) } }
+        }
+        item {
+            val limMb = s.storyCacheLimitMb
+            Text(
+                "Лимит кэша историй: ${limMb} MB",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+            )
+        }
+        item {
+            Slider(
+                value = s.storyCacheLimitMb.toFloat(),
+                onValueChange = { v -> scope.launch { app.prefs.setStoryCacheLimitMb(v.toInt()) } },
+                valueRange = 50f..2000f,
+                steps = 38,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+        // P0.18 #STORY-HELP: блок-инструкция по жестам в полноэкранном
+        // просмотрщике историй. Показывается всегда, не зависит от storiesShown.
+        item {
+            Card {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(
+                        "Как пользоваться историями",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "• Удерживайте палец — пауза/воспроизведение\n" +
+                            "• Короткий тап — открыть контент (клипы, фото, пост, ссылку)\n" +
+                            "• Свайп влево/вправо — следующая/предыдущая история\n" +
+                            "• Тап по шапке — страница автора",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
