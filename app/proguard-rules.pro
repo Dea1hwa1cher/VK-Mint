@@ -75,3 +75,10 @@
 -keepclassmembers class * extends androidx.work.ListenableWorker {
     <init>(android.content.Context, androidx.work.WorkerParameters);
 }
+
+# --- WebRTC & FFmpegKit (JNI native callbacks) ---
+-keep class org.webrtc.** { *; }
+-dontwarn org.webrtc.**
+-keep class com.arthenica.ffmpegkit.** { *; }
+-dontwarn com.arthenica.ffmpegkit.**
+
