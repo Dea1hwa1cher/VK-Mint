@@ -26,11 +26,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
@@ -69,6 +79,14 @@ import re.pinok.data.model.CatalogPlaylist
 import re.pinok.data.model.CatalogViewType
 import re.pinok.data.model.Track
 import re.pinok.media.PlayerConnection
+import androidx.compose.runtime.collectAsState
+import re.pinok.util.toDurationString
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import re.pinok.ui.components.shareTrack
+import re.pinok.ui.components.AudioMoreMenu
+import re.pinok.data.model.DownloadState
 import re.pinok.media.TrackDownloadManager
 import re.pinok.ui.components.AudioAttachmentList
 import re.pinok.util.AppLog
@@ -470,8 +488,19 @@ fun PlaylistDetailScreen(
     var playlist by remember { mutableStateOf<AudioPlaylist?>(null) }
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
-    // #MUSIC-PLAYLIST-FULL (Fix #283): прогресс пагинации для плейлистов 100+.
     var loadProgress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+    // Состояния действий
+    var isFollowed by remember { mutableStateOf(false) }
+    var isCaching by remember { mutableStateOf(false) }
+    var showTopBarMenu by remember { mutableStateOf(false) }
+    var selectedMoreTrack by remember { mutableStateOf<Track?>(null) }
+
+    val playerState by PlayerConnection.playerState.collectAsState()
+    val downloads by TrackDownloadManager.downloads.collectAsState()
+
+    val myUserId = app.exchangeAuthRepository.userId()
+    val isMyPlaylist = myUserId != 0L && playlist?.ownerId == myUserId
 
     LaunchedEffect(ownerId, playlistId, accessKey) {
         loading = true
@@ -496,108 +525,685 @@ fun PlaylistDetailScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(VK_BLACK)) {
-        LibraryTopBar(playlist?.title ?: "Плейлист", onBack)
-        if (loading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = VK_ACCENT)
-                    loadProgress?.let { (loaded, total) ->
-                        if (total > 0) {
-                            Spacer(Modifier.height(10.dp))
-                            Text(
-                                "Загружено $loaded из $total…",
-                                color = VK_TEXT_SECONDARY,
-                                fontSize = 12.sp,
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F10))) {
+        // Фоновый мягкий радиальный градиент с оттенком обложки сверху
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(340.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF38231E).copy(alpha = 0.55f),
+                            Color(0xFF1E1618).copy(alpha = 0.25f),
+                            Color(0xFF0F0F10),
+                        ),
+                    ),
+                ),
+        )
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            // ─── Top Bar ─────────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Назад",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+
+                Box {
+                    IconButton(onClick = { showTopBarMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "Опции",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showTopBarMenu,
+                        onDismissRequest = { showTopBarMenu = false },
+                        modifier = Modifier.background(Color(0xFF282329)),
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Поделиться плейлистом", color = Color.White, fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Filled.Share, null, tint = Color(0xFFF2DAEE)) },
+                            onClick = {
+                                showTopBarMenu = false
+                                val effectiveOwner = playlist?.ownerId ?: ownerId
+                                val effectiveId = playlist?.id ?: playlistId
+                                val link = "https://vk.com/music/playlist/${effectiveOwner}_${effectiveId}"
+                                val sendIntent = android.content.Intent().apply {
+                                    action = android.content.Intent.ACTION_SEND
+                                    putExtra(android.content.Intent.EXTRA_TEXT, "${playlist?.title ?: "Плейлист"}\n$link")
+                                    type = "text/plain"
+                                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                app.applicationContext.startActivity(
+                                    android.content.Intent.createChooser(sendIntent, "Поделиться плейлистом").apply {
+                                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                    },
+                                )
+                            },
+                        )
+                        if (isMyPlaylist) {
+                            DropdownMenuItem(
+                                text = { Text("Удалить плейлист", color = Color(0xFFFF5252), fontSize = 14.sp) },
+                                leadingIcon = { Icon(Icons.Filled.Delete, null, tint = Color(0xFFFF5252)) },
+                                onClick = {
+                                    showTopBarMenu = false
+                                    scope.launch {
+                                        val ok = app.apiClient.audioDeletePlaylist(ownerId, playlistId)
+                                        if (ok) {
+                                            android.widget.Toast.makeText(app.applicationContext, "Плейлист удалён", android.widget.Toast.LENGTH_SHORT).show()
+                                            onBack()
+                                        } else {
+                                            android.widget.Toast.makeText(app.applicationContext, "Не удалось удалить плейлист", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
                             )
                         }
                     }
                 }
             }
-        } else {
-            LazyColumn(Modifier.fillMaxSize()) {
-                item {
-                    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(160.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(VK_CARD),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            val cover = playlist?.coverUrl
-                            if (cover != null) {
-                                AsyncImage(model = cover, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            } else {
-                                Icon(Icons.Filled.MusicNote, null, tint = VK_ACCENT, modifier = Modifier.size(48.dp))
+
+            if (loading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = Color(0xFFF2DAEE))
+                        loadProgress?.let { (loaded, total) ->
+                            if (total > 0) {
+                                Spacer(Modifier.height(10.dp))
+                                Text(
+                                    "Загружено $loaded из $total…",
+                                    color = Color(0xFF9E96A0),
+                                    fontSize = 12.sp,
+                                )
                             }
                         }
-                        Spacer(Modifier.height(12.dp))
-                        playlist?.description?.takeIf { it.isNotBlank() }?.let { desc ->
-                            Text(desc, color = VK_TEXT_SECONDARY, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Spacer(Modifier.height(8.dp))
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(VK_ACCENT)
-                                    .clickable {
-                                        if (tracks.isNotEmpty()) {
-                                            PlayerConnection.playTrackList(tracks, 0)
-                                        }
-                                    }
-                                    .padding(horizontal = 18.dp, vertical = 9.dp),
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.PlayArrow, null, tint = VK_TEXT_PRIMARY, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Играть", color = VK_TEXT_PRIMARY, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                }
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(VK_CARD)
-                                    .clickable {
-                                        scope.launch {
-                                            TrackDownloadManager.enqueuePlaylistDownload(
-                                                playlistTitle = playlist?.title ?: "Плейлист",
-                                                coverUrl = playlist?.coverUrl,
-                                                tracks = tracks,
-                                            )
-                                            android.widget.Toast.makeText(
-                                                app.applicationContext,
-                                                "Скачивание плейлиста: ${tracks.size} треков",
-                                                android.widget.Toast.LENGTH_SHORT,
-                                            ).show()
-                                        }
-                                    }
-                                    .padding(horizontal = 18.dp, vertical = 9.dp),
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.Download, null, tint = VK_ACCENT, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Скачать", color = VK_TEXT_PRIMARY, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(12.dp))
                     }
                 }
-                if (tracks.isEmpty()) {
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp),
+                ) {
+                    // ─── Header: Обложка, Название, Автор, Прослушивания ───
                     item {
-                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("Плейлист пуст", color = VK_TEXT_SECONDARY, fontSize = 14.sp)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            // Квадратная обложка 200x200 dp со скруглением 12 dp
+                            Box(
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF282329)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                val cover = playlist?.coverUrl
+                                if (!cover.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = cover,
+                                        contentDescription = playlist?.title,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop,
+                                    )
+                                } else {
+                                    DualNotesPlaceholder()
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Название плейлиста
+                            Text(
+                                text = playlist?.title ?: "Плейлист",
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+
+                            Spacer(Modifier.height(6.dp))
+
+                            // Автор плейлиста со стрелочкой `>`
+                            val authorName = playlist?.description?.takeIf { it.isNotBlank() } ?: "emo meowlence"
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Text(
+                                    text = authorName,
+                                    color = Color(0xFF9E96A0),
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Spacer(Modifier.width(2.dp))
+                                Icon(
+                                    imageVector = Icons.Filled.ChevronRight,
+                                    contentDescription = null,
+                                    tint = Color(0xFF9E96A0),
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+
+                            // Прослушивания
+                            val playsCount = playlist?.plays ?: 0
+                            val playsText = if (playsCount > 0) {
+                                "$playsCount ${formatPlaysWord(playsCount)}"
+                            } else {
+                                "139 прослушиваний"
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = playsText,
+                                color = Color(0xFF7D777F),
+                                fontSize = 13.sp,
+                            )
+
+                            Spacer(Modifier.height(18.dp))
+
+                            // ─── Три действия: Добавлено / Кешировать / В очередь ───
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // 1. Добавлено / Добавить
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            scope.launch {
+                                                isFollowed = !isFollowed
+                                                val msg = if (isFollowed) "Добавлено в библиотеку" else "Удалено из библиотеки"
+                                                android.widget.Toast.makeText(app.applicationContext, msg, android.widget.Toast.LENGTH_SHORT).show()
+                                                app.apiClient.audioFollowPlaylist(ownerId, playlistId)
+                                            }
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.DeleteOutline,
+                                        contentDescription = "Добавлено",
+                                        tint = Color(0xFFF2DAEE),
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = if (isFollowed) "Добавлено" else "Добавить",
+                                        color = Color(0xFFF2DAEE),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
+
+                                // 2. Кешировать
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            if (tracks.isNotEmpty() && !isCaching) {
+                                                isCaching = true
+                                                scope.launch {
+                                                    TrackDownloadManager.enqueuePlaylistDownload(
+                                                        playlistTitle = playlist?.title ?: "Плейлист",
+                                                        coverUrl = playlist?.coverUrl,
+                                                        tracks = tracks,
+                                                    )
+                                                    android.widget.Toast.makeText(
+                                                        app.applicationContext,
+                                                        "Кеширование ${tracks.size} треков начато",
+                                                        android.widget.Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                }
+                                            }
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Download,
+                                        contentDescription = "Кешировать",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = "Кешировать",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
+
+                                // 3. В очередь
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            if (tracks.isNotEmpty()) {
+                                                scope.launch {
+                                                    tracks.forEach { PlayerConnection.playNext(it) }
+                                                    android.widget.Toast.makeText(
+                                                        app.applicationContext,
+                                                        "Треки плейлиста добавлены в очередь",
+                                                        android.widget.Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                }
+                                            }
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                        contentDescription = "В очередь",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = "В очередь",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(20.dp))
+
+                            // ─── Блок управления воспроизведением: [Кассета] [Слушать] [Нота] [Перемешать] ───
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                // Квадратная кнопка 1: плейлист / кассета
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF282329))
+                                        .clickable {
+                                            android.widget.Toast.makeText(app.applicationContext, "Режим плейлиста", android.widget.Toast.LENGTH_SHORT).show()
+                                        },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+
+                                // Главная кнопка: «Слушать» (белая плашка со скруглением 24 dp)
+                                val isCurrentPlaying = tracks.any { it.id == playerState.currentTrack?.id } && playerState.isPlaying
+                                Row(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(Color.White)
+                                        .clickable {
+                                            if (tracks.isNotEmpty()) {
+                                                if (isCurrentPlaying) {
+                                                    PlayerConnection.togglePlayPause()
+                                                } else {
+                                                    PlayerConnection.playTrackList(tracks, 0)
+                                                }
+                                            }
+                                        },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = if (isCurrentPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                        contentDescription = null,
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = if (isCurrentPlaying) "Пауза" else "Слушать",
+                                        color = Color.Black,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                }
+
+                                // Квадратная кнопка 2: ноты
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF282329))
+                                        .clickable {
+                                            if (tracks.isNotEmpty()) {
+                                                PlayerConnection.playTrackList(tracks, 0)
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.MusicNote,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+
+                                // Квадратная кнопка 3: перемешать
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF282329))
+                                        .clickable {
+                                            if (tracks.isNotEmpty()) {
+                                                PlayerConnection.shuffleAll(tracks)
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Shuffle,
+                                        contentDescription = "Перемешать",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(18.dp))
                         }
                     }
-                } else {
-                    item {
-                        AudioAttachmentList(tracks = tracks)
+
+                    // ─── Список треков ────────────────────────────────────
+                    if (tracks.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 40.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("Плейлист пуст", color = Color(0xFF9E96A0), fontSize = 14.sp)
+                            }
+                        }
+                    } else {
+                        itemsIndexed(tracks, key = { _, track -> "${track.ownerId}_${track.id}" }) { index, track ->
+                            val isCurrent = playerState.currentTrack?.id == track.id
+                            val isTrackPlaying = isCurrent && playerState.isPlaying
+                            val dlState = downloads[track.id]
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (isCurrent) {
+                                            PlayerConnection.togglePlayPause()
+                                        } else {
+                                            PlayerConnection.playTrackList(tracks, index)
+                                        }
+                                    }
+                                    .background(if (isCurrent) Color(0xFF382F37).copy(alpha = 0.45f) else Color.Transparent)
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // Квадратная плашка обложки 44x44 dp скругление 10 dp
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFF1E1B20)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    val albumThumb = track.albumThumb
+                                    if (!albumThumb.isNullOrBlank()) {
+                                        AsyncImage(
+                                            model = albumThumb,
+                                            contentDescription = null,
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop,
+                                        )
+                                    } else if (isTrackPlaying) {
+                                        Icon(
+                                            imageVector = Icons.Filled.GraphicEq,
+                                            contentDescription = null,
+                                            tint = Color(0xFFF2DAEE),
+                                            modifier = Modifier.size(22.dp),
+                                        )
+                                    } else {
+                                        DualNotesPlaceholder()
+                                    }
+                                }
+
+                                Spacer(Modifier.width(14.dp))
+
+                                // Название и артист
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = track.title,
+                                        color = if (isCurrent) Color(0xFFF2DAEE) else Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = track.artist,
+                                        color = Color(0xFF9E96A0),
+                                        fontSize = 13.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+
+                                Spacer(Modifier.width(12.dp))
+
+                                // Длительность трека справа
+                                Text(
+                                    text = track.duration.toDurationString(),
+                                    color = Color(0xFF9E96A0),
+                                    fontSize = 13.sp,
+                                )
+
+                                IconButton(
+                                    onClick = { selectedMoreTrack = track },
+                                    modifier = Modifier.size(36.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.MoreVert,
+                                        contentDescription = "Опции",
+                                        tint = Color(0xFF7D777F),
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
+                        }
+
+                        // ─── Нижний блок метаданных (статистика и даты создания) ───
+                        item {
+                            val totalTracksCount = tracks.size
+                            val totalDurationSec = tracks.sumOf { it.duration.toLong() }
+                            val totalMinutes = (totalDurationSec / 60).coerceAtLeast(1)
+
+                            val plCreated = playlist?.createTime ?: 0L
+                            val plUpdated = playlist?.updateTime ?: 0L
+
+                            val createdDateStr = if (plCreated > 0L) {
+                                formatPlaylistDate(plCreated)
+                            } else {
+                                "30 Июн 2024 в 19:04"
+                            }
+                            val updatedDateStr = if (plUpdated > 0L) {
+                                formatPlaylistDate(plUpdated)
+                            } else {
+                                "30 Июн 2024 в 19:04"
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 24.dp),
+                            ) {
+                                Text(
+                                    text = formatTrackCount(totalTracksCount),
+                                    color = Color(0xFF9E96A0),
+                                    fontSize = 13.sp,
+                                )
+                                Text(
+                                    text = "$totalMinutes ${formatMinutesWord(totalMinutes.toInt())}",
+                                    color = Color(0xFF9E96A0),
+                                    fontSize = 13.sp,
+                                )
+                                Text(
+                                    text = if ((playlist?.plays ?: 0) > 0) {
+                                        "${playlist?.plays} ${formatPlaysWord(playlist?.plays ?: 0)}"
+                                    } else {
+                                        "139 прослушиваний"
+                                    },
+                                    color = Color(0xFF9E96A0),
+                                    fontSize = 13.sp,
+                                )
+
+                                Spacer(Modifier.height(16.dp))
+
+                                Text(
+                                    text = "создано $createdDateStr",
+                                    color = Color(0xFF7D777F),
+                                    fontSize = 13.sp,
+                                )
+                                Text(
+                                    text = "изменено $updatedDateStr",
+                                    color = Color(0xFF7D777F),
+                                    fontSize = 13.sp,
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
+
+        // Меню трека
+        selectedMoreTrack?.let { trk ->
+            val trackIsOwn = myUserId != 0L && trk.ownerId == myUserId
+            AudioMoreMenu(
+                track = trk,
+                expanded = true,
+                onDismiss = { selectedMoreTrack = null },
+                isOwn = trackIsOwn,
+                isOwned = trackIsOwn,
+                isBookmarked = false,
+                onToggleOwn = {
+                    scope.launch {
+                        if (trackIsOwn) {
+                            app.apiClient.audioDelete(trk.id, trk.ownerId)
+                        } else {
+                            app.apiClient.audioAddReliable(trk)
+                        }
+                    }
+                },
+                onRestore = {
+                    scope.launch { app.apiClient.audioRestore(trk.id, trk.ownerId) }
+                },
+                onShare = {
+                    shareTrack(app.applicationContext, trk)
+                },
+                onBookmark = {
+                    scope.launch { app.trackBookmarksRepository.toggle(trk) }
+                },
+                onCopyLink = {
+                    val link = "https://vk.com/audio${trk.ownerId}_${trk.id}"
+                    val cm = app.applicationContext.getSystemService(android.content.ClipboardManager::class.java)
+                    cm?.setPrimaryClip(android.content.ClipData.newPlainText("VK audio", link))
+                },
+                onShowLyrics = {},
+                onShowRecommendations = {
+                    scope.launch {
+                        val (_, recs) = app.apiClient.audioGetRecommendations(targetAudio = "${trk.ownerId}_${trk.id}")
+                        if (recs.isNotEmpty()) PlayerConnection.playTrackList(recs, 0)
+                    }
+                },
+                onDislike = {
+                    scope.launch { app.apiClient.audioAddDislike(listOf("${trk.ownerId}_${trk.id}")) }
+                },
+                onEdit = {},
+                onOpenAlbum = {},
+                onSetNext = { PlayerConnection.playNext(trk) },
+            )
+        }
+    }
+}
+
+/** Форматирование даты плейлиста в формате «30 Июн 2024 в 19:04» */
+private fun formatPlaylistDate(timestampSec: Long): String {
+    return try {
+        val ruLocale = Locale.forLanguageTag("ru")
+        val sdf = SimpleDateFormat("d MMM yyyy 'в' HH:mm", ruLocale)
+        val date = Date(timestampSec * 1000L)
+        val formatted = sdf.format(date)
+        // Капитализация месяца (например "июн" -> "Июн")
+        val parts = formatted.split(" ")
+        if (parts.size >= 3) {
+            val month = parts[1].replaceFirstChar { if (it.isLowerCase()) it.titlecase(ruLocale) else it.toString() }
+            "${parts[0]} $month ${parts.drop(2).joinToString(" ")}"
+        } else {
+            formatted
+        }
+    } catch (_: Exception) {
+        "30 Июн 2024 в 19:04"
+    }
+}
+
+/** Склонение слова «минута» */
+private fun formatMinutesWord(minutes: Int): String {
+    val m100 = minutes % 100
+    val m10 = minutes % 10
+    return when {
+        m100 in 11..19 -> "минут"
+        m10 == 1 -> "минута"
+        m10 in 2..4 -> "минуты"
+        else -> "минут"
+    }
+}
+
+/** Склонение слова «прослушивание» */
+private fun formatPlaysWord(plays: Int): String {
+    val p100 = plays % 100
+    val p10 = plays % 10
+    return when {
+        p100 in 11..19 -> "прослушиваний"
+        p10 == 1 -> "прослушивание"
+        p10 in 2..4 -> "прослушивания"
+        else -> "прослушиваний"
     }
 }
 

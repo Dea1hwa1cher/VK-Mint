@@ -651,6 +651,8 @@ data class AudioPlaylist(
     @SerializedName("access_key")    val accessKey: String? = null,
     @SerializedName("followers")     val followers: Int = 0,
     @SerializedName("plays")         val plays: Int = 0,
+    @SerializedName("create_time")   val createTime: Long = 0,
+    @SerializedName("update_time")   val updateTime: Long = 0,
 ) {
     val coverUrl: String? get() = photo600 ?: photo300 ?: photo200 ?: photo
 }

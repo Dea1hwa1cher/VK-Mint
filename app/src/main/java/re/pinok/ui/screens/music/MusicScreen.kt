@@ -1359,7 +1359,7 @@ enum class TrackSortOrder(val title: String) {
 
 // ─── Плейсхолдер сдвоенных нот из VK Music ───────────────────────────────────
 @Composable
-private fun DualNotesPlaceholder(
+internal fun DualNotesPlaceholder(
     modifier: Modifier = Modifier,
     tint: Color = Color.White.copy(alpha = 0.85f),
 ) {
@@ -1420,7 +1420,7 @@ private fun DualNotesPlaceholder(
     }
 }
 
-private fun headRadiusY(w: Float, h: Float): Float = h * 0.11f
+internal fun headRadiusY(w: Float, h: Float): Float = h * 0.11f
 
 // ─── Вкладка «Моя музыка»: меню + мои треки с пагинацией ─────────────────────
 

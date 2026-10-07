@@ -118,6 +118,8 @@ internal fun parseAudioPlaylist(o: JsonObject): re.pinok.data.model.AudioPlaylis
             accessKey = o.get("access_key")?.takeIf { !it.isJsonNull }?.asString,
             followers = o.get("followers")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
             plays = o.get("plays")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
+            createTime = o.get("create_time")?.takeIf { !it.isJsonNull }?.asLong ?: 0L,
+            updateTime = o.get("update_time")?.takeIf { !it.isJsonNull }?.asLong ?: 0L,
         )
     } catch (e: Exception) {
         AppLog.w("VKApiClient", "parseAudioPlaylist failed: ${e.message}")
