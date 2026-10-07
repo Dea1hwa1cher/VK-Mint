@@ -24,7 +24,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -102,6 +109,35 @@ private fun LibraryTopBar(title: String, onBack: () -> Unit) {
 //  Плейлисты (мои) — audio.getPlaylists
 // ════════════════════════════════════════════════════════════════════
 
+// ─── Фильтр плейлистов ──────────────────────────────────────────────────────
+enum class PlaylistFilter(val title: String) {
+    ALL("Все плейлисты"),
+    MINE("Мои плейлисты"),
+    FOLLOWED("Подписки"),
+}
+
+private fun formatPlaylistSubtitle(playlist: AudioPlaylist): String {
+    val countText = formatTrackCount(playlist.count)
+    val desc = playlist.description?.trim()
+    return if (!desc.isNullOrEmpty()) {
+        "$desc · $countText"
+    } else {
+        countText
+    }
+}
+
+private fun formatTrackCount(count: Int): String {
+    val rem100 = count % 100
+    val rem10 = count % 10
+    val word = when {
+        rem100 in 11..19 -> "треков"
+        rem10 == 1 -> "трек"
+        rem10 in 2..4 -> "трека"
+        else -> "треков"
+    }
+    return "$count $word"
+}
+
 @Composable
 fun MusicPlaylistsScreen(
     onBack: () -> Unit,
@@ -112,13 +148,28 @@ fun MusicPlaylistsScreen(
     var playlists by remember { mutableStateOf<List<AudioPlaylist>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var errorText by remember { mutableStateOf<String?>(null) }
-    // #AUDIO-PAGING-ALL (волна 38): была одна страница на 50 плейлистов —
-    // при библиотеке больше 50 до конца списка было не доскроллить.
     var serverOffset by remember { mutableStateOf(0) }
     var hasMore by remember { mutableStateOf(false) }
     var loadingMore by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+
+    var selectedFilter by remember { mutableStateOf(PlaylistFilter.ALL) }
+    var filterMenuExpanded by remember { mutableStateOf(false) }
+    val myUserId = remember { app.exchangeAuthRepository.userId() }
+
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var newPlaylistTitle by remember { mutableStateOf("") }
+    var newPlaylistDesc by remember { mutableStateOf("") }
+    var creating by remember { mutableStateOf(false) }
+
+    val displayedPlaylists = remember(playlists, selectedFilter, myUserId) {
+        when (selectedFilter) {
+            PlaylistFilter.ALL -> playlists
+            PlaylistFilter.MINE -> if (myUserId != 0L) playlists.filter { it.ownerId == myUserId } else playlists
+            PlaylistFilter.FOLLOWED -> if (myUserId != 0L) playlists.filter { it.ownerId != myUserId } else playlists
+        }
+    }
 
     fun loadMore() {
         if (loadingMore || loading || !hasMore) return
@@ -129,8 +180,6 @@ fun MusicPlaylistsScreen(
                 serverOffset += page.size
                 val fresh = page.filter { nv -> playlists.none { it.ownerId == nv.ownerId && it.id == nv.id } }
                 playlists = (playlists + fresh).distinctBy { "${it.ownerId}_${it.id}" }
-                // #AUDIO-PAGING-HOLE (волна 41): непустая страница ≠ конец списка
-                // (VK может отдать короткую страницу в середине листинга).
                 hasMore = page.isNotEmpty()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -149,11 +198,8 @@ fun MusicPlaylistsScreen(
             val (total, list) = app.apiClient.audioGetPlaylists(count = 50, offset = 0)
             playlists = list
             serverOffset = list.size
-            // #AUDIO-PAGING-HOLE (волна 41): непустая страница ≠ конец списка;
-            // сбой (total=-1) — сохраняем hasMore для повтора.
             hasMore = list.isNotEmpty() || total < 0
             if (list.isEmpty()) {
-                // #AUDIO-PAGING-HOLE: сбой вызова ≠ «нет плейлистов» — честная причина.
                 errorText = if (total < 0) {
                     "Не удалось загрузить плейлисты: ${app.apiClient.lastApiErrorHuman() ?: "неизвестная причина"}"
                 } else {
@@ -171,7 +217,6 @@ fun MusicPlaylistsScreen(
         }
     }
 
-    // #AUDIO-PAGING-ALL: автодогрузка при доскролле до конца.
     LaunchedEffect(listState) {
         snapshotFlow {
             val info = listState.layoutInfo
@@ -183,29 +228,223 @@ fun MusicPlaylistsScreen(
             .collect { if (it > 0) loadMore() }
     }
 
+    if (showCreateDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!creating) showCreateDialog = false },
+            containerColor = Color(0xFF282329),
+            shape = RoundedCornerShape(16.dp),
+            title = {
+                Text(
+                    text = "Новый плейлист",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = newPlaylistTitle,
+                        onValueChange = { newPlaylistTitle = it },
+                        placeholder = { Text("Название плейлиста", color = Color(0xFF9E96A0)) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFF2DAEE),
+                            unfocusedBorderColor = Color(0xFF9E96A0).copy(alpha = 0.5f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color(0xFFF2DAEE),
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newPlaylistDesc,
+                        onValueChange = { newPlaylistDesc = it },
+                        placeholder = { Text("Описание (необязательно)", color = Color(0xFF9E96A0)) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFF2DAEE),
+                            unfocusedBorderColor = Color(0xFF9E96A0).copy(alpha = 0.5f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            cursorColor = Color(0xFFF2DAEE),
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = newPlaylistTitle.isNotBlank() && !creating,
+                    onClick = {
+                        val t = newPlaylistTitle.trim()
+                        val d = newPlaylistDesc.trim()
+                        scope.launch {
+                            creating = true
+                            try {
+                                val myId = app.exchangeAuthRepository.userId()
+                                val newId = app.apiClient.audioCreatePlaylist(
+                                    ownerId = myId,
+                                    title = t,
+                                    description = d,
+                                )
+                                if (newId > 0) {
+                                    val newPl = AudioPlaylist(
+                                        id = newId,
+                                        ownerId = myId,
+                                        title = t,
+                                        description = d,
+                                        count = 0,
+                                    )
+                                    playlists = listOf(newPl) + playlists
+                                    showCreateDialog = false
+                                    newPlaylistTitle = ""
+                                    newPlaylistDesc = ""
+                                }
+                            } catch (e: Exception) {
+                                AppLog.e("MusicPlaylistsScreen", "Failed to create playlist", e)
+                            } finally {
+                                creating = false
+                            }
+                        }
+                    },
+                ) {
+                    Text(if (creating) "Создание…" else "Создать", color = Color(0xFFF2DAEE))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !creating,
+                    onClick = { showCreateDialog = false },
+                ) {
+                    Text("Отмена", color = Color(0xFF9E96A0))
+                }
+            },
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize().background(VK_BLACK)) {
-        LibraryTopBar("Плейлисты", onBack)
+        // ─── Шапка: стрелка назад + селектор «Все плейлисты ⌵» ───
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Назад",
+                    tint = Color.White,
+                )
+            }
+            Box {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { filterMenuExpanded = true }
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = selectedFilter.title,
+                        color = Color.White,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowDown,
+                        contentDescription = "Фильтр плейлистов",
+                        tint = Color(0xFFF2DAEE),
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = filterMenuExpanded,
+                    onDismissRequest = { filterMenuExpanded = false },
+                    modifier = Modifier.background(Color(0xFF282329)),
+                ) {
+                    PlaylistFilter.entries.forEach { filter ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = filter.title,
+                                    color = if (selectedFilter == filter) Color(0xFFF2DAEE) else Color.White,
+                                    fontWeight = if (selectedFilter == filter) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            },
+                            onClick = {
+                                selectedFilter = filter
+                                filterMenuExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
         when {
             loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = VK_ACCENT)
+                CircularProgressIndicator(color = Color(0xFFF2DAEE))
             }
             errorText != null && playlists.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(errorText ?: "", color = VK_TEXT_SECONDARY, fontSize = 14.sp)
+                Text(errorText ?: "", color = Color(0xFF9E96A0), fontSize = 14.sp)
             }
             else -> LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                items(playlists, key = { "${it.ownerId}_${it.id}" }) { pl ->
+                // ─── Пункт «Создать плейлист» (первый элемент со сквирклом) ───
+                item(key = "create_playlist") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showCreateDialog = true }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0xFF382F37)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                                contentDescription = "Создать плейлист",
+                                tint = Color(0xFFF2DAEE),
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "Создать плейлист",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal,
+                        )
+                    }
+                }
+
+                items(displayedPlaylists, key = { "${it.ownerId}_${it.id}" }) { pl ->
                     PlaylistRow(
                         title = pl.title,
                         coverUrl = pl.coverUrl,
-                        subtitle = if (pl.count > 0) "${pl.count} треков" else null,
+                        subtitle = formatPlaylistSubtitle(pl),
                         onClick = { onOpenPlaylist(pl.ownerId, pl.id, pl.accessKey) },
                     )
                 }
-                // #AUDIO-PAGING-ALL: футер догрузки.
-                if (hasMore) {
+
+                // Футер догрузки
+                if (hasMore && selectedFilter == PlaylistFilter.ALL) {
                     item(key = "playlists_more") {
                         Box(Modifier.fillMaxWidth().padding(14.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = VK_ACCENT)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = Color(0xFFF2DAEE),
+                            )
                         }
                     }
                 }
@@ -764,24 +1003,51 @@ private fun PlaylistRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(8.dp)).background(VK_CARD),
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF282329)),
             contentAlignment = Alignment.Center,
         ) {
-            if (coverUrl != null) {
-                AsyncImage(model = coverUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            if (!coverUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = coverUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
             } else {
-                Icon(Icons.Filled.MusicNote, null, tint = VK_ACCENT, modifier = Modifier.size(24.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                    contentDescription = null,
+                    tint = Color(0xFFF2DAEE),
+                    modifier = Modifier.size(26.dp),
+                )
             }
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = VK_TEXT_PRIMARY, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (subtitle != null) {
-                Text(subtitle, color = VK_TEXT_SECONDARY, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    color = Color(0xFF9E96A0),
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
