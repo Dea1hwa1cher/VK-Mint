@@ -108,6 +108,12 @@ fun SOVATheme(
     val accent = SovaColors.accents.getOrElse(accentIndex) { SovaColors.Black }
     val white = Color.White
 
+    // #WCAG-CONTRAST: динамический расчет контрастного onAccent.
+    // Для ярких/светлых акцентов (luminance > 0.4f, например Lime, Orange)
+    // черный текст обеспечивает WCAG AA/AAA контраст (>= 4.5:1).
+    // Для темных и насыщенных (VK Modern, VK Classic, Red, Blue, Black) — белый текст.
+    val onAccent = if (accent.luminance() > 0.4f) SovaColors.Black else white
+
     // #MONET-DYNAMIC-COLOR: dynamic colors только на Android 12+ (API 31, S).
     // На более старых версиях dynamicLightColorScheme/dynamicDarkColorScheme
     // либо crash (нет @RequiresApi guard), либо возвращают fallback. Мы
@@ -121,7 +127,7 @@ fun SOVATheme(
     //   FAB, ProgressIndicator и т.п. через MaterialTheme.colorScheme.primary)
     //   перекрашиваются под обои, и выбранный accent теряется.
     // Гибрид: берём dynamic-схему, но .copy() оверрайдим accent-роли (primary,
-    //   secondary, tertiary, onPrimary, onSecondary, onTertiary) = accent.
+    //   secondary, tertiary, onPrimary, onSecondary, onTertiary, container-токены) = accent.
     //   Surface/background/surfaceVariant остаются от обоев. Так активные
     //   элементы (кнопки, свитчи, прогресс) = accent, а подложка = обои.
     // При monetHybrid=false — чистый Monet (все роли = обои), как раньше.
@@ -130,16 +136,33 @@ fun SOVATheme(
             val ctx = LocalContext.current
             val dyn = if (darkTheme) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
             if (monetHybrid) {
-                // Вычисляем контрастный onPrimary: accent может быть тёмным
-                // или светлым — для readability текста на accent-кнопке.
-                val onAccent = if (accent.luminance() > 0.5f) SovaColors.Black else white
+                val primaryContainerColor = if (darkTheme) {
+                    if (accent == SovaColors.Black) Color(0xFF2C2C2C) else accent.copy(alpha = 0.22f)
+                } else {
+                    if (accent == SovaColors.Black) Color(0xFFE8E8E8) else accent.copy(alpha = 0.12f)
+                }
+                val onPrimaryContainerColor = if (darkTheme) {
+                    white
+                } else {
+                    if (accent == SovaColors.Black || accent.luminance() > 0.4f) SovaColors.Black else accent
+                }
                 dyn.copy(
                     primary = accent,
                     onPrimary = onAccent,
+                    primaryContainer = primaryContainerColor,
+                    onPrimaryContainer = onPrimaryContainerColor,
                     secondary = accent,
                     onSecondary = onAccent,
+                    secondaryContainer = if (darkTheme) Color(0xFF2C2C2C) else Color(0xFFE2E7EE),
+                    onSecondaryContainer = if (darkTheme) white else SovaColors.Black,
                     tertiary = accent,
                     onTertiary = onAccent,
+                    tertiaryContainer = if (darkTheme) {
+                        if (accent == SovaColors.Black) Color(0xFF242424) else accent.copy(alpha = 0.15f)
+                    } else {
+                        if (accent == SovaColors.Black) Color(0xFFF0F0F0) else accent.copy(alpha = 0.08f)
+                    },
+                    onTertiaryContainer = onPrimaryContainerColor,
                     // inversePrimary оставляем от обоев — для inverse-поверхностей.
                 )
             } else {
@@ -148,36 +171,71 @@ fun SOVATheme(
         }
         darkTheme -> darkColorScheme(
             primary = accent,
-            onPrimary = white,
+            onPrimary = onAccent,
+            primaryContainer = if (accent == SovaColors.Black) Color(0xFF2C2C2C) else accent.copy(alpha = 0.22f),
+            onPrimaryContainer = white,
             secondary = accent,
-            onSecondary = white,
+            onSecondary = onAccent,
+            secondaryContainer = Color(0xFF2C2C2C),
+            onSecondaryContainer = white,
             tertiary = accent,
+            onTertiary = onAccent,
+            tertiaryContainer = if (accent == SovaColors.Black) Color(0xFF242424) else accent.copy(alpha = 0.15f),
+            onTertiaryContainer = white,
             background = Color(0xFF121212),       // VK desktop: page background
             onBackground = white,
             surface = Color(0xFF1E1E1E),          // VK desktop: card/surface
             onSurface = white,
-            surfaceVariant = Color(0xFF2A2A2A),  // VK: slightly lighter surface
-            onSurfaceVariant = Color(0xFF999999), // VK: secondary text
-            surfaceContainer = Color(0xFF1E1E1E),
+            surfaceVariant = Color(0xFF2A2A2A),   // VK: slightly lighter surface
+            onSurfaceVariant = Color(0xFF999999),  // VK: secondary text
+            surfaceContainerLowest = Color(0xFF0F0F10),
             surfaceContainerLow = Color(0xFF1A1A1A),
-            surfaceContainerHigh = Color(0xFF2C2C2C),
-            error = Color(0xFFCF6679),
+            surfaceContainer = Color(0xFF1E1E1E),
+            surfaceContainerHigh = Color(0xFF262626),
+            surfaceContainerHighest = Color(0xFF333333),
             outline = Color(0xFF444444),
+            outlineVariant = Color(0xFF333333),
+            error = Color(0xFFCF6679),
+            onError = Color(0xFF1E1E1E),
+            errorContainer = Color(0xFF93000A),
+            onErrorContainer = Color(0xFFFFDAD6),
+            inverseSurface = Color(0xFFE2E2E6),
+            inverseOnSurface = Color(0xFF1B1B1F),
+            inversePrimary = if (accent == SovaColors.Black) white else accent,
         )
         else -> lightColorScheme(
             primary = accent,
-            onPrimary = white,
+            onPrimary = onAccent,
+            primaryContainer = if (accent == SovaColors.Black) Color(0xFFE8E8E8) else accent.copy(alpha = 0.12f),
+            onPrimaryContainer = if (accent == SovaColors.Black || accent.luminance() > 0.4f) SovaColors.Black else accent,
             secondary = accent,
-            onSecondary = white,
+            onSecondary = onAccent,
+            secondaryContainer = Color(0xFFE2E7EE),
+            onSecondaryContainer = SovaColors.Black,
             tertiary = accent,
-            background = white,
+            onTertiary = onAccent,
+            tertiaryContainer = if (accent == SovaColors.Black) Color(0xFFF0F0F0) else accent.copy(alpha = 0.08f),
+            onTertiaryContainer = if (accent == SovaColors.Black || accent.luminance() > 0.4f) SovaColors.Black else accent,
+            background = Color(0xFFF2F4F7),       // Modern neutral page background (separates white cards)
             onBackground = SovaColors.Black,
-            surface = white,
+            surface = white,                      // Clean white card / surface
             onSurface = SovaColors.Black,
-            surfaceVariant = Color(0xFFF5F5F5),
-            onSurfaceVariant = Color(0xFF333333),
-            error = Color(0xFFB00020),
+            surfaceVariant = Color(0xFFF0F2F5),
+            onSurfaceVariant = Color(0xFF555555),
+            surfaceContainerLowest = white,
+            surfaceContainerLow = Color(0xFFF7F9FB),
+            surfaceContainer = Color(0xFFECEFF3),
+            surfaceContainerHigh = Color(0xFFE6E9EE),
+            surfaceContainerHighest = Color(0xFFE0E3E8),
             outline = Color(0xFFCCCCCC),
+            outlineVariant = Color(0xFFE0E0E0),
+            error = Color(0xFFBA1A1A),
+            onError = white,
+            errorContainer = Color(0xFFFFDAD6),
+            onErrorContainer = Color(0xFF410002),
+            inverseSurface = Color(0xFF2E3133),
+            inverseOnSurface = Color(0xFFF1F0F4),
+            inversePrimary = white,
         )
     }
 
