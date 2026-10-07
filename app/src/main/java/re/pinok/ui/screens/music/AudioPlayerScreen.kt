@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
@@ -25,7 +27,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
+import androidx.compose.material.icons.automirrored.filled.Reply
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
@@ -42,9 +48,13 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -85,8 +95,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -198,98 +213,53 @@ fun AudioPlayerScreen(
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        // ─── Top bar: back + title + more ─────────────────────────────
+        // ─── Top bar: collapse + source title + share ─────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Назад",
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = "Свернуть",
                     tint = vkTextPrimary,
+                    modifier = Modifier.size(30.dp),
                 )
             }
-            Text(
-                text = "Сейчас играет",
-                color = vkTextSecondary,
-                fontSize = 13.sp,
+            Column(
                 modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-            var showTopMenu by remember { mutableStateOf(false) }
-            Box {
-                IconButton(onClick = { showTopMenu = true }) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "Ещё",
-                        tint = vkTextPrimary,
-                    )
-                }
-                DropdownMenu(expanded = showTopMenu, onDismissRequest = { showTopMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Текст песни", color = vkTextPrimary) },
-                        onClick = {
-                            showTopMenu = false
-                            showLyrics = true
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Добавить в плейлист", color = vkTextPrimary) },
-                        onClick = {
-                            showTopMenu = false
-                            // Fix #258: открываем диалог выбора плейлиста.
-                            showPlaylistDialog = true
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(if (trackBookmarkedNow) "Удалить из закладок" else "В закладки", color = vkTextPrimary) },
-                        onClick = {
-                            showTopMenu = false
-                            val t = track
-                            if (t == null) return@DropdownMenuItem
-                            // #FAVE-AUDIO (2026-08-03): fave.add(type="audio") НЕ существует
-                            // — у fave.* нет аудио-раздела. #BOOKMARKS-FIX (2026-09-12)
-                            // сводил закладку к «Моей музыке»; тестер ожидает раздельные
-                            // сущности. Волна 40 #BOOKMARKS-TRACKS: «В закладки» =
-                            // ЛОКАЛЬНАЯ закладка (TrackBookmarksRepository → SovaPrefs),
-                            // видна в BookmarksScreen раздел «Треки». Toggle-семантика.
-                            scope.launch {
-                                val now = try {
-                                    app.trackBookmarksRepository.toggle(t)
-                                } catch (e: Exception) {
-                                    AppLog.e("AudioPlayerScreen", "track bookmark toggle error", e)
-                                    null
-                                }
-                                snackbarHostState.showSnackbar(
-                                    when (now) {
-                                        true -> "Добавлено в закладки"
-                                        false -> "Удалено из закладок"
-                                        null -> "Не удалось обновить закладку"
-                                    }
-                                )
-                            }
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Поделиться", color = vkTextPrimary) },
-                        onClick = {
-                            showTopMenu = false
-                            val t = track
-                            if (t == null) {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Нет трека для передачи")
-                                }
-                                return@DropdownMenuItem
-                            }
-                            // Вызов общего helper: shareTrack(context, track) — единая
-                            // логика ACTION_SEND + chooser + обработка ошибок.
-                            shareTrack(localContext, t)
-                        },
-                    )
-                }
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Сейчас играет",
+                    color = vkTextSecondary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                )
+                Text(
+                    text = "Моя музыка",
+                    color = vkTextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(
+                onClick = {
+                    if (track != null) shareTrack(localContext, track)
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Reply,
+                    contentDescription = "Поделиться",
+                    tint = vkTextPrimary,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .graphicsLayer(scaleX = -1f),
+                )
             }
         }
 
@@ -315,21 +285,16 @@ fun AudioPlayerScreen(
             return@Column
         }
 
-        // ─── Крупная обложка ───────────────────────────────────────────
+        Spacer(modifier = Modifier.weight(0.3f))
+
+        // ─── Крупная обложка трека (1:1, square) ──────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 16.dp)
-                .height(320.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.hsl((abs(track.artist.hashCode()) % 360).toFloat(), 0.6f, 0.4f),
-                            Color.hsl(((abs(track.artist.hashCode() * 31)) % 360).toFloat(), 0.5f, 0.25f),
-                        ),
-                    ),
-                ),
+                .padding(horizontal = 24.dp)
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.Black),
             contentAlignment = Alignment.Center,
         ) {
             val albumThumb = track.albumThumb
@@ -341,52 +306,241 @@ fun AudioPlayerScreen(
                     contentScale = ContentScale.Crop,
                 )
             } else {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.3f),
-                    modifier = Modifier.size(96.dp),
-                )
-            }
-        }
+                // Стильный плейсхолдер с белыми сдвоенными нотами (по образу и подобию референса)
+                Canvas(modifier = Modifier.size(130.dp)) {
+                    val strokeW = 12.dp.toPx()
+                    val headR = size.width * 0.13f
 
-        // ─── Название + артист ─────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = track.title,
-                    color = vkTextPrimary,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = track.artist,
-                    color = vkAccent,
-                    fontSize = 15.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            // Иконка текста песни — только если трек имеет lyrics
-            if (track.hasLyrics) {
-                IconButton(onClick = {
-                    lyricsText = null
-                    showLyrics = true
-                }) {
-                    Text("ТТ", color = vkTextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    // Левая головка ноты
+                    val leftCenter = Offset(size.width * 0.30f, size.height * 0.72f)
+                    drawCircle(
+                        color = Color.White,
+                        radius = headR,
+                        center = leftCenter,
+                        style = Stroke(width = strokeW),
+                    )
+
+                    // Правая головка ноты (выше левой)
+                    val rightCenter = Offset(size.width * 0.70f, size.height * 0.58f)
+                    drawCircle(
+                        color = Color.White,
+                        radius = headR,
+                        center = rightCenter,
+                        style = Stroke(width = strokeW),
+                    )
+
+                    // Левый штиль
+                    val leftStemX = leftCenter.x + headR - strokeW * 0.35f
+                    val leftStemBottom = leftCenter.y
+                    val leftStemTop = size.height * 0.28f
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(leftStemX, leftStemBottom),
+                        end = Offset(leftStemX, leftStemTop),
+                        strokeWidth = strokeW,
+                        cap = StrokeCap.Round,
+                    )
+
+                    // Правый штиль
+                    val rightStemX = rightCenter.x + headR - strokeW * 0.35f
+                    val rightStemBottom = rightCenter.y
+                    val rightStemTop = size.height * 0.16f
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(rightStemX, rightStemBottom),
+                        end = Offset(rightStemX, rightStemTop),
+                        strokeWidth = strokeW,
+                        cap = StrokeCap.Round,
+                    )
+
+                    // Верхняя связующая перекладина (beam)
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(leftStemX - strokeW * 0.2f, leftStemTop),
+                        end = Offset(rightStemX + strokeW * 0.2f, rightStemTop),
+                        strokeWidth = strokeW * 1.6f,
+                        cap = StrokeCap.Round,
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        // Фоновый эффект кассетных бобин / кругов свечения под обложкой (как на референсе)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val ringRadius = size.width * 0.16f
+                val strokeRing = Stroke(width = 20.dp.toPx())
+                val glowColor = Color.White.copy(alpha = 0.05f)
+                drawCircle(
+                    color = glowColor,
+                    radius = ringRadius,
+                    center = Offset(size.width * 0.28f, size.height * 0.4f),
+                    style = strokeRing,
+                )
+                drawCircle(
+                    color = glowColor,
+                    radius = ringRadius,
+                    center = Offset(size.width * 0.72f, size.height * 0.4f),
+                    style = strokeRing,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(0.7f))
+
+        // ─── Название трека, артист и быстрые действия (Dislike + Добавить) ─────
+        val myUserId = app.exchangeAuthRepository.userId()
+        val ownedByMe = myUserId != 0L && track.ownerId == myUserId
+        var ownOverride by remember(track.id, track.ownerId) { mutableStateOf<Boolean?>(null) }
+        var ownToggling by remember(track.id, track.ownerId) { mutableStateOf(false) }
+        val ownOverrideNow = ownOverride
+        val ownedNow = if (ownOverrideNow != null) ownOverrideNow else ownedByMe
+
+        var isDisliked by remember(track.id) { mutableStateOf(false) }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                val displayTitle = if (!track.subtitle.isNullOrBlank()) {
+                    "${track.title} (${track.subtitle})"
+                } else {
+                    track.title
+                }
+                Text(
+                    text = displayTitle,
+                    color = vkTextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = track.artist,
+                    color = vkTextSecondary,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            // Дизлайк
+            IconButton(
+                onClick = {
+                    val nextDisliked = !isDisliked
+                    isDisliked = nextDisliked
+                    scope.launch {
+                        try {
+                            val audioId = "${track.ownerId}_${track.id}"
+                            val ok = if (nextDisliked) {
+                                app.apiClient.audioAddDislike(listOf(audioId))
+                            } else {
+                                app.apiClient.audioRemoveDislike(listOf(audioId))
+                            }
+                            if (ok) {
+                                snackbarHostState.showSnackbar(if (nextDisliked) "Не нравится" else "Дизлайк снят")
+                            }
+                        } catch (e: Exception) {
+                            AppLog.e("AudioPlayerScreen", "dislike error", e)
+                        }
+                    }
+                },
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    imageVector = if (isDisliked) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                    contentDescription = "Не нравится",
+                    tint = if (isDisliked) vkAccent else vkTextSecondary,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // В моей музыке (галочка как на референсе)
+            IconButton(
+                onClick = {
+                    if (ownToggling) return@IconButton
+                    val t = track
+                    val wasOwned = if (ownOverrideNow != null) ownOverrideNow else ownedByMe
+                    scope.launch {
+                        ownToggling = true
+                        if (wasOwned) {
+                            var ok = false
+                            var errText: String? = null
+                            try {
+                                ok = app.apiClient.audioDelete(t.id, t.ownerId)
+                                if (!ok) errText = app.apiClient.lastApiError
+                            } catch (e: Exception) {
+                                AppLog.e("AudioPlayerScreen", "#AUDIO-TOGGLE-OWNING delete error", e)
+                                errText = e.message
+                            }
+                            if (ok) {
+                                ownOverride = false
+                                re.pinok.data.audio.AudioLibraryPager.get().removeTrack(t)
+                                snackbarHostState.showSnackbar("Удалено из моей музыки")
+                            } else {
+                                val shown = if (errText != null) errText else "ошибка сети"
+                                snackbarHostState.showSnackbar("Не удалось удалить: $shown")
+                            }
+                        } else {
+                            var ok = false
+                            var errText: String? = null
+                            try {
+                                val (addOk, addErr) = app.apiClient.audioAddReliable(t)
+                                ok = addOk
+                                if (!addOk) errText = addErr
+                            } catch (e: Exception) {
+                                AppLog.e("AudioPlayerScreen", "#AUDIO-TOGGLE-OWNING add error", e)
+                                errText = e.message
+                            }
+                            if (ok) {
+                                ownOverride = true
+                                re.pinok.data.audio.AudioLibraryPager.get().addTrackFront(t)
+                                snackbarHostState.showSnackbar("Добавлено в мою музыку")
+                            } else {
+                                val shown = if (errText != null) errText else "ошибка сети"
+                                snackbarHostState.showSnackbar("Не удалось добавить: $shown")
+                            }
+                        }
+                        ownToggling = false
+                    }
+                },
+                modifier = Modifier.size(40.dp),
+            ) {
+                when {
+                    ownToggling -> CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = vkAccent,
+                        trackColor = Color.Transparent,
+                    )
+                    ownedNow -> Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "В моей музыке",
+                        tint = vkTextPrimary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    else -> Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Добавить в мою музыку",
+                        tint = vkTextSecondary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         // ─── Прогресс-бар с таймингами ─────────────────────────────────
         val effectiveDuration = if (playerState.durationMs > 0) playerState.durationMs else track.duration * 1000L
@@ -415,13 +569,15 @@ fun AudioPlayerScreen(
                 valueRange = 0f..effectiveDuration.coerceAtLeast(1L).toFloat(),
                 modifier = Modifier.fillMaxWidth(),
                 colors = SliderDefaults.colors(
-                    activeTrackColor = vkAccent,
-                    inactiveTrackColor = vkTextSecondary.copy(alpha = 0.3f),
-                    thumbColor = vkAccent,
+                    activeTrackColor = Color.White,
+                    inactiveTrackColor = Color(0xFF333333),
+                    thumbColor = Color.White,
                 ),
             )
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
@@ -429,44 +585,78 @@ fun AudioPlayerScreen(
                     color = vkTextSecondary,
                     fontSize = 11.sp,
                 )
-                // Оставшееся время (с минусом, как в SOVA)
-                val remaining = (effectiveDuration - playerState.positionMs).coerceAtLeast(0L)
                 Text(
-                    text = "-" + remaining.toDurationString(),
+                    text = effectiveDuration.toDurationString(),
                     color = vkTextSecondary,
                     fontSize = 11.sp,
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // ─── Основные контролы: prev / play-pause / next ──────────────
-        // Fix #163: Play должен быть строго по центру экрана.
-        // Раньше в ряду было 4 кнопки (Download/Prev/Play/Next) при
-        // SpaceEvenly → Play оказывался на 60% ширины, а не 50%.
-        // Download перенесён во второй ряд. Теперь 3 кнопки при SpaceEvenly:
-        // позиции 25% / 50% / 75% → Play ровно по центру.
+        // ─── Основные контролы (Repeat squircle, Prev, Play/Pause circle, Next, Shuffle) ───
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Prev
-            IconButton(onClick = { PlayerConnection.prev() }) {
-                Icon(
-                    Icons.Filled.SkipPrevious, "Предыдущий",
-                    tint = vkTextPrimary, modifier = Modifier.size(40.dp),
-                )
-            }
-            // Play/Pause (центральная, крупная)
+            // 1. Повтор (в скруглённом квадратном контейнере, как на референсе)
+            val isRepeatActive = playerState.repeatMode != PlayerState.REPEAT_MODE_OFF
             Box(
                 modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(36.dp))
-                    .background(vkAccent)
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF262626))
+                    .clickable { PlayerConnection.cycleRepeatMode() },
+                contentAlignment = Alignment.Center,
+            ) {
+                val repeatIcon = when (playerState.repeatMode) {
+                    PlayerState.REPEAT_MODE_ONE, PlayerState.REPEAT_MODE_TWO -> Icons.Filled.RepeatOne
+                    else -> Icons.Filled.Repeat
+                }
+                Icon(
+                    imageVector = repeatIcon,
+                    contentDescription = "Повтор",
+                    tint = if (isRepeatActive) Color.White else Color(0xFF8E8E8E),
+                    modifier = Modifier.size(24.dp),
+                )
+                if (playerState.repeatMode == PlayerState.REPEAT_MODE_TWO) {
+                    Text(
+                        text = "2",
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .background(vkAccent, shape = CircleShape)
+                            .padding(horizontal = 3.dp)
+                            .offset(x = 2.dp, y = (-2).dp),
+                    )
+                }
+            }
+
+            // 2. Предыдущий
+            IconButton(
+                onClick = { PlayerConnection.prev() },
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.SkipPrevious,
+                    contentDescription = "Предыдущий",
+                    tint = Color.White,
+                    modifier = Modifier.size(34.dp),
+                )
+            }
+
+            // 3. Играть / Пауза (крупная круглая кнопка тёмно-серого цвета)
+            Box(
+                modifier = Modifier
+                    .size(66.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF424242))
                     .clickable { PlayerConnection.togglePlayPause() },
                 contentAlignment = Alignment.Center,
             ) {
@@ -474,255 +664,247 @@ fun AudioPlayerScreen(
                     imageVector = if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (playerState.isPlaying) "Пауза" else "Играть",
                     tint = Color.White,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(38.dp),
                 )
             }
-            // Next
-            IconButton(onClick = { PlayerConnection.next() }) {
-                Icon(
-                    Icons.Filled.SkipNext, "Следующий",
-                    tint = vkTextPrimary, modifier = Modifier.size(40.dp),
-                )
-            }
-        }
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // ─── Второй ряд: download / own / shuffle / speed / queue / equalizer / repeat ──
-        // Fix #163: Download перенесён сюда из главного ряда (чтобы Play был
-        // по центру). 7 кнопок при SpaceEvenly, padding уменьшен до 12dp.
-        val dl = downloads[track.id]
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Download (перенесён из главного ряда)
-            IconButton(onClick = {
-                if (dl != null && (dl.isCompleted || dl.isInProgress)) {
-                    TrackDownloadManager.removeDownload(track.id)
-                    return@IconButton
-                }
-                if (track.url != null) {
-                    TrackDownloadManager.enqueueDownload(track)
-                    return@IconButton
-                }
-                scope.launch {
-                    AppLog.i("AudioPlayer", "download: track.url is null, trying audioGetById for ${track.id}")
-                    val resolved = app.apiClient.audioGetById(track)
-                    if (resolved != null && resolved.url != null) {
-                        TrackDownloadManager.enqueueDownload(resolved)
-                    } else {
-                        AppLog.w("AudioPlayer", "download: audioGetById returned no URL for ${track.id}")
-                    }
-                }
-            }) {
-                when {
-                    dl == null ->
-                        Icon(Icons.Filled.Download, "Скачать", tint = vkTextSecondary, modifier = Modifier.size(24.dp))
-                    // #OFFLINE-STATUS-1: дохлый трек (DEAD_URL) — MusicOff, красный.
-                    dl.isDead ->
-                        Icon(Icons.Filled.MusicOff, "Недоступен (URL истёк)", tint = Color(0xFFEF4444), modifier = Modifier.size(24.dp))
-                    dl.status == re.pinok.data.model.DownloadStatus.FAILED ->
-                        Icon(Icons.Filled.Download, "Повторить", tint = vkTextSecondary, modifier = Modifier.size(24.dp))
-                    dl.isInProgress -> CircularProgressIndicator(
-                        progress = { if (dl.progress >= 0) dl.progress / 100f else 0f },
-                        modifier = Modifier.size(22.dp),
-                        strokeWidth = 2.dp,
-                        color = vkAccent,
-                        trackColor = Color.Transparent,
-                    )
-                    // #OFFLINE-STATUS-1: siren-кэш — DownloadDone + wifi-бейдж.
-                    dl.isSirenCache -> Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.DownloadDone, "Скачано (онлайн-кеш, siren)", tint = vkAccent, modifier = Modifier.size(24.dp))
-                        Icon(Icons.Filled.Wifi, null, tint = Color(0xFF22C55E), modifier = Modifier.align(Alignment.BottomEnd).offset(x = 1.dp, y = 1.dp).size(11.dp))
-                    }
-                    dl.isCompleted -> Icon(Icons.Filled.DownloadDone, "Скачано", tint = vkAccent, modifier = Modifier.size(24.dp))
-                    else -> Icon(Icons.Filled.Download, "Скачивание", tint = vkTextSecondary, modifier = Modifier.size(24.dp))
-                }
-            }
-            // Поделиться (заметная кнопка) — переиспользует общий helper.
-            IconButton(onClick = {
-                shareTrack(localContext, track)
-            }) {
+            // 4. Следующий
+            IconButton(
+                onClick = { PlayerConnection.next() },
+                modifier = Modifier.size(48.dp),
+            ) {
                 Icon(
-                    Icons.Filled.Share, "Поделиться",
-                    tint = vkTextSecondary, modifier = Modifier.size(24.dp),
+                    imageVector = Icons.Filled.SkipNext,
+                    contentDescription = "Следующий",
+                    tint = Color.White,
+                    modifier = Modifier.size(34.dp),
                 )
             }
-            // Fix #388 #AUDIO-TOGGLE-OWNING: тумблер «В моей музыке» — паритет
-            // веб-VK (data-testid=MusicAudio_ToggleOwning: иконка add, при
-            // data-testactive=true — трек уже в моей музыке → удаление).
-            // Не в моей музыке → тап добавляет (audioAddReliable: audio.add,
-            // при отказе — web-fallback al_audio.php?act=add); уже в моей →
-            // тап СРАЗУ удаляет (audio.delete — как в вебе, без диалога).
-            // Состояние честное: при ошибке API кнопка НЕ переключается.
-            val myUserId = app.exchangeAuthRepository.userId()
-            // userId() возвращает 0, если идентификатор не получен — в этом
-            // случае владение неизвестно и кнопка работает как «Добавить».
-            val ownedByMe = myUserId != 0L && track.ownerId == myUserId
-            // Локальный оверлей владения: null = «как определилось по ownerId»,
-            // true/false — результат успешного добавления/удаления в этой
-            // сессии. remember по треку — при смене трека состояние сбрасывается.
-            var ownOverride by remember(track.id, track.ownerId) { mutableStateOf<Boolean?>(null) }
-            var ownToggling by remember(track.id, track.ownerId) { mutableStateOf(false) }
-            val ownOverrideNow = ownOverride
-            val ownedNow = if (ownOverrideNow != null) ownOverrideNow else ownedByMe
-            IconButton(onClick = {
-                if (ownToggling) return@IconButton
-                val t = track
-                val wasOwned = if (ownOverrideNow != null) ownOverrideNow else ownedByMe
-                scope.launch {
-                    ownToggling = true
-                    if (wasOwned) {
-                        var ok = false
-                        var errText: String? = null
-                        try {
-                            ok = app.apiClient.audioDelete(t.id, t.ownerId)
-                            if (!ok) errText = app.apiClient.lastApiError
-                        } catch (e: Exception) {
-                            AppLog.e("AudioPlayerScreen", "#AUDIO-TOGGLE-OWNING delete error", e)
-                            errText = e.message
-                        }
-                        if (ok) {
-                            ownOverride = false
-                            // Волна 31 #AUDIO-ADD-INSTANT: удаление немедленно
-                            // отражается в общем стейте пейджера «Моей музыки»
-                            // (список и total; курсор выравнивается на −1).
-                            re.pinok.data.audio.AudioLibraryPager.get().removeTrack(t)
-                            snackbarHostState.showSnackbar("Удалено из моей музыки")
-                        } else {
-                            // NULL-ЯВНО: errText nullable — явный if вместо ?:.
-                            val shown = if (errText != null) errText else "ошибка сети"
-                            snackbarHostState.showSnackbar("Не удалось удалить: $shown")
-                        }
-                    } else {
-                        var ok = false
-                        var errText: String? = null
-                        try {
-                            val (addOk, addErr) = app.apiClient.audioAddReliable(t)
-                            ok = addOk
-                            if (!addOk) errText = addErr
-                        } catch (e: Exception) {
-                            AppLog.e("AudioPlayerScreen", "#AUDIO-TOGGLE-OWNING add error", e)
-                            errText = e.message
-                        }
-                        if (ok) {
-                            ownOverride = true
-                            // Волна 31 #AUDIO-ADD-INSTANT: трек немедленно в
-                            // начале «Моей музыки» (общий стейт пейджера, позиция
-                            // как у VK — новейшие первыми; dedupe по ownerId_id;
-                            // курсор выравнивается на +1). Без этого трек появлялся
-                            // в списке только после перезапуска приложения.
-                            re.pinok.data.audio.AudioLibraryPager.get().addTrackFront(t)
-                            snackbarHostState.showSnackbar("Добавлено в мою музыку")
-                        } else {
-                            // NULL-ЯВНО: errText nullable — явный if вместо ?:.
-                            val shown = if (errText != null) errText else "ошибка сети"
-                            snackbarHostState.showSnackbar("Не удалось добавить: $shown")
-                        }
-                    }
-                    ownToggling = false
-                }
-            }) {
-                when {
-                    ownToggling -> CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        strokeWidth = 2.dp,
-                        color = vkAccent,
-                        trackColor = Color.Transparent,
-                    )
-                    ownedNow -> Icon(
-                        Icons.Filled.CheckCircle,
-                        "В моей музыке — нажмите, чтобы удалить",
-                        tint = vkAccent,
-                        modifier = Modifier.size(24.dp),
-                    )
-                    else -> Icon(
-                        Icons.Filled.AddCircleOutline,
-                        "Добавить в мою музыку",
-                        tint = vkTextSecondary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
-            // Shuffle
-            IconButton(onClick = {
-                PlayerConnection.setShuffleModeEnabled(!playerState.shuffleModeEnabled)
-            }) {
+
+            // 5. Перемешать
+            IconButton(
+                onClick = { PlayerConnection.setShuffleModeEnabled(!playerState.shuffleModeEnabled) },
+                modifier = Modifier.size(46.dp),
+            ) {
                 Icon(
-                    Icons.Filled.Shuffle, "Перемешать",
-                    tint = if (playerState.shuffleModeEnabled) vkAccent else vkTextSecondary,
+                    imageVector = Icons.Filled.Shuffle,
+                    contentDescription = "Перемешать",
+                    tint = if (playerState.shuffleModeEnabled) vkAccent else Color(0xFF8E8E8E),
                     modifier = Modifier.size(24.dp),
                 )
             }
-            // Speed
-            var showSpeedMenu by remember { mutableStateOf(false) }
-            Box {
-                IconButton(onClick = { showSpeedMenu = true }) {
+        }
+
+        Spacer(modifier = Modifier.weight(0.5f))
+
+        // ─── Нижняя панель действий (Текст Тт, Эквалайзер, Очередь, Ещё) ───
+        var showMoreMenu by remember { mutableStateOf(false) }
+        var showSpeedDialog by remember { mutableStateOf(false) }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Текст песни (Тт)
+            IconButton(
+                onClick = {
+                    lyricsText = null
+                    showLyrics = true
+                },
+                modifier = Modifier.size(44.dp),
+            ) {
+                Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = "${"%.2f".format(playerState.speed)}x",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (playerState.speed != 1.0f) vkAccent else vkTextSecondary,
+                        text = "T",
+                        color = if (showLyrics) vkAccent else Color(0xFF8E8E8E),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "т",
+                        color = if (showLyrics) vkAccent else Color(0xFF8E8E8E),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.offset(y = (-1).dp),
                     )
                 }
-                DropdownMenu(expanded = showSpeedMenu, onDismissRequest = { showSpeedMenu = false }) {
-                    listOf(0.25f, 0.5f, 0.65f, 0.85f, 1.0f, 1.15f, 1.2f, 1.25f, 1.5f, 2.0f).forEach { spd ->
-                        DropdownMenuItem(
-                            text = { Text("${"%.2f".format(spd)}x") },
-                            onClick = {
-                                PlayerConnection.setPlaybackSpeed(spd)
-                                showSpeedMenu = false
-                            },
-                        )
-                    }
-                }
             }
-            // Queue
-            IconButton(onClick = onOpenQueue) {
+
+            // Эквалайзер
+            IconButton(
+                onClick = { showEqualizer = true },
+                modifier = Modifier.size(44.dp),
+            ) {
                 Icon(
-                    Icons.AutoMirrored.Filled.QueueMusic, "Очередь",
-                    tint = vkTextSecondary, modifier = Modifier.size(24.dp),
+                    imageVector = Icons.Filled.Tune,
+                    contentDescription = "Эквалайзер",
+                    tint = if (showEqualizer) vkAccent else Color(0xFF8E8E8E),
+                    modifier = Modifier.size(24.dp),
                 )
             }
-            // Equalizer
-            IconButton(onClick = { showEqualizer = true }) {
+
+            // Очередь
+            IconButton(
+                onClick = onOpenQueue,
+                modifier = Modifier.size(44.dp),
+            ) {
                 Icon(
-                    Icons.Filled.Equalizer, "Эквалайзер",
-                    tint = vkTextSecondary, modifier = Modifier.size(24.dp),
+                    imageVector = Icons.AutoMirrored.Filled.PlaylistPlay,
+                    contentDescription = "Очередь",
+                    tint = Color(0xFF8E8E8E),
+                    modifier = Modifier.size(28.dp),
                 )
             }
-            // Repeat (4 состояния: OFF / ALL / ONE / TWO)
-            IconButton(onClick = { PlayerConnection.cycleRepeatMode() }) {
-                val repeatIcon = when (playerState.repeatMode) {
-                    PlayerState.REPEAT_MODE_ONE, PlayerState.REPEAT_MODE_TWO -> Icons.Filled.RepeatOne
-                    else -> Icons.Filled.Repeat
+
+            // Меню «Ещё» (три точки)
+            Box {
+                IconButton(
+                    onClick = { showMoreMenu = true },
+                    modifier = Modifier.size(44.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Ещё",
+                        tint = Color(0xFF8E8E8E),
+                        modifier = Modifier.size(24.dp),
+                    )
                 }
-                val repeatTint = if (playerState.repeatMode != PlayerState.REPEAT_MODE_OFF) vkAccent else vkTextSecondary
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(repeatIcon, "Повтор", tint = repeatTint, modifier = Modifier.size(24.dp))
-                    // Бейдж "2" для REPEAT_MODE_TWO поверх иконки RepeatOne.
-                    if (playerState.repeatMode == PlayerState.REPEAT_MODE_TWO) {
-                        Text(
-                            text = "2",
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .background(vkAccent, shape = RoundedCornerShape(50))
-                                .padding(horizontal = 3.dp)
-                                .offset(x = 6.dp, y = (-4).dp),
-                        )
-                    }
+                DropdownMenu(
+                    expanded = showMoreMenu,
+                    onDismissRequest = { showMoreMenu = false },
+                ) {
+                    // Скачать
+                    val dl = downloads[track.id]
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                when {
+                                    dl?.isCompleted == true -> "Скачано"
+                                    dl?.isInProgress == true -> "Скачивание (${dl.progress}%)"
+                                    else -> "Скачать трек"
+                                },
+                                color = vkTextPrimary,
+                            )
+                        },
+                        leadingIcon = {
+                            when {
+                                dl?.isInProgress == true -> CircularProgressIndicator(
+                                    progress = { if (dl.progress >= 0) dl.progress / 100f else 0f },
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = vkAccent,
+                                )
+                                dl?.isCompleted == true -> Icon(Icons.Filled.DownloadDone, null, tint = vkAccent)
+                                else -> Icon(Icons.Filled.Download, null, tint = vkTextSecondary)
+                            }
+                        },
+                        onClick = {
+                            showMoreMenu = false
+                            if (dl != null && (dl.isCompleted || dl.isInProgress)) {
+                                TrackDownloadManager.removeDownload(track.id)
+                                return@DropdownMenuItem
+                            }
+                            if (track.url != null) {
+                                TrackDownloadManager.enqueueDownload(track)
+                                return@DropdownMenuItem
+                            }
+                            scope.launch {
+                                val resolved = app.apiClient.audioGetById(track)
+                                if (resolved != null && resolved.url != null) {
+                                    TrackDownloadManager.enqueueDownload(resolved)
+                                }
+                            }
+                        },
+                    )
+
+                    // Скорость воспроизведения
+                    DropdownMenuItem(
+                        text = { Text("Скорость: ${"%.2f".format(playerState.speed)}x", color = vkTextPrimary) },
+                        onClick = {
+                            showMoreMenu = false
+                            showSpeedDialog = true
+                        },
+                    )
+
+                    // Добавить в плейлист
+                    DropdownMenuItem(
+                        text = { Text("Добавить в плейлист", color = vkTextPrimary) },
+                        onClick = {
+                            showMoreMenu = false
+                            showPlaylistDialog = true
+                        },
+                    )
+
+                    // Закладки
+                    DropdownMenuItem(
+                        text = { Text(if (trackBookmarkedNow) "Удалить из закладок" else "В закладки", color = vkTextPrimary) },
+                        onClick = {
+                            showMoreMenu = false
+                            scope.launch {
+                                val now = try {
+                                    app.trackBookmarksRepository.toggle(track)
+                                } catch (e: Exception) {
+                                    null
+                                }
+                                snackbarHostState.showSnackbar(
+                                    when (now) {
+                                        true -> "Добавлено в закладки"
+                                        false -> "Удалено из закладок"
+                                        null -> "Не удалось обновить закладку"
+                                    }
+                                )
+                            }
+                        },
+                    )
+
+                    // Поделиться
+                    DropdownMenuItem(
+                        text = { Text("Поделиться", color = vkTextPrimary) },
+                        onClick = {
+                            showMoreMenu = false
+                            shareTrack(localContext, track)
+                        },
+                    )
                 }
             }
         }
 
-        // Fix #161: небольшой нижний отступ для визуального баланса.
-        // navigationBarsPadding на Column уже учитывает gesture/nav bar.
-        Spacer(modifier = Modifier.height(16.dp))
+        if (showSpeedDialog) {
+            AlertDialog(
+                onDismissRequest = { showSpeedDialog = false },
+                title = { Text("Скорость воспроизведения", color = vkTextPrimary) },
+                text = {
+                    Column {
+                        listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f).forEach { spd ->
+                            TextButton(
+                                onClick = {
+                                    PlayerConnection.setPlaybackSpeed(spd)
+                                    showSpeedDialog = false
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = "${spd}x" + if (playerState.speed == spd) " ✓" else "",
+                                    color = if (playerState.speed == spd) vkAccent else vkTextPrimary,
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showSpeedDialog = false }) {
+                        Text("Закрыть", color = vkAccent)
+                    }
+                },
+                containerColor = vkCard,
+            )
+        }
+
+        // Небольшой нижний отступ для визуального баланса
+        Spacer(modifier = Modifier.height(8.dp))
     }
 
     // ─── Lyrics Bottom Sheet ────────────────────────────────────────
