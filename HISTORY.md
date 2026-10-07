@@ -17,7 +17,7 @@
 2026-09-02 — hotfix a5a26926: 9 фейлов сборки пользователя = неверные координаты androidx.annotation в каталоге версий (Этап 1.2-в): name "androidx-annotation" → "annotation" (артефакт androidx-annotation не существует; реальный — androidx.annotation:annotation 1.9.1). Резолв падал до компиляции Kotlin, каскад :core:media → 8 задач :app.
 2026-09-02)
 
-### Текущая ветка: `PinoK` (origin: github.com/pinokio240/PinoK_1.git)
+### Текущая ветка: `VK Mint` (origin: github.com/vkmint/vkmint.git)
 ### Последний коммит: fix(calls) — #CALLS-ACCEPT-RESTART: выживание при topology→SERVER (см. git log -1)
 
 ### МАСТЕР-ПЛАН: **[`контейнеры.план.md`](./контейнеры.план.md)** — все этапы, чеклисты, правила.
@@ -64,7 +64,7 @@
 ### Команды для быстрого старта завтра:
 ```bash
 cd /home/z/my-project
-git pull origin PinoK
+git pull origin VK Mint
 git log --oneline -5        # HEAD ≥ f2f6b17d
 rg "Этап 1.2" контейнеры.план.md   # текущий этап
 # Сборка (нужен Android SDK, на машине пользователя):
@@ -75,7 +75,7 @@ rg "Этап 1.2" контейнеры.план.md   # текущий этап
 
 ## 🚀 Стартовая точка для завтра (2026-07-28)
 
-### Текущая ветка: `PinoK` (origin: github.com/pin24/VK_X_mod)
+### Текущая ветка: `VK Mint` (origin: github.com/pin24/VK_X_mod)
 ### Последний коммит: `6889b1fbc` (feat #308 — VK Clips Phase 5)
 
 ### Что сделано за день (2026-07-27/28):
@@ -141,27 +141,27 @@ rg "Этап 1.2" контейнеры.план.md   # текущий этап
 
 ### Ключевые файлы дня (для быстрого контекста):
 - `VK_IMPORT_API.MD` §37 (строки ~10400-11260) — полное исследование clips
-- `app/src/main/java/re/pinok/data/model/Models.kt` — Video class с clip-полями (lines 280-395)
-- `app/src/main/java/re/pinok/api/VKApiClient.kt`:
+- `app/src/main/java/vk/mint/data/model/Models.kt` — Video class с clip-полями (lines 280-395)
+- `app/src/main/java/vk/mint/api/VKApiClient.kt`:
   - lines 10385-10680 — clips API (newsfeedGetClipsFeed, videoGetClipById, searchClips, etc.)
   - lines 10657-10780 — Phase 5 upload pipeline (videoSave, videoUploadFile, videoDeleteClip)
-- `app/src/main/java/re/pinok/ui/screens/clips/`:
+- `app/src/main/java/vk/mint/ui/screens/clips/`:
   - `ClipsFeedScreen.kt` (650 строк) — VerticalPager + ExoPlayer overlay
   - `ClipsRepository.kt` (197 строк) — обёртка над API
   - `ClipsViewModel.kt` (229 строк) — state + pagination + optimistic like/subscribe
   - `ClipInteractionsSheet.kt` (604 строк) — share / comments / more-actions sheets
   - `ClipCreateScreen.kt` (649 строк) — Phase 5: camera + review + publish
   - `ClipCreateViewModel.kt` (325 строк) — Phase 5: record + upload pipeline
-- `app/src/main/java/re/pinok/realtime/ClipsCounter.kt` (90 строк) — badge counter
-- `app/src/main/java/re/pinok/ui/navigation/SovaNavHost.kt` — Clips + ClipCreate routes
-- `app/src/main/java/re/pinok/ui/navigation/Screen.kt` — Screen.Clips, Screen.ClipCreate
+- `app/src/main/java/vk/mint/realtime/ClipsCounter.kt` (90 строк) — badge counter
+- `app/src/main/java/vk/mint/ui/navigation/VkMintNavHost.kt` — Clips + ClipCreate routes
+- `app/src/main/java/vk/mint/ui/navigation/Screen.kt` — Screen.Clips, Screen.ClipCreate
 
 ### Команды для быстрого старта завтра:
 ```bash
 cd /home/z/vkx
 git log --oneline -12          # последние коммиты
 git status                     # должен быть clean
-rg "TODO §37" app/src/main/java/re/pinok/  # все TODO по clips
+rg "TODO §37" app/src/main/java/vk/mint/  # все TODO по clips
 # Сборка (нужен Android SDK):
 ./gradlew compileDebugKotlin
 # Установка на устройство:
@@ -169,7 +169,7 @@ rg "TODO §37" app/src/main/java/re/pinok/  # все TODO по clips
 ```
 
 ### Ветка и remote:
-- Ветка: `PinoK` (локально `PinoK`, remote `origin/PinoK`)
+- Ветка: `VK Mint` (локально `VK Mint`, remote `origin/VK Mint`)
 - Remote: `https://github.com/pin24/VK_X_mod`
 - Все коммиты за день запушены: `8f604b576` (последний push перед Phase 5) → `6889b1fbc` (Phase 5)
 
@@ -177,7 +177,7 @@ rg "TODO §37" app/src/main/java/re/pinok/  # все TODO по clips
 
 ## Стартовая точка для завтра (2026-07-17)
 
-### Текущая ветка: `SOVA_2_lenta`
+### Текущая ветка: `VK_MINT_lenta`
 ### Последний коммит: `c7f7ae794` (fix #86)
 
 ### Что сделано за день:
@@ -232,7 +232,7 @@ rg "TODO §37" app/src/main/java/re/pinok/  # все TODO по clips
 
 ---
 
-## #90 — 2026-07-17 — Аудит дубликатов + VideoPlayer overlay + переименование в PinoK
+## #90 — 2026-07-17 — Аудит дубликатов + VideoPlayer overlay + переименование в VK Mint
 
 ### Часть 1: Аудит дубликатов кода
 
@@ -264,7 +264,7 @@ rg "TODO §37" app/src/main/java/re/pinok/  # все TODO по clips
 
 9. **`messagesGetHistory` vs `messagesGetHistoryWithProfiles`** — почти идентичный код (не тронут)
 
-**Создан:** `app/src/main/java/re/sova/s2/util/FormatUtils.kt` — общие extension-функции форматирования.
+**Создан:** `app/src/main/java/re/vkmint/s2/util/FormatUtils.kt` — общие extension-функции форматирования.
 
 **Обновлено 11 файлов** — удалены private-дубликаты, добавлены импорты утилит, удалены неиспользуемые импорты (SimpleDateFormat, Date, Locale).
 
@@ -280,7 +280,7 @@ rg "TODO §37" app/src/main/java/re/pinok/  # все TODO по clips
 
 **Решение — Overlay (Способ 1):** VideoPlayer теперь рендерится поверх текущего экрана без навигации.
 
-**Изменения в `SovaNavHost.kt`:**
+**Изменения в `VkMintNavHost.kt`:**
 - `VideoHolder` расширен: добавлен `MutableStateFlow<Video?> active` + методы `open(video)`/`close()`.
 - Все 8 мест `VideoHolder.last = video; nav.navigate(Screen.VideoPlayer.buildRoute(...))` заменены на `VideoHolder.open(video)`.
 - `composable(Screen.VideoPlayer.route)` удалён из NavHost.
@@ -291,40 +291,40 @@ rg "TODO §37" app/src/main/java/re/pinok/  # все TODO по clips
 
 **Эффект:** Feed (и любой экран) остаётся живым в Composition. LazyListState, allPosts, likes — всё продолжает жить. Никаких хаков с FeedScrollHolder для видео не нужно.
 
-### Часть 4: Переименование приложения SOVA 2.0 → PinoK
+### Часть 4: Переименование приложения VK Mint 2.0 → VK Mint
 
-- `strings.xml`: `app_name` → "PinoK"
-- `SettingsScreen.kt`: заголовок About → "PinoK"
-- `SovaNavHost.kt`: fallback title + drawer header → "PinoK"
-- `AuthActivity.kt`: title на экране входа → "PinoK"
-- `LockerActivity.kt`: BiometricPrompt title → "PinoK"
-- `SovaPrefs.kt`: дефолтный путь загрузки → "/Music/PinoK/"
-- `FeedScreen.kt`: дефолтный путь загрузки → "/Music/PinoK/"
+- `strings.xml`: `app_name` → "VK Mint"
+- `SettingsScreen.kt`: заголовок About → "VK Mint"
+- `VkMintNavHost.kt`: fallback title + drawer header → "VK Mint"
+- `AuthActivity.kt`: title на экране входа → "VK Mint"
+- `LockerActivity.kt`: BiometricPrompt title → "VK Mint"
+- `VkMintPrefs.kt`: дефолтный путь загрузки → "/Music/VK Mint/"
+- `FeedScreen.kt`: дефолтный путь загрузки → "/Music/VK Mint/"
 
 **Не переименовано** (пакетный рефакторинг — отдельная задача):
-- Пакет `re.sova.s2`, имена классов (SovaApp, SOVATheme, SovaNavHost, SovaPrefs), themes.xml (Theme.SOVA).
+- Пакет `re.vkmint.s2`, имена классов (VkMintApp, VkMintTheme, VkMintNavHost, VkMintPrefs), themes.xml (Theme.VK Mint).
 
 ### Файлы изменены (16):
 - `app/src/main/res/values/strings.xml`
-- `app/src/main/java/re/sova/s2/util/FormatUtils.kt` (НОВЫЙ)
-- `app/src/main/java/re/sova/s2/ui/navigation/SovaNavHost.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/music/MusicScreen.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/feed/FeedScreen.kt`
-- `app/src/main/java/re/sova/s2/ui/components/AudioAttachmentList.kt`
-- `app/src/main/java/re/sova/s2/ui/components/AudioMoreMenu.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/profile/ProfileScreen.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/community/CommunityScreen.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/notifications/NotificationsScreen.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/community/BoardTopicScreen.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/im/ChatDetailScreen.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/im/MessagesScreen.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/music/AudioPlayerScreen.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/offline/OfflineAudioPlayerScreen.kt`
-- `app/src/main/java/re/sova/s2/api/VKApiClient.kt`
-- `app/src/main/java/re/sova/s2/data/local/SovaPrefs.kt`
-- `app/src/main/java/re/sova/s2/auth/AuthActivity.kt`
-- `app/src/main/java/re/sova/s2/locker/LockerActivity.kt`
-- `app/src/main/java/re/sova/s2/ui/screens/settings/SettingsScreen.kt`
+- `app/src/main/java/re/vkmint/s2/util/FormatUtils.kt` (НОВЫЙ)
+- `app/src/main/java/re/vkmint/s2/ui/navigation/VkMintNavHost.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/music/MusicScreen.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/feed/FeedScreen.kt`
+- `app/src/main/java/re/vkmint/s2/ui/components/AudioAttachmentList.kt`
+- `app/src/main/java/re/vkmint/s2/ui/components/AudioMoreMenu.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/profile/ProfileScreen.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/community/CommunityScreen.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/notifications/NotificationsScreen.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/community/BoardTopicScreen.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/im/ChatDetailScreen.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/im/MessagesScreen.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/music/AudioPlayerScreen.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/offline/OfflineAudioPlayerScreen.kt`
+- `app/src/main/java/re/vkmint/s2/api/VKApiClient.kt`
+- `app/src/main/java/re/vkmint/s2/data/local/VkMintPrefs.kt`
+- `app/src/main/java/re/vkmint/s2/auth/AuthActivity.kt`
+- `app/src/main/java/re/vkmint/s2/locker/LockerActivity.kt`
+- `app/src/main/java/re/vkmint/s2/ui/screens/settings/SettingsScreen.kt`
 
 ### ПРАВИЛО #7: HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в проекте. Без исключений.
 
@@ -457,22 +457,22 @@ Fix #92 добавил перебор Origin (`login.vk.com`, `id.vk.com`, `m.vk
 
 ---
 
-## #95 — 2026-07-18 (UTC+3, Europe/Moscow) — ветка PinoK: cherry-pick + доп. кнопка «Войти через сессию браузера»
+## #95 — 2026-07-18 (UTC+3, Europe/Moscow) — ветка VK Mint: cherry-pick + доп. кнопка «Войти через сессию браузера»
 
-**Контекст:** Пользователь работает в ветке `PinoK`. На ветке `PinoK_1` уже был
+**Контекст:** Пользователь работает в ветке `VK Mint`. На ветке `VK_Mint` уже был
 реализован авто-вход через сессию VK из внешнего браузера (коммит `2e82419f3`),
-но в `PinoK` этого функционала не было. Пользователь попросил сделать
+но в `VK Mint` этого функционала не было. Пользователь попросил сделать
 **дополнительную явную кнопку** входа через сессию браузера (помимо авто-проверки).
 
-### Шаг 1: Cherry-pick `2e82419f3` (авто-вход) на PinoK
+### Шаг 1: Cherry-pick `2e82419f3` (авто-вход) на VK Mint
 
 - Коммит чистый: 3 файла, +229 строк, 0 удалений.
 - `ExternalBrowserAuth.kt` — новый файл (конфликтов не было).
-- `SovaApp.kt` — `warmUpCookieManager()` в onCreate.
+- `VkMintApp.kt` — `warmUpCookieManager()` в onCreate.
 - `AuthActivity.kt` — авто-проверка CookieManager в `LaunchedEffect(Unit)`,
   баннер «Сессия VK найдена в браузере», смена текста primary CTA на
   «Войти (сессия найдена)», авто-переход в `AuthPhase.WEBVIEW`.
-- Cherry-pick прошёл без конфликтов → новый коммит `32830c14e` на PinoK.
+- Cherry-pick прошёл без конфликтов → новый коммит `32830c14e` на VK Mint.
 
 ### Шаг 2: Дополнительная явная кнопка (коммит `b5c1ecbb0`)
 
@@ -501,10 +501,10 @@ Fix #92 добавил перебор Origin (`login.vk.com`, `id.vk.com`, `m.vk
 **UI:**
 - `OutlinedButton` + `Icons.Outlined.Public` (глобус = браузер), material-icons-extended уже в зависимостях.
 - `contentColor = primary` (приоритетнее Direct Auth).
-- Подпись: «Если вы уже вошли в VK через Chrome или другой браузер — PinoK подхватит эту сессию автоматически.»
+- Подпись: «Если вы уже вошли в VK через Chrome или другой браузер — VK Mint подхватит эту сессию автоматически.»
 
 **Затронутые файлы:**
-- `app/src/main/java/re/pinok/auth/AuthActivity.kt` (+58/−1):
+- `app/src/main/java/vk/mint/auth/AuthActivity.kt` (+58/−1):
   • `import androidx.compose.material.icons.outlined.Public`
   • `val scope = rememberCoroutineScope()` в `AuthScreen`
   • `val onBrowserSessionLogin: () -> Unit` — lambda с fresh re-check
@@ -518,19 +518,19 @@ Fix #92 добавил перебор Origin (`login.vk.com`, `id.vk.com`, `m.vk
 - Рекомендация пользователю: отозвать текущий PAT в GitHub → Settings → Developer settings → Personal access tokens (токен попал в открытый текст чата ранее). Дальше использовать deploy key (SSH) или секретное хранилище.
 
 ### Результат
-- Ветка `PinoK` теперь содержит и авто-вход (cherry-pick), и явную кнопку.
-- `git log` на PinoK:
+- Ветка `VK Mint` теперь содержит и авто-вход (cherry-pick), и явную кнопку.
+- `git log` на VK Mint:
   ```
-  b5c1ecbb0 feat(PinoK): кнопка «Войти через сессию браузера» на LandingScreen
+  b5c1ecbb0 feat(VK Mint): кнопка «Войти через сессию браузера» на LandingScreen
   32830c14e feat: авто-вход через сессию VK из внешнего браузера (Chrome и т.д.)
   de3bbdf44 refactor: полная переделка авторизации на m.vk.ru localStorage
   ```
-- Push в `origin/PinoK` успешен: `de3bbdf44..b5c1ecbb0`.
+- Push в `origin/VK Mint` успешен: `de3bbdf44..b5c1ecbb0`.
 - Android SDK на сервере отсутствует — компиляцию проверяет пользователь локально (`git pull` + сборка).
 
 ### TODO / следующее
 - Проверить компиляцию локально (особенно `Icons.Outlined.Public` — должен разрешиться через material-icons-extended).
-- Если нужна кнопка и на `PinoK_1` — сделать merge PinoK → PinoK_1 или cherry-pick `b5c1ecbb0`.
+- Если нужна кнопка и на `VK_Mint` — сделать merge VK Mint → VK_Mint или cherry-pick `b5c1ecbb0`.
 
 ### ПРАВИЛО #7: HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в проекте. Без исключений.
 
@@ -539,12 +539,12 @@ Fix #92 добавил перебор Origin (`login.vk.com`, `id.vk.com`, `m.vk
 ## fix #96 — 2026-07-18 (UTC+3, Europe/Moscow) — 4 бага из лога пользователя
 
 **Контекст:** Пользователь прислал лог `лог.txt` (65 записей, vivo V2425A Android 16).
-В логе видны 4 проблемы. Реализованы все 4 фикса в одном коммите `04a2ac313` на ветке PinoK.
+В логе видны 4 проблемы. Реализованы все 4 фикса в одном коммите `04a2ac313` на ветке VK Mint.
 
 ### Симптомы из лога:
 1. `API error 1117: Access token has expired` на все методы (messages.getConversations,
    messages.getLongPollServer) — токен истёк, но не рефрешится.
-2. Лог-дамп начинается с `# SOVA 2.0 detailed log dump` и `# App: re.sova.s2.debug` —
+2. Лог-дамп начинается с `# VK Mint 2.0 detailed log dump` и `# App: re.vkmint.s2.debug` —
    старое название/пакет в видимых строках (rename package уже сделан в commit 95c49484e,
    но строки остались).
 3. Пользователь: «при запуске приложения: приложение открывается начинает
@@ -556,35 +556,35 @@ Fix #92 добавил перебор Origin (`login.vk.com`, `id.vk.com`, `m.vk
 
 ---
 
-### Fix #96-a: Ренейминг SOVA → PinoK в видимых строках логов
+### Fix #96-a: Ренейминг VK Mint → VK Mint в видимых строках логов
 
-**Проблема:** rename package (re.sova.s2 → re.pinok) уже сделан в commit 95c49484e,
-но ВИДИМЫЕ пользователю строки «SOVA» остались в логах, share-subject, именах файлов,
+**Проблема:** rename package (re.vkmint.s2 → vk.mint) уже сделан в commit 95c49484e,
+но ВИДИМЫЕ пользователю строки «VK Mint» остались в логах, share-subject, именах файлов,
 имени темы.
 
 **Файлы (8):**
-- `AppLog.kt`: PREFIX «SOVA» → «PinoK», «# SOVA 2.0 detailed log dump» →
-  «# PinoK detailed log dump», «# === SOVA 2.0 session» → «# === PinoK session»
-- `SovaApp.kt:127`: «onCreate: SOVA 2.0 starting» → «onCreate: PinoK starting»
-- `LogScreen.kt:128`: share-subject «SOVA 2.0 detailed logs» → «PinoK detailed logs»
+- `AppLog.kt`: PREFIX «VK Mint» → «VK Mint», «# VK Mint 2.0 detailed log dump» →
+  «# VK Mint detailed log dump», «# === VK Mint 2.0 session» → «# === VK Mint session»
+- `VkMintApp.kt:127`: «onCreate: VK Mint 2.0 starting» → «onCreate: VK Mint starting»
+- `LogScreen.kt:128`: share-subject «VK Mint 2.0 detailed logs» → «VK Mint detailed logs»
 - `LogViewerDialogContent.kt`: share-subject (2 места) + имя файла
-  «sova_logs_$ts.txt» → «pinok_logs_$ts.txt»
-- `NetworkInterceptors.kt:58`: «Blocked by SOVA AdBlock» → «Blocked by PinoK AdBlock»
-- `themes.xml`: `Theme.SOVA` → `Theme.PinoK` (style name, 2 стиля)
-- `AndroidManifest.xml`: 5 ссылок `@style/Theme.SOVA*` → `@style/Theme.PinoK*`
-- `TrackDownloadManager.kt`: комментарии `/Music/SOVA` → `/Music/PinoK` (2 места,
-  дефолтный путь в SovaPrefs уже `/Music/PinoK/`)
+  «vkmint_logs_$ts.txt» → «vkmint_logs_$ts.txt»
+- `NetworkInterceptors.kt:58`: «Blocked by VK Mint AdBlock» → «Blocked by VK Mint AdBlock»
+- `themes.xml`: `Theme.VK Mint` → `Theme.VkMint` (style name, 2 стиля)
+- `AndroidManifest.xml`: 5 ссылок `@style/Theme.VK Mint*` → `@style/Theme.VkMint*`
+- `TrackDownloadManager.kt`: комментарии `/Music/VK Mint` → `/Music/VK Mint` (2 места,
+  дефолтный путь в VkMintPrefs уже `/Music/VK Mint/`)
 
 **НАМЕРЕННО НЕ тронуты:**
-- `sova2://oauth` deep link scheme — зарегистрирована в VK app settings, переименование
+- `vkmint://oauth` deep link scheme — зарегистрирована в VK app settings, переименование
   сломает OAuth redirect.
-- `sova2-salt:$pin` — соль PIN-хеша в LockerActivity, переименование сделает все
+- `vkmint-salt:$pin` — соль PIN-хеша в LockerActivity, переименование сделает все
   существующие PIN-коды невалидными (хеш не совпадёт).
-- `sova_secure_prefs.xml`, `sova_settings` DataStore — имена файлов/prefs, при
+- `vkmint_secure_prefs.xml`, `vkmint_settings` DataStore — имена файлов/prefs, при
   переименовании пользователь потеряет настройки.
-- `SovaApp` / `SovaPrefs` имена классов — refactor отдельной большой задачей
+- `VkMintApp` / `VkMintPrefs` имена классов — refactor отдельной большой задачей
   (много ссылок по всему коду).
-- `sova_bg` / `sova_fg` цвета в colors.xml — внутренние имена ресурсов, не видны
+- `vkmint_bg` / `vkmint_fg` цвета в colors.xml — внутренние имена ресурсов, не видны
   пользователю.
 
 ---
@@ -611,7 +611,7 @@ Fix #92 добавил перебор Origin (`login.vk.com`, `id.vk.com`, `m.vk
 1. `ensureFreshToken()` — пробует silent refresh через exchange_token.
 2. Для web token (vk1.a.*) refresh требует WebView → возвращает null.
 3. `tokenStorage.clear()` — токен очищен.
-4. `SovaApp.get().notifyTokenInvalidated()` — инкрементирует `tokenInvalidationTicks`.
+4. `VkMintApp.get().notifyTokenInvalidated()` — инкрементирует `tokenInvalidationTicks`.
 5. MainActivity (LaunchedEffect на tokenInvalidationTick) перезапускает AuthActivity.
 6. AuthActivity → авто-проверка CookieManager → если remixsid валиден → авто-вход
    → новый web_token → продолжение работы.
@@ -631,15 +631,15 @@ Fix #92 добавил перебор Origin (`login.vk.com`, `id.vk.com`, `m.vk
 **Корневая причина:** в `MainActivity.onCreate` → `setContent`:
 1. `val snapshot by app.prefs.data.collectAsState(initial = null)` — snap = null
    пока DataStore грузится при холодном старте (200-500ms, дольше на медленном диске).
-2. `if (snap == null) return@SOVATheme` → пустой белый экран, `DraggableLogFab`
+2. `if (snap == null) return@VkMintTheme` → пустой белый экран, `DraggableLogFab`
    НЕ показывается.
 3. `DraggableLogFab` показывался только внутри `if (hasValidToken())` → если
    токена нет, FAB скрыт.
 
 **Фикс в `MainActivity.kt`:**
-- Новый `StartupLoadingScreen` composable: лого «PinoK» + `CircularProgressIndicator`
+- Новый `StartupLoadingScreen` composable: лого «VK Mint» + `CircularProgressIndicator`
   (32dp, primary color). Заменяет пустой белый экран.
-- `return@SOVATheme` заменён на `snap == null -> StartupLoadingScreen()` в `when`.
+- `return@VkMintTheme` заменён на `snap == null -> StartupLoadingScreen()` в `when`.
 - Добавлена ветка `else -> StartupLoadingScreen()` (нет токена, не offline — пока
   AuthActivity не показалась).
 - `Box`-обёртка верхнего уровня: `DraggableLogFab` теперь ВСЕГДА поверх любого
@@ -693,10 +693,10 @@ EqualizerHelper.attachOnce(playerSessionId)  // skip (sessionId==0)
 
 ### Результат
 - 11 файлов изменено, +191/−93 строк.
-- Коммит `04a2ac313` на ветке PinoK.
-- Push в `origin/PinoK` (одноразовый URL-токен).
+- Коммит `04a2ac313` на ветке VK Mint.
+- Push в `origin/VK Mint` (одноразовый URL-токен).
 - Android SDK на сервере отсутствует — компиляцию проверяет пользователь локально
-  (`git pull` на PinoK + сборка).
+  (`git pull` на VK Mint + сборка).
 
 ### TODO / следующее
 - Проверить компиляцию локально (особенно `Player.Listener` import и smart-cast
@@ -705,8 +705,8 @@ EqualizerHelper.attachOnce(playerSessionId)  // skip (sessionId==0)
   воспроизведении трека (в логе «Equalizer attached to sessionId=X»).
 - Проверить: после ~часа использования при истечении web_token должен произойти
   авто-ре-логин через remixsid (кратковременный возврат на AuthActivity → авто-вход).
-- Логи теперь начинаются с «# PinoK detailed log dump» и «# App: re.pinok.debug»
-  (applicationId уже re.pinok, applicationIdSuffix=.debug для debug build).
+- Логи теперь начинаются с «# VK Mint detailed log dump» и «# App: vk.mint.debug»
+  (applicationId уже vk.mint, applicationIdSuffix=.debug для debug build).
 
 ### ПРАВИЛО #7: HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в проекте. Без исключений.
 
@@ -746,7 +746,7 @@ invocations (тело функции вызывает другие `@Composable`
 composable-контекст) корректен — проблема была только в отсутствующем импорте.
 
 ### Фикс
-`app/src/main/java/re/pinok/ui/MainActivity.kt`:
+`app/src/main/java/vk/mint/ui/MainActivity.kt`:
 - Добавлен `import androidx.compose.runtime.Composable` (строка 29, в начало
   группы `androidx.compose.runtime.*`, по алфавиту перед `LaunchedEffect`).
 
@@ -761,17 +761,17 @@ done
 только `MainActivity.kt`.
 
 ### Затронутые файлы
-- `app/src/main/java/re/pinok/ui/MainActivity.kt` (+1 строка: импорт)
+- `app/src/main/java/vk/mint/ui/MainActivity.kt` (+1 строка: импорт)
 - `HISTORY.md` (эта запись)
 
 ### Результат
 - Минимальный однострочный фикс — добавлен пропущенный импорт.
-- Коммит на ветке PinoK.
-- Push в `origin/PinoK` (одноразовый URL-токен, не сохраняется в config).
+- Коммит на ветке VK Mint.
+- Push в `origin/VK Mint` (одноразовый URL-токен, не сохраняется в config).
 - Android SDK на сервере отсутствует — компиляцию проверяет пользователь локально.
 
 ### TODO / следующее
-- Пользователь: `git pull` на ветке PinoK и пересобрать debug-билд —
+- Пользователь: `git pull` на ветке VK Mint и пересобрать debug-билд —
   ошибки `Unresolved reference 'Composable'` должны исчезнуть.
 - Если появятся новые ошибки компиляции — прислать лог, продолжим фикс за фиксом.
 
@@ -822,18 +822,18 @@ done
 Уменьшение: ~10dp ≈ **10%** ✓
 
 ### Затронутые файлы
-- `app/src/main/java/re/pinok/ui/screens/feed/StoriesRow.kt` (11 размеров ×0.9,
+- `app/src/main/java/vk/mint/ui/screens/feed/StoriesRow.kt` (11 размеров ×0.9,
   +5 строк комментария KDoc «Fix #98»)
 - `HISTORY.md` (эта запись)
 
 ### Результат
-- Коммит на ветке PinoK.
-- Push в `origin/PinoK` (одноразовый URL-токен).
+- Коммит на ветке VK Mint.
+- Push в `origin/VK Mint` (одноразовый URL-токен).
 - Android SDK на сервере отсутствует — компиляцию/визуальную проверку выполняет
   пользователь локально (`git pull` + сборка).
 
 ### TODO / следующее
-- Пользователь: `git pull` на PinoK, пересобрать, проверить визуально что панель
+- Пользователь: `git pull` на VK Mint, пересобрать, проверить визуально что панель
   Stories стала на ~10% меньше.
 - Если 10% окажется недостаточно/избыточно — сказать «ещё на X%» или «верни как
   было», скорректирую коэффициент.
@@ -880,17 +880,17 @@ done
 Суммарно от оригинала (до #98): ~102dp → ~87dp = **−14.7%**
 
 ### Затронутые файлы
-- `app/src/main/java/re/pinok/ui/screens/feed/StoriesRow.kt` (11 размеров ×0.95,
+- `app/src/main/java/vk/mint/ui/screens/feed/StoriesRow.kt` (11 размеров ×0.95,
   +6 строк комментария KDoc «Fix #99»)
 - `HISTORY.md` (эта запись)
 
 ### Результат
-- Коммит на ветке PinoK.
-- Push в `origin/PinoK` (одноразовый URL-токен).
+- Коммит на ветке VK Mint.
+- Push в `origin/VK Mint` (одноразовый URL-токен).
 - Android SDK на сервере отсутствует — визуальную проверку выполняет пользователь.
 
 ### TODO / следующее
-- Пользователь: `git pull` на PinoK, пересобрать, проверить визуально что панель
+- Пользователь: `git pull` на VK Mint, пересобрать, проверить визуально что панель
   Stories стала ещё чуть меньше (~5% от размера после #98).
 - Если нужно ещё скорректировать — сказать «ещё на X%» или «верни как было».
 
@@ -1031,13 +1031,13 @@ data-* атрибуты, testids).
 
 ### Результат
 - 3 документа созданы/обновлены.
-- Коммит на ветке PinoK.
-- Push в `origin/PinoK` (одноразовый URL-токен).
+- Коммит на ветке VK Mint.
+- Push в `origin/VK Mint` (одноразовый URL-токен).
 - Android SDK на сервере отсутствует — реализация плана (код) выполняется
   отдельными коммитами по этапам после подтверждения пользователем.
 
 ### TODO / следующее
-- Пользователь: `git pull` на PinoK, прочитать `STORY_VIDEO_CACHE_PLAN.md`.
+- Пользователь: `git pull` на VK Mint, прочитать `STORY_VIDEO_CACHE_PLAN.md`.
 - Подтвердить начало реализации Этапа 1 (`StoryVideoDownloadManager`) —
   или скорректировать план.
 - После подтверждения — реализация по atomic-коммитам (Этап 1 → 2 → 3 → 4 → 5).
@@ -1084,7 +1084,7 @@ data-* атрибуты, testids).
 
 Регистрация:
 - AndroidManifest: `<service .media.StoryVideoDownloadService dataSync>`
-- SovaApp.onCreate: `StoryVideoDownloadManager.init(this)` после VideoDownloadManager
+- VkMintApp.onCreate: `StoryVideoDownloadManager.init(this)` после VideoDownloadManager
 - strings.xml: 8 новых строк (channel, notification, offline_tab_stories)
 
 ### Этап 2: Интеграция в StoryViewerScreen (коммит `15565a2f2`)
@@ -1139,7 +1139,7 @@ data-* атрибуты, testids).
 - `silent` параметр в `enqueueDownload` — skip foreground service
 
 ### Этап 5: Настройки + LRU cap (коммит `f6e555a3a`)
-**SovaPrefs:**
+**VkMintPrefs:**
 - `autoCacheStories: Boolean` (default true) — gate auto-cache
 - `storyCacheLimitMb: Int` (default 200) — LRU cap
 - Keys: `AUTO_CACHE_STORIES`, `STORY_CACHE_LIMIT_MB`
@@ -1149,7 +1149,7 @@ data-* атрибуты, testids).
 - `StoryVideoDownloadManager.enforceCacheLimit(limitMb)` — удаляет самые старые
   stories (по `downloadedAt` из .meta) пока total size ≤ limit
 - Вызывается после каждой успешной загрузки в `downloadFile` (через `prefs.data.first()`)
-- Вызывается в `SovaApp.onCreate` после загрузки prefs (async)
+- Вызывается в `VkMintApp.onCreate` после загрузки prefs (async)
 
 **Gate auto-cache:**
 - `StoryViewerScreen`: читает `autoCacheStories` через `collectAsState`
@@ -1183,7 +1183,7 @@ data-* атрибуты, testids).
 | `a89f34b7b` | 1 | StoryVideoDownloadManager + Service (foundation) |
 | `15565a2f2` | 2 | Интеграция в StoryViewerScreen |
 | `8bdc3568e` | 3 | Tab «Истории» в OfflineManagerScreen |
-| `f6e555a3a` | 5 | SovaPrefs + LRU cap |
+| `f6e555a3a` | 5 | VkMintPrefs + LRU cap |
 
 (Этап 4 URL-refresh + silent реализован внутри этапа 1 в `StoryVideoDownloadManager`)
 
@@ -1191,7 +1191,7 @@ data-* атрибуты, testids).
 - **8 файлов** изменено (3 new + 5 modified)
 - **+1058 / −8 строк**
 - Новые файлы: `StoryVideoDownloadManager.kt` (632), `StoryVideoDownloadService.kt` (120)
-- Изменённые: `SovaApp.kt`, `SovaPrefs.kt`, `StoryViewerScreen.kt`,
+- Изменённые: `VkMintApp.kt`, `VkMintPrefs.kt`, `StoryViewerScreen.kt`,
   `OfflineManagerScreen.kt`, `AndroidManifest.xml`, `strings.xml`
 
 ### Критерии готовности (из плана)
@@ -1206,16 +1206,16 @@ data-* атрибуты, testids).
 - [x] Cache cap 200 МБ: LRU eviction по `downloadedAt`
 - [x] Лента НЕ ломается: StoriesHolder кэш валиден, stories загружаются
 - [x] Нет утечек ExoPlayer (DisposableEffect release on dispose)
-- [x] HISTORY.md обновлён, коммит запушен в `origin/PinoK`
+- [x] HISTORY.md обновлён, коммит запушен в `origin/VK Mint`
 
 ### Результат
-- 4 atomic-коммита на ветке PinoK.
-- Push в `origin/PinoK` (одноразовый URL-токен).
+- 4 atomic-коммита на ветке VK Mint.
+- Push в `origin/VK Mint` (одноразовый URL-токен).
 - Android SDK на сервере отсутствует — компиляцию и runtime-проверку
   выполняет пользователь локально (`git pull` + сборка).
 
 ### TODO / следующее
-- Пользователь: `git pull` на PinoK, пересобрать debug-билд.
+- Пользователь: `git pull` на VK Mint, пересобрать debug-билд.
 - Проверить компиляцию (особенно `StoryVideoDownloadManager`, `StoryOfflineTab`).
 - Проверить в рантайме:
   1. Открыть story video → играет с CDN → в логе «auto-cache story #N (silent)»
@@ -1243,12 +1243,12 @@ e: StoryViewerScreen.kt:253:39 Unresolved reference 'autoCacheStories'.
 ### Анализ
 Строка 252 — чтение pref-снапшота для gate'а auto-cache:
 ```kotlin
-val app = re.pinok.SovaApp.get()
+val app = vk.mint.VkMintApp.get()
 val prefsSnap by app.prefs.data.collectAsState(initial = null)
 val autoCacheStories = prefsSnap?.autoCacheStories ?: true
 ```
 
-- `SovaPrefs.Snapshot.autoCacheStories: Boolean` существует (стр. 164 в SovaPrefs.kt) — поле добавлено в этапе 5.
+- `VkMintPrefs.Snapshot.autoCacheStories: Boolean` существует (стр. 164 в VkMintPrefs.kt) — поле добавлено в этапе 5.
 - Паттерн `app.prefs.data.collectAsState(initial = null)` уже работает в `MainActivity.kt:127`.
 - В `StoryViewerScreen.kt` импорта `androidx.compose.runtime.collectAsState` НЕ было.
 
@@ -1258,7 +1258,7 @@ val autoCacheStories = prefsSnap?.autoCacheStories ?: true
 Достаточно добавить один импорт — обе ошибки исчезнут.
 
 ### Изменение
-**1 файл**: `app/src/main/java/re/pinok/ui/screens/feed/StoryViewerScreen.kt`
+**1 файл**: `app/src/main/java/vk/mint/ui/screens/feed/StoryViewerScreen.kt`
 - Добавлен импорт `androidx.compose.runtime.collectAsState` (строка 31,
   между `Composable` и `DisposableEffect` — алфавитный порядок).
 
@@ -1266,13 +1266,13 @@ val autoCacheStories = prefsSnap?.autoCacheStories ?: true
 - `enqueueDownload(story, ownerName, ownerPhoto100, silent)` — сигнатура
   `StoryVideoDownloadManager.enqueueDownload` совпадает с вызовом (стр. 138-142).
 - `StoryGroup.name: String?` и `StoryGroup.photo100: String?` — существуют (стр. 866-867).
-- `SovaApp.get(): SovaApp` — существует (стр. 418).
+- `VkMintApp.get(): VkMintApp` — существует (стр. 418).
 - Других неразрешённых ссылок в файле нет.
 
 ### Результат
 - Минимальный фикс: +1 строка импорта.
 - Compile error устранён, остальная логика этапа 2 не тронута.
-- Коммит + push в `origin/PinoK`.
+- Коммит + push в `origin/VK Mint`.
 
 ### ПРАВИЛО #7: HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в проекте. Без исключений.
 
@@ -1282,7 +1282,7 @@ val autoCacheStories = prefsSnap?.autoCacheStories ?: true
 
 ### Контекст
 Пользователь прислал лог зависшего приложения (Screenshot_20260718_213600.png):
-splash-screen «PinoK» с прогресс-баром, дальше не идёт. Логи показали:
+splash-screen «VK Mint» с прогресс-баром, дальше не идёт. Логи показали:
 
 ```
 21:32:54.438  messages.getConversations → API error 5 (token invalid)
@@ -1398,7 +1398,7 @@ AuthScreen показывает LANDING (не RESULT_OK → не зависае�
 - [ ] Runtime-проверка пользователем — требует сборки
 
 ### Проверка пользователем
-1. `git pull origin PinoK`
+1. `git pull origin VK Mint`
 2. Пересобрать debug-билд
 3. Воспроизвести: дождаться истечения web_token (~1 час) или очистить данные
 4. Ожидаемое поведение: вместо зависания на splash — silent re-login (2-5 сек),
@@ -1420,7 +1420,7 @@ e: FeedScreen.kt:185:13 No value passed for parameter 'storyCacheLimitMb'.
 
 ### Анализ
 
-**Ошибка (FeedScreen.kt:185)**: `collectAsState(initial = SovaPrefs.Snapshot(...))`
+**Ошибка (FeedScreen.kt:185)**: `collectAsState(initial = VkMintPrefs.Snapshot(...))`
 создаёт Snapshot вручную для initial-значения. В этапе 5 (Fix #100) в `Snapshot`
 добавлены поля `autoCacheStories` и `storyCacheLimitMb`, но конструктор в FeedScreen
 не обновили. Компилятор падает: 2 обязательных параметра не переданы.
@@ -1445,12 +1445,12 @@ netSslPinning = false,
 комментарий Fix #108 с объяснением.
 
 ### Проверка
-- `rg "SovaPrefs.Snapshot("` → только одно место (FeedScreen), исправлено.
+- `rg "VkMintPrefs.Snapshot("` → только одно место (FeedScreen), исправлено.
 - Других warning'ов в логе не было.
 
 ### Результат
 - 2 compile error + 1 warning устранены.
-- Коммит + push в `origin/PinoK`.
+- Коммит + push в `origin/VK Mint`.
 
 ### ПРАВИЛО #7: HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в проекте. Без исключений.
 
@@ -1461,7 +1461,7 @@ netSslPinning = false,
 ### Контекст
 Пользователь продолжил работу над VK_X_mod. Серия точечных правок по
 конкретным багам из тестирования + одна инициатива по null-safety.
-Все коммиты в ветке `PinoK`.
+Все коммиты в ветке `VK Mint`.
 
 ### Коммиты (8 шт.)
 
@@ -1488,7 +1488,7 @@ netSslPinning = false,
 **Файл:** `ui/screens/feed/StoryViewerScreen.kt` (+122)
 
 #### `6825b78cd` — fix #110-#113: 4 проблемы из отзывов пользователя
-- **#110 Настройки авто-кэша (stories + audio):** `SovaPrefs.autoCacheAudio`
+- **#110 Настройки авто-кэша (stories + audio):** `VkMintPrefs.autoCacheAudio`
   (default=true), новая секция «Авто-кэш» в SettingsScreen с двумя тумблерами,
   `PlayerConnection.autoCacheAudio` гейтит 3 места auto-cache (pre-cache first
   track, HLS auto-cache on STATE_READY, error-triggered cache Fix #76).
@@ -1509,7 +1509,7 @@ netSslPinning = false,
 голубой. Выбор цвета — рядом кружков по 32dp, что неудобно и ломается на
 узких экранах.
 **Фикс:**
-- `SovaPrefs.kt` + `MainActivity.kt`: default `themeAccentIndex` 0 → 6 (Cyan,
+- `VkMintPrefs.kt` + `MainActivity.kt`: default `themeAccentIndex` 0 → 6 (Cyan,
   `Color(0xFF00ACC1)` = «голубой»).
 - `SettingsScreen.AccentPicker`: ряд кружков заменён на `Slider` с дискретными
   шагами (10 цветов), превью-плашкой 40×40dp, названием + позицией `N / 10`.
@@ -1517,7 +1517,7 @@ netSslPinning = false,
   добавлены `Slider` + `kotlin.math.roundToInt`.
 
 #### `4f0bbbf8c` — Fix: No value passed for parameter 'autoCacheAudio' в FeedScreen
-**Проблема:** Fix #110 добавил поле `autoCacheAudio` в `SovaPrefs.Snapshot`,
+**Проблема:** Fix #110 добавил поле `autoCacheAudio` в `VkMintPrefs.Snapshot`,
 но fallback-конструирование `Snapshot(...)` в `FeedScreen.kt:190` (initial
 для `collectAsState`) не обновили → compile error.
 **Фикс:** Добавлен `autoCacheAudio = true` в initial-Snapshot рядом с
@@ -1554,9 +1554,9 @@ NavHost → `nav.popBackStack()` возвращал `false` → кнопка н�
 **Фикс (по предложению пользователя — заменил стрелку на крестик):**
 - `LogScreen.kt`: `ArrowBack` → `Close`, `onBack` → `onClose`,
   `contentDescription` «Назад» → «Закрыть».
-- `SovaNavHost.kt`: `onClose` = `popBackStack()`, а если `false` — fallback
+- `VkMintNavHost.kt`: `onClose` = `popBackStack()`, а если `false` — fallback
   на `nav.navigate(Feed)` с `popUpTo(startDestination){inclusive=true}`.
-- `SovaNavHost.kt`: `Screen.Logs` убран из `mainRoutes` — больше не
+- `VkMintNavHost.kt`: `Screen.Logs` убран из `mainRoutes` — больше не
   сохраняется как `lastRoute`, проблема не повторится.
 
 **Проблема #4 (лента):** Лента сбрасывалась в начало после просмотра историй.
@@ -1568,7 +1568,7 @@ header, берём первый реальный пост. Если постов
 
 ### Проверка
 - `grep -c '!!' app/src/main/java/**/*.kt` → 0 (только в комментариях).
-- Все коммиты запушены в `origin/PinoK` через one-shot URL с PAT.
+- Все коммиты запушены в `origin/VK Mint` через one-shot URL с PAT.
 - Токен нигде не сохранён (`git remote get-url origin` → без токена).
 
 ### Правило #7 (повтор)
@@ -1602,10 +1602,10 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
 массовым внедрением плана мессенджера (`MESSENGER_PLAN.MD`). За один непрерывный
 проход реализованы: переключаемый web-API gateway, **весь Sprint 1**, критический
 **Fix #112** (устойчивость сессии после простоя), **весь Sprint 2** и **5 из 7
-пунктов Sprint 3**. Все 17 коммитов в ветке `PinoK`.
+пунктов Sprint 3**. Все 17 коммитов в ветке `VK Mint`.
 
 Главный принцип плана соблюдён: **никаких breaking changes**. Все новые функции
-включаются feature-flag'ами в `SovaPrefs` (по умолчанию `false`), старые модели и
+включаются feature-flag'ами в `VkMintPrefs` (по умолчанию `false`), старые модели и
 API signatures не трогаются, `MessagesScreen`/`ChatDetailScreen` сохраняют
 backward-compatibility. `!!` в кодовой базе = 0 (см. `CODING_STYLE.md`).
 
@@ -1619,11 +1619,11 @@ web-фронтенд) имеет более широкую поверхност�
 перекомпиляции.
 **Фикс:**
 - `VKEndpoints.kt` — все host'ы вынесены в единый `ApiHost` enum/объект,
-  переключаемый через `SovaPrefs.useWebApiGateway`.
+  переключаемый через `VkMintPrefs.useWebApiGateway`.
 - `VKApiClient.kt` — базовый URL строится динамически из эндпоинта.
-- `SovaApp.kt` — инициализация читает флаг до первого запроса.
+- `VkMintApp.kt` — инициализация читает флаг до первого запроса.
 - `AuthActivity.kt` — OAuth flow корректно работает на обоих хостах.
-- `SovaPrefs.kt` — `useWebApiGateway: Boolean = false` (default = старое поведение).
+- `VkMintPrefs.kt` — `useWebApiGateway: Boolean = false` (default = старое поведение).
 - `SettingsScreen.kt` — тумблер «Web API gateway (web.api.vk.ru)».
 - `FeedScreen.kt` — прокинут флаг в Snapshot.
 **Документация:** `VK_IMPORT_API.MD` §ЧАСТЬ 24 (+694 строки) — полное описание
@@ -1639,14 +1639,14 @@ web-фронтенд) имеет более широкую поверхност�
   (message typing), throttle 4с, emit в `typingFlow`.
 - `ChatDetailScreen.kt` — подписка на `typingFlow` для текущего `chatId`,
   подстановка имени пользователя, анимированная смена subtitle TopBar.
-- `SovaPrefs.kt` — `msgTypingIndicator: Boolean = true`.
+- `VkMintPrefs.kt` — `msgTypingIndicator: Boolean = true`.
 - `SettingsScreen.kt` + `FeedScreen.kt` — флаг в UI/Snapshot.
 
 ##### `e72c14123` — P0.2: notifications — имя чата + auto-cancel
 **Проблема:** Push-уведомление показывало только текст, без имени чата; не
 закрывалось при открытии чата.
 **Фикс:**
-- `SovaApp.kt` — при построении notification резолвит имя чата через
+- `VkMintApp.kt` — при построении notification резолвит имя чата через
   `messages.getConversationsById`, подставляет в `setContentTitle`.
 - `MessageNotifier.kt` — `cancel(chatId)` при входе в ChatDetailScreen.
 - `ChatDetailScreen.kt` — `onCancelNotification(chatId)` в `LaunchedEffect`.
@@ -1661,12 +1661,12 @@ web-фронтенд) имеет более широкую поверхност�
 - `ChatDetailScreen.kt` (+171) — `PinnedMessageBar` (collapsable, тап → скролл
   к сообщению, long-press → «Открепить»), пункт «Закрепить» в dropdown меню
   сообщения.
-- `SovaPrefs.kt` — `msgPinBar: Boolean = true`.
+- `VkMintPrefs.kt` — `msgPinBar: Boolean = true`.
 
 ##### `c201d25e4` — P2.4: wall attachment click → PostDetailScreen
 **Фикс:** Тап по wall-вложению в сообщении открывал пустоту. Теперь навигация
 на существующий `PostDetailScreen` через `Screen.PostDetail(postId, ownerId)`.
-**Файлы:** `SovaNavHost.kt` (+5), `ChatDetailScreen.kt` (+4).
+**Файлы:** `VkMintNavHost.kt` (+5), `ChatDetailScreen.kt` (+4).
 
 ##### `707c8fbfd` — P2.1+P2.2+P2.3: video/audio/poll attachment playback
 **Три фичи в одном коммите** (общий контекст рендеринга вложений):
@@ -1676,7 +1676,7 @@ web-фронтенд) имеет более широкую поверхност�
   корректный lifecycle (pause при сворачивании чата).
 - **P2.3 Poll:** `PollAttachmentCard` — голосование, `polls.getById` /
   `polls.addVote`, live-обновление через LongPoll `[75]`.
-**Файлы:** `SovaNavHost.kt` (+20 route), `ChatDetailScreen.kt` (+136 карточек
+**Файлы:** `VkMintNavHost.kt` (+20 route), `ChatDetailScreen.kt` (+136 карточек
 и хендлеров).
 
 #### Fix #112 — критический баг сессии
@@ -1695,7 +1695,7 @@ web-фронтенд) имеет более широкую поверхност�
 3. **`LongPollClient.kt`** — `currentCall` не отменялся при `resume()` →
    висел старый вызов, новый не стартовал. Добавлена отмена `currentCall` в
    начале `resume()`.
-4. **`SovaApp.kt`** — `checkTokenValidity()` — proactive-проверка валидности
+4. **`VkMintApp.kt`** — `checkTokenValidity()` — proactive-проверка валидности
    токена (не только по 401) при старте.
 **Документация:** `VK_IMPORT_API.MD` §ЧАСТЬ 25 (+164 строки) — детальный разбор
 4 причин, диагностика, regression-test.
@@ -1710,7 +1710,7 @@ web-фронтенд) имеет более широкую поверхност�
 - `ChatDetailScreen.kt` — `MessageGrouper` helper: для каждого сообщения
   вычисляет `isFirstInGroup` / `isLastInGroup` на основе (peerId, fromId,
   timestamp delta). Условный отступ/аватар/имя/время только на границах группы.
-- `SovaPrefs.kt` — `msgGrouping: Boolean = true`.
+- `VkMintPrefs.kt` — `msgGrouping: Boolean = true`.
 
 ##### `65edbdca6` — P1.1: date separators + unread divider + scroll-to-bottom FAB
 **Фича (большой коммит, +336/−100):**
@@ -1724,7 +1724,7 @@ web-фронтенд) имеет более широкую поверхност�
 **Реализация:** рефакторинг `LazyColumn` в ChatDetailScreen (state hoisting,
 `rememberLazyListState`, `snapshotFlow { listState.firstVisibleItemIndex }`),
 внешний `Box` для оверлея FAB.
-**SovaPrefs:** `msgDateSeparators` + `msgScrollFab` (оба default true).
+**VkMintPrefs:** `msgDateSeparators` + `msgScrollFab` (оба default true).
 
 ##### `18c734b29` — P1.2: reply via swipe
 **Фича:** Свайп вправо по сообщению → раскрывает reply-панель (quote сообщения)
@@ -1734,7 +1734,7 @@ web-фронтенд) имеет более широкую поверхност�
   bubble, порог 60dp, анимированный сдвиг + фон-иконка Reply. При отпускании
   за порогом → `onReplyTo(message)`. Поле ввода получает `replyTo` state,
   рендерит `ReplyPreviewBar` с кнопкой закрытия.
-- `SovaPrefs.kt` — `msgSwipeReply: Boolean = true`.
+- `VkMintPrefs.kt` — `msgSwipeReply: Boolean = true`.
 **Риск (gestures):** свайп не конфликтует со скроллом LazyColumn (порог по
 дельте, не по скорости).
 
@@ -1745,7 +1745,7 @@ web-фронтенд) имеет более широкую поверхност�
 - `ChatDetailScreen.kt` (+37) — в `MessageBubble` для исходящих рендерит
   `CheckIcon` / `DoneAllIcon` рядом с таймштампом. Состояние берётся из поля
   `Message.isRead` (обновляется через LongPoll событие `[6]` read-inbound).
-- `SovaPrefs.kt` — `msgReadReceipts: Boolean = true`.
+- `VkMintPrefs.kt` — `msgReadReceipts: Boolean = true`.
 
 ##### `7c63a2234` — P1.4: search bar + tabs в MessagesScreen
 **Фича:** Поиск по чатам + 3 таба-фильтра: «Все» / «Каналы» / «Непрочитанные».
@@ -1754,7 +1754,7 @@ web-фронтенд) имеет более широкую поверхност�
   `conversations` по `title.contains(query, ignoreCase)`. `TabRow` с 3 табами:
   All / Channel (filter `isChannel`) / Unread (filter `unreadCount > 0`).
   Debounce 250мс на запрос, сохранение активного таба в state.
-- `SovaPrefs.kt` — `msgSearch: Boolean = true`.
+- `VkMintPrefs.kt` — `msgSearch: Boolean = true`.
 
 #### Sprint 3 — новые экраны (5 из 7)
 
@@ -1766,7 +1766,7 @@ web-фронтенд) имеет более широкую поверхност�
   Set<Long>`. Long-press переключает режим. Тап в режиме → toggle выделения
   (чекбокс на bubble). TopBar меняется на selection-bar с счётчиком и
   action-иконками. Exit → очистка выделения.
-- `SovaPrefs.kt` — `msgMultiSelect: Boolean = true`.
+- `VkMintPrefs.kt` — `msgMultiSelect: Boolean = true`.
 
 ##### `c09902088` — P3.5: multi-file upload
 **Фича:** Выбор до 10 фото за раз (раньше — по одному).
@@ -1774,7 +1774,7 @@ web-фронтенд) имеет более широкую поверхност�
 - `ChatDetailScreen.kt` (+33) — `PickMultipleVisualMedia(maxItems = 10)` через
   `ActivityResultContracts`. Очередь загрузки, прогресс-индикатор на каждом
   превью, отмена отдельной загрузки.
-- `SovaPrefs.kt` — `msgMultiFile: Boolean = true`.
+- `VkMintPrefs.kt` — `msgMultiFile: Boolean = true`.
 
 ##### `2e331d162` — P3.6: dual send/mic button
 **Фича:** Одна кнопка с 6 состояниями: EDIT (текст есть → Send), LOADING
@@ -1783,7 +1783,7 @@ web-фронтенд) имеет более широкую поверхност�
 **Реализация:**
 - `ChatDetailScreen.kt` (+59) — sealed `SendButtonState` + `when`-резолв
   состояния. Анимация перехода иконка/текст через `AnimatedContent`.
-- `SovaPrefs.kt` — `msgDualButton: Boolean = true`.
+- `VkMintPrefs.kt` — `msgDualButton: Boolean = true`.
 
 ##### `dd0efe95f` — P3.2: mute/unmute chat
 **Фича:** Mute/unmute чата (отключить уведомления), bell-off индикатор в списке.
@@ -1793,7 +1793,7 @@ web-фронтенд) имеет более широкую поверхност�
 - `ChatDetailScreen.kt` (+62) — пункт «Отключить уведомления» / «Включить» в
   dropdown TopBar. Bell-off иконка overlay на аватаре.
 - `MessagesScreen.kt` (+14) — `BellOff` overlay на аватаре чата если muted.
-- `SovaPrefs.kt` — `msgMute: Boolean = true`.
+- `VkMintPrefs.kt` — `msgMute: Boolean = true`.
 
 ##### `017683659` — P3.1: ChatInfo screen (самый большой коммит, +766)
 **Фича:** Отдельный экран информации о чате: участники, медиа, действия.
@@ -1805,15 +1805,15 @@ web-фронтенд) имеет более широкую поверхност�
 - `VKApiClient.kt` (+16) — `messagesGetConversationMembers`, расширенный
   `getHistoryAttachments`.
 - `Screen.kt` (+11) — `Screen.ChatInfo(chatId)`.
-- `SovaNavHost.kt` (+21) — route + navArgs.
+- `VkMintNavHost.kt` (+21) — route + navArgs.
 - `ChatDetailScreen.kt` (+18) — кнопка info в TopBar → navigate.
-- `SovaPrefs.kt` — `msgChatInfo: Boolean = true`.
+- `VkMintPrefs.kt` — `msgChatInfo: Boolean = true`.
 
 ### Проверка
-- Все 17 коммитов в ветке `PinoK`, working tree clean.
-- `git log origin/PinoK..HEAD --oneline | wc -l` = 29 (накопленные с прошлых
+- Все 17 коммитов в ветке `VK Mint`, working tree clean.
+- `git log origin/VK Mint..HEAD --oneline | wc -l` = 29 (накопленные с прошлых
   сессий, включая #109-#114) — **НЕ запушены**, ждут push.
-- Каждый коммит соблюдает: `!!` = 0, feature-flag в SovaPrefs, отдельный scope.
+- Каждый коммит соблюдает: `!!` = 0, feature-flag в VkMintPrefs, отдельный scope.
 - Smoke-тесты по плану (§0.3) — пользователь проводит локально (sandbox без
   Android SDK).
 
@@ -1853,10 +1853,10 @@ Sprint 3 — 5/7. Sprint 4 — 0/4.**
 
 ## Стартовая точка для следующей сессии
 
-### Текущая ветка: `PinoK`
+### Текущая ветка: `VK Mint`
 ### Последний коммит: `017683659` (P3.1: ChatInfo screen)
 ### Working tree: clean
-### НЕ запушено: 29 коммитов в `origin/PinoK`
+### НЕ запушено: 29 коммитов в `origin/VK Mint`
 
 ### Что сделано за сессию
 - ✅ Task #Web-API: переключаемый gateway (web.api.vk.ru)
@@ -1908,13 +1908,13 @@ Sprint 3 — 5/7. Sprint 4 — 0/4.**
 ### Ключевые файлы для продолжения
 - `MESSENGER_PLAN.MD` — полный план, §«Итоговая таблица приоритето».
 - `VK_IMPORT_API.MD` §ЧАСТЬ 21-25 — карта экранов/API/аудит/реализации.
-- `app/src/main/java/re/pinok/data/local/SovaPrefs.kt` — все feature-flags `msg*`.
-- `app/src/main/java/re/pinok/ui/screens/im/ChatDetailScreen.kt` — основной
+- `app/src/main/java/vk/mint/data/local/VkMintPrefs.kt` — все feature-flags `msg*`.
+- `app/src/main/java/vk/mint/ui/screens/im/ChatDetailScreen.kt` — основной
   экран чата, куда встроены P0.1, P0.3, P1.1, P1.2, P1.3, P2.5, P2.6, P3.5, P3.6.
-- `app/src/main/java/re/pinok/ui/screens/im/ChatInfoScreen.kt` — новый экран P3.1.
-- `app/src/main/java/re/pinok/ui/screens/im/MessagesScreen.kt` — список чатов
+- `app/src/main/java/vk/mint/ui/screens/im/ChatInfoScreen.kt` — новый экран P3.1.
+- `app/src/main/java/vk/mint/ui/screens/im/MessagesScreen.kt` — список чатов
   (P1.4 search+tabs, P3.2 mute-indicator).
-- `app/src/main/java/re/pinok/api/VKApiClient.kt` — новые методы: pin/unpin,
+- `app/src/main/java/vk/mint/api/VKApiClient.kt` — новые методы: pin/unpin,
   setConversationPushSettings, getConversationMembers, getHistoryAttachments.
 - `CODING_STYLE.md` — политика `!!` (запрещён) / `?:` (5 правильных категорий).
 
@@ -1926,7 +1926,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
 ## Сессия: Sprint 4 завершение (P3.4 + P3.3 + P3.7) — 3 коммита
 
 **Дата:** Сессия после перерыва (продолжение с context-resume).
-**Ветка:** `PinoK`
+**Ветка:** `VK Mint`
 **Base commit:** `5fe6458f5`
 **Финальный commit:** `c02602799` (+ 2 промежуточных)
 **Прогресс:** 17/24 → **20/24 (83%)**. Sprint 4 полностью завершён.
@@ -1939,7 +1939,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
 Найдены незакоммиченные изменения от прошлой сессии — начатый P3.4 (Channel mode):
 - `Models.kt`: `CanWrite` data class + `isChannel` computed property
 - `VKApiClient.kt`: парсинг `can_write` в getConversations/getConversationsById
-- `SovaPrefs.kt`: `msgChannelMode` flag
+- `VkMintPrefs.kt`: `msgChannelMode` flag
 - `ChatDetailScreen.kt`: `channelModeEnabled` + `isChannel` state + `leaveChannel()` + bottomBar ветвление
 - `SettingsScreen.kt` + `FeedScreen.kt`: toggle + preview default
 - **НЕ ХВАТАЛО:** `ChannelFooterBar` composable (вызывалась, но не была определена)
@@ -1958,7 +1958,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
 
 Полная реализация папок диалогов. Гибридный подход:
 - VK API `messages.getChatFolders` (best-effort, недокументирован)
-- Клиентские папки в `SovaPrefs.msgFoldersData` (JSON, source of truth)
+- Клиентские папки в `VkMintPrefs.msgFoldersData` (JSON, source of truth)
 
 **Новые файлы:**
 - `data/local/FoldersRepository.kt` — CRUD с Gson-сериализацией
@@ -1966,11 +1966,11 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
 
 **Изменённые файлы:**
 - `Models.kt` — `ChatFolder(id, title, peerIds, iconEmoji)` data class
-- `SovaPrefs.kt` — `msgFolders` flag + `msgFoldersData` JSON string
+- `VkMintPrefs.kt` — `msgFolders` flag + `msgFoldersData` JSON string
 - `VKApiClient.kt` — `messagesGetChatFolders()` (мягкий парсинг, emptyList при ошибке)
-- `SovaApp.kt` — `foldersRepository` registration
+- `VkMintApp.kt` — `foldersRepository` registration
 - `Screen.kt` — `Screen.FoldersSettings` route
-- `SovaNavHost.kt` — composable registration + `onFoldersSettings` callback
+- `VkMintNavHost.kt` — composable registration + `onFoldersSettings` callback
 - `MessagesScreen.kt` — динамические табы (`FolderTabRow` + `FolderTabChip`) + safety-clamp + legacy 3-tab mode сохранён
 - `SettingsScreen.kt` — toggle «Папки диалого»
 - `FeedScreen.kt` — preview default
@@ -1999,9 +1999,9 @@ Attachments, reply/forwarded overlays, swipe, multi-select, grouping, reactions 
 - `MESSENGER_PLAN.MD` — Sprint 4 отмечен как ✅ ВЫПОЛНЕН с ссылками на коммиты
 
 ### Push verification
-Все 3 коммита запушены в `origin/PinoK`:
+Все 3 коммита запушены в `origin/VK Mint`:
 ```
-5fe6458f5..c02602799  PinoK -> PinoK
+5fe6458f5..c02602799  VK Mint -> VK Mint
 ```
 Проверено: `git rev-list --left-right --count HEAD...FETCH_HEAD` → `0  0` (синхронизировано).
 
@@ -2058,7 +2058,7 @@ batching). По оценке рисков начато с **P4.2** (наимен
 
 ### Что сделано (P4.2 — LongPoll `pts` persistence + `getLongPollHistory` backfill)
 
-**1. `SovaPrefs.kt`** — 3 новых поля:
+**1. `VkMintPrefs.kt`** — 3 новых поля:
 - `msgLpBackfill: Boolean` (default `false`, opt-in feature-flag)
 - `lpLastTs: Long` (default `0`) — сохранённый последний ts
 - `lpLastPts: Long` (default `0`) — сохранённый последний pts
@@ -2074,7 +2074,7 @@ batching). По оценке рисков начато с **P4.2** (наимен
 - `data class LongPollHistory(history, newPts, newTs, messagesCount, conversationsCount)`.
 
 **3. `LongPollClient.kt`** — backfill-логика + persistence:
-- Конструктор принял `prefs: SovaPrefs? = null` (не ломает существующие вызовы).
+- Конструктор принял `prefs: VkMintPrefs? = null` (не ломает существующие вызовы).
 - Новое `@Volatile var lastPts: Long` (аналог `lastTs`, но для pts).
 - `performBackfillIfNeeded(lp)` — при старте цикла, если `msgLpBackfill=true`
   и `lpLastPts > 0` и `lpLastPts < lp.pts` → вызов `messagesGetLongPollHistory`,
@@ -2090,7 +2090,7 @@ batching). По оценке рисков начато с **P4.2** (наимен
 - Все backfill-операции обёрнуты в try/catch с AppLog.w — non-fatal, не рвут
   основной LongPoll-цикл.
 
-**4. `SovaApp.kt`** — передает `prefs` в конструктор `LongPollClient`.
+**4. `VkMintApp.kt`** — передает `prefs` в конструктор `LongPollClient`.
 
 **5. `SettingsScreen.kt`** — новый тумблер в Messages-секции (сразу после
 bubble-less): «Восстановление пропущенных сообщений», subtitle «LongPoll
@@ -2113,12 +2113,12 @@ backfill: проверяет пропущенные события при зап
    против N итераций poll'а.
 
 ### Файлы изменены (5)
-- `app/src/main/java/re/pinok/data/local/SovaPrefs.kt` (+3 поля, +3 setter, +3 key)
-- `app/src/main/java/re/pinok/api/VKApiClient.kt` (+метод +дата-класс, ~95 строк)
-- `app/src/main/java/re/pinok/realtime/LongPollClient.kt` (+prefs param, +lastPts,
+- `app/src/main/java/vk/mint/data/local/VkMintPrefs.kt` (+3 поля, +3 setter, +3 key)
+- `app/src/main/java/vk/mint/api/VKApiClient.kt` (+метод +дата-класс, ~95 строк)
+- `app/src/main/java/vk/mint/realtime/LongPollClient.kt` (+prefs param, +lastPts,
   +performBackfillIfNeeded, +performBackfillOnFailed1, +persistLpState, +pts в failed=0)
-- `app/src/main/java/re/pinok/SovaApp.kt` (+prefs в конструкторе LongPollClient)
-- `app/src/main/java/re/pinok/ui/screens/settings/SettingsScreen.kt` (+1 тумблер)
+- `app/src/main/java/vk/mint/VkMintApp.kt` (+prefs в конструкторе LongPollClient)
+- `app/src/main/java/vk/mint/ui/screens/settings/SettingsScreen.kt` (+1 тумблер)
 
 ### Коммит
 `P4.2: LongPoll pts persistence + getLongPollHistory backfill`
@@ -2149,7 +2149,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
 ### Что сделано (3 коммита, всё opt-in, default false)
 
 #### Commit `49a1cba0c` — P4.1: LongPoll v14 (lp_version=14, mode=1226)
-- `SovaPrefs`: +`msgLpV14` (feature-flag, opt-in).
+- `VkMintPrefs`: +`msgLpV14` (feature-flag, opt-in).
 - `VKApiClient.messagesGetLongPollServer(lpVersion: Int = 3)` — параметризован,
   по умолчанию 3 (обратная совместимость), caller может передать 14.
 - `LongPollClient`:
@@ -2163,7 +2163,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
   базовые индексы (0=type, 1=msgId, 2=flags, 3=peerId, 4=ts, 5=text) сохраняются.
 
 #### Commit `3933aa7a9` — P4.4: execute batching (VKApiClient.execute + VKScript)
-- `SovaPrefs`: +`msgExecuteBatch` (feature-flag, opt-in).
+- `VkMintPrefs`: +`msgExecuteBatch` (feature-flag, opt-in).
 - `VKApiClient`:
   - `execute(script: String): JsonObject?` — общий метод для `execute` endpoint.
     Логирует `execute_errors` (частичный fail), но не падает — caller получает
@@ -2182,7 +2182,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
   и `docs.save` в `executeUnsupportedMethods`, нельзя batch'ить upload+save+send.
 
 #### Commit `0a06eeb2a` — P4.3: WebSocket для каналов (STUB)
-- `SovaPrefs`: +`msgWsChannels` (feature-flag, opt-in).
+- `VkMintPrefs`: +`msgWsChannels` (feature-flag, opt-in).
 - `realtime/ChannelWebSocketClient.kt` — НОВЫЙ файл (STUB):
   - Класс с `start`/`stop`/`subscribe`/`unsubscribe` API.
   - `SharedFlow<LongPollEvent> events` (тот же тип что у `LongPollClient`).
@@ -2191,7 +2191,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
     event types, heartbeat) и что НЕ ИЗВЕСТНО (FIXME при активации).
   - 5-шаговый план активации (снифф → фиксация → парсер → интеграция → skip в LP).
 - `SettingsScreen`: тумблер «WebSocket для канало» с пометкой STUB.
-- **STUB НЕ ИНТЕГРИРОВАН** в основной flow (`SovaApp` НЕ запускает `ChannelWebSocketClient`).
+- **STUB НЕ ИНТЕГРИРОВАН** в основной flow (`VkMintApp` НЕ запускает `ChannelWebSocketClient`).
   Причина: протокол недокументирован, может измениться без notice. Активация только
   когда VK форсирует отказ от LongPoll для каналов.
 
@@ -2215,13 +2215,13 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
 5. **Не удалён старый код** — v3 LP сохранён как default, v14 opt-in.
 
 ### Файлы изменены за Sprint 5 (8 коммитов в этой сессии)
-- `app/src/main/java/re/pinok/data/local/SovaPrefs.kt` (+6 полей, +6 setter, +6 key)
-- `app/src/main/java/re/pinok/api/VKApiClient.kt` (+2 метода, +2 data-класса, параметризация)
-- `app/src/main/java/re/pinok/api/VKScript.kt` — НОВЫЙ
-- `app/src/main/java/re/pinok/realtime/LongPollClient.kt` (+prefs, +lastPts, +backfill, +v14)
-- `app/src/main/java/re/pinok/realtime/ChannelWebSocketClient.kt` — НОВЫЙ (STUB)
-- `app/src/main/java/re/pinok/SovaApp.kt` (+prefs в конструкторе LongPollClient)
-- `app/src/main/java/re/pinok/ui/screens/settings/SettingsScreen.kt` (+4 тумблера)
+- `app/src/main/java/vk/mint/data/local/VkMintPrefs.kt` (+6 полей, +6 setter, +6 key)
+- `app/src/main/java/vk/mint/api/VKApiClient.kt` (+2 метода, +2 data-класса, параметризация)
+- `app/src/main/java/vk/mint/api/VKScript.kt` — НОВЫЙ
+- `app/src/main/java/vk/mint/realtime/LongPollClient.kt` (+prefs, +lastPts, +backfill, +v14)
+- `app/src/main/java/vk/mint/realtime/ChannelWebSocketClient.kt` — НОВЫЙ (STUB)
+- `app/src/main/java/vk/mint/VkMintApp.kt` (+prefs в конструкторе LongPollClient)
+- `app/src/main/java/vk/mint/ui/screens/settings/SettingsScreen.kt` (+4 тумблера)
 - `HISTORY.md` + `MESSENGER_PLAN.MD` — документация
 
 ### Коммиты (4 в этой сессии, +1 ранее)
@@ -2237,7 +2237,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
    - Сниффнуть WS traffic web.vk.com при открытии канала (DevTools → Network → WS).
    - Зафиксировать endpoint, auth flow, event types в VK_IMPORT_API.MD §24.
    - Доделать `ChannelWebSocketClient.onMessage` парсер (сейчас TODO).
-   - В `SovaApp` добавить опциональный старт `ChannelWebSocketClient` если
+   - В `VkMintApp` добавить опциональный старт `ChannelWebSocketClient` если
      `prefs.msgWsChannels == true`.
    - В `LongPollClient.handleNewMessage` skip events для channel peer_id если WS активен.
 3. **Тестирование Sprint 5 на реальном устройстве** (нет Android SDK в sandbox):
@@ -2278,7 +2278,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
   только тапы на ссылке, остальные события идут в родительский `combinedClickable`.
 
 #### Фича 2: Настройка «внутренний vs внешний браузер»
-- **`SovaPrefs.kt`**: новое поле `openLinksInInternalBrowser: Boolean` (default false).
+- **`VkMintPrefs.kt`**: новое поле `openLinksInInternalBrowser: Boolean` (default false).
   - Snapshot field + data flow + setter `setOpenLinksInInternalBrowser` + Keys.OPEN_LINKS_INTERNAL.
 - **`FeedScreen.kt`**: добавлен `openLinksInInternalBrowser = false` в initial Snapshot
   (иначе компилятор падает — тот же класс бага что Fix #100/#110).
@@ -2317,18 +2317,18 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
 #### Навигация
 - **`Screen.kt`**: `object InternalBrowser : Screen("internal_browser?url={url}", ...)`
   + `buildRoute(url)` с `Uri.encode`.
-- **`SovaNavHost.kt`**: импорт `InternalBrowserScreen` + регистрация `composable(...)` с
+- **`VkMintNavHost.kt`**: импорт `InternalBrowserScreen` + регистрация `composable(...)` с
   `NavType.StringType` для URL. `onOpenUrlInternal = { nav.navigate(Screen.InternalBrowser.buildRoute(url)) }`
   подключён к `ChatDetailScreen` в ChatDetail-регистрации.
 
 ### Изменённые файлы (6 modified + 1 new)
-- `app/src/main/java/re/pinok/data/local/SovaPrefs.kt` (+9 строк: field + setter + key + snapshot)
-- `app/src/main/java/re/pinok/ui/navigation/Screen.kt` (+11: InternalBrowser route)
-- `app/src/main/java/re/pinok/ui/navigation/SovaNavHost.kt` (+19: import + composable + onOpenUrlInternal)
-- `app/src/main/java/re/pinok/ui/screens/feed/FeedScreen.kt` (+2: initial snapshot field)
-- `app/src/main/java/re/pinok/ui/screens/im/ChatDetailScreen.kt` (+149: 4 фичи)
-- `app/src/main/java/re/pinok/ui/screens/settings/SettingsScreen.kt` (+8: toggle)
-- `app/src/main/java/re/pinok/ui/screens/browser/InternalBrowserScreen.kt` (NEW, 278 строк)
+- `app/src/main/java/vk/mint/data/local/VkMintPrefs.kt` (+9 строк: field + setter + key + snapshot)
+- `app/src/main/java/vk/mint/ui/navigation/Screen.kt` (+11: InternalBrowser route)
+- `app/src/main/java/vk/mint/ui/navigation/VkMintNavHost.kt` (+19: import + composable + onOpenUrlInternal)
+- `app/src/main/java/vk/mint/ui/screens/feed/FeedScreen.kt` (+2: initial snapshot field)
+- `app/src/main/java/vk/mint/ui/screens/im/ChatDetailScreen.kt` (+149: 4 фичи)
+- `app/src/main/java/vk/mint/ui/screens/settings/SettingsScreen.kt` (+8: toggle)
+- `app/src/main/java/vk/mint/ui/screens/browser/InternalBrowserScreen.kt` (NEW, 278 строк)
 
 ### Примечания
 - **Android SDK нет в sandbox** — компиляция не проверена. Пользователь должен собрать локально.
@@ -2383,12 +2383,12 @@ val inner = when (type) {
 `step1 getMessagesUploadServer` → `step2 upload` → `step3 docs.save` →
 `step4 messages.send` → `✓ sent messageId=…`. При сбое видно, какой этап упал.
 
-#### Фикс 3: `SovaApp.appScope` — фото/файл/голосовое переживают навигацию
+#### Фикс 3: `VkMintApp.appScope` — фото/файл/голосовое переживают навигацию
 **Баг:** upload запускался в `rememberCoroutineScope()`, который отменяется при уходе
 с экрана (`LeftCompositionCancellationException`) → вложение терялось на полпути,
 особенно если пользователь нажал «Назад» во время загрузки.
 
-**Фикс:** добавлен публичный `SovaApp.appScope` (SupervisorJob + Dispatchers.IO).
+**Фикс:** добавлен публичный `VkMintApp.appScope` (SupervisorJob + Dispatchers.IO).
 Переведены на него:
 - `stopAndSendVoice()`
 - `photoPickerLauncher`
@@ -2400,13 +2400,13 @@ UI-обновления (`reloadMessages`, `animateScrollToItem`, `uploading = f
 в композиционном `scope.launch` — no-op если экран закрыт.
 
 ### Изменённые файлы (3 modified + 1 new)
-- `app/src/main/java/re/pinok/api/VKApiClient.kt` — `docsSave()` rewrite + `sendVoiceMessage()` step-logging (+69/−19)
-- `app/src/main/java/re/pinok/SovaApp.kt` — публичный `val appScope` (+14/−0)
-- `app/src/main/java/re/pinok/ui/screens/im/ChatDetailScreen.kt` — `stopAndSendVoice` + 4 launchers → `appScope` (+68/−29)
+- `app/src/main/java/vk/mint/api/VKApiClient.kt` — `docsSave()` rewrite + `sendVoiceMessage()` step-logging (+69/−19)
+- `app/src/main/java/vk/mint/VkMintApp.kt` — публичный `val appScope` (+14/−0)
+- `app/src/main/java/vk/mint/ui/screens/im/ChatDetailScreen.kt` — `stopAndSendVoice` + 4 launchers → `appScope` (+68/−29)
 - `reference/VK_WEB_COMPOSER_ANALYSIS.md` (NEW) — разбор CSS/JS/DOM VK Web композера (413 строк)
 
 ### Коммит
-`83b6006` (branch `PinoK`, запушен в `origin/PinoK`):
+`83b6006` (branch `VK Mint`, запушен в `origin/VK Mint`):
 `Fix #115: голосовые не отправлялись + фото/файл отменялись при навигации`
 
 Вместе с ним ушёл лежавший локально `cc09038` (Unified attach menu).
@@ -2473,7 +2473,7 @@ Canvas 21dp, вертикальные столбики (2dp bar, 1.5dp gap) из
 Box с `CircleShape` + `MaterialTheme.colorScheme.error` фон + внутренний квадрат 14dp.
 
 ### Изменённые файлы (1 modified)
-- `app/src/main/java/re/pinok/ui/screens/im/ChatDetailScreen.kt` (+270/−47):
+- `app/src/main/java/vk/mint/ui/screens/im/ChatDetailScreen.kt` (+270/−47):
   - state: `voiceAmplitudes`, `pendingVoiceFile`, `pendingVoiceDuration`, `isPreviewingVoice`, `previewProgress`, `previewPlayer`
   - funcs: `stopVoiceRecordingForReview()`, `sendPendingVoice()`, `togglePreviewPendingVoice()` + обновлённые `startVoiceRecording`/`stopAndSendVoice`/`cancelVoiceRecording`
   - composables: `VoiceRecordingToolbar`, `VoiceReviewToolbar`, `VoiceWaveformCanvas`
@@ -2529,7 +2529,7 @@ Text(
 таймер `0:04 → 0:05` не дрожит. Но теперь применено корректно через `TextStyle`.
 
 ### Изменённые файлы (1 modified)
-- `app/src/main/java/re/pinok/ui/screens/im/ChatDetailScreen.kt` (2 места):
+- `app/src/main/java/vk/mint/ui/screens/im/ChatDetailScreen.kt` (2 места):
   - строка ~3827: `VoiceRecordingToolbar` — duration при записи
   - строка ~3928: `VoiceReviewToolbar` — duration при предпрослушивании
 
@@ -2544,10 +2544,10 @@ Text(
 
 ### Симптом (из логката 18:24:35)
 ```
-PinoK/VKApi        E  ✗ messages.getConversations err=5 (token invalid)
-PinoK/VKApiClient  W  API error 5 — refreshing via exchange_token
-PinoK/ExchangeAuthRepo W  ensureFreshToken: no exchange_token, web refresh failed — re-login required
-PinoK/VKApiClient  E  Refresh failed, clearing access_token
+VK Mint/VKApi        E  ✗ messages.getConversations err=5 (token invalid)
+VK Mint/VKApiClient  W  API error 5 — refreshing via exchange_token
+VK Mint/ExchangeAuthRepo W  ensureFreshToken: no exchange_token, web refresh failed — re-login required
+VK Mint/VKApiClient  E  Refresh failed, clearing access_token
 ```
 Каждые ~24ч (после истечения web_token) — принудительный re-login через
 WebView m.vk.ru. Удобство silent refresh терялось.
@@ -2578,7 +2578,7 @@ access_token ещё валиден (`hasValidAccessToken()`), вызываем `
 и персистим результат. Одноразовая операция.
 
 `silentAuth()` вызывается из `keepAlive()`, который запускается каждые 60с
-из `SovaApp.startKeepAlive()`. `keepAlive()` вызывает `silentAuth()` только
+из `VkMintApp.startKeepAlive()`. `keepAlive()` вызывает `silentAuth()` только
 в последние 60с перед истечением токена — идеальный момент для backfill:
 токен ещё жив (`getExchangeToken` сработает), но скоро истечёт (нужен refresh).
 После backfill `silentAuth()` продолжает штатно → `authByExchangeToken()` →
@@ -2595,7 +2595,7 @@ val expiresIn = if (currentExpiresAt == 0L) 0L
 ```
 
 ### Изменённые файлы (1 modified)
-- `app/src/main/java/re/pinok/auth/exchange/ExchangeAuthRepository.kt`:
+- `app/src/main/java/vk/mint/auth/exchange/ExchangeAuthRepository.kt`:
   - `saveWebTokenResult()`: +блок получения exchange_token после сохранения web_token
   - `silentAuth()`: +backfill exchange_token при его отсутствии (для старых сессий)
 
@@ -2662,7 +2662,7 @@ player.let { p ->
 `VoiceMessageBubble`, где onCompletionListener тоже не делает release.
 
 ### Изменённые файлы (1 modified)
-- `app/src/main/java/re/pinok/ui/screens/im/ChatDetailScreen.kt`:
+- `app/src/main/java/vk/mint/ui/screens/im/ChatDetailScreen.kt`:
   - 7 мест вызова `release()` — все теперь с `reset()` + сброс listeners
   - `sendPendingVoice()` и `cancelVoiceRecording()` — + освобождение плеера
 
@@ -2672,26 +2672,26 @@ player.let { p ->
 
 ---
 
-## Fix #119 — 2026-07-19: /Music/PinoK не записывался (Scoped Storage path)
+## Fix #119 — 2026-07-19: /Music/VK Mint не записывался (Scoped Storage path)
 
 ### Симптом (из логката 18:24:34)
 ```
-TrackDownloadManager  E  reconfigurePath: target dir not writable: /Music/PinoK — falling back to internal
+TrackDownloadManager  E  reconfigurePath: target dir not writable: /Music/VK Mint — falling back to internal
 ```
-Музыкальные загрузки всегда падали в internal storage вместо /Music/PinoK.
+Музыкальные загрузки всегда падали в internal storage вместо /Music/VK Mint.
 
 ### Причина (2 проблемы)
 
 **1. Неправильная интерпретация пути.**
-Дефолтный путь в `SovaPrefs` = `"/Music/PinoK/"`. Это **относительный** путь
-к external storage, но код делал `File(newPath)` → `File("/Music/PinoK")` —
+Дефолтный путь в `VkMintPrefs` = `"/Music/VK Mint/"`. Это **относительный** путь
+к external storage, но код делал `File(newPath)` → `File("/Music/VK Mint")` —
 абсолютный путь в **root filesystem**, недоступный для записи → `canWrite()=false`
 → fallback на internal. Каждые 60с (keepAlive) эта ошибка логировалась.
 
 **2. SAF tree URI не декодировался.**
 `PathSettingRow` использует `OpenDocumentTree()` → возвращает `content://` URI.
-`uri.path` для tree URI даёт `/tree/primary:Music/PinoK` — это не реальный путь.
-Попадал в `reconfigurePath` → `File("/tree/primary:Music/PinoK")` → тоже fail.
+`uri.path` для tree URI даёт `/tree/primary:Music/VK Mint` — это не реальный путь.
+Попадал в `reconfigurePath` → `File("/tree/primary:Music/VK Mint")` → тоже fail.
 
 ### Исправление
 
@@ -2699,9 +2699,9 @@ TrackDownloadManager  E  reconfigurePath: target dir not writable: /Music/PinoK 
 - Добавлен `resolveDownloadDir(rawPath)` — нормализует путь:
   - `""` → internal storage
   - `/storage/...`, `/data/...`, `/sdcard/...`, `/mnt/...` → как есть (абсолютный)
-  - `/tree/primary:Music/PinoK` → `/storage/emulated/0/Music/PinoK` (SAF decode)
+  - `/tree/primary:Music/VK Mint` → `/storage/emulated/0/Music/VK Mint` (SAF decode)
   - `content://` → fallback на internal (нельзя через File API)
-  - `/Music/PinoK` или `Music/PinoK` → `File(externalRoot, "Music/PinoK")`
+  - `/Music/VK Mint` или `Music/VK Mint` → `File(externalRoot, "Music/VK Mint")`
 - На Android 11+ (API 30+) проверяется `Environment.isExternalStorageManager()`
   и логируется warning, если MANAGE_EXTERNAL_STORAGE не предоставлено.
 
@@ -2712,22 +2712,22 @@ TrackDownloadManager  E  reconfigurePath: target dir not writable: /Music/PinoK 
 
 **SettingsScreen.kt — PathSettingRow:**
 - На Android 11+ если `!isExternalStorageManager()`:
-  - Жёлтое предупреждение: "Для записи в /Music/PinoK нужен доступ ко всем файлам"
+  - Жёлтое предупреждение: "Для записи в /Music/VK Mint нужен доступ ко всем файлам"
   - Кнопка "Доступ к файлам" → открывает `ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION`
 - Если доступ предоставлен: зелёная галочка "Доступ ко всем файлам предоставлен"
 
 ### Цепочка
-1. Дефолтный путь `/Music/PinoK/` теперь → `/storage/emulated/0/Music/PinoK` ✓
+1. Дефолтный путь `/Music/VK Mint/` теперь → `/storage/emulated/0/Music/VK Mint` ✓
 2. Пользователь нажимает "Доступ к файлам" → система → MANAGE_EXTERNAL_STORAGE ✓
-3. `canWrite()` = true → загрузки пишутся в public `/Music/PinoK/` ✓
+3. `canWrite()` = true → загрузки пишутся в public `/Music/VK Mint/` ✓
 4. Файлы видны в файловых менеджерах и музыкальных плеерах системы ✓
 
 ### Изменённые файлы (3 modified)
-- `app/src/main/java/re/pinok/media/TrackDownloadManager.kt`: +`resolveDownloadDir()`,
+- `app/src/main/java/vk/mint/media/TrackDownloadManager.kt`: +`resolveDownloadDir()`,
   `reconfigurePath` использует его, import `android.os.Environment`
-- `app/src/main/java/re/pinok/media/VideoDownloadManager.kt`: +`resolveVideoDir()`,
+- `app/src/main/java/vk/mint/media/VideoDownloadManager.kt`: +`resolveVideoDir()`,
   `reconfigurePath` + canWrite fallback, import `android.os.Environment`
-- `app/src/main/java/re/pinok/ui/screens/settings/SettingsScreen.kt`:
+- `app/src/main/java/vk/mint/ui/screens/settings/SettingsScreen.kt`:
   `PathSettingRow` + проверка MANAGE_EXTERNAL_STORAGE + кнопка запроса + warnings,
   imports: Intent, Uri, Build, Environment, Settings, FolderOpen/WarningAmber icons
 
@@ -2793,7 +2793,7 @@ MANAGE_EXTERNAL_STORAGE декларирован в AndroidManifest.xml (стр�
 6. Выход с экрана чата → dispose(), MediaPlayer освобождён
 
 ### Изменённые файлы (1 modified)
-- `app/src/main/java/re/pinok/ui/screens/im/ChatDetailScreen.kt`:
+- `app/src/main/java/vk/mint/ui/screens/im/ChatDetailScreen.kt`:
   - +`VoicePlaybackController` класс (~135 строк)
   - `VoiceMessageBubble` переписан: -локальный MediaPlayer, +controller
   - `MessageBubble`: +параметр voicePlaybackController
@@ -2864,10 +2864,10 @@ lifecycle. Решение через `totalItemsCount` — одна строка
 перемещения блоков и без изменения lifecycle.
 
 ### Изменённые файлы (2 modified)
-- `app/src/main/java/re/pinok/ui/screens/im/ChatDetailScreen.kt`:
+- `app/src/main/java/vk/mint/ui/screens/im/ChatDetailScreen.kt`:
   - -`import androidx.compose.runtime.Saver`
   - +`import androidx.compose.runtime.saveable.Saver`
-- `app/src/main/java/re/pinok/ui/screens/im/MessagesScreen.kt`:
+- `app/src/main/java/vk/mint/ui/screens/im/MessagesScreen.kt`:
   - `reachedEnd`: `filteredChats.size` → `listState.layoutInfo.totalItemsCount`
   - +guard `total > 0 &&` перед сравнением
   - +комментарий Fix #129 с объяснением
@@ -2887,7 +2887,7 @@ lifecycle. Решение через `totalItemsCount` — одна строка
 > git-коммитах, но не были занесены в HISTORY.md в момент работы.
 > Ниже — краткое резюме для сохранения append-only принципа.
 > Полные тела коммитов доступны через `git log`.
-> Ветка: `PinoK`. После этого блока HEAD: `535da4360` (Fix #167).
+> Ветка: `VK Mint`. После этого блока HEAD: `535da4360` (Fix #167).
 
 ---
 
@@ -2901,7 +2901,7 @@ lifecycle. Решение через `totalItemsCount` — одна строка
 - **#142+#143+#144** — Notification throttle 500ms / cancel on destroy / AES pad вместо truncate
 - **#145-#149** — Build fix + 4 диалоговых фикса (messagesDelete array, history action object, LongPoll codes 1/2/3, CancellationException catch)
 - **#150+#151** — messagesDelete robust parsing (WEB gateway variants) + markAsRead CancellationException
-- **#152+#153+#154** — NOTIFICATION_ID collision 1001→2001 / FileProvider ClipData / PinoK as share target
+- **#152+#153+#154** — NOTIFICATION_ID collision 1001→2001 / FileProvider ClipData / VK Mint as share target
 - **#155** — Kotlin nested block comment fix (`image/*)` → `image)`)
 - **#156** — Share sheet MIME fix (`text/plain; charset=utf-8` → `text/plain`, 3 intent-filters)
 - **#154-full** — ShareToChatSheet: полный форвардинг share → выбор чата → отправка
@@ -2942,7 +2942,7 @@ ExoPlayer пытается играть повреждённый `.ts` → не�
 - Новый публичный `isCacheValid(trackId)`: StateFlow lookup + структурная проверка.
 
 **Fix 2 — PlayerConnection.toMediaItem (гибрид ONLINE/OFFLINE):**
-- Читает `SovaApp.networkObserver.isOnline()` (реактивный StateFlow, O(1)).
+- Читает `VkMintApp.networkObserver.isOnline()` (реактивный StateFlow, O(1)).
 - `useLocal = localFile != null && (!isOnline || !hasUrl)`:
   - online + hasUrl → стримим HLS (cache ignored)
   - offline + hasUrl → кэш если валиден
@@ -2960,8 +2960,8 @@ ExoPlayer пытается играть повреждённый `.ts` → не�
 - `isValidMpegTs` логирует sync bytes при INVALID.
 
 ### Изменённые файлы
-- `app/src/main/java/re/pinok/media/PlayerConnection.kt` (toMediaItem, playTrackList)
-- `app/src/main/java/re/pinok/media/TrackDownloadManager.kt` (isValidAudioFile, isValidMpegTs, isCacheValid)
+- `app/src/main/java/vk/mint/media/PlayerConnection.kt` (toMediaItem, playTrackList)
+- `app/src/main/java/vk/mint/media/TrackDownloadManager.kt` (isValidAudioFile, isValidMpegTs, isCacheValid)
 
 ### Ожидаемый logcat после фикса
 ```
@@ -2973,7 +2973,7 @@ ONLINE mime=APPLICATION_M3U8 (HLS)
 → нет UnrecognizedInputFormatException → нет перепрыгивания
 
 ### Коммит
-`0fdad4b4b` — запушен в origin/PinoK.
+`0fdad4b4b` — запушен в origin/VK Mint.
 
 ---
 
@@ -3020,7 +3020,7 @@ verifyCacheIntegrity: #456249870 NO_HASH (старая загрузка, нет 
 ```
 
 ### Коммит
-`5e5af89bf` — запушен в origin/PinoK.
+`5e5af89bf` — запушен в origin/VK Mint.
 
 ---
 
@@ -3088,7 +3088,7 @@ deepScanTrack: #456249870 DONE — structural=true sha=VALID m3u8=CHANGED overal
 ```
 
 ### Коммит
-`535da4360` — запушен в origin/PinoK.
+`535da4360` — запушен в origin/VK Mint.
 
 ---
 
@@ -3106,8 +3106,8 @@ User может измерить эффективность каждого ур�
 
 ### Git
 ```
-branch: PinoK
-HEAD: 535da4360 (origin/PinoK, не ahead)
+branch: VK Mint
+HEAD: 535da4360 (origin/VK Mint, не ahead)
 commits сегодня: 3 (Fix #165, #166, #167)
 ```
 
@@ -3132,7 +3132,7 @@ commits сегодня: 3 (Fix #165, #166, #167)
 отображался «непонятный набор бук» — классический симптом HTML-entity /
 encoding-мismatch в email, возвращаемом VK.
 
-### Что сделано (коммит 978505d50, уже в origin/PinoK)
+### Что сделано (коммит 978505d50, уже в origin/VK Mint)
 - CookieManager warmup: устранён NPE при раннем доступе к CookieManager
   до инициализации WebView.
 - WebView UTF-8 safety: принудительная установка UTF-8 при парсинге
@@ -3178,21 +3178,21 @@ CookieManager + storage.clear() в signOut() полностью очищают �
 > Надо добавить настройку общий размер текста в процентах, как в + так и в минус. Это сложно?
 
 ### Оценка
-Не сложно — фундамент уже был в SovaPrefs (fontScale: Int, default 100,
+Не сложно — фундамент уже был в VkMintPrefs (fontScale: Int, default 100,
 ключ FONT_SCALE, сеттер setFontScale), но фактически не использовался.
 ~30 минут работы.
 
 ### Что сделано (коммит aba255fc4)
 **Theme.kt:**
-- `SOVATheme` принимает `fontScale: Int = 100`
+- `VkMintTheme` принимает `fontScale: Int = 100`
 - Переопределяет `LocalDensity` → множитель применяется ко всем
   sp-значениям глобально (включая 176 мест с прямыми fontSize = X.sp)
-- Дополнительно строит scaled-копию `SovaTypography` — страховка для
+- Дополнительно строит scaled-копию `VkMintTypography` — страховка для
   компонентов, берущих TextStyle напрямую из MaterialTheme.typography
 - При fontScale=100 — ноль оверхеда, путь идентичен старому коду
 
 **MainActivity.kt:230:**
-- Прокинут `fontScale = snap?.fontScale ?: 100` в SOVATheme
+- Прокинут `fontScale = snap?.fontScale ?: 100` в VkMintTheme
 
 **SettingsScreen.kt:**
 - `FontScaleRow`: Slider 70-150%, шаг 5%, мгновенный отклик
@@ -3219,10 +3219,10 @@ CookieManager + storage.clear() в signOut() полностью очищают �
 ## Сводка статуса проекта (на 2026-07-22)
 
 ### Ветки
-- `PinoK` (основная разработка) — 631 коммит, HEAD aba255fc4
+- `VK Mint` (основная разработка) — 631 коммит, HEAD aba255fc4
 - `main` — 763095dc5 (отстаёт, последний пуш 2026-07-12)
-- `PinoK_1` — параллельная ветка (авто-вход)
-- `SOVA_2_lenta` — старая ветка ленты
+- `VK_Mint` — параллельная ветка (авто-вход)
+- `VK_MINT_lenta` — старая ветка ленты
 
 ### Объём кода
 - 105 .kt файлов, ~58 765 строк
@@ -3278,7 +3278,7 @@ HISTORY.md дополняется ПОСЛЕ ЛЮБОГО изменения в 
 
 ### Диагноз
 Fix #187 (коммит `fa08ce637`) уже добавил кнопку «Войти через Яндекс / Chrome»
-и OAuth implicit flow с custom scheme redirect `sova2://oauth`. Но у пользователя
+и OAuth implicit flow с custom scheme redirect `vkmint://oauth`. Но у пользователя
 авторизация НЕ подхватывалась из-за **трёх недочётов** в реализации Fix #187:
 
 1. **`ExternalBrowserLauncher.tryLaunchCustomTabs()`** использовал
@@ -3308,7 +3308,7 @@ Fix #187 (коммит `fa08ce637`) уже добавил кнопку «Вой�
 - **`buildOAuthUrl(silent = true)`** по умолчанию БЕЗ `revoke=1`. Теперь:
   - Если залогинен в выбранном браузере И уже давал разрешения этому
     client_id (6287487) → VK сразу делает redirect на
-    `sova2://oauth#access_token=...` (silent sign-in, 0 кликов).
+    `vkmint://oauth#access_token=...` (silent sign-in, 0 кликов).
   - Если залогинен но НЕ давал разрешения → VK покажет экран
     «Разрешить доступ» (1 клик).
   - Если НЕ залогинен → форма логина в браузере.
@@ -3324,7 +3324,7 @@ Fix #187 (коммит `fa08ce637`) уже добавил кнопку «Вой�
   инициализируется сразу как `BrowserAuthCheck(found=false, ...)`.
   Асинхронная проверка `tryFindExistingAuth()` остаётся (обновит на
   `found=true` в редком случае, если ранее логинились в WebView внутри
-  PinoK), но спиннер больше не показывается.
+  VK Mint), но спиннер больше не показывается.
 - **Баннер** «Сессия VK найдена» → переименован в «Сессия VK найдена
   в приложении» (точнее отражает источник — CookieManager WebView,
   а не настоящий браузер).
@@ -3341,29 +3341,29 @@ Silent redirect (VK сразу редиректит без экрана «Раз
 1. Пользователь ЯВНО нажимает «Войти через Яндекс / Chrome» — осознанное
    действие.
 2. Пользователь ЯВНО выбирает браузер в системном chooser.
-3. Custom scheme `sova2://oauth` защищает redirect — только PinoK может
+3. Custom scheme `vkmint://oauth` защищает redirect — только VK Mint может
    его поймать (intent-filter BROWSABLE + DEFAULT в AndroidManifest).
 4. `access_token` приходит в URL fragment (`#`), не в query — не
    логируется прокси/серверами.
 
 ### Файлы изменены
-- `app/src/main/java/re/pinok/auth/exchange/ExternalBrowserLauncher.kt`
+- `app/src/main/java/vk/mint/auth/exchange/ExternalBrowserLauncher.kt`
   (+245/-95 строк, полностью переписан launch flow + chooser)
-- `app/src/main/java/re/pinok/auth/AuthActivity.kt`
+- `app/src/main/java/vk/mint/auth/AuthActivity.kt`
   (+87 строк, убран спиннер + улучшена UX кнопки)
 
 ### Что проверить пользователю
-1. `git pull` на ветке `PinoK`.
+1. `git pull` на ветке `VK Mint`.
 2. Собрать APK, установить.
-3. Открыть PinoK → на экране входа нажать «Войти через Яндекс / Chrome».
+3. Открыть VK Mint → на экране входа нажать «Войти через Яндекс / Chrome».
 4. В системном chooser выбрать браузер, где уже залогинены в VK.
 5. Ожидаемый результат:
    - Если ранее давали разрешения client_id=6287487 → VK СРАЗУ
-     редиректит обратно в PinoK, без ввода пароля и без экрана
+     редиректит обратно в VK Mint, без ввода пароля и без экрана
      «Разрешить доступ».
    - Если НЕ давали разрешения → VK покажет экран «Разрешить доступ»
-     (1 клик «Разрешить»), потом редирект в PinoK.
-6. После redirect → PinoK показывает главный экран, токен сохранён.
+     (1 клик «Разрешить»), потом редирект в VK Mint.
+6. После redirect → VK Mint показывает главный экран, токен сохранён.
 
 ### Не сделано (TODO)
 - Не добавлена настройка «Всегда спрашивать разрешение» (для параноиков,
@@ -3426,8 +3426,8 @@ VK мигрирует с .com на .ru домены (2025-2026):
 - Object (singleton) с volatile `snapshot: Snapshot?`.
 - `current: Snapshot` — синхронное чтение, O(1), thread-safe.
   Если snapshot ещё не загружен — возвращает Defaults.
-- `update(snap: SovaPrefs.Snapshot)` — обновляет snapshot из prefs Flow.
-  Вызывается из SovaApp.onCreate() (initial) и из runtime-подписки на prefs.
+- `update(snap: VkMintPrefs.Snapshot)` — обновляет snapshot из prefs Flow.
+  Вызывается из VkMintApp.onCreate() (initial) и из runtime-подписки на prefs.
 - `validateHost()` — убирает scheme если пользователь ввёл "https://...",
   убирает trailing slash, заменяет пустое на default.
 - `validateClientId()` — только цифры, непустой.
@@ -3442,7 +3442,7 @@ VK мигрирует с .com на .ru домены (2025-2026):
   - `vkCookieUrls()` — список всех вариантов доменов (.com + .ru)
     для CookieManager проверки/clear.
 
-#### `SovaPrefs.kt` — новые ключи + поля + setters
+#### `VkMintPrefs.kt` — новые ключи + поля + setters
 - Keys: AUTH_OAUTH_HOST, AUTH_ID_HOST, AUTH_LOGIN_HOST,
   AUTH_MOBILE_WEB_HOST, AUTH_API_HOST, AUTH_WEB_CLIENT_ID, AUTH_FORCE_REVOKE
 - Snapshot поля: authOauthHost, authIdHost, authLoginHost,
@@ -3455,7 +3455,7 @@ VK мигрирует с .com на .ru домены (2025-2026):
   AUTH_MOBILE_WEB_HOST_DEFAULT="m.vk.ru", AUTH_API_HOST_DEFAULT="api.vk.com",
   AUTH_WEB_CLIENT_ID_DEFAULT="6287487"
 
-#### `SovaApp.kt` — инициализация + runtime-обновление
+#### `VkMintApp.kt` — инициализация + runtime-обновление
 - `AuthDomainsConfig.update(initialSnap)` сразу после `runBlocking { prefs.data.first() }`
   в onCreate() — ДО того, как любой auth flow попытается читать домены.
 - В runtime-подписке на prefs.data.collect (та же что для autoCacheAudio)
@@ -3495,26 +3495,26 @@ VK мигрирует с .com на .ru домены (2025-2026):
 ### Безопасность
 - Scheme всегда https (validateHost убирает http://, https:// — добавляем заново).
 - Пустые/blank значения заменяются на defaults.
-- Custom scheme sova2://oauth НЕ настраивается — фиксирована (intent-filter).
+- Custom scheme vkmint://oauth НЕ настраивается — фиксирована (intent-filter).
 - client_id валидируется (только цифры).
 - Изменения применяются немедленно к следующему auth flow (snapshot volatile).
 
 ### Файлы
-- НОВЫЙ: `app/src/main/java/re/pinok/auth/exchange/AuthDomainsConfig.kt` (+290 строк)
-- НОВЫЙ: `app/src/main/java/re/pinok/auth/exchange/AuthDomainsSettingsSheet.kt` (+380 строк)
-- `app/src/main/java/re/pinok/data/local/SovaPrefs.kt` (+45 строк: keys, fields, setters, defaults)
-- `app/src/main/java/re/pinok/SovaApp.kt` (+8 строк: init + runtime update)
-- `app/src/main/java/re/pinok/auth/exchange/ExchangeAuthApi.kt` (endpoints → computed)
-- `app/src/main/java/re/pinok/auth/OAuthWebViewActivity.kt` (buildOAuthUrl + REDIRECT_URI → computed)
-- `app/src/main/java/re/pinok/auth/exchange/ExternalBrowserLauncher.kt` (buildOAuthUrl → AuthDomainsConfig)
-- `app/src/main/java/re/pinok/auth/exchange/ExternalBrowserAuth.kt` (VK_COOKIE_URLS → computed)
-- `app/src/main/java/re/pinok/auth/AuthActivity.kt` (loadUrl → AuthDomainsConfig + шестерёнка в углу)
+- НОВЫЙ: `app/src/main/java/vk/mint/auth/exchange/AuthDomainsConfig.kt` (+290 строк)
+- НОВЫЙ: `app/src/main/java/vk/mint/auth/exchange/AuthDomainsSettingsSheet.kt` (+380 строк)
+- `app/src/main/java/vk/mint/data/local/VkMintPrefs.kt` (+45 строк: keys, fields, setters, defaults)
+- `app/src/main/java/vk/mint/VkMintApp.kt` (+8 строк: init + runtime update)
+- `app/src/main/java/vk/mint/auth/exchange/ExchangeAuthApi.kt` (endpoints → computed)
+- `app/src/main/java/vk/mint/auth/OAuthWebViewActivity.kt` (buildOAuthUrl + REDIRECT_URI → computed)
+- `app/src/main/java/vk/mint/auth/exchange/ExternalBrowserLauncher.kt` (buildOAuthUrl → AuthDomainsConfig)
+- `app/src/main/java/vk/mint/auth/exchange/ExternalBrowserAuth.kt` (VK_COOKIE_URLS → computed)
+- `app/src/main/java/vk/mint/auth/AuthActivity.kt` (loadUrl → AuthDomainsConfig + шестерёнка в углу)
 - `HISTORY.md` (эта запись)
 
 ### Что проверить пользователю
-1. `git pull` на ветке `PinoK`.
+1. `git pull` на ветке `VK Mint`.
 2. Собрать APK, установить.
-3. Открыть PinoK → на экране входа в правом верхнем углу — шестерёнка.
+3. Открыть VK Mint → на экране входа в правом верхнем углу — шестерёнка.
 4. Тап по шестерёнке → ModalBottomSheet с 7 полями.
 5. По умолчанию все домены = .com (кроме mobile web = m.vk.ru).
 6. Нажать «Переключить все на .ru» → 5 доменов меняются на .ru варианты.
@@ -3544,19 +3544,19 @@ VK мигрирует с .com на .ru домены (2025-2026):
 ```
 
 ### Корневая причина
-Fix #187/#188 использовали `redirect_uri=sova2://oauth` (custom scheme) с
+Fix #187/#188 использовали `redirect_uri=vkmint://oauth` (custom scheme) с
 `client_id=6287487`. Но 6287487 — это официальный web-client ВК (vk.com
 десктоп), и ВК разрешил для него ТОЛЬКО `redirect_uri=https://oauth.vk.com/blank.html`.
-Custom scheme sova2://oauth НЕ зарегистрирован в настройках приложения на
+Custom scheme vkmint://oauth НЕ зарегистрирован в настройках приложения на
 стороне ВК → ВК отклоняет его.
 
 Custom scheme redirect работает ТОЛЬКО для client_id, которые мы сами
 зарегистрировали бы на dev.vk.com. Но мы используем чужой публичный
-client_id (6287487) — для него sova2:// никогда не работал и не будет.
+client_id (6287487) — для него vkmint:// никогда не работал и не будет.
 
 ### Решение
 1. **ExternalBrowserLauncher.buildOAuthUrl()** — redirect_uri изменён с
-   `sova2://oauth` на `https://oauth.vk.com/blank.html` (через
+   `vkmint://oauth` на `https://oauth.vk.com/blank.html` (через
    `AuthDomainsConfig.oauthBlankRedirectUrl()`). Это единственный валидный
    redirect для 6287487.
 2. **AuthDomainsConfig.oauthAuthorizeUrl()** — добавлен URL-encoding для
@@ -3583,13 +3583,13 @@ client_id (6287487) — для него sova2:// никогда не работ�
 4. Если залогинен → ВК редиректит на `blank.html#access_token=...`.
 5. Браузер показывает пустую страницу; токен в адресной строке.
 6. Юзер копирует URL (долгий тап → «Копировать»).
-7. Возвращается в PinoK → вставляет в поле → жмёт «Войти».
+7. Возвращается в VK Mint → вставляет в поле → жмёт «Войти».
 8. Приложение парсит → `submitOAuthToken` → `AuthState.Success` → `onSuccess()`.
 
 ### Безопасность
 - access_token в URL fragment (#), не в query — не логируется прокси.
 - Юзер ЯВНО нажимает кнопку, ЯВНО выбирает браузер, ЯВНО вставляет токен.
-- Custom scheme sova2://oauth и intent-filter в MainActivity ОСТАЮТСЯ для
+- Custom scheme vkmint://oauth и intent-filter в MainActivity ОСТАЮТСЯ для
   будущего использования (если зарегистрируем собственный client_id).
 
 ### Файлы
@@ -3601,19 +3601,19 @@ client_id (6287487) — для него sova2:// никогда не работ�
 - `HISTORY.md` (эта запись)
 
 ### Что проверить пользователю
-1. `git pull` на ветке `PinoK`.
+1. `git pull` на ветке `VK Mint`.
 2. Собрать APK, установить.
 3. Нажать «Войти через Яндекс / Chrome».
 4. Выбрать браузер в chooser.
 5. Если залогинен в VK в этом браузере → ВК покажет пустую страницу
    (адресная строка: `https://oauth.vk.com/blank.html#access_token=...`).
 6. Долгий тап на адресную строку → «Копировать».
-7. Вернуться в PinoK → нажать «Вставить из буфера» (или вставить вручную).
+7. Вернуться в VK Mint → нажать «Вставить из буфера» (или вставить вручную).
 8. Нажать «Войти» → приложение входит, переход на главный экран.
 
 ---
 
-## Fix #191: «Поделиться → PinoK» — вход без копирования/вставки
+## Fix #191: «Поделиться → VK Mint» — вход без копирования/вставки
 
 **Дата:** 2026-07-22
 **Запрос пользователя:** «...скопировать URL, вставить, войти.» Пользователей
@@ -3625,19 +3625,19 @@ Fix #190 требовал от пользователя скопировать U
 
 ### Решение — 3 способа входа (по приоритету)
 
-**1. «Поделиться → PinoK» (ОСНОВНОЙ, Fix #191)**
+**1. «Поделиться → VK Mint» (ОСНОВНОЙ, Fix #191)**
 MainActivity уже имеет intent-filter для ACTION_SEND text/* (Fix #154).
 Теперь handleShareIntent проверяет: если shared text содержит
 `access_token=` + `user_id=` — обрабатывает как OAuth redirect, а не как
 share-to-chat. Пользователь:
 - Жмёт «Войти через Яндекс/Chrome» → chooser → браузер
-- В браузере: «Поделиться» → выбирает PinoK
+- В браузере: «Поделиться» → выбирает VK Mint
 - Токен сохраняется автоматически, Toast «вход выполнен ✓»
 - AuthActivity.onResume видит токен → finish(RESULT_OK)
 
 **2. Clipboard auto-detection (АВТО-FALLBACK)**
 AuthActivity.onResume проверяет буфер обмена. Если юзер просто скопировал
-URL (долгий тап → Копировать) и вернулся в PinoK — вход произойдёт сам.
+URL (долгий тап → Копировать) и вернулся в VK Mint — вход произойдёт сам.
 Fingerprint буфера запоминается чтобы не входить повторно.
 
 **3. Ручная вставка (DEEP FALLBACK)**
@@ -3646,7 +3646,7 @@ Fingerprint буфера запоминается чтобы не входить
 
 ### UI
 - После нажатия «Войти через Яндекс/Chrome» показывается подсказка:
-  «Шаг 2: Поделиться → PinoK» с инструкцией (1. Поделиться → 2. PinoK → 3. авто).
+  «Шаг 2: Поделиться → VK Mint» с инструкцией (1. Поделиться → 2. VK Mint → 3. авто).
 - Спиннер «Входим…» при state==Loading.
 - Кнопка «Не сработало? Вставить ссылку вручную» → раскрывает ManualPasteBlock.
 
@@ -3664,8 +3664,8 @@ Fingerprint буфера запоминается чтобы не входить
 - `HISTORY.md` (эта запись)
 
 ### Что проверить
-1. «Войти через Яндекс/Chrome» → браузер → «Поделиться» → PinoK → авто-вход.
-2. ИЛИ: скопировать URL в браузере → вернуться в PinoK → авто-вход из буфера.
+1. «Войти через Яндекс/Chrome» → браузер → «Поделиться» → VK Mint → авто-вход.
+2. ИЛИ: скопировать URL в браузере → вернуться в VK Mint → авто-вход из буфера.
 3. ИЛИ: «Не сработало? Вставить вручную» → вставить → «Войти».
 
 ---
@@ -3707,13 +3707,13 @@ VK web JS bundles). Fallback на `sticker_id` оставлен на случа�
 Добавлен `AppLog.w` при fallback для диагностики.
 
 ### Файлы
-- `app/src/main/java/re/pinok/api/VKApiClient.kt`:
+- `app/src/main/java/vk/mint/api/VKApiClient.kt`:
   `storeGetStickerPacks` (+filters=purchased),
   `messagesSendSticker` (attachment primary + sticker_id fallback)
 - `HISTORY.md` (эта запись)
 
 ### Что проверить (пользователь)
-1. `git pull` на ветке `PinoK`.
+1. `git pull` на ветке `VK Mint`.
 2. Открыть чат → тапнуть 😀-иконку в composer → стикер-панель должна
    показать паки со стикерами (раньше была пустая/ошибка).
 3. Тапнуть стикер → он должен отправиться в чат.
@@ -3754,7 +3754,7 @@ I/PhotosScreen   Loaded 0 albums
 При этом авторизация проходит успешно (00:39:08 Auth success, LongPoll
 запущен, web_token получен) — но ВСЕ API-вызовы шорт-сиркитятся.
 
-**Корневая причина:** `privacyOfflineMode == true` в SovaPrefs.
+**Корневая причина:** `privacyOfflineMode == true` в VkMintPrefs.
 - Флаг включается АВТОМАТИЧЕСКИ в `VKApiClient.callInternal` (стр.6987,
   Fix #38) после 3 последовательных сетевых ошибок в течение 60 сек.
 - Флаг СОХРАНЯЕТСЯ в DataStore (переживает перезапуск приложения).
@@ -3782,24 +3782,24 @@ API-вызов даже не идёт (в логе нет ни одной стр
 
 ### Правки
 **`ExchangeAuthRepository.kt`:**
-- Конструктор: +`private val prefs: SovaPrefs? = null` (nullable, чтобы
+- Конструктор: +`private val prefs: VkMintPrefs? = null` (nullable, чтобы
   не сломать возможные другие вызовы).
 - `saveOAuthToken`: после `storage.saveAuthResult` →
   `prefs?.setPrivacyOfflineMode(false)` + лог.
 - `saveWebTokenResult`: перед `AuthState.Success` →
   `prefs?.setPrivacyOfflineMode(false)` + лог.
-- Импорт `re.pinok.data.local.SovaPrefs`.
+- Импорт `vk.mint.data.local.VkMintPrefs`.
 
-**`SovaApp.kt:318`:** передать `prefs = prefs` в конструктор
+**`VkMintApp.kt:318`:** передать `prefs = prefs` в конструктор
 `ExchangeAuthRepository`.
 
 ### Файлы
-- `app/src/main/java/re/pinok/auth/exchange/ExchangeAuthRepository.kt`
-- `app/src/main/java/re/pinok/SovaApp.kt`
+- `app/src/main/java/vk/mint/auth/exchange/ExchangeAuthRepository.kt`
+- `app/src/main/java/vk/mint/VkMintApp.kt`
 - `HISTORY.md` (эта запись)
 
 ### Что проверить (пользователь)
-1. `git pull` на ветке `PinoK`.
+1. `git pull` на ветке `VK Mint`.
 2. Запустить приложение. Если уже «застряло» в offline — выйти из аккаунта
    и заново войти через WebView. В логе после входа должно появиться:
    `WebToken saved — privacyOfflineMode reset to false`.
@@ -3904,10 +3904,10 @@ HISTORY подробно не описаны. Текущая сессия — Fi
 
 | Файл | Коммиты |
 |------|---------|
-| `app/src/main/java/re/pinok/ui/screens/feed/PostDetailScreen.kt` | e31b85b18, beafb316f |
-| `app/src/main/java/re/pinok/api/VKApiClient.kt` | e31b85b18, db4205cf0 |
-| `app/src/main/java/re/pinok/ui/screens/notifications/NotificationSettingsScreen.kt` | e7bbb28b2, df5e9eb6b |
-| `app/src/main/java/re/pinok/ui/screens/notifications/NotificationsScreen.kt` | db4205cf0 |
+| `app/src/main/java/vk/mint/ui/screens/feed/PostDetailScreen.kt` | e31b85b18, beafb316f |
+| `app/src/main/java/vk/mint/api/VKApiClient.kt` | e31b85b18, db4205cf0 |
+| `app/src/main/java/vk/mint/ui/screens/notifications/NotificationSettingsScreen.kt` | e7bbb28b2, df5e9eb6b |
+| `app/src/main/java/vk/mint/ui/screens/notifications/NotificationsScreen.kt` | db4205cf0 |
 | `VK_IMPORT_API.MD` | ff91c4a57, db4205cf0 (§32, §33) |
 | `HISTORY.md` | этот коммит |
 
@@ -3940,8 +3940,8 @@ HISTORY подробно не описаны. Текущая сессия — Fi
 
 ### Точка продолжения для следующей сессии
 
-- Ветка: `PinoK`, последний коммит `db4205cf0`.
-- Все коммиты запушены в `origin/PinoK`.
+- Ветка: `VK Mint`, последний коммит `db4205cf0`.
+- Все коммиты запушены в `origin/VK Mint`.
 - Working tree чистый (после этого коммита с HISTORY).
 - Документация: VK_IMPORT_API.MD §32 (комментарии) + §33 (уведомления).
 - Если пользователь подтвердит, что комментарии/уведомления работают —
@@ -3955,7 +3955,7 @@ HISTORY подробно не описаны. Текущая сессия — Fi
 
 ## Fix #268 — поиск музыки: автофокус поля + Elvis-баг в feature flags
 
-**Коммит:** `675ab0b` (ветка `PinoK`)
+**Коммит:** `675ab0b` (ветка `VK Mint`)
 
 ### Проблема 1 — «Текстовое поле поиска не вызывается»
 
@@ -4017,8 +4017,8 @@ val enabled = enabledBool
 
 | Файл | Изменение |
 |------|-----------|
-| `app/src/main/java/re/pinok/api/VKApiClient.kt` | Elvis-баг в `accountGetTogglesExternal` |
-| `app/src/main/java/re/pinok/ui/screens/music/MusicScreen.kt` | FocusRequester + автофокус поля поиска |
+| `app/src/main/java/vk/mint/api/VKApiClient.kt` | Elvis-баг в `accountGetTogglesExternal` |
+| `app/src/main/java/vk/mint/ui/screens/music/MusicScreen.kt` | FocusRequester + автофокус поля поиска |
 
 ### Что проверить пользователю
 
@@ -4034,7 +4034,7 @@ val enabled = enabledBool
 
 ## Fix #269 — P0 поиск в «Моя музыка» + P1 description pre-fill + Toast
 
-**Коммит:** `5fd472e` (ветка `PinoK`)
+**Коммит:** `5fd472e` (ветка `VK Mint`)
 
 ### P0 — поиск музыки «опущен» во вкладку «Моя музыка»
 
@@ -4080,7 +4080,7 @@ title-слоте не фокусировалось → пользователь 
 
 ### P3 — приложение падает: НЕ РЕШЕНО
 
-Нужен **logcat** от пользователя (`adb logcat | grep -iE "AndroidRuntime|pinok"`)
+Нужен **logcat** от пользователя (`adb logcat | grep -iE "AndroidRuntime|vkmint"`)
 до «FATAL EXCEPTION» + шаги воспроизведения (на каком экране, какое действие).
 
 После Fix #268 (Elvis-баг) feature flags теперь парсятся правильно —
@@ -4092,10 +4092,10 @@ title-слоте не фокусировалось → пользователь 
 
 | Файл | Изменение |
 |------|-----------|
-| `app/src/main/java/re/pinok/data/model/Models.kt` | +`description` в Chat |
-| `app/src/main/java/re/pinok/api/VKApiClient.kt` | парсинг `chat_settings.description` |
-| `app/src/main/java/re/pinok/ui/screens/im/ChatInfoScreen.kt` | pre-fill + Toast |
-| `app/src/main/java/re/pinok/ui/screens/music/MusicScreen.kt` | inline поле поиска в tab 1 |
+| `app/src/main/java/vk/mint/data/model/Models.kt` | +`description` в Chat |
+| `app/src/main/java/vk/mint/api/VKApiClient.kt` | парсинг `chat_settings.description` |
+| `app/src/main/java/vk/mint/ui/screens/im/ChatInfoScreen.kt` | pre-fill + Toast |
+| `app/src/main/java/vk/mint/ui/screens/music/MusicScreen.kt` | inline поле поиска в tab 1 |
 
 ### Что проверить пользователю
 
@@ -4113,7 +4113,7 @@ title-слоте не фокусировалось → пользователь 
 
 ## Сессия §37.12 #324–#330: VK Clips — playback, likes, UI, download, comments
 
-**Ветка:** `PinoK` · **Коммиты:** `fcac1b9d7` → `f0d7ddae0`
+**Ветка:** `VK Mint` · **Коммиты:** `fcac1b9d7` → `f0d7ddae0`
 
 ### #324 — `shortVideo.getRecom` (canonical VK web endpoint)
 
@@ -4143,7 +4143,7 @@ JsonPrimitive (int/string), а не объект/массив. NEW-формат 
 
 ### #327 — Скрыть глобальный TopAppBar на Clips, оставить bottom NavigationBar
 
-Флаг `hidesGlobalTopBarOnly` в SovaNavHost: скрывает ТОЛЬКО верхнюю панель
+Флаг `hidesGlobalTopBarOnly` в VkMintNavHost: скрывает ТОЛЬКО верхнюю панель
 («Клипы» заголовок), оставляя нижнюю навигацию. `hasOwnTopBar` скрывает обе.
 Mute-кнопка сдвинута ниже FAB «создать клип» (top=56dp).
 
@@ -4199,13 +4199,13 @@ Mute-кнопка сдвинута ниже FAB «создать клип» (top
 | `ui/screens/clips/ClipsViewModel.kt` | логирование fetchClipDetails |
 | `ui/screens/clips/ClipsFeedScreen.kt` | кнопка «Скачать», mute сдвинута |
 | `ui/screens/feed/PostDetailScreen.kt` | +`expandedReplies`/`threadReplies` state, +`ReplyItem` composable, фикс clickable |
-| `ui/navigation/SovaNavHost.kt` | +`hidesGlobalTopBarOnly`, +`Screen.ClipOfflinePlayer` route |
+| `ui/navigation/VkMintNavHost.kt` | +`hidesGlobalTopBarOnly`, +`Screen.ClipOfflinePlayer` route |
 | `ui/navigation/Screen.kt` | +`ClipOfflinePlayer` |
 | `media/ClipVideoDownloadManager.kt` | НОВЫЙ — менеджер скачивания clips |
 | `media/ClipDownloadService.kt` | НОВЫЙ — Service для фоновой загрузки |
 | `ui/screens/offline/OfflineManagerScreen.kt` | +вкладка «Клипы», +`ClipOfflineTab`/`ClipOfflineRow` |
 | `ui/screens/offline/ClipOfflinePlayerScreen.kt` | НОВЫЙ — офлайн-плеер clips |
-| `SovaApp.kt` | init ClipVideoDownloadManager |
+| `VkMintApp.kt` | init ClipVideoDownloadManager |
 | `AndroidManifest.xml` | регистрация ClipDownloadService |
 
 ### Что проверить пользователю
@@ -4281,7 +4281,7 @@ more/download) имели щедрый равномерный интервал.
 ### #334 — Video quality preference (feat) + 2 системных фикса inset/equalizer
 
 **`85f3603ca` feat(#334):** настройка приоритета качества видео для плеера и clips.
-- `SovaPrefs`: новое поле `videoPreferredQuality: String`
+- `VkMintPrefs`: новое поле `videoPreferredQuality: String`
   (`'auto'|'2160'|'1440'|'1080'|'720'|'480'|'360'|'240'|'144'`), default `'auto'`.
 - `SettingsScreen` VideoTab: секция «Качество воспроизведения» с RadioButton-списком
   из 9 опций.
@@ -4333,7 +4333,7 @@ Column `bottomBar` slot — inset ВСЕГДА резервируется нез
 прилетал async pref.
 
 **Fix:**
-- `SovaApp`: `@Volatile var prefsSnapshot: SovaPrefs.Snapshot?` для синхронного
+- `VkMintApp`: `@Volatile var prefsSnapshot: VkMintPrefs.Snapshot?` для синхронного
   O(1) чтения. Seeded из `runBlocking { prefs.data.first() }` в onCreate,
   обновляется существующим `prefs.data.collect`.
 - `VideoPlayerScreen`/`ClipsFeedScreen`: `produceState` заменён на синхронный
@@ -4350,7 +4350,7 @@ Column `bottomBar` slot — inset ВСЕГДА резервируется нез
 Нижняя панель редактируется полностью. Скролы при переполнении.
 
 **Реализация:**
-- `SovaPrefs.kt` (+38 строк): 4 новых поля Snapshot — `sidebarItemsOrder`,
+- `VkMintPrefs.kt` (+38 строк): 4 новых поля Snapshot — `sidebarItemsOrder`,
   `sidebarHiddenItems`, `bottomBarItemsOrder`, `bottomBarHiddenItems`
   (JSON-массивы route-строк; default-константы `SIDEBAR_ITEMS_ORDER_DEFAULT` /
   `BOTTOM_BAR_ITEMS_ORDER_DEFAULT`). Сеттеры + 4 DataStore Keys.
@@ -4358,14 +4358,14 @@ Column `bottomBar` slot — inset ВСЕГДА резервируется нез
   Каждая — reorderable список (↑/↓ кнопки) + toggle видимости (eye/eyeOff).
   Фикс. хвост drawer'а (Офлайн/Настройки/Выйти) НЕ входит в `sidebarItemsOrder`
   — рендерится отдельно, не редактируется.
-- `SovaNavHost.kt` (+253/-61): helpers `normalizeRouteOrder()`,
+- `VkMintNavHost.kt` (+253/-61): helpers `normalizeRouteOrder()`,
   `visibleSidebarScreens`/`visibleBottomScreens`. Drawer переписан:
   header (fixed) / scrollable middle (`verticalScroll` + `weight(1f)`) /
   fixed tail (Офлайн → Настройки → Выйти). Bottom bar: `dockScreens.forEach`
   → `visibleBottomScreens.forEach`; NavigationBar скрыт целиком если пуст.
 - `SettingsScreen.kt` (+5): `SettingsTab.PANEL_EDITOR` + when-branch.
 - `FeedScreen.kt` (+8): 4 новых поля в прямую `Snapshot()`-инициализацию.
-- Live update: `prefsSnap` через `collectAsState` в SovaNavHost → recomposition
+- Live update: `prefsSnap` через `collectAsState` в VkMintNavHost → recomposition
   при изменении в SettingsScreen.
 
 ### #338 — Quality selection broken after codec fallback
@@ -4408,15 +4408,15 @@ Column `bottomBar` slot — inset ВСЕГДА резервируется нез
 | `ui/screens/clips/ClipsFeedScreen.kt` | #332: action column BottomEnd + mute в колонку; #336: синхр. pref |
 | `api/VKApiClient.kt` | #333: парсинг mediaThumbs в notificationsGetRedesign |
 | `ui/screens/notifications/*.kt` | #333: mediaThumbs lookup; #335: skip null thumb |
-| `data/local/SovaPrefs.kt` | #334: videoPreferredQuality; #337: 4 поля panel editor |
+| `data/local/VkMintPrefs.kt` | #334: videoPreferredQuality; #337: 4 поля panel editor |
 | `ui/screens/settings/SettingsScreen.kt` | #334: VideoQualityCard; #337: PanelEditor tab |
 | `ui/screens/videoplayer/VideoPlayerScreen.kt` | #334: computeInitialQualityIndex; #336: синхр. pref; #338: codec fallback fix |
-| `ui/navigation/SovaNavHost.kt` | #334: inset на bottomBar slot; #337: reorderable drawer/bottombar |
+| `ui/navigation/VkMintNavHost.kt` | #334: inset на bottomBar slot; #337: reorderable drawer/bottombar |
 | `ui/screens/feed/FeedScreen.kt` | #334/#337: Snapshot init |
 | `media/EqualizerHelper.kt` | #334: lightweight reattach toggle |
 | `ui/screens/notifications/NotificationsScreen.kt` | #334: navigationBarsPadding на outer Box |
 | `ui/screens/settings/PanelEditorTab.kt` | #337: НОВЫЙ (~430 строк) |
-| `SovaApp.kt` | #336: prefsSnapshot для синхронного чтения |
+| `VkMintApp.kt` | #336: prefsSnapshot для синхронного чтения |
 
 ### Что проверить пользователю
 
@@ -4454,7 +4454,7 @@ Column `bottomBar` slot — inset ВСЕГДА резервируется нез
   «устройство не поддерживает HEVC» чтобы стартовать сразу с HLS/AVC, минуя
   первоначальный DECODING_FAILED.
 
-### Коммиты (origin/PinoK)
+### Коммиты (origin/VK Mint)
 
 - `106804897` fix(#331): VK disabled Direct Auth password grant
 - `116d2af81` fix(#332): clips right action column overlap
@@ -4491,7 +4491,7 @@ push-уведомления не приходят; часто приходитс
    показывал «Авторизуйтесь заново» вместо ожидания silent re-login.
 
 **Fix:**
-- **A.** `SovaPrefs`: `msgLpBackfill` default `false → true`. LongPollClient при
+- **A.** `VkMintPrefs`: `msgLpBackfill` default `false → true`. LongPollClient при
   старте вызывает `messages.getLongPollHistory(pts, ts)` → восстанавливает
   пропущенные события → MessageNotifier показывает накопленные уведомления.
 - **B.** `MessagesScreen`: retry 3× с backoff 500ms/1.5s/3s на transient
@@ -4500,7 +4500,7 @@ push-уведомления не приходят; часто приходитс
   (IOException) — приоритет на ошибку сети, а не «Нет диалого».
 - **C.** `MainActivity` boot: если `hasValidToken()=false` AND есть `remixsid` →
   передаём `EXTRA_SILENT_MODE=true`. `AuthActivity` в silent mode применяет
-  `Theme.PinoK.Silent` (transparent, windowIsTranslucent, no animation) → юзер
+  `Theme.VkMint.Silent` (transparent, windowIsTranslucent, no animation) → юзер
   видит предыдущий кадр MainActivity, а не WebView.
 
 **Коммит:** `ba71c58f7`
@@ -4515,7 +4515,7 @@ push-уведомления не приходят; часто приходитс
 
 **Root cause:**
 FCM/Firebase в проекте нет → LongPoll единственный realtime-канал доставки
-сообщений. `LongPollClient` живёт в `SovaApp` (Application) и работает пока жив
+сообщений. `LongPollClient` живёт в `VkMintApp` (Application) и работает пока жив
 процесс. Android Doze / memory pressure убивают фоновый процесс через несколько
 минут после ухода приложения в фон → LongPoll умирает → push перестают приходить.
 `BootReceiver` НЕ перезапускал LongPoll после перезагрузки устройства. Манифест
@@ -4524,9 +4524,9 @@ FCM/Firebase в проекте нет → LongPoll единственный real
 **Fix:**
 - **`LongPollKeepAliveService`** (новый) — foreground-сервис, type=
   `remoteMessaging`, удерживает процесс живым в фоне. Сервис сам НЕ выполняет
-  LongPoll-работу — `LongPollClient` уже запущен в `SovaApp.onCreate()`. Сервис
+  LongPoll-работу — `LongPollClient` уже запущен в `VkMintApp.onCreate()`. Сервис
   просто держит процесс, чтобы LongPoll мог продолжать опрос VK LongPoll server.
-  - Канал «Фоновая работа» `IMPORTANCE_LOW` (без звука/heads-up), notif «PinoK —
+  - Канал «Фоновая работа» `IMPORTANCE_LOW` (без звука/heads-up), notif «VK Mint —
     получение сообщений в фоне», тап → `MainActivity`.
   - `onStartCommand`: `START_STICKY` + `longPollClient.start()` если token valid
     (covers boot case — процесс поднят сервисом, MainActivity не запускалась).
@@ -4537,7 +4537,7 @@ FCM/Firebase в проекте нет → LongPoll единственный real
   - `ServiceCompat.startForeground` с
     `ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING` (API 34+).
     `remoteMessaging` НЕ подпадает под 6-часовой Android 14+ timeout.
-- **`SovaApp`** — `ActivityLifecycleCallbacks` (onActivityStarted/onActivityStopped)
+- **`VkMintApp`** — `ActivityLifecycleCallbacks` (onActivityStarted/onActivityStopped)
   → `startedActivities` счётчик → `isAnyActivityForeground()` используется
   сервисом для решения: headless refresh vs отдать обработку MainActivity.
 - **`MainActivity`** — старт/стоп сервиса рядом с `LongPollClient.start()/stop()`
@@ -4556,7 +4556,7 @@ FCM/Firebase в проекте нет → LongPoll единственный real
 | Файл | Изменения |
 |------|-----------|
 | `realtime/LongPollKeepAliveService.kt` | НОВЫЙ (~230 строк): foreground service + headless refresh |
-| `SovaApp.kt` | #340: ActivityLifecycleCallbacks + isAnyActivityForeground() |
+| `VkMintApp.kt` | #340: ActivityLifecycleCallbacks + isAnyActivityForeground() |
 | `ui/MainActivity.kt` | #340: start/stop сервиса в login/logout/exit paths |
 | `locker/BootReceiver.kt` | #340: start сервиса на boot + MY_PACKAGE_REPLACED |
 | `AndroidManifest.xml` | #340: <service> remoteMessaging + MY_PACKAGE_REPLACED action |
@@ -4568,7 +4568,7 @@ FCM/Firebase в проекте нет → LongPoll единственный real
    → уведомление должно прийти без ручного открытия app.
 3. **Не «выбивает из аккаунта»** — оставить app на 20+ мин, открыть → должен
    остаться залогиненным (silent re-login в фоне через сервис).
-4. **Low-priority notif** — в шторке должна быть постоянная notif «PinoK —
+4. **Low-priority notif** — в шторке должна быть постоянная notif «VK Mint —
    получение сообщений в фоне» (канал «Фоновая работа», без звука).
 5. **Logout** — выйти из аккаунта → keep-alive notif должна исчезнуть.
 
@@ -4579,7 +4579,7 @@ FCM/Firebase в проекте нет → LongPoll единственный real
 - **FCM** — если в будущем добавят server-side push, сервис можно будет
   убрать (FCM разбудит процесс).
 
-### Коммиты (origin/PinoK)
+### Коммиты (origin/VK Mint)
 
 - `ba71c58f7` fix(#339): push notifications + silent re-login UI flash + Socket is closed
 - `<this commit>` fix(#340): foreground LongPoll keep-alive service
@@ -4637,7 +4637,7 @@ HEVC-качество → DECODING_FAILED → fallback.
 - Fallback #338 остаётся как страховка — не удалять.
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (#340) — onboarding-промпт не реализован.
 
-### Коммиты (origin/PinoK)
+### Коммиты (origin/VK Mint)
 
 - `0b706133b` fix(#338-warning): remove unnecessary safe call on smart-cast non-null ExoPlayer
 - `<this commit>` fix(#341): session-level HEVC detection
@@ -4683,7 +4683,7 @@ output → приглушённый звук.
 звучит хуже speaker). Лог покажет тип устройства; дальше можно добавить
 `BluetoothA2dp.getCodecStatus()` диагностику если потребуется.
 
-### Коммиты (origin/PinoK)
+### Коммиты (origin/VK Mint)
 
 - `3420e1c42` fix(#341): session-level HEVC detection
 - `<this commit>` fix(#342): BT equalizer dynamic debounce + route diagnostics
@@ -4767,7 +4767,7 @@ VK_IMPORT_API.MD (раздел уведомления), составить пл�
 | `OK_VIDEO_PLAN.md` | НОВЫЙ (~280 строк) — план внедрения |
 | `WORKLOG_ARCHIVE.md` | RESEARCH-OK-PLAYER entry |
 
-### Коммиты (origin/PinoK)
+### Коммиты (origin/VK Mint)
 
 - `cfb7f52b6` fix(#341-compile): HevcSupport — remove unresolved getSupportedMimeTypes
 - `<this commit>` docs: OK.ru player analysis + cross-platform plan + notifications supplement
@@ -4781,7 +4781,7 @@ VK_IMPORT_API.MD (раздел уведомления), составить пл�
 
 (Предварительно была декомпиляция APK `Equalizer v6.3.5.7 (345).apk`,
 пользователь дал добро на выгрузку декомпила на git и составление плана
-внедрения в PinoK.)
+внедрения в VK Mint.)
 
 ### Что сделано
 
@@ -4814,7 +4814,7 @@ VK_IMPORT_API.MD (раздел уведомления), составить пл�
      живы вне app
    - **Boot receiver** — auto-start на boot
 
-3. **Выгружено на git** (ветка `PinoK`, папка `reference/equalizer/`):
+3. **Выгружено на git** (ветка `VK Mint`, папка `reference/equalizer/`):
    - `apktool_jazibkhan_smali/` — smali приложения (46 файлов, 732 KB)
    - `apktool_ye_smali/` — smali AudioEffect-менеджера (24 файла, 304 KB)
    - `apktool_manifest_strings/` — манифест + strings (560 KB)
@@ -4822,7 +4822,7 @@ VK_IMPORT_API.MD (раздел уведомления), составить пл�
    - `README.md` — описание структуры + извлечённые функции
    - **APK (16 MB) НЕ включён** в git — только код
 
-4. **План внедрения** в PinoK — новый файл `EQUALIZER_INTEGRATION_PLAN.md`:
+4. **План внедрения** в VK Mint — новый файл `EQUALIZER_INTEGRATION_PLAN.md`:
    - **Этап 1 (P0, 1-2 дня):** `AudioEffectsEngine` — единый движок
      6 эффектов. Заменяет текущий `EqualizerHelper` (legacy only).
    - **Этап 2 (P0, 1-2 дня):** Полноэкранный `EqualizerScreen` с 5
@@ -4835,7 +4835,7 @@ VK_IMPORT_API.MD (раздел уведомления), составить пл�
      сохраняет/переиспользует пресеты, auto-apply per device
    - **Этап 5 (P2 опц., 2 дня):** `AudioDeviceObserver` +
      Foreground Service (опционально — Global Mix для внешних плееров;
-     для PinoK скорее всего не нужно, т.к. он сам плеер)
+     для VK Mint скорее всего не нужно, т.к. он сам плеер)
 
    **MVP = Этапы 1+2 (4 дня)** → пользователь получает BassBoost +
    Virtualizer + LoudnessEnhancer + Reverb + расширенный UI.
@@ -4843,7 +4843,7 @@ VK_IMPORT_API.MD (раздел уведомления), составить пл�
    Риски и митигация описаны (AudioEffect init crash, DP vs legacy
    конфликт, battery, performance).
 
-### Текущий gap PinoK
+### Текущий gap VK Mint
 
 `EqualizerHelper.kt` (только legacy `Equalizer`, 5-10 band) → не хватает
 5 эффектов, visualizer, custom presets, auto-apply. UI — BottomSheet с
@@ -4854,8 +4854,8 @@ VK_IMPORT_API.MD (раздел уведомления), составить пл�
 AdMob/AppLovin/Facebook ads, Singular/AppMetrica analytics, In-App
 Billing, PremiumHelper SDK (троян-обёртка монетизации), Firebase
 Messaging (у нас свой push через VK LongPoll), Theme chooser (Material3
-dynamic color уже есть). Global Mix режим для PinoK скорее всего не
-нужен (PinoK сам музыкальный плеер, эффекты на собственную session).
+dynamic color уже есть). Global Mix режим для VK Mint скорее всего не
+нужен (VK Mint сам музыкальный плеер, эффекты на собственную session).
 
 ### Файлы
 
@@ -4868,7 +4868,7 @@ dynamic color уже есть). Global Mix режим для PinoK скорее 
 | `reference/equalizer/jadx_sources/jazibkhan/` | НОВЫЙ | 580 KB |
 | `EQUALIZER_INTEGRATION_PLAN.md` | НОВЫЙ | 12 KB |
 
-### Коммиты (origin/PinoK)
+### Коммиты (origin/VK Mint)
 
 - `<this commit>` docs: Equalizer v6.3.5.7 decompile + integration plan
 
@@ -4923,7 +4923,7 @@ dynamic color уже есть). Global Mix режим для PinoK скорее 
 - `release()` → `engine.release()`
 - `getBands/setBand/applyPreset/setEnabled/isEnabled` → делегируют в engine
 - `loadEnabled/loadPreset/loadBands` — fallback на прямое чтение prefs если
-  engine ещё не создан (SovaApp не готов / PlayerService не стартовал)
+  engine ещё не создан (VkMintApp не готов / PlayerService не стартовал)
 - **Новый метод:** `EqualizerHelper.engine()` — доступ к engine для UI
   (новые эффекты: bass/virt/loud/reverb)
 - **Backward compat:** `numberOfBands()`, `bandLevelRange()` — делегируют
@@ -4952,7 +4952,7 @@ API engine готов к использованию UI — `EqualizerHelper.engi
 | `media/AudioEffectsEngine.kt` | **NEW** (575 строк) — единый движок 6 эффектов |
 | `media/EqualizerHelper.kt` | → deprecated facade (147 строк, было 359) |
 
-### Коммиты (origin/PinoK)
+### Коммиты (origin/VK Mint)
 
 - `<this commit>` feat(equalizer): Этап 1 — AudioEffectsEngine (6 эффектов)
 
@@ -5004,7 +5004,7 @@ master switch + текущий пресет в subtitle) и `PrimaryScrollableTa
 импорты `horizontalScroll`, `Modifier.layout`.
 
 Новый параметр `AudioPlayerScreen(onOpenFullEqualizer: () -> Unit = {})` —
-пробрасывается из `SovaNavHost` как `nav.navigate(Screen.Equalizer.route)`.
+пробрасывается из `VkMintNavHost` как `nav.navigate(Screen.Equalizer.route)`.
 
 ### 3. Настройки → вкладка «Эквалайзер» (feature flags)
 
@@ -5050,7 +5050,7 @@ master switch + текущий пресет в subtitle) и `PrimaryScrollableTa
 | `media/EqualizerFeatureFlags.kt` | **NEW** (115 строк) — persistence feature flags |
 | `ui/screens/music/EqualizerScreen.kt` | **NEW** (778 строк) — полноэкранный UI, 5 вкладок |
 | `ui/navigation/Screen.kt` | + `Screen.Equalizer` маршрут + иконка |
-| `ui/navigation/SovaNavHost.kt` | + drawer + composable + hasOwnTopBar + onOpenFullEqualizer |
+| `ui/navigation/VkMintNavHost.kt` | + drawer + composable + hasOwnTopBar + onOpenFullEqualizer |
 | `ui/screens/settings/SettingsScreen.kt` | + `SettingsTab.EQUALIZER` + `EqualizerTab()` (5 toggle'ов) |
 | `ui/screens/music/AudioPlayerScreen.kt` | упрощён BottomSheet (presets + quick bass/virt + кнопка) |
 
@@ -5173,7 +5173,7 @@ master switch + текущий пресет в subtitle) и `PrimaryScrollableTa
 4. «После просмотра поста лента не запоминает положение» — предыдущий фикс не сработал
 5. «про нюанс ищи обязательно» — обязательное расследование двойного factory run
 
-### Что сделано за сессию (5 коммитов, origin/PinoK)
+### Что сделано за сессию (5 коммитов, origin/VK Mint)
 
 | Коммит | Фикс | Описание |
 |--------|------|----------|
@@ -5247,9 +5247,9 @@ singletons (`AuthWebViewRetention`, `PendingSsoHolder`, `PendingAuthResult`)
 **Фикс:** После `signOut()` в MainActivity добавлены `.clear()` вызовы:
 ```kotlin
 try {
-    re.pinok.auth.AuthWebViewRetention.clear()
-    re.pinok.auth.PendingSsoHolder.clear()
-    re.pinok.auth.PendingAuthResult.clear()
+    vk.mint.auth.AuthWebViewRetention.clear()
+    vk.mint.auth.PendingSsoHolder.clear()
+    vk.mint.auth.PendingAuthResult.clear()
     AppLog.i("MainActivity", "Logout: cleared auth-UI singletons")
 } catch (e: Exception) {
     AppLog.w("MainActivity", "Logout: auth-UI singleton clear failed: ${e.message}")
@@ -5299,7 +5299,7 @@ onDispose {
 фикс через `restoreKey = StoriesHolder.dirtyKey.collectAsState()` НЕ сработал.
 
 **Корневая причина timing-проблемы:** `markDirty()` вызывается в
-`SovaNavHost.LaunchedEffect(currentRoute)` при возврате на Feed. Но FeedScreen
+`VkMintNavHost.LaunchedEffect(currentRoute)` при возврате на Feed. Но FeedScreen
 мог recompose и прочитать `restoreKey` ДО того как StateFlow-update от
 `markDirty()` propagate → `LaunchedEffect(restoreKey)` видел «тот же» key →
 НЕ перезапускался → позиция НЕ восстанавливалась.
@@ -5338,7 +5338,7 @@ onDispose {
 | `ui/MainActivity.kt` | #LOGOUT-SINGLETON-CLEAR — .clear() после signOut() |
 | `ui/screens/feed/FeedScreen.kt` | #FEED-SCROLL-RESTORE-FIX — DisposableEffect + posts.isNotEmpty() триггер |
 
-### Коммиты (origin/PinoK)
+### Коммиты (origin/VK Mint)
 
 - `97dc0ef` fix(ui): #SHARE-IME-FIX — клавиатура перекрывала поле «Комментарий…» в ShareSheet
 - `86d8e0e` fix(auth): убраны Kotlin warnings 'Unnecessary safe call on non-null WebView'
@@ -5364,7 +5364,7 @@ onDispose {
 
 ### Стартовая точка для завтра (2026-08-01)
 
-- **Ветка:** `PinoK` (origin: github.com/pin24/VK_X_mod)
+- **Ветка:** `VK Mint` (origin: github.com/pin24/VK_X_mod)
 - **Последний коммит:** `e578f3d` (fix #FEED-SCROLL-RESTORE-FIX)
 - **Приоритет 1:** Собрать APK, проверить SSO и feed scroll на устройстве
 - **Приоритет 2:** Auth error 5/1117 при отправке фото — ensureFreshToken
@@ -5477,7 +5477,7 @@ deep-link'ами. 16 коммитов за день, от `3a3a22e` (02:39) до
 
 **`ba38118` refactor(auth): #NULL-SAFE-HELPER + §41.19** — smart-cast вместо
 `?.` цепочек. Новый private top-level helper `isNetworkRecentlySwitched(windowMs)`.
-5 мест в VKApiClient.kt заменены. Coding style PinoK: без `?.`, `!!`, `?:`.
+5 мест в VKApiClient.kt заменены. Coding style VK Mint: без `?.`, `!!`, `?:`.
 
 **`e9cb6d0` fix(auth): #NULL-SAFE** — null-smart вызов `authRepo.hasSilentReloginMeans()`
 во втором блоке (где smart-cast уже не действует). Compile fix.
@@ -5539,11 +5539,11 @@ Snapshot расширился, забыли обновить initial-значе�
 summary (8 строк + «+N ещё»). Режимы превью (full/sender_only/hidden).
 Quiet hours (переход через полночь). Аватар (largeIcon). BigPicture для фото.
 Auto-dismiss (`setTimeoutAfter`). Кнопка «Прочитать» (NotificationActionReceiver).
-16+ push* prefs в SovaPrefs.
+16+ push* prefs в VkMintPrefs.
 
 **`2d76d60` feat(push): §42.3 #PUSH-SOURCE-FILTER** — source filter + sn_*
 client-side. Две проблемы: (1) sn_* toggles — SERVER-SIDE VK settings
-(управляют FCM), PinoK опрашивает getRedesign → sn_* НЕ влияли. (2) Нет
+(управляют FCM), VK Mint опрашивает getRedesign → sn_* НЕ влияли. (2) Нет
 фильтра по источнику. Решение: A. `pushFromCommunities`/`pushFromUsers`
 (parentOwnerId < 0 / > 0). B. `SnNotifyFilter` — маппинг 20+ sn_* keys →
 predicate, применяется client-side в showBatch шаг 3c. Порядок фильтрации:
@@ -5595,10 +5595,10 @@ period'а — каждый вызов ~5.5с (grace delay 5с + retry) и воз
 `startTokenInvalidationWatcher` ловит инкремент → `tokenPauseUntilMs = now + 30с`,
 loop проверяет каждые 2с `isTokenValid` для раннего выхода. (2) Method-aware
 grace delay: 2с для `messages.getLongPollServer` (lightweight), 5с для
-остальных. (3) 2 WARN-лога понижены до DEBUG (log noise). SovaApp передаёт
+остальных. (3) 2 WARN-лога понижены до DEBUG (log noise). VkMintApp передаёт
 параметры в конструктор. +235 строк в LongPollClient.kt.
 
-### Все коммиты (origin/PinoK, 15 штук)
+### Все коммиты (origin/VK Mint, 15 штук)
 
 | Hash | Section | Описание |
 |------|---------|----------|
@@ -5635,7 +5635,7 @@ grace delay: 2с для `messages.getLongPollServer` (lightweight), 5с для
 4. **FCM (Firebase Cloud Messaging)** — `account.registerDevice` для настоящих
    push вместо LongPoll+polling (батарея).
 5. **RemoteInput** — прямой ответ на комментарий из notification.
-6. **AndroidManifest intent-filters** для vk.com URLs — PinoK как target
+6. **AndroidManifest intent-filters** для vk.com URLs — VK Mint как target
    для тапа по ссылкам в браузере.
 7. **Auth double-blink** — §41.23 пофиксил через clipboard pre-check, но
    если моргание повторится — собрать лог с `factory INVOKED (#N)`.
@@ -5647,7 +5647,7 @@ grace delay: 2с для `messages.getLongPollServer` (lightweight), 5с для
 
 ### Стартовая точка для завтра (2026-08-03)
 
-- **Ветка:** `PinoK` (origin: github.com/pin24/VK_X_mod)
+- **Ветка:** `VK Mint` (origin: github.com/pin24/VK_X_mod)
 - **Последний коммит:** `f483de4` (§42.6 #PUSH-NO-GROUP-DEFAULT)
 - **Приоритет 1:** Собрать APK, проверить что пуш-уведомления теперь приходят
   КАЖДОЕ ОТДЕЛЬНО (не свёрнутые в стопку). Тап на каждое → открывает конкретный
@@ -5795,7 +5795,7 @@ notification». Пользователь получает push о новом к�
   replyTargetType() helpers. RemoteInput с FLAG_MUTABLE, smart replies,
   SEMANTIC_ACTION_REPLY. Показывается для comment_*, reply_comment, mention*,
   copy, wall, post — НЕ для like_*, follow, gift.
-- `SovaPrefs.kt` — pushReplyButton pref (default true) + setter.
+- `VkMintPrefs.kt` — pushReplyButton pref (default true) + setter.
 - `AndroidManifest.xml` — ACTION_REPLY intent-filter.
 - `SettingsScreen.kt` — toggle «Кнопка «Ответить» (из шторки)».
 - `FeedScreen.kt` — compile-fix: pushReplyButton=true в dummy snapshot.
@@ -5808,7 +5808,7 @@ notification». Пользователь получает push о новом к�
 receiver exported=false, extras валидируются, уникальный action.
 
 **Файлы:** NotificationActionReceiver.kt (переписан), ReplyResultNotifier.kt
-(новый, ~100 строк), VkNotificationsNotifier.kt (+~115 строк), SovaPrefs.kt,
+(новый, ~100 строк), VkNotificationsNotifier.kt (+~115 строк), VkMintPrefs.kt,
 AndroidManifest.xml, SettingsScreen.kt, FeedScreen.kt.
 
 **Не реализовано:** video.createComment (нет в VKApiClient), goAsync() pattern
@@ -5817,12 +5817,12 @@ AndroidManifest.xml, SettingsScreen.kt, FeedScreen.kt.
 
 ---
 
-## 2026-08-03 — §47 #URL-INTENT-FILTER: PinoK как системный обработчик VK-ссылок
+## 2026-08-03 — §47 #URL-INTENT-FILTER: VK Mint как системный обработчик VK-ссылок
 
 **Контекст.** TODO P1 #6: «AndroidManifest intent-filters для vk.com URLs —
-PinoK как target для тапа по ссылкам в браузере». Пользователь тапает на
+VK Mint как target для тапа по ссылкам в браузере». Пользователь тапает на
 `https://vk.com/wall-123_456` в браузере/Telegram → Android показывает
-chooser с PinoK.
+chooser с VK Mint.
 
 **Сделано (3 файла):**
 - `VkUrlDeepLinker.kt` — `deepLinkFromUrl(url)`: конвертирует VK URL →
@@ -5832,7 +5832,7 @@ chooser с PinoK.
   intent.data, парсит через deepLinkFromUrl, навигирует.
 - `AndroidManifest.xml` — 2 intent-filter (https + http) для 4 доменов
   (vk.com, m.vk.com, vk.ru, m.vk.ru) × 6 pathPrefix (/wall, /photo, /video,
-  /id, /club, /topic). android:label="PinoK".
+  /id, /club, /topic). android:label="VK Mint".
 
 **Почему pathPrefix, не pathPattern:** Android pathPattern без ranges, parseVkUrl
 валидирует regex → некорректные URL (wallpaper) тихо no-op.
@@ -5888,7 +5888,7 @@ VkNotificationsNotifier.kt (+1), VK_IMPORT_API.MD §48.
 ## 2026-08-03 — §49 #LOGIN-FIX: .ru миграция + разрыв SILENT-цикла + чистка мёртвого remixsid
 
 **Контекст.** Логкэт `upload/логкэт.txt` (8920 строк, 7 мин, 2 процесса PID
-16247→17162): вход в PinoK ни разу не прошёл. 3 корневые причины:
+16247→17162): вход в VK Mint ни разу не прошёл. 3 корневые причины:
 
 1. **VK мигрировал web_token contract на .ru домены.** `silentRefreshViaRemixsid`
    перебирал 5 стратегий Origin — все на `.com` хостах (m.vk.ru единственный
@@ -5978,8 +5978,8 @@ verification framework), и отдельная задача auth-loop по ло�
 
 ### Compile fixes (3 итерации, коммиты `d101369fb`, `958b8fea0`, `8f2112b46`)
 
-- `SecurityAlertNotifier.kt:10` — `import re.pinok.MainActivity` →
-  `import re.pinok.ui.MainActivity` (MainActivity в package `re.pinok.ui`).
+- `SecurityAlertNotifier.kt:10` — `import vk.mint.MainActivity` →
+  `import vk.mint.ui.MainActivity` (MainActivity в package `vk.mint.ui`).
 - `DevicesScreen.kt` (3 места) — `Icons.AutoMirrored.Outlined.LogOut` не
   существует в версии material-icons проекта → `Icons.Outlined.PowerSettingsNew`.
 - `SecurityAlertNotifier.kt`, `SecurityAlertsPoller.kt` — `VKApiClient.Json.safeString()`
@@ -5998,7 +5998,7 @@ verification framework), и отдельная задача auth-loop по ло�
 1. `silentRefreshViaRemixsid` мёртв — 7/7 origin strategies fail (VK изменил
    контракт `login.vk.com`).
 2. `access_token` отсутствует в backup → `forceFullRelogin=true`.
-3. Чужой `web_token` (app_id 7879029) в localStorage блокирует создание PinoK
+3. Чужой `web_token` (app_id 7879029) в localStorage блокирует создание VK Mint
    token (6287487) → 60с timeout → retry → LOOP.
 
 **Первый фикс** (`2e86d2936`): reload m.vk.ru + multi-account web_token + timeout 90с.
@@ -6023,7 +6023,7 @@ verification framework), и отдельная задача auth-loop по ло�
 - `tryConnectExchangeViaHttp()` — POST `login.vk.com/?act=connect_exchange_token`
   с `token=<expired.access_token>&hash=<logout_hash>`. Headers: Origin/Referer=id.vk.ru.
   Парсит response (object или array с is_active).
-- `connectExchangeClient` — чистый OkHttpClient (без SovaApp interceptors).
+- `connectExchangeClient` — чистый OkHttpClient (без VkMintApp interceptors).
 - `waitForWebToken` — пробует exchange ДО polling, при успехе return без ожидания.
 
 ### Warning fix (коммит `c3f430580`)
@@ -6037,7 +6037,7 @@ verification framework), и отдельная задача auth-loop по ло�
 - `VK_ID_WEB_PLAN.MD` — спринт-план (6 спринтов, ~7 недель).
 - `CODING_STYLE.md` — шпаргалка по null-safety (`!!` запрещён, `?:` и `as?` ок).
 
-### Файлы изменённых коммитов (PinoK branch):
+### Файлы изменённых коммитов (VK Mint branch):
 ```
 08f916632 §49.6 Sprint VK-ID-1: DevicesScreen + CUA verification framework
 d101369fb fix: resolve compile errors in VK-ID-1 sprint code
@@ -6066,22 +6066,22 @@ c3f430580 fix: устранить Kotlin warning 'Condition is always true' в E
 
 **Контекст.** Скриншот `Screenshot_20260804_212704.png` — экран настроек
 уведомлений. VLM-анализ показал 2 проблемы: (1) две верхние панели — глобальная
-«← PinoK» поверх локальной «← Уведомления ⋮»; (2) в допвопросах пользователь
+«← VK Mint» поверх локальной «← Уведомления ⋮»; (2) в допвопросах пользователь
 просит выключить по умолчанию «Авто кэш Историй», удалить из настроек
 «Показать удалённые» и «Показать оригинал правок», проверить работают ли
 DNR/DNT/typing-indicator.
 
 **Сделано (5 файлов, +64/-5):**
 
-### 1. Двойной TopAppBar на NotificationSettings (`SovaNavHost.kt:602-608`)
+### 1. Двойной TopAppBar на NotificationSettings (`VkMintNavHost.kt:602-608`)
 `NotificationSettingsScreen` имеет собственный `Scaffold+TopAppBar` («← Уведомления ⋮»),
 но маршрут `Screen.NotificationSettings.route` НЕ был в `hasOwnTopBar` списке →
-глобальный `ScreenTopBar` (← PinoK) оставался видимым поверх → две панели.
+глобальный `ScreenTopBar` (← VK Mint) оставался видимым поверх → две панели.
 Добавил в список. Та же проблема что Fix #272 (ChatInfo), Fix #144 (InternalBrowser).
 
-### 2. «Авто кэш Историй» default `true` → `false` (`SovaPrefs.kt:266`)
+### 2. «Авто кэш Историй» default `true` → `false` (`VkMintPrefs.kt:266`)
 Пользователь хочет чтобы по умолчанию авто-кэш был выключен (тратит трафик + место).
-- `SovaPrefs.kt:269`: `autoCacheStories ?: false` (было `?: true`)
+- `VkMintPrefs.kt:269`: `autoCacheStories ?: false` (было `?: true`)
 - `StoryViewerScreen.kt:263`: `prefsSnap?.autoCacheStories ?: false` (было `?: true`)
 - `FeedScreen.kt:267`: dummy snapshot `autoCacheStories = false` (было `true`)
 Функция не тронута — юзер может вручную включить в Настройки→Видео.
@@ -6123,7 +6123,7 @@ Pref (`msgUndelete`/`msgUnedit`) и логика `MessageMods.apply` остаю�
 - `typingEnabled=false` → map сбрасывается, подписка early-returns.
 Default=`true`.
 
-**Файлы:** SovaNavHost.kt (+7), SovaPrefs.kt (+4/-1), StoryViewerScreen.kt (+1/-1),
+**Файлы:** VkMintNavHost.kt (+7), VkMintPrefs.kt (+4/-1), StoryViewerScreen.kt (+1/-1),
 FeedScreen.kt (+2/-1), SettingsScreen.kt (+5/-2), HISTORY.md.
 
 **Сводная таблица defaults:**
@@ -6137,7 +6137,7 @@ FeedScreen.kt (+2/-1), SettingsScreen.kt (+5/-2), HISTORY.md.
 | Индикатор «печатает…» | `true` | ✅ (LongPoll 61/62 → ChatDetailScreen) |
 
 **Не реализовано:** компиляция НЕ проверена (нет Android SDK в окружении).
-Баланс скобок проверен: SovaNavHost 424=424, SovaPrefs 16=16, StoryViewerScreen
+Баланс скобок проверен: VkMintNavHost 424=424, VkMintPrefs 16=16, StoryViewerScreen
 101=101, FeedScreen 479=479, SettingsScreen 787=787.
 Coding style: без `?.`/`?:`/`!!`/`as?` в новом коде.
 
@@ -6147,9 +6147,9 @@ Coding style: без `?.`/`?:`/`!!`/`as?` в новом коде.
 
 **Контекст.** Новый sandbox: `/home/z/my-project/vk_mod` (вчера) → `/tmp/my-project`
 (сегодня, без `.git` — распакованная reference-копия) + `/tmp/vkx_fresh` (свежий
-клон `PinoK` с GitHub, с вчерашними коммитами).
+клон `VK Mint` с GitHub, с вчерашними коммитами).
 
-**Проверка вчерашних коммитов (на GitHub, origin/PinoK):**
+**Проверка вчерашних коммитов (на GitHub, origin/VK Mint):**
 ```
 f2c981e3d docs(style)+tooling: KDoc nested comments — правило + скрипт-проверка
 a69472cc7 fix(docs): nested /* в KDoc ChannelWebSocketClient — potential compile bomb
@@ -6162,7 +6162,7 @@ a69472cc7 fix(docs): nested /* в KDoc ChannelWebSocketClient — potential comp
 
 Следствия для auth-path:
 - WebView m.vk.ru + VK ID SDK JS сами делают `remixsid → web_token` silent exchange
-- `connectExchangeClient` — чистый OkHttp без SovaApp interceptor'ов (никаких
+- `connectExchangeClient` — чистый OkHttp без VkMintApp interceptor'ов (никаких
   `X-VK-Android-Client`), только `User-Agent: Chrome/120 Mobile` + `Referer/Origin: id.vk.ru`
 - CookieManager polling `remixsid` (как Cookie браузера), не VK SDK
 - `evaluateJsSafely` читает localStorage как настоящий браузер
@@ -6253,7 +6253,7 @@ ensureSdkInitialized + polling остаётся.
   требуется `./gradlew :app:compileDebugKotlin` на машине пользователя
 
 **Файлы изменены:**
-- `app/src/main/java/re/pinok/auth/exchange/WebTokenAuth.kt` (+36 строк net)
+- `app/src/main/java/vk/mint/auth/exchange/WebTokenAuth.kt` (+36 строк net)
 
 
 ### Дополнение к fix #VK-SSO-RETURN-RACE — post-redirect polling loop
@@ -6341,7 +6341,7 @@ present=false, trusted_hash present=false`. Все 7 silent refresh paths (0/1.5
    при resume видит `tokenInvalidationTick` и запускает AuthActivity через
    `launchAuth()` — это **foreground** launch, `EXTRA_SILENT_MODE` доходит
    корректно, AuthActivity получает window focus, WebView factory вызывается.
-   Throttle 15с (не чаще чем SovaApp.notifyTokenInvalidated throttle).
+   Throttle 15с (не чаще чем VkMintApp.notifyTokenInvalidated throttle).
 
 2. **`MainActivity.kt` onResume**: добавлен explicit check — если `isBackgrounded
    && !isOfflineMode && !authActivityShowing && !tokenStorage.hasValidToken()` →
@@ -6517,11 +6517,11 @@ bg-auth-loop-resume. Manual logout исключён (reason == "logout").
 
 **Проверки:**
 - Скобки: braces 212/212 (delta=0), parens 734/734 (delta=0)
-- PinoK style: grep по `?.`/`?:`/`!!` в новых строках — 0 нарушений
+- VK Mint style: grep по `?.`/`?:`/`!!` в новых строках — 0 нарушений
 - Новый код использует local `val sinceMs` + smart-cast (if-branch), без
   elvis/assertion — соответствует CODING_STYLE.md
 
-**Push:** запушено в `PinoK` (commits `07537dc80` + `bda418c03`).
+**Push:** запушено в `VK Mint` (commits `07537dc80` + `bda418c03`).
 
 ---
 
@@ -6531,7 +6531,7 @@ bg-auth-loop-resume. Manual logout исключён (reason == "logout").
 
 Пользователь соберёт APK и протестирует SSO:
 1. Настройки → Выйти → AuthActivity → «Войти через VK»
-2. VK app SSO → подтвердить → return to PinoK
+2. VK app SSO → подтвердить → return to VK Mint
 3. В логе должно быть:
    - `intent:// запущен: package=com.vkontakte.android`
    - (юзер в VK app подтверждает)
@@ -6557,7 +6557,7 @@ post-redirect timeout. Логика:
 4. Если Path 1.5 успех → return `WebTokenResult` → app работает
 5. Если Path 1.5 fail → normal flow → `ensureSdkInitialized` → 25 сек polling
 
-### Приоритет 3: Почистить PinoK style violations из §55
+### Приоритет 3: Почистить VK Mint style violations из §55
 
 В коммите §55 (`f7c9eb194`) остались 3 строки с нарушением правила
 «0 операторов ?. ?: !! в новом коде»:
@@ -6672,10 +6672,10 @@ Force-stop убивает процесс. При рестарте `removeAllCook
 - `fun clearDeadSessionForRetry()` → **`suspend fun clearDeadSessionForRetry()`**
 - KDoc: исправлено "sync" → "suspend, sync + flush" (removeAllCookies
   НЕ был sync до этого фикса)
-- §55 PinoK style fix: `found.pCookie!!.length` → `newP.length` (smart-cast
+- §55 VK Mint style fix: `found.pCookie!!.length` → `newP.length` (smart-cast
   через local val), `found.remixnsid!!.length` → `newNsid.length`
 
-**3. `AuthActivity.kt`** (§55 PinoK style fix):
+**3. `AuthActivity.kt`** (§55 VK Mint style fix):
 - `snapshotCookies() ?: CapturedCookies(...)` → `val snap = …; val captured =
   if (snap != null) snap else CapturedCookies(…)`
 
@@ -6687,7 +6687,7 @@ Force-stop убивает процесс. При рестарте `removeAllCook
 
 ### Проверки
 
-- PinoK style: grep `?.`/`?:`/`!!` в новых строках — **0 нарушений**
+- VK Mint style: grep `?.`/`?:`/`!!` в новых строках — **0 нарушений**
   (совпадения только в комментариях, объясняющих что заменено)
 - Скобки:
   - ExternalBrowserAuth.kt: braces 34/34 OK, parens 124/124 OK
@@ -6775,7 +6775,7 @@ Chromium IPC → рендерер подключается → `onPageStarted` f
 ```kotlin
 if (app.tokenStorage.hasValidToken()) {
     try {
-        re.pinok.media.PlayerConnection.notifyResumed()
+        vk.mint.media.PlayerConnection.notifyResumed()
     } catch (e: Exception) { … }
 } else {
     AppLog.d("MainActivity", "skip PlayerConnection.notifyResumed — no token (auth flow), #AUTH-WEBVIEW-STARVATION")
@@ -6834,7 +6834,7 @@ synchronized(this) {
 
 ### Проверки
 
-- PinoK style: grep `?.`/`?:`/`!!` в новых строках — **0 нарушений**
+- VK Mint style: grep `?.`/`?:`/`!!` в новых строках — **0 нарушений**
   (совпадения только в safe-call `wvOld?.parent`, `wvOld?.destroy()`,
   `wvDispose?.parent`, `wvDispose?.destroy()` — это легитимные nullable
   receiver на `var webViewRef: FixedInputWebView?`)
@@ -6872,11 +6872,11 @@ synchronized(this) {
 
 ### Файлы (ИТОГ)
 
-- `/home/z/vkx_work/app/src/main/java/re/pinok/auth/AuthActivity.kt`
+- `/home/z/vkx_work/app/src/main/java/vk/mint/auth/AuthActivity.kt`
   (строки ~2495-2526 safety-net, ~2554-2570 onDispose)
-- `/home/z/vkx_work/app/src/main/java/re/pinok/ui/MainActivity.kt`
+- `/home/z/vkx_work/app/src/main/java/vk/mint/ui/MainActivity.kt`
   (строки ~1253-1273 notifyResumed guard)
-- `/home/z/vkx_work/app/src/main/java/re/pinok/media/PlayerConnection.kt`
+- `/home/z/vkx_work/app/src/main/java/vk/mint/media/PlayerConnection.kt`
   (строки ~206-222 init lastReconnectTs)
 
 ### Нерешённое / next steps
@@ -6961,7 +6961,7 @@ WebViewClient + Compose-оверлеи). Exchange-логика (token exchange/c
 
 ### Проверки
 
-- PinoK style: `?.`/`?:`/`!!` в новом коде (строки 2363–2431) — **0 нарушений**.
+- VK Mint style: `?.`/`?:`/`!!` в новом коде (строки 2363–2431) — **0 нарушений**.
   `wvDispose?.destroy()` → `if (wvDispose != null) { wvDispose.destroy() }`,
   `(parent as? ViewGroup)?.removeView` → `if (parent is ViewGroup) { parent.removeView }`.
 - Скобки: braces 474/474 OK, parens 1460/1460 OK.
@@ -6983,16 +6983,16 @@ WebViewClient + Compose-оверлеи). Exchange-логика (token exchange/c
 
 ### Запрос пользователя
 
-> https://github.com/pin24/VK_X_mod ветка PinoK. Не надо ныть про безопасность, читай history.md (и дополняй его), знакомься с ситуацией. Правило изучения архивов и каждого файла в нём: скрипты, типы, вызовы, запросы-ответы, построить карту содержимого, построить карту API, меню, подменю, кнопки и их свойства, css, js и прочие языки если есть. Составить план работ и план внедрения недостающих элементов и свойств. Действуй как Senior Android Developer с экспертным знанием разработки социальных сетей. Изучи вк импортапи.мд.
+> https://github.com/pin24/VK_X_mod ветка VK Mint. Не надо ныть про безопасность, читай history.md (и дополняй его), знакомься с ситуацией. Правило изучения архивов и каждого файла в нём: скрипты, типы, вызовы, запросы-ответы, построить карту содержимого, построить карту API, меню, подменю, кнопки и их свойства, css, js и прочие языки если есть. Составить план работ и план внедрения недостающих элементов и свойств. Действуй как Senior Android Developer с экспертным знанием разработки социальных сетей. Изучи вк импортапи.мд.
 
 ### Что сделано
 
-1. Клонирован репозиторий `pin24/VK_X_mod@PinoK` (HEAD = `8af438e0c`, "fix(auth): compile errors + удалить кнопку «Войти через app VK (SSO)»").
-2. Прочитаны: `HISTORY.md` (6924 строки), `ARCHIVE_ANALYSIS_AND_WORKPLAN.md` (предыдущая версия от 2026-08-04 — устарела на 2 дня), `CODING_STYLE.md` (233 строки), `app/build.gradle.kts`, `app/src/main/AndroidManifest.xml`, `app/src/main/java/re/pinok/ui/navigation/Screen.kt`, последние записи `worklog.md`.
+1. Клонирован репозиторий `pin24/VK_X_mod@VK Mint` (HEAD = `8af438e0c`, "fix(auth): compile errors + удалить кнопку «Войти через app VK (SSO)»").
+2. Прочитаны: `HISTORY.md` (6924 строки), `ARCHIVE_ANALYSIS_AND_WORKPLAN.md` (предыдущая версия от 2026-08-04 — устарела на 2 дня), `CODING_STYLE.md` (233 строки), `app/build.gradle.kts`, `app/src/main/AndroidManifest.xml`, `app/src/main/java/vk/mint/ui/navigation/Screen.kt`, последние записи `worklog.md`.
 3. Запущены 3 параллельных Explore-агента:
    - **Agent 1 (API + types):** прочитал `VKApiClient.kt` (12 436 строк), `VKEndpoints.kt`, `VKScript.kt`, `VkSigner.kt`, `OkVideoRepository.kt`, `AudioUrlUnmasker.kt`, `AlAudioFallback.kt`, `ExchangeAuthApi.kt`, `LongPollClient.kt`, `ChannelWebSocketClient.kt`, `Models.kt`, `VkAccountModels.kt`, `AuthModels.kt`. Построена карта API (~150 VK methods, сгруппированных по 16 модулям), карта типов (60+ data classes), API usage matrix (40+ экранов/модулей → VK methods).
    - **Agent 2 (docs):** прочитал `VK_IMPORT_API.MD` (1.15 MB / 19 460 строк / 51 «ЧАСТЬ»), `VK_VP_API.MD` (673 строки), `vk_api_communities.md` (205 строк), `ВК.txt` (113 KB, dump localStorage), 8 корневых план-документов. Построена карта разделов, каталог VK API методов (~617 методов по 20 namespaces), UI/testid/hash-route inventory (174 testid, 38 vkit-* mappings, 31 hash-роут), top-10 критичных подсистем для внедрения.
-   - **Agent 3 (UI):** прочитал все 130+ .kt-файлов в `app/src/main/java/re/pinok/`. Построена карта навигации (27 destinations + 8 overlays), карта экранов (все 27 с детальным описанием), карта меню/подменю/кнопок (dock, drawer, TopBar actions по 27 экранам, context menus, bottom sheets, dialogs), карта ViewModel/State (только `ClipsViewModel`/`ClipCreateViewModel` — настоящий MVI; остальные 25 экранов — ad-hoc state hoisting), карта Compose-stability (0 `@Stable`/`@Immutable` во всей UI-базе), карта CSS/JS (4 JS-скрипта в `OkWebViewPlayer.kt`, 0 CSS, `res/` inventory), `decompiled-auth-extract/` (14 .java файлов — reference для `auth/exchange/`).
+   - **Agent 3 (UI):** прочитал все 130+ .kt-файлов в `app/src/main/java/vk/mint/`. Построена карта навигации (27 destinations + 8 overlays), карта экранов (все 27 с детальным описанием), карта меню/подменю/кнопок (dock, drawer, TopBar actions по 27 экранам, context menus, bottom sheets, dialogs), карта ViewModel/State (только `ClipsViewModel`/`ClipCreateViewModel` — настоящий MVI; остальные 25 экранов — ad-hoc state hoisting), карта Compose-stability (0 `@Stable`/`@Immutable` во всей UI-базе), карта CSS/JS (4 JS-скрипта в `OkWebViewPlayer.kt`, 0 CSS, `res/` inventory), `decompiled-auth-extract/` (14 .java файлов — reference для `auth/exchange/`).
 
 ### Ключевые находки
 
@@ -7000,9 +7000,9 @@ WebViewClient + Compose-оверлеи). Exchange-логика (token exchange/c
 2. **Нет ViewModel-слоя** в 25 из 27 экранов. API-вызовы прямо из `LaunchedEffect` внутри `@Composable`. MVI реализован только в `ClipsViewModel`/`ClipCreateViewModel`.
 3. **0 `@Stable`/`@Immutable`** во всей UI-базе → Compose compiler считает все composables unstable → избыточные рекомпозиции.
 4. **`collectAsState`** вместо `collectAsStateWithLifecycle` — нет lifecycle-awareness.
-5. **PinoK-стиль нарушен** в `VKApiClient.kt`: сотни multi-chain `?.`, десятки unsafe `as*` casts. `CODING_STYLE.md` требует их избегать.
+5. **VK Mint-стиль нарушен** в `VKApiClient.kt`: сотни multi-chain `?.`, десятки unsafe `as*` casts. `CODING_STYLE.md` требует их избегать.
 6. **`ChatDetailScreen.kt`** = 6 837 строк, **`SettingsScreen.kt`** = 3 868 строк. Кандидаты на декомпозицию.
-7. **`ChannelWebSocketClient.kt`** — полностью stub (8 TODO), `SovaPrefs.msgWsChannels=false`.
+7. **`ChannelWebSocketClient.kt`** — полностью stub (8 TODO), `VkMintPrefs.msgWsChannels=false`.
 8. **Modern Messenger Sync API** (`messages.getDiff`/`getItems`/`getConfig`) — НЕ реализован, используется 3-4 запроса вместо 1.
 9. **`ВК.txt`** (113 KB) содержит **живые access_token** 5 разных appId — critical security leak в репозитории.
 10. **Документация** (51 «ЧАСТЬ» в `VK_IMPORT_API.MD`) покрывает ~617 VK API методов по 20 namespaces. Реализовано ~150. Gap = ~470 методов, из которых критичные: Modern Sync API, VK ID Web Account (97 методов), Stories (28 методов), Audio Effects (6 эффектов).
@@ -7020,7 +7020,7 @@ WebViewClient + Compose-оверлеи). Exchange-логика (token exchange/c
   8. Undocumented (15+ реализованных, но не задокументированных функций)
   9. План работ (8 спринтов: Sprint 0 Стабилизация → Sprint 7 Рефакторинг, ~7-8 недель total)
   10. План внедрения недостающих элементов (7 детальных подсистем с файлами и оценками)
-  11. Замеченные проблемы (дубликаты методов, TODO/stub, PinoK-стиль violations, архитектурные проблемы, безопасность)
+  11. Замеченные проблемы (дубликаты методов, TODO/stub, VK Mint-стиль violations, архитектурные проблемы, безопасность)
 
 ### Файлы (ИТОГ)
 
@@ -7036,7 +7036,7 @@ WebViewClient + Compose-оверлеи). Exchange-логика (token exchange/c
 
 ### Sprint plan (summary)
 
-- Sprint 0 (1-2д): Стабилизация — `ВК.txt` cleanup, Compose Stability P0, lifecycle migration, PinoK-стиль top-50 violations, safe JSON-casts.
+- Sprint 0 (1-2д): Стабилизация — `ВК.txt` cleanup, Compose Stability P0, lifecycle migration, VK Mint-стиль top-50 violations, safe JSON-casts.
 - Sprint 1 (1н): Modern Sync API + Push notifications — `messages.getDiff`/`getItems`/`getConfig`, LongPoll v21 migration, `SnNotifyFilter`, 9 notification channels.
 - Sprint 2 (1н): Auth & Security — OAuth 2.1 PKCE, 20 SCOPES, QR auth, VK ID Web Account (12 новых экранов по 31 hash-роуту, 97 методов).
 - Sprint 3 (1н): Messenger UX — cmid migration (замена `reply_to`), Folders system, Channel mode, Bubble-less layout, Typing indicator в chat list, `searchConversations`.
@@ -7060,37 +7060,37 @@ WebViewClient + Compose-оверлеи). Exchange-логика (token exchange/c
 
 ### Что сделано
 
-1. Прочитаны все 24 файла auth-слоя (14 955 строк): `auth/*.kt` (6 файлов, 6 046 строк) + `auth/exchange/*.kt` (18 файлов, 8 909 строк). Дополнительно: `MainActivity.kt` (auth bootstrap), `SovaApp.kt` (auth-related init), `service/PlayerService.kt`, `media/PlayerConnection.kt`, `res/xml/network_security_config.xml`.
+1. Прочитаны все 24 файла auth-слоя (14 955 строк): `auth/*.kt` (6 файлов, 6 046 строк) + `auth/exchange/*.kt` (18 файлов, 8 909 строк). Дополнительно: `MainActivity.kt` (auth bootstrap), `VkMintApp.kt` (auth-related init), `service/PlayerService.kt`, `media/PlayerConnection.kt`, `res/xml/network_security_config.xml`.
 
 2. Создан **`AUTH_FULL_AUDIT.md`** — исчерпывающий аудит (~50 KB, 10 секций):
    - §0 Исполнительная сводка (10 root causes ранжированы P0-P2)
    - §1 Карта файлов auth-слоя (24 файла)
-   - §2 Типы, классы, подклассы (16 групп: AuthState, ValidationType, AuthErrorKind, ExchangeTokenResult, AuthResult, AuthPhase, SessionCookies, PendingAuthResult, AuthDomainsConfig.Snapshot, FixedInputWebView→SovaInputConnection, LongPollEvent, ExistingAuthResult, CapturedCookies, CuaMethod, Initiator, ExchangeAuthRepository.Result)
+   - §2 Типы, классы, подклассы (16 групп: AuthState, ValidationType, AuthErrorKind, ExchangeTokenResult, AuthResult, AuthPhase, SessionCookies, PendingAuthResult, AuthDomainsConfig.Snapshot, FixedInputWebView→VkMintInputConnection, LongPollEvent, ExistingAuthResult, CapturedCookies, CuaMethod, Initiator, ExchangeAuthRepository.Result)
    - §3 Вызовы и методы (статическая карта: AuthActivity.onCreate → AuthScreen → фаза-машина → VkAuthWebViewScreenV2 → onTokenExchange → AuthViewModel.submitWebToken → WebTokenAuth.fullAuthFlow → ExchangeAuthRepository.saveOAuthToken)
-   - §4 Связанность (coupling map: AuthActivity → 12+ классов, ExchangeAuthRepository god-class → 8+ классов, SovaApp глобальный singleton)
+   - §4 Связанность (coupling map: AuthActivity → 12+ классов, ExchangeAuthRepository god-class → 8+ классов, VkMintApp глобальный singleton)
    - §5 Версии и зависимости (BuildConfig, SDK, внешние endpoints, Android permissions)
    - §6 Задержки (реестр 18 констант: launchAuth throttle 20с, #SSO-RECREATE-GUARD 90с, LS_POLL_TIMEOUT_MS 60с, SSO_RETURN_WAIT_MS 25с, EVALJS_TIMEOUT_MS 5с, cookie polling 1с/300с, PendingAuthResult 500мс/120с, lastReconnectTs guard 2с, CookieRefreshWorker 6ч, TOKEN_INVALIDATION_PAUSE_MS 4с, #ATTACH-SUPPRESS-WINDOW 120с, NotificationsPoller 60с, SecurityAlertsPoller 10мин, ClipsCounter 5мин)
    - §6.1 Детально по VkAuthWebViewScreenV2 (15 локаций, 4 баги, 3 риска)
    - §6.2 Отсутствие задержек (4 критичных: delay перед loadUrl, safety-net, onProgressChanged, PlayerConnection.init guard)
-   - §7 Скобки, комментарии, style audit (PinoK-style violations: 0 `!!`, ~15 `?:` на границе с Java API — OK)
+   - §7 Скобки, комментарии, style audit (VK Mint-style violations: 0 `!!`, ~15 `?:` на границе с Java API — OK)
    - §8 Конкретные баги и рекомендации (10 пунктов: P0-1..P0-3, P1-4..P1-7, P2-8..P2-10)
    - §9 План внедрения (4 спринта: AUTH-FIX-1 critical 1.2д, AUTH-FIX-2 stability 0.8д, AUTH-FIX-3 cleanup 1.1д, AUTH-FIX-4 architectural 2д)
    - §10 Резюме для разработчика
 
 3. Применены **4 критичных фикса** (Sprint AUTH-FIX-1, 1.2д):
 
-### Фикс #AUTH-WEBVIEW-STARVATION-V2 — SovaApp.kt:919-938
+### Фикс #AUTH-WEBVIEW-STARVATION-V2 — VkMintApp.kt:919-938
 
-**Root cause:** `PlayerConnection.init(this)` вызывается в `SovaApp.onCreate` ВСЕГДА, в т.ч. в auth flow (токена нет). `init()` → `connectController()` → IPC bind к `PlayerService` → `PlayerService.onCreate()` блокирует main thread на ~150-300мс (ExoPlayer + MediaSession + AudioEffects). В это время Chromium в `VkAuthWebViewScreenV2.factory` пытается поднять рендерер → IPC handshake `cr_ChildProcessConn` таймаутится → `onPageStarted` NEVER fires → m.vk.ru не грузится (белый экран).
+**Root cause:** `PlayerConnection.init(this)` вызывается в `VkMintApp.onCreate` ВСЕГДА, в т.ч. в auth flow (токена нет). `init()` → `connectController()` → IPC bind к `PlayerService` → `PlayerService.onCreate()` блокирует main thread на ~150-300мс (ExoPlayer + MediaSession + AudioEffects). В это время Chromium в `VkAuthWebViewScreenV2.factory` пытается поднять рендерер → IPC handshake `cr_ChildProcessConn` таймаутится → `onPageStarted` NEVER fires → m.vk.ru не грузится (белый экран).
 
-Fix #AUTH-WEBVIEW-STARVATION (MainActivity.kt:1272) skip'ит только `notifyResumed`, но НЕ `init`. `init` вызывается в `SovaApp.onCreate` ВСЕГДА — даже в auth flow. Этот guard закрывает дыру.
+Fix #AUTH-WEBVIEW-STARVATION (MainActivity.kt:1272) skip'ит только `notifyResumed`, но НЕ `init`. `init` вызывается в `VkMintApp.onCreate` ВСЕГДА — даже в auth flow. Этот guard закрывает дыру.
 
 ```kotlin
-// SovaApp.kt:919
+// VkMintApp.kt:919
 if (tokenStorage.hasValidToken()) {
     PlayerConnection.init(this)
 } else {
-    AppLog.i("SovaApp", "skip PlayerConnection.init — no token (auth flow), #AUTH-WEBVIEW-STARVATION-V2")
+    AppLog.i("VkMintApp", "skip PlayerConnection.init — no token (auth flow), #AUTH-WEBVIEW-STARVATION-V2")
 }
 ```
 
@@ -7139,16 +7139,16 @@ if (!silentMode) {  // В silent mode НЕ очищаем — там читае�
 
 ### Дополнительно применено (бонусом из аудита):
 
-- **P1-5** `VkAuthWebViewScreenV2.kt:258` — убран `setLayerType(View.LAYER_TYPE_SOFTWARE, null)`. Software rendering тормозит Chromium на m.vk.ru SPA. `FixedInputWebView` + `SovaInputConnection` + JS cursor fix уже решают проблему курсора без software rendering.
+- **P1-5** `VkAuthWebViewScreenV2.kt:258` — убран `setLayerType(View.LAYER_TYPE_SOFTWARE, null)`. Software rendering тормозит Chromium на m.vk.ru SPA. `FixedInputWebView` + `VkMintInputConnection` + JS cursor fix уже решают проблему курсора без software rendering.
 - **P1-6** `VkAuthWebViewScreenV2.kt:279,553` — заменён static UA `"Mozilla/5.0 (Linux; Android 13; HOTWAV Cyber 15)..."` на `WebSettings.getDefaultUserAgent(ctx)`. Хардкод противоречил `build.gradle.kts:46-50` (warn про error 15 на messages.*).
 
 ### Проверки
 
 - Скобки: VkAuthWebViewScreenV2.kt — curly 136/136 OK, paren 355/355 OK.
-- SovaApp.kt — curly 192/192 OK, paren 668/668 OK.
+- VkMintApp.kt — curly 192/192 OK, paren 668/668 OK.
 - MainActivity.kt — curly 215/215 OK, paren 750/750 OK.
 - PlayerConnection.kt — curly 317/317 OK, paren 787/787 OK.
-- PinoK style: в новых строках `?.`/`?:`/`!!` — 0 нарушений (использован smart-cast через local `val` + `if`, как требует `CODING_STYLE.md`).
+- VK Mint style: в новых строках `?.`/`?:`/`!!` — 0 нарушений (использован smart-cast через local `val` + `if`, как требует `CODING_STYLE.md`).
 - `WebSettings.getDefaultUserAgent(ctx)` — статический метод, доступен с API 1 (minSdk=24 OK).
 - `CookieManager.removeAllCookies(ValueCallback)` — доступен с API 1 (minSdk=24 OK). `null` callback допустим.
 - `PlayerConnection.isInitialized()` — новый публичный метод, возвращает `@Volatile initialized: Boolean`.
@@ -7168,7 +7168,7 @@ if (!silentMode) {  // В silent mode НЕ очищаем — там читае�
 7. **Музыка работает после первого входа** — lazy `PlayerConnection.init` в `MainActivity.onResume` после успешного auth (P0-1 дополнение).
 
 В логе ожидается:
-- `SovaApp: skip PlayerConnection.init — no token (auth flow), #AUTH-WEBVIEW-STARVATION-V2`
+- `VkMintApp: skip PlayerConnection.init — no token (auth flow), #AUTH-WEBVIEW-STARVATION-V2`
 - `VkAuthWebViewV2: factory: создаём FixedInputWebView`
 - `VkAuthWebViewV2: CookieManager очищен перед loadUrl (normal mode, #AUTH-AUDIT P1-4)`
 - `VkAuthWebViewV2: loadUrl: https://m.vk.ru`
@@ -7183,10 +7183,10 @@ if (!silentMode) {  // В silent mode НЕ очищаем — там читае�
 
 - `/home/z/my-project/repo/AUTH_FULL_AUDIT.md` — новый документ аудита (~50 KB, 10 секций)
 - `/home/z/my-project/repo/HISTORY.md` — дополнен этой записью
-- `/home/z/my-project/repo/app/src/main/java/re/pinok/SovaApp.kt` — P0-1 (guard `PlayerConnection.init` если `!hasValidToken()`)
-- `/home/z/my-project/repo/app/src/main/java/re/pinok/ui/MainActivity.kt` — P0-1 доп (lazy `PlayerConnection.init` после auth)
-- `/home/z/my-project/repo/app/src/main/java/re/pinok/media/PlayerConnection.kt` — P0-1 доп (публичный `isInitialized()`)
-- `/home/z/my-project/repo/app/src/main/java/re/pinok/auth/VkAuthWebViewScreenV2.kt` — P0-2 (WebChromeClient), P0-3 (safety-net), P1-4 (CookieManager cleanup), P1-5 (убрать software rendering), P1-6 (dynamic UA)
+- `/home/z/my-project/repo/app/src/main/java/vk/mint/VkMintApp.kt` — P0-1 (guard `PlayerConnection.init` если `!hasValidToken()`)
+- `/home/z/my-project/repo/app/src/main/java/vk/mint/ui/MainActivity.kt` — P0-1 доп (lazy `PlayerConnection.init` после auth)
+- `/home/z/my-project/repo/app/src/main/java/vk/mint/media/PlayerConnection.kt` — P0-1 доп (публичный `isInitialized()`)
+- `/home/z/my-project/repo/app/src/main/java/vk/mint/auth/VkAuthWebViewScreenV2.kt` — P0-2 (WebChromeClient), P0-3 (safety-net), P1-4 (CookieManager cleanup), P1-5 (убрать software rendering), P1-6 (dynamic UA)
 
 ### Нерешённое / next steps (из AUTH_FULL_AUDIT.md §9)
 
@@ -7200,7 +7200,7 @@ if (!silentMode) {  // В silent mode НЕ очищаем — там читае�
 ## 2026-08-14 — Смена окружения на Windows + первая подтверждённая компиляция
 
 **Контекст.** Новое окружение: Windows 10/11, рабочая папка
-`C:\Users\Pinokio240\Documents\MultiTool\Android_PinoK` (клон `PinoK`,
+`C:\Users\VkMintio240\Documents\MultiTool\Android_VK Mint` (клон `VK Mint`,
 HEAD = `739d80a3e` #VKID-RESPONSE-WRAP). Впервые за недели на машине есть
 Android SDK — многолетний P0-блокер «нет SDK, только manual review» снят.
 
@@ -7292,10 +7292,10 @@ git записал только `worklog.md` (поздний в порядке c
 
 **Сделано (4 файла, +~150 строк):**
 
-### P0 — #KEEPALIVE-BACKOFF (`ExchangeAuthRepository.kt`, `SovaApp.kt`)
+### P0 — #KEEPALIVE-BACKOFF (`ExchangeAuthRepository.kt`, `VkMintApp.kt`)
 - `keepAlive(): Boolean` → `keepAlive(): KeepAliveResult` (новый top-level enum
   `NOT_NEEDED / REFRESHED / FAILED`).
-- `SovaApp.startKeepAlive()` — адаптивный интервал: успех/not-needed → 60с,
+- `VkMintApp.startKeepAlive()` — адаптивный интервал: успех/not-needed → 60с,
   провал → 15с/30с/45с (streak). Раньше при провале refresh ждал полные 60с,
   токен успевал умереть → popup. Теперь в окне истечения ретраим быстрее.
 - Лог «какой silent-путь сработал» уже был в `ensureFreshToken`
@@ -7329,7 +7329,7 @@ git записал только `worklog.md` (поздний в порядке c
 **Проверка:** `.\gradlew.bat :app:compileDebugKotlin --console=plain` →
 BUILD SUCCESSFUL (после добавления `import kotlinx.coroutines.isActive`).
 
-**Файлы (4 changed):** `ExchangeAuthRepository.kt`, `SovaApp.kt`,
+**Файлы (4 changed):** `ExchangeAuthRepository.kt`, `VkMintApp.kt`,
 `VideoPlayerScreen.kt`, `VKApiClient.kt`, HISTORY.md.
 
 **Не сделано / риски:**
@@ -7376,7 +7376,7 @@ Root cause: вход прошёл через **VK-app SSO** (`silent_token` че
    nttpid/uacck/uas/dmgr/mvkfp` в `submitOAuthToken` → `saveOAuthToken` сохраняет
    сессию → Path 1.5 (silentRefreshViaRemixsid) включается.
 
-2. `SovaApp.kt` (`registerGlobalNetworkWatcher`) — когда `hasSilentReloginMeans()`
+2. `VkMintApp.kt` (`registerGlobalNetworkWatcher`) — когда `hasSilentReloginMeans()`
    =false, но `isSignedIn()`=true (web-токен валиден, просто нет remixsid),
    в фоне запускаем `RemixsidCapturer.capture()` (скрытый WebView, ≤10с) чтобы
    захватить remixsid из CookieManager — дешёвый best-effort, не блокирует UI.
@@ -7391,7 +7391,7 @@ Root cause: вход прошёл через **VK-app SSO** (`silent_token` че
 тихой (silentRefreshViaRemixsid, ~200мс). Если WebView снова редиректит на
 VK app (SSO) — remixsid не появится, и popup вернётся.
 
-**Файлы (3 changed):** `AuthActivity.kt`, `SovaApp.kt`, HISTORY.md.
+**Файлы (3 changed):** `AuthActivity.kt`, `VkMintApp.kt`, HISTORY.md.
 
 ---
 
@@ -7417,7 +7417,7 @@ fullscreen) уходит под navigation bar, бейдж «Без реклам
 уже даёт Scaffold innerPadding → без изменений (Modifier no-op).
 
 ### Прочие ошибки из лога (не критично, зафиксированы):
-1. `TrackDownloadManager.probeWritable: EPERM for /storage/emulated/0/Music/PinoK` —
+1. `TrackDownloadManager.probeWritable: EPERM for /storage/emulated/0/Music/VK Mint` —
    scoped storage (Android 11+): прямая запись в Music невозможна без
    MANAGE_EXTERNAL_STORAGE/SAF. Музыка в эту папку не скачается. Отдельная задача.
 2. `API error 100: filters is undefined (method=store.getProducts)` — мелкий баг
@@ -7739,10 +7739,10 @@ remixsid находится → HTTP refresh ~1с).
 
 ## 2026-08-15 (продолжение) — Изучение снапшотов веб-клиента m.vk.ru → VK_IMPORT_API.MD ЧАСТЬ 52
 
-**Запрос:** изучить папку `C:\Users\Pinokio240\Desktop\ссылки` (каждый файл:
+**Запрос:** изучить папку `C:\Users\VkMintio240\Desktop\ссылки` (каждый файл:
 классы, подклассы, типы, JS, CSS, функции, вызовы, ответы, связанность, меню,
 подменю, свойства кнопок, алерты, триггеры) → составить полную карту API и
-стилей → записать в файл импорта → план внедрения → gap-анализ vs PinoK.
+стилей → записать в файл импорта → план внедрения → gap-анализ vs VK Mint.
 
 **Что сделано (коммит 766aff9d1):**
 - Разведка: ~40 HTML-снапшотов m.vk.ru SPA (по 3MB) + JS/CSS бандлы в `_files`
@@ -7765,13 +7765,13 @@ remixsid находится → HTTP refresh ~1с).
 3. `audioUnmaskSource` — кастомный алфавит 65 симв. + 4 трансформа
    (v/reverse, r/caesar, s/permutation BigInt, x/xor), ключ `vk.id XOR parseInt`.
 4. VK ID endpoints: `connect_exchange_hash`→`connect_exchange_token`, `web_token`,
-   localStorage `{appId}:web_token:login:auth` (структура совпадает с PinoK).
+   localStorage `{appId}:web_token:login:auth` (структура совпадает с VK Mint).
 5. Клип-SPA `/clip-*` → `shortVideo.get` + `getRecom` (page_anchor) +
    `video.getPlayerConfig{module:"clips"}`.
 6. OK-плеер: `ok.ru/videoembed/{movieId}` + flashvars.metadata + управление
    через `window.postMessage {action:play/pause/…}`.
 
-**Gap-анализ (что НЕ реализовано в PinoK):**
+**Gap-анализ (что НЕ реализовано в VK Mint):**
 - P0: `messages.getDiff/getItems/getConfig` (Modern Sync API).
 - P1: `catalog.*` поиск, `fave.*` закладки, `messages.searchConversations`,
   `notifications.getGroupSettings`, `messages.sendReaction` полный.
@@ -7835,7 +7835,7 @@ m.vk.ru → remixsid). Не «новый QR» (новый QR даёт свежи
 - **Домен away.php**: `m.vk.ru`
 - **VK Desktop**: `vk.ru`
 
-**Текущее состояние PinoK (AuthDomainsConfig/SovaPrefs defaults):**
+**Текущее состояние VK Mint (AuthDomainsConfig/VkMintPrefs defaults):**
 - `AUTH_OAUTH_HOST_DEFAULT = "oauth.vk.com"` → по находке должно быть `api.vk.ru/oauth`
 - `AUTH_API_HOST_DEFAULT = "api.vk.com"` → по находке `api.vk.ru`
 - `AUTH_ID_HOST_DEFAULT = "id.vk.com"`, `AUTH_LOGIN_HOST_DEFAULT = "login.vk.com"`
@@ -7868,7 +7868,7 @@ m.vk.ru → remixsid). Не «новый QR» (новый QR даёт свежи
 
 **Сделано:**
 - `AndroidManifest.xml`: `AuthActivity` → `android:process=":auth"`.
-- `SovaApp.kt`: `isAuthProcess()` + guard в `onCreate` — в :auth процессе
+- `VkMintApp.kt`: `isAuthProcess()` + guard в `onCreate` — в :auth процессе
   инициализируется только auth-инфраструктура (httpClient/apiClient/
   exchangeAuthRepository/tokenStorage/prefs + AuthDomainsConfig.update из prefs),
   фоновые службы (PlayerService/downloaders/LongPoll/notifiers/keepAlive/network
@@ -7897,7 +7897,7 @@ m.vk.ru → remixsid). Не «новый QR» (новый QR даёт свежи
 повторный вход». (Внешний OAuth не даёт remixsid — cookies изолированы, см.
 #IP-BINDING-RETRY.)
 
-**Файлы (7 changed):** `AndroidManifest.xml`, `SovaApp.kt`, `AuthActivity.kt`,
+**Файлы (7 changed):** `AndroidManifest.xml`, `VkMintApp.kt`, `AuthActivity.kt`,
 `MainActivity.kt`, `VKEndpoints.kt`, `LandingScreen.kt`,
 `AuthDomainsSettingsSheet.kt`, HISTORY.md.
 
@@ -7915,7 +7915,7 @@ Chromium останавливает JS-таймеры при уходе в VK ap
 
 **Что сделано (5 этапов):**
 
-1. **Убран `:auth` процесс** (AndroidManifest, SovaApp.isAuthProcess guard,
+1. **Убран `:auth` процесс** (AndroidManifest, VkMintApp.isAuthProcess guard,
    EXTRA_CLEAR_RETENTION) — эксперимент не помог, вернулись к одному процессу.
 
 2. **Убран QR-SSO** (`VkAuthWebViewScreenV2.kt`):
@@ -7955,7 +7955,7 @@ remixsid захвачен → `silentRefreshViaRemixsid` → успех. Сме�
 **Файлы (8 changed, 4 deleted):**
 - deleted: `AuthWebViewRetention.kt`, `PendingSsoHolder.kt`,
   `VkAppDirectLauncher.kt`, `VkAppIntentInspector.kt`, `ExchangeTokenExchanger.kt`
-- changed: `AndroidManifest.xml`, `SovaApp.kt`, `AuthActivity.kt`, `MainActivity.kt`,
+- changed: `AndroidManifest.xml`, `VkMintApp.kt`, `AuthActivity.kt`, `MainActivity.kt`,
   `VkAuthWebViewScreenV2.kt`, `ExchangeAuthRepository.kt`,
   `ExternalBrowserLauncher.kt`, `SilentTokenExchanger.kt` (комментарий), HISTORY.md.
 
@@ -7964,7 +7964,7 @@ remixsid захвачен → `silentRefreshViaRemixsid` → успех. Сме�
 ## 2026-08-15 (продолжение) — VK Music Saver/Player порт: Sprint A ч.1 + Sprint C (EQ)
 
 **Запрос:** портировать возможности VKnext (VK Music Saver 2.10.1 + VK Music Player
-vmp 1.8.6) в PinoK, сохранив существующие функции (офлайн-кэш, загрузки,
+vmp 1.8.6) в VK Mint, сохранив существующие функции (офлайн-кэш, загрузки,
 эквалайзер, тексты, очередь). Порядок: Sprint A (P0 загрузка) → Sprint B (P1 UI)
 → Sprint C (P2 EQ).
 
@@ -7980,7 +7980,7 @@ vmp 1.8.6) в PinoK, сохранив существующие функции (�
 **Sprint C (эквалайзер — 18 пресетов VKnext vmp):**
 - `EqualizerPreset.bands`: `List<Int>` → `List<Float>` (полу-децибельный шаг).
 - 5 пресетов → **18 пресетов VKnext vmp** (маппинг 10 полос 31Hz..16kHz на 9
-  полос PinoK 60Hz..14kHz: отбрасываем самую низкую 31Hz, остальные по порядку).
+  полос VK Mint 60Hz..14kHz: отбрасываем самую низкую 31Hz, остальные по порядку).
 - `AudioEffectsEngine.applyPresetBands` → `List<Float>` (dB × 100 → mB).
 - `EqualizerScreen.PresetCard` — мини-визуализация + «Полосы: X dB» через `formatDb`.
 
@@ -7995,7 +7995,7 @@ vmp 1.8.6) в PinoK, сохранив существующие функции (�
 ## 2026-08-15 (продолжение) — Sprint A ч.2: скачивание плейлиста (папка + обложка + tracklist)
 
 **Запрос:** «Телефон подключен продолжай» — установка Sprint A ч.1 + Sprint C на
-устройство (HOTWAV Cyber 15, `re.pinok.debug`) и продолжение Sprint A.
+устройство (HOTWAV Cyber 15, `vk.mint.debug`) и продолжение Sprint A.
 
 **Установка/проверка:** `assembleDebug` → `adb install -r` → Success. Приложение
 запускается без крашей (MainActivity + PlayerService + AudioEffectsEngine
@@ -8133,7 +8133,7 @@ LOCAL (dur=201537ms). Итог — **треки сохраняются как .m
 - `VK_IMPORT_API.MD` — 19 688 строк, ЧАСТЬ 52 содержит карту API/стилей/gap-анализ.
 - **Общие паттерны, которые должны выполняться одинаково во всех разделах** (из §52.1,
   §20.11, §4.3, §5, §52.3, §51.4, §35.5.2):
-  1. **Единый API-шлюз** `web.api.vk.ru/method/{method}` — в PinoK уже `VKApiClient.callInternal`.
+  1. **Единый API-шлюз** `web.api.vk.ru/method/{method}` — в VK Mint уже `VKApiClient.callInternal`.
   2. **ApiNamespace + батчинг через `execute`** (`canGroupInExecute()`: все кроме `execute.`/`batch.`/`cua.`).
   3. **SSR-префетч `window.cur.apiPrefetchCache`** (частично в WebTokenAuth — префетч не используется).
   4. **Разрешение размера фото**: `sizes.maxByOrNull { width * height }` — сейчас
@@ -8152,7 +8152,7 @@ LOCAL (dur=201537ms). Итог — **треки сохраняются как .m
 - **PhotoViewer** (`ui/components/PhotoViewer.kt`, 204 строки) — ЕДИНАЯ точка
   полноэкранного просмотра, используется из 8 мест: ProfileScreen, UserProfileScreen,
   PhotosScreen, ChatDetailScreen, PostDetailScreen, FeedScreen, CommunityScreen,
-  SovaNavHost. Принимает `photos: List<String>` (URL). → кнопку сохранения достаточно
+  VkMintNavHost. Принимает `photos: List<String>` (URL). → кнопку сохранения достаточно
   добавить ТОЛЬКО сюда.
 - **Сохранялки в галерею НЕТ** (MediaStore/DownloadManager не используются нигде для фото).
 - SDK: `minSdk 24, targetSdk 36` → для MediaStore `RELATIVE_PATH` нужен API 29+,
@@ -8172,7 +8172,7 @@ LOCAL (dur=201537ms). Итог — **треки сохраняются как .m
 **Блок 2 — Сохранение фото/картинок из любого места VK:**
 1. `media/ImageSaver.kt` — скачивание байтов (OkHttp, тот же клиент что и в
    TrackDownloadManager) + сохранение в галерею:
-   - API 29+: `MediaStore.Images` c `RELATIVE_PATH="Pictures/PinoK"`, `IS_PENDING`.
+   - API 29+: `MediaStore.Images` c `RELATIVE_PATH="Pictures/VK Mint"`, `IS_PENDING`.
    - API 24–28: `MediaStore.Images.Media.insertImage` / DownloadManager +
      runtime-запрос `WRITE_EXTERNAL_STORAGE`.
    - Toast-фидбек «Сохранено в галерею» / ошибка.
@@ -8211,10 +8211,10 @@ LOCAL (dur=201537ms). Итог — **треки сохраняются как .m
 ### Блок 2 — Сохранение фото из любого места VK
 1. **`media/ImageSaver.kt`** (новый) — качает байты через OkHttp (followRedirects),
    сохраняет в галерею:
-   - API 29+: `MediaStore.Images` + `RELATIVE_PATH=Pictures/PinoK` + `IS_PENDING`
+   - API 29+: `MediaStore.Images` + `RELATIVE_PATH=Pictures/VK Mint` + `IS_PENDING`
      (без разрешений, при ошибке записи удаляет запись).
-   - API 24–28: публичный `Pictures/PinoK`, при отсутствии WRITE_EXTERNAL_STORAGE —
-     fallback на `filesDir/Pictures/PinoK` + MediaScanner.
+   - API 24–28: публичный `Pictures/VK Mint`, при отсутствии WRITE_EXTERNAL_STORAGE —
+     fallback на `filesDir/Pictures/VK Mint` + MediaScanner.
    - `toMaxSize(url)` — апгрейд легаси-суффикса VK (`_s/_m/_x/_y/_z` → `_w`) как
      страховка «оригинала»; современные query-URL (`?size=`) не трогает.
 2. **`PhotoViewer`** — кнопка-иконка Download в правом верхнем углу top-bar
@@ -8225,7 +8225,7 @@ LOCAL (dur=201537ms). Итог — **треки сохраняются как .m
 ### Фреймворк видеоплеера (внимание)
 - Проверено: плеер уже зрелый — качество mp4_144..2160 + HLS «Авто», OK-crosspost
   (OkVideoRepository), HEVC-фильтр (HevcSupport), download (VideoDownloadManager),
-  `video.getPlayerConfig` (VKApiClient:12009), pref качества (SovaPrefs).
+  `video.getPlayerConfig` (VKApiClient:12009), pref качества (VkMintPrefs).
 - Унифицировано: порядок/метки качеств + выбор индекса вынесены в `VideoQuality`
   (используется в `VideoPlayerScreen` и `Video.playUrlForQuality` для клипов).
 - Осталось на будущее (из плана): `AvatarUrls`, `ExponentialBackoff`, `VkColors.kt`/`VkDimens.kt`,
@@ -8261,7 +8261,7 @@ app уходит в PiP, а нужно листать контент и смот
   вся логика живёт внутри чужого iframe. Диспетчер `OneVideoPlayer.supports()` выбирает
   платформу (OK native/iframe, YouTube `YT.Player`, TikTok-clip, VK cross-post). Vimeo/
   Dailymotion/Rutube/Coub — НЕ поддерживаются (отдаётся только `player` = embed-URL).
-- PinoK уже зеркалит это в `VideoPlatformRouter` (VK/OK → ExoPlayer, YouTube/Instagram/
+- VK Mint уже зеркалит это в `VideoPlatformRouter` (VK/OK → ExoPlayer, YouTube/Instagram/
   EXTERNAL_IFRAME → WebView). Плеер зрелый — не переделывался.
 
 ### Фрейм видео: root cause + фикс
@@ -8379,7 +8379,7 @@ APK установлен, запуск без крашей.
   (`short_video_full`) → постер `first_frames[]` (вертикальные кадры `iv.okcdn.ru/getVideoPreview`
   135x240…1080x1920) → `<video>` с `blob:` MSE-потоком. `covers[]` — горизонтальные (для ленты),
   `files` — подписанные okcdn URL, `timeline_thumbs` — спрайт hover-preview, `stats_pixels` — медиаскоп.
-- PinoK уже зеркалит это в ClipsFeedScreen (VerticalPager + ExoPlayer). Gap: постер брался из
+- VK Mint уже зеркалит это в ClipsFeedScreen (VerticalPager + ExoPlayer). Gap: постер брался из
   `covers` (горизонтальный 16:9) вместо вертикального `first_frames`.
 
 ### Фикс 1: вертикальный постер клипа (#FIRST-FRAME)
@@ -8430,7 +8430,7 @@ PiP должен встать на паузу сам. Проблема с зад
   как «установка не удалась»), остальные поля корректны (Service=WUDFRd, ClassGUID=WPD,
   LowerFilters=WpdUSB, Mfg=oem36.inf). ADB-интерфейс (MI_01) и composite (PID_201D) — OK.
 - **Вывод:** битая запись реестра только у MTP-интерфейса (FAILEDINSTALL), а не драйвер.
-- Фикс-скрипт: `C:\Users\Pinokio240\Desktop\fix_mtp_code19.bat` (запустить от имени
+- Фикс-скрипт: `C:\Users\VkMintio240\Desktop\fix_mtp_code19.bat` (запустить от имени
   администратора) — `pnputil /remove-device` битых MTP-узлов + `/scan-devices` + переподключение.
   Альтернатива вручную: Диспетчер устройств → Переносные устройства → MTP → Удалить устройство
   (галочка «Удалить программы драйверо») → переподключить телефон.
@@ -8459,7 +8459,7 @@ MTP скрипт запущен от админа → телефон виден 
 - **Загрузчик вкладки** (pageProfile.43842c52.js): `case "short_videos": i["shortVideo.getOwnerVideos"] = {owner_id: e, count: 9}`.
 
 ### Root cause
-В PinoK на CommunityScreen было 5 вкладок (Записи/Фото/Видео/Музыка/Обсуждения) —
+В VK Mint на CommunityScreen было 5 вкладок (Записи/Фото/Видео/Музыка/Обсуждения) —
 вкладки «Клипы» и метода `shortVideo.getOwnerVideos` не было вообще.
 
 ### Фикс
@@ -8565,7 +8565,7 @@ APK установлен, запуск без крашей.
    `credentials{key,ts,server_lp}`, `server_version`, `invalidate_all`,
    `counters{messages, messages_unread_unmuted}`, `folders.items[]` (`MessagesDiff.Folder`
    id/name/type/flags). Логирует результат на INFO (tag VKApiClient — NETWORK).
-2. **`SovaPrefs`** — feature-flag `msgModernSync` (default **false**, opt-in) + setter +
+2. **`VkMintPrefs`** — feature-flag `msgModernSync` (default **false**, opt-in) + setter +
    toggle «Modern Sync (getDiff)» в SettingsScreen → LongPoll и transport.
 3. **`LongPollClient`** — при `msgModernSync=true` credentials берутся из `messagesGetDiff`
    (server=server_lp "api.vk.com/ruim<uid>", key, ts), LP-опрос идёт по
@@ -8574,7 +8574,7 @@ APK установлен, запуск без крашей.
    если getDiff вернул null/пустые credentials. Коды LP-событий (4/5/6/7/8/9/61/62/80)
    те же, что v3/v14 (§35.3.2) — `handleEvent` без изменений.
 
-### Тест на устройстве (HOTWAV, re.pinok.debug)
+### Тест на устройстве (HOTWAV, vk.mint.debug)
 - `messagesGetDiff ok: key=yes(9a4b679b…) ts=1642435314 server_lp=api.vk.com/ruim171093180
   server_version=10498152 invalidate_all=true counters=3/0 folders=1` — credentials валидны,
   тот же ts что legacy getLongPollServer.
@@ -8586,7 +8586,7 @@ APK установлен, запуск без крашей.
 (исправлен deprecation RequestBody.create → `ByteArray(0).toRequestBody(null)`, добавлен
 `msgModernSync` в FeedScreen Snapshot-initial). APK установлен, без крашей.
 
-**Файлы (changed 4):** `VKApiClient.kt`, `SovaPrefs.kt`, `LongPollClient.kt`,
+**Файлы (changed 4):** `VKApiClient.kt`, `VkMintPrefs.kt`, `LongPollClient.kt`,
 `FeedScreen.kt`, `SettingsScreen.kt`, HISTORY.md.
 
 **TODO (следующие шаги Sprint A):**
@@ -8630,7 +8630,7 @@ APK установлен, запуск без крашей.
 **Проверка:** `compileDebugKotlin` + `assembleDebug` → BUILD SUCCESSFUL, 0 предупреждений.
 APK установлен, запуск без крашей.
 
-**Файлы (changed 3):** `VKApiClient.kt`, `SovaPrefs.kt`, `LongPollClient.kt`,
+**Файлы (changed 3):** `VKApiClient.kt`, `VkMintPrefs.kt`, `LongPollClient.kt`,
 `MessagesScreen.kt`, HISTORY.md.
 
 **TODO (Sprint A, оставшееся):**
@@ -8666,7 +8666,7 @@ APK установлен, запуск без крашей.
 **Проверка:** `compileDebugKotlin` + `assembleDebug` → BUILD SUCCESSFUL, 0 предупреждений.
 APK установлен, запуск без крашей (pid OK).
 
-**Файлы (changed 1):** `VKApiClient.kt`, `SovaPrefs.kt`, HISTORY.md.
+**Файлы (changed 1):** `VKApiClient.kt`, `VkMintPrefs.kt`, HISTORY.md.
 
 **TODO (Sprint A, финал):**
 - Folders в UI из getDiff (`MessagesDiff.Folder` парсится; системные папки
@@ -8710,7 +8710,7 @@ APK установлен, запуск без крашей (pid OK).
 **Проверка:** `compileDebugKotlin` + `assembleDebug` → BUILD SUCCESSFUL, 0 предупреждений.
 APK установлен.
 
-**Файлы (changed 2):** `VKApiClient.kt`, `MessagesScreen.kt`, `SovaPrefs.kt`, HISTORY.md.
+**Файлы (changed 2):** `VKApiClient.kt`, `MessagesScreen.kt`, `VkMintPrefs.kt`, HISTORY.md.
 
 **TODO:**
 - Разгадать курсор `messages.getItems` (нужен снапшот со scroll-down страницы
@@ -8789,7 +8789,7 @@ APK установлен, без крашей (pid OK).
   загрузку всех каналов.
 
 **Файлы (0 changed):** только расследование; `VKApiClient.kt`/`LongPollClient.kt`/
-`SovaPrefs.kt` откачены к чистому состоянию (компилируются, 0 предупреждений).
+`VkMintPrefs.kt` откачены к чистому состоянию (компилируются, 0 предупреждений).
 
 **TODO на завтра:**
 1. Переподключить телефон → probe курсора getItems (разгадать channels_X_Y).
@@ -8872,7 +8872,7 @@ APK установлен, запуск без крашей (pid OK).
   - Общие `LibraryTopBar` + `PlaylistRow`.
 - **`MusicScreen`**: меню «Моя музыка» теперь навигирует на экраны (Плейлисты/Альбомы/
   Артисты) вместо AlertDialog-стаба; «Скачанная музыка» — по-прежнему диалог.
-- **`SovaNavHost`**: зарегистрированы 5 новых экранов, проброшена навигация.
+- **`VkMintNavHost`**: зарегистрированы 5 новых экранов, проброшена навигация.
 
 **Проверка:** `compileDebugKotlin` + `assembleDebug` → BUILD SUCCESSFUL, 0 предупреждений
 (единственное `w:` — transient daemon-сообщение «Unable to release compile session»,
@@ -8881,7 +8881,7 @@ FAB «Обновить ленту» + «Наверх» и открытие му�
 
 **Файлы (new 1, changed 3):**
 - new: `ui/screens/music/MusicLibraryScreens.kt`
-- changed: `Screen.kt`, `SovaNavHost.kt`, `MusicScreen.kt`, `FeedScreen.kt`, HISTORY.md.
+- changed: `Screen.kt`, `VkMintNavHost.kt`, `MusicScreen.kt`, `FeedScreen.kt`, HISTORY.md.
 
 **TODO:**
 - Видео-порт (альбомы/плейлисты видео) — рекогносцировка, отдельным шагом.
@@ -8899,7 +8899,7 @@ FAB «Обновить ленту» + «Наверх» и открытие му�
   «Unknown method»** — это Kate-Mobile-методы, НЕ доступны для web-токена (vk1.a.*).
 - `audio.getPlaylists` → **err=100 «owner_id is undefined»** — метод требует owner_id.
 - `catalog.getAudio` → **err=3** (известно ранее; `audio.getCatalog` — рабочий fallback).
-- `catalog.getAudioSearch` → **работает**, но PinoK слал `q=…` вместо `query=…` и без
+- `catalog.getAudioSearch` → **работает**, но VK Mint слал `q=…` вместо `query=…` и без
   `need_blocks=1` → VK возвращал только заголовки секций (249B).
 - `audio.getPlaylistById` — **не слал обязательный `playlist_id`** + не слал owner_id;
   плейлист-парсер падал `UnsupportedOperationException: JsonObject` на поле `photo`
@@ -8925,7 +8925,7 @@ FAB «Обновить ленту» + «Наверх» и открытие му�
   `response.audios[]` + fallback `catalog.sections[].blocks[].audios[]`.
 
 **Навигация (slug вместо Long):**
-- `Screen.ArtistDetail.buildRoute(artistId: String)` (Uri.encode), `SovaNavHost` —
+- `Screen.ArtistDetail.buildRoute(artistId: String)` (Uri.encode), `VkMintNavHost` —
   `NavType.StringType`, `MusicArtistsScreen.onOpenArtist(artist.domain ?: id)`,
   `ArtistDetailScreen(artistId: String)`, `MusicScreen.onOpenArtist(String)`.
 - `MusicArtistsScreen` LazyColumn key: `it.domain ?: it.id.toString()` (иначе Key "0"
@@ -8966,10 +8966,10 @@ FAB «Обновить ленту» + «Наверх» и открытие му�
 - `audioGetAudiosByArtist(slug: String, name: String)`: `catalog.getAudioSearch(query=name)`
   → фильтр `response.audios[]` по `track.artist` (name/slug) и `main_artists[].name/.domain`.
 - Навигация: `Screen.ArtistDetail.buildRoute(slug, name)` (slug + name через query-параметр),
-  `SovaNavHost` — два navArgument'а; `MusicArtistsScreen.onOpenArtist(slug, name)`;
+  `VkMintNavHost` — два navArgument'а; `MusicArtistsScreen.onOpenArtist(slug, name)`;
   `ArtistDetailScreen(slug, name)`; `MusicScreen.onOpenArtist(slug, name)`.
-- Убраны все временные probe/dump (pinok_search.json, pinok_artist.html,
-  pinok_ctx_tc.json, pinok_probe.json, pinok_webartist.json).
+- Убраны все временные probe/dump (vkmint_search.json, vkmint_artist.html,
+  vkmint_ctx_tc.json, vkmint_probe.json, vkmint_webartist.json).
 
 **Проверка на устройстве:** BUILD SUCCESSFUL, 0 предупреждений. «Артисты» → «basta» →
 тап по «Баста» → ArtistDetail показывает 38 треков (На Работу feat. Смоки Мо, Чистый
@@ -8988,15 +8988,15 @@ FAB «Обновить ленту» + «Наверх» и открытие му�
 
 ## 2026-08-17 (ещё 3) — двойная панель музыкальных экранов + порядок вкладок
 
-**Запрос:** «образуются две панели: стрелка назад + PinoK (сверху) и ниже стрелка
+**Запрос:** «образуются две панели: стрелка назад + VK Mint (сверху) и ниже стрелка
 назад + Плейлист. Оставить нижнюю, скрыть верхнюю. Найти и убрать такие же места.
 Вкладки Моя музыка и Главная переставить местами (Моя музыка — первая).»
 
 ### 1. Двойная панель (глобальный ScreenTopBar поверх LibraryTopBar)
-- `SovaNavHost.hasOwnTopBar`: добавлены 5 музыкальных маршрутов —
+- `VkMintNavHost.hasOwnTopBar`: добавлены 5 музыкальных маршрутов —
   `MusicPlaylists`, `PlaylistDetail`, `MusicAlbums`, `MusicArtists`, `ArtistDetail`.
   У всех собственный `LibraryTopBar` (← Название) → глобальный ScreenTopBar
-  (← PinoK) больше не рисуется поверх. Та же причина что у ChatInfo (Fix #272)
+  (← VK Mint) больше не рисуется поверх. Та же причина что у ChatInfo (Fix #272)
   и InternalBrowser (Fix #144).
 
 ### 2. Порядок вкладок на экране «Музыка»
@@ -9011,9 +9011,9 @@ FAB «Обновить ленту» + «Наверх» и открытие му�
 
 **Проверка на устройстве:** BUILD SUCCESSFUL, 0 предупреждений. Вкладки: «Моя музыка»
 первая (по умолчанию открыта), затем «Главная», «Обзор». Экран «Плейлисты»: вверху
-только одна панель «← Плейлисты», панель «← PinoK» исчезла. Крашей нет (pid OK).
+только одна панель «← Плейлисты», панель «← VK Mint» исчезла. Крашей нет (pid OK).
 
-**Файлы (changed 2):** `SovaNavHost.kt`, `MusicScreen.kt`, HISTORY.md.
+**Файлы (changed 2):** `VkMintNavHost.kt`, `MusicScreen.kt`, HISTORY.md.
 
 ---
 
@@ -9343,17 +9343,17 @@ Assassination Under God, CHAMPION SOUND, Я идиотка), Новые имен
 - Новый экран `CatalogSectionScreen` (MusicLibraryScreens.kt): грузит секцию,
   показывает треки через AudioAttachmentList и плейлисты через PlaylistRow.
 - Новый маршрут `Screen.CatalogSection(sectionId, title)` + регистрация в
-  SovaNavHost (+ hasOwnTopBar).
+  VkMintNavHost (+ hasOwnTopBar).
 - `SectionHeader` получил `onShowAll` — «Показать все» кликабелен, когда у
   блока есть showAllId; проброшен через MusicHomeTab/DiscoverTab ← MusicScreen ←
-  SovaNavHost.
+  VkMintNavHost.
 
 **Проверено на устройстве:** заголовки без дублей; «Показать все» на «Мои треки»
 открывает экран со 100 треками (Russian Story/memory/It's a Trap/Свет атомов…).
 Без крашей.
 
 **Файлы (changed 4):** `VKApiClient.kt`, `MusicScreen.kt`, `MusicLibraryScreens.kt`,
-`Screen.kt`, `SovaNavHost.kt`, HISTORY.md.
+`Screen.kt`, `VkMintNavHost.kt`, HISTORY.md.
 
 **TODO (план продолжения):**
 - Курсор messages.getItems (channels_X_Y) — заблокирован без снапшота vk.ru/im.
@@ -9421,7 +9421,7 @@ Assassination Under God, CHAMPION SOUND, Я идиотка), Новые имен
 **Проверено на устройстве:** вкладка «Каналы» теперь показывает все каналы
 (Время Перемен. Новости, Аниме, Мир Дунхуа Аниме, ИИ фото, LMAnime, Магическая
 Реальность, Арнольд, VK Next, ИИ.sys…) — раньше было 2 (Х5 Клуб, Pepsi).
-Без крашей. Убран probe-дамп + файлы pinok_*.json/html с устройства.
+Без крашей. Убран probe-дамп + файлы vkmint_*.json/html с устройства.
 
 **Файлы (changed 2):** `VKApiClient.kt`, `MessagesScreen.kt`, HISTORY.md.
 
@@ -9431,7 +9431,7 @@ Assassination Under God, CHAMPION SOUND, Я идиотка), Новые имен
 ## 2026-08-18 — #SETTINGS-FIX: Аудит и исправление настроек
 
 ### Исправлено:
-- **#SETTINGS-ACCOUNT-SET-ONLINE**: ccount.setOnline теперь вызывается периодически (каждые 5 мин) в keepAliveScope SovaApp. Тумблер «Скрывать был в сети» теперь РАБОТАЕТ — при включении ping не отправляется, last_seen не обновляется.
+- **#SETTINGS-ACCOUNT-SET-ONLINE**: ccount.setOnline теперь вызывается периодически (каждые 5 мин) в keepAliveScope VkMintApp. Тумблер «Скрывать был в сети» теперь РАБОТАЕТ — при включении ping не отправляется, last_seen не обновляется.
 - **#SETTINGS-LOCKER-PIN-DIALOG**: добавлен PinSetupDialog — при первом включении lockerEnabled (если PIN не установлен) показывается диалог с 2 шагами (ввод + подтверждение). PIN хэшируется через LockerActivity.hashPin.
 - **#SETTINGS-PROXY-UI**: добавлен UI прокси в NetworkTab: toggle ВКЛ/ВЫКЛ + OutlinedTextField для хоста и порта (netProxyEnabled/Host/Port).
 - **#SETTINGS-STORY-CACHE-LIMIT**: добавлен Slider лимита кэша историй (50-2000 MB) в VideoTab.
@@ -9636,13 +9636,13 @@ PiP снова показывает старый клип.
 
 **Bookmarks UI:** /bookmarks?type=<user|group|post|article|link|video|narrative|game|mini_app|product>. FCThumb боковая панель с закреплёнными. Tags через tags API.---
 ## Сессия 2026-08-19
-Ветка: PinoK
+Ветка: VK Mint
 Последний коммит: 7e918d1e5
 ---
 
 ## Сессия 2026-08-19
 
-### Ветка: PinoK
+### Ветка: VK Mint
 ### Последний коммит: 7e918d1e5 (feat: звонки, настройки фильтра/избранного, рефакторинг)
 
 ### Что сделано:
@@ -9689,7 +9689,7 @@ PiP снова показывает старый клип.
 
 ## Сессия 2026-08-20
 
-### Ветка: PinoK
+### Ветка: VK Mint
 ### Последний коммит: b94842fd7
 
 ### Что сделано:
@@ -9726,7 +9726,7 @@ PiP снова показывает старый клип.
 
 ## Сессия 2026-08-21 — Звонки: queuev4 + LP 115 (расшифровка механизма)
 
-### Ветка: PinoK
+### Ветка: VK Mint
 
 ### Что сделано:
 
@@ -9742,13 +9742,13 @@ PiP снова показывает старый клип.
 - **Входящий звонок UI** (m.vk.ru): IncomingCall__panel, data-testid mvk_calls_incoming_call, _caller_name, _btn_decline/accept.
 - XHR_STATS в localStorage: session_id, peer_id, call_event_type (IncomingCallReceived / OutgoingCallStartedAudio / CallDeclinedOrHangedRemotely).
 
-**Исправления в коде PinoK:**
+**Исправления в коде VK Mint:**
 - ExchangeAuthRepository: добавлен публичный satToken() (делегат к storage.satToken()).
 - VKApiClient.queueSubscribe: queue_id "accountcounters_<uid>" (было ACCOUNT_COUNTERS_), поле timestamp (было ts), SAT-токен через прямой POST к api.vk.com (fallback на web-токен), url = queuev4.vk.ru/im1180.
 - Queuev4Client: правильный формат a_check (act/key/ts/id/wait, БЕЗ mode/version), парсинг ответа (массив [main,add...] или объект, события из add.events[]/updates[] = массивы кодов), обработка LP 115 (INCOMING_CALL) и 70 (VIDEO_CALL), LP -1/-2 (credential expired). QUEUE_CALLS = "calls".
 - CallScreen: при исходящем звонке queueSubscribe() → setCredential → start(); слушатель events queuev4 (LP 115 → CONNECTING).
-- SovaApp: startCallNotifier() — глобальный слушатель queuev4 LP 115 → показ системного уведомления «Входящий звонок» (канал vk_calls).
-- SovaPrefs: callsQueueKey/callsQueueTs (ввод credential вручную из localStorage).
+- VkMintApp: startCallNotifier() — глобальный слушатель queuev4 LP 115 → показ системного уведомления «Входящий звонок» (канал vk_calls).
+- VkMintPrefs: callsQueueKey/callsQueueTs (ввод credential вручную из localStorage).
 - SettingsScreen → Звонки: поля key/ts + кнопки «Подключить queuev4» / «Остановить».
 
 **Сборка:** BUILD SUCCESSFUL, APK установлен на устройство.
@@ -9766,24 +9766,24 @@ PiP снова показывает старый клип.
 
 ## Сессия 2026-08-21 (продолжение) — Звонки: входящий вызов РАБОТАЕТ
 
-### Ветка: PinoK
+### Ветка: VK Mint
 
 ### Что сделано (после предыдущей записи):
 
 **Диагностика «ручной ввод key/ts не работает»:**
-- queuev4.vk.ru/im1180?act=a_check с key/ts из localStorage браузера → {"failed":2,"err":5} — key привязан к браузерной cookie-сессии, не работает в PinoK (OkHttp без cookieJar).
+- queuev4.vk.ru/im1180?act=a_check с key/ts из localStorage браузера → {"failed":2,"err":5} — key привязан к браузерной cookie-сессии, не работает в VK Mint (OkHttp без cookieJar).
 - Ручной ввод credential в Настройки→Звонки — НЕ решение (key протухает при каждом звонке VK).
 
 **ГЛАВНОЕ ОТКРЫТИЕ — queue.subscribe работает с web-токеном:**
 - Правильный queue_id = "accountcounters_<uid>" (НЕ "ACCOUNT_COUNTERS_<uid>" — именно это давало err=100 ранее!).
 - queue.subscribe с web-токеном успешно возвращает {queues:[{key,timestamp}]} → свежий key/ts для текущей сессии.
 - SAT-токен НЕ нужен для queue.subscribe (достаточно web-токена).
-- Автоподключение: SovaApp.startCallSignaling() вызывается из MainActivity при старте (когда токен валиден) → queueSubscribe → setCredential → queuev4Client.start(). Fallback — manual credential из SovaPrefs.
+- Автоподключение: VkMintApp.startCallSignaling() вызывается из MainActivity при старте (когда токен валиден) → queueSubscribe → setCredential → queuev4Client.start(). Fallback — manual credential из VkMintPrefs.
 
 **Входящий звонок приходит в messages LongPoll (НЕ в queuev4):**
-- Лог: LongPollClient "unknown event type=115 ev=[115,-1,-1]" — LP 115 идёт через обычный messages long-poll (уже работает в PinoK).
+- Лог: LongPollClient "unknown event type=115 ev=[115,-1,-1]" — LP 115 идёт через обычный messages long-poll (уже работает в VK Mint).
 - Добавлен LongPollEvent.IncomingCall(payload) + обработка case 115 в LongPollClient.handleEvent.
-- SovaApp.startCallNotifier() слушает LongPollEvent.IncomingCall → системное уведомление «Входящий звонок» (канал vk_calls: IMPORTANCE_HIGH, звук рингтона, вибрация 0,500,400,500,400,500, fullScreenIntent, CATEGORY_CALL, ongoing).
+- VkMintApp.startCallNotifier() слушает LongPollEvent.IncomingCall → системное уведомление «Входящий звонок» (канал vk_calls: IMPORTANCE_HIGH, звук рингтона, вибрация 0,500,400,500,400,500, fullScreenIntent, CATEGORY_CALL, ongoing).
 - createCallNotificationChannel() вызывается в onCreate — канал создаётся заранее (иначе Android создаёт канал с дефолтным звуком).
 - Queuev4Client оставлен как fallback-канал (LP 115 через queuev4 events).
 
@@ -9809,7 +9809,7 @@ PiP снова показывает старый клип.
 
 ## Сессия 2026-08-22 — ОТВЕТ на входящий звонок: vchat API разгадан, conversation_id фикс
 
-### Ветка: PinoK
+### Ветка: VK Mint
 
 ### Что сделано:
 
@@ -9818,17 +9818,17 @@ PiP снова показывает старый клип.
 - ConversationParamsDecoder (новый): LZ4-декомпрессия "len:base64" payload → {srcp,stne,tkn,trne,trnp,trnu,wse,wte}; `decodeParamsJson()` парсит response vchat API (token/endpoint/turn_server/stun_server).
 - CallSignalingClient (новый): WebSocket-сигналинг к endpoint (accept/decline/hangup), приём SDP/ICE → WebRtcEngine.
 - CallScreen: для входящего декодирует payload; если payload="-1" — fallback через messagesGetCurrentCalls → conversation_id → vchat.getConversationParams → decodeParamsJson. Кнопки «Принять»/«Отклонить» шлют команды в signaling.
-- SovaApp: вторая queuev4-подписка `events_queue<uid>` (полные conversation params из localStorage queue_connection_events_queue<uid>); pendingIncomingCallPayload/PeerId/Title + consumeIncomingCall(); DNS-пин calls.okcdn.ru/api.mycdn.me → 155.212.204.12 (OkHttp не резолвит okcdn без этого).
-- SovaNavHost/Screen: роут call/{peerId} получил аргумент payload; LaunchedEffect на pendingIncomingCallPayload → навигация на CallScreen(incoming=true, payload).
+- VkMintApp: вторая queuev4-подписка `events_queue<uid>` (полные conversation params из localStorage queue_connection_events_queue<uid>); pendingIncomingCallPayload/PeerId/Title + consumeIncomingCall(); DNS-пин calls.okcdn.ru/api.mycdn.me → 155.212.204.12 (OkHttp не резолвит okcdn без этого).
+- VkMintNavHost/Screen: роут call/{peerId} получил аргумент payload; LaunchedEffect на pendingIncomingCallPayload → навигация на CallScreen(incoming=true, payload).
 - ExchangeAuthRepository: deviceId() (стабильный UUID для get_anonym_token).
-- SovaPrefs: callsSessionKey (ручной ввод session_key из localStorage `_okcls_anonymLogin` в Настройки → Звонки).
+- VkMintPrefs: callsSessionKey (ручной ввод session_key из localStorage `_okcls_anonymLogin` в Настройки → Звонки).
 
 **Лог-тест на устройстве (Cyber_15, входящий звонок):**
 - LP 115 payload.len=2 ("-1") → messages.getCurrentCalls нашёл call_id=84eb87a0-7bc1-4ea8-9052-7f0ef9ec6725, caller=152094335.
 - getAnonymToken дал `anonym.eyJ...`, но auth.anonymLogin → **401 AUTH_LOGIN: Access token is broken**; apiKey 7793118/android_web/0 → 101 PARAM_API_KEY. session_key=null → vchat.getConversationParams → 103 PARAM_SESSION_KEY required → FAILED.
 - Диагноз: apiKey CGMMEJLGDIHBABABA ВАЛИДЕН (vchat отвечает 103, а не 101), проблема в типе токена.
 
-**Разбор папки C:\Users\Pinokio240\Desktop\ссылки\Новая папка\2208 (снапшоты vk.ru/m.vk.ru + localStorage дамп log.txt):**
+**Разбор папки C:\Users\VkMintio240\Desktop\ссылки\Новая папка\2208 (снапшоты vk.ru/m.vk.ru + localStorage дамп log.txt):**
 - log.txt = localStorage-дамп аккаунта uid=171093180: `_okcls_anonymLogin:$Ksd...` → **session_key + session_secret_key + uid=584520805550**; `calls_token_with_url_<uid>` = `$Ksd...///https://calls.okcdn.ru` (callToken + endpoint); `queue_connection_events_queue<uid>`; `queue_credential_calls_cache_<uid>_<app_id>`.
 - q_frame.html подтверждает queuev4.vk.ru/im1180 LongPoll (endpoint whitelist).
 - calls JS-чанк (auth.anonymLogin/vchat) в снапшот НЕ попал — только CSS (calls.dda8e018.css, webCallsBridge).
@@ -9859,7 +9859,7 @@ PiP снова показывает старый клип.
 
 ## Сессия 2026-08-23 — Звонки VK: дешифровка WebRTC, эталон через Chrome, UI-карта кнопок
 
-### Ветка: PinoK
+### Ветка: VK Mint
 
 ### Главные рабочие цепочки и находки за день:
 
@@ -9879,7 +9879,7 @@ PiP снова показывает старый клип.
 - `iceTransportPolicy: "all"` (forceRelayPolicy ? relay : all).
 - Ответ сервера на accept-call: `{response:"accept-call", participantIds:[...]}`.
 
-**3. Логи реальных звонков PinoK (call_log2-20) — диагностика:**
+**3. Логи реальных звонков VK Mint (call_log2-20) — диагностика:**
 - vchat.getConversationParams РАБОТАЕТ с `conversation_id` + session_key → STUN/TURN/endpoint/token.
 - WS к videowebrtc.okcdn.ru/ws2: userId=okcdn uid (584520805550) — ОБЯЗАТЕЛЬНО (иначе invalid-token).
 - offer/candidates приходят, Remote audio track есть, answer отправляется, но **ICE: CHECKING → CLOSED** (не CONNECTED) во всех тестах.
@@ -9888,7 +9888,7 @@ PiP снова показывает старый клип.
 
 **4. Эталонный звонок через Chrome (эмулятор Android 16, tcpdump pcap):**
 - Потоки: P2P media `95.26.26.135:37922 ↔ 10.0.2.16:42090` (4000+ пакетов!), TURN relay 193.203.43.26/90.156.236.127:19302, WS к videowebrtc (155.212.205.229/155.212.204.12:443), vchat calls.okcdn.ru.
-- **ВЫВОД: конфигурация ICE (STUN/TURN из params) правильная** — Chrome соединился. Проблема PinoK — в SDP/порядке libjingle, не в серверах.
+- **ВЫВОД: конфигурация ICE (STUN/TURN из params) правильная** — Chrome соединился. Проблема VK Mint — в SDP/порядке libjingle, не в серверах.
 - Эмулятор Android 16 (AVD Android16, API 36) + WebView 133 — VK работает. UA-фикс для старых WebView добавлен (chromeMobileUserAgent fallback на CHROME_UA при Chrome<100).
 
 **5. Карта кнопок окон звонков из HTML-снапшотов (CALLS_UI_BUTTONS.md):**
@@ -9898,9 +9898,9 @@ PiP снова показывает старый клип.
 - История: `calls_history_list_audiocall` (phone_outline_24) / `_videocall` (videocam_outline_24).
 - Join-ссылка: `https://vk.ru/call/join/<32-байт base64url>` (vchat.createJoinLink).
 
-**6. Реализовано в PinoK за день:**
+**6. Реализовано в VK Mint за день:**
 - CallScreen: окна по карте VK (входящий: Принять/Отклонить с именами/иконками; активный: микрофон/динамик/ссылка/завершить; имя звонящего крупно).
-- Имя+аватар звонящего: SovaApp.refreshIncomingCaller() — messagesGetCurrentCalls → caller_id → usersGetByIds → title/photo → SovaNavHost передаёт в CallScreen.
+- Имя+аватар звонящего: VkMintApp.refreshIncomingCaller() — messagesGetCurrentCalls → caller_id → usersGetByIds → title/photo → VkMintNavHost передаёт в CallScreen.
 - Кнопка «Ссылка»: VKApiClient.vchatCreateJoinLink (чистый метод, без перебора хостов) → копирует `https://vk.ru/call/join/<link>` в буфер.
 - WebRtcEngine аудио: AEC/NS/AGC включены, field trials RED+EarlyStartPlayout, setSpeakerOn (AudioManager.isSpeakerphoneOn), setCommunicationMode (MODE_IN_COMMUNICATION + audio focus) при accept/start.
 
@@ -9919,9 +9919,9 @@ PiP снова показывает старый клип.
 
 ## Сессия 2026-08-23 (вечер) — диагноз TURN/relay, эталонный звонок Chrome, второй телефон Redmi 9
 
-### Проект: PinoK
+### Проект: VK Mint
 
-### Главные выводы (диагноз, почему ICE FAILED в PinoK):
+### Главные выводы (диагноз, почему ICE FAILED в VK Mint):
 
 **1. Эталонный звонок Chrome (эмулятор Android16, 10.0.2.16, тот же NAT 95.26.26.135 что и телефон) — РАБОТАЕТ только через TURN relay:**
 - pcap `logs/relay_call.pcap` (1.3MB, снят tcpdump на эмуляторе): медиа = **SRTP напрямую на relay-адрес** `193.203.43.2:48701` (пакеты 30-127 байт каждые ~15мс, audio PT 63/97/123, video PT 72/73/77).
@@ -9936,18 +9936,18 @@ PiP снова показывает старый клип.
 
 **3. Главная гипотеза: мы используем НЕПРАВИЛЬНЫЕ TURN-credentials.**
 - Chrome берёт TURN из **WS-события `connection`** (в нём есть `conversationParams.turn` — в логе видно `"conversationParams":{"turn":{"urls":["tu...`), а не из vchat getConversationParams.
-- Наш PinoK событие `connection` **игнорировал** (`else -> {}` в CallScreen).
+- Наш VK Mint событие `connection` **игнорировал** (`else -> {}` в CallScreen).
 - **Исправление сделано:** CallScreen теперь парсит `connection` → `conversationParams` → `ConversationParamsDecoder.decodeParamsJson(cp)` → `engine.setIceServers(wsParams)`. Событие connection приходит ДО offer, так что ICE-серверы обновятся до создания PC.
 - CallSignalingClient: для `connection` теперь логируется полный JSON (`FULL_CONNECTION`, без `.take(300)`).
 
 **4. Диагностика session_key в эмуляторе (долгая, результат важен):**
-- DataStore-файл `sova_settings.preferences_pb` в эмуляторе был **битым** (теги несовместимы): `prefs read: callsSessionKey=BLANK uid=0` — DataStore возвращал пустые значения, хотя ключ в файле был.
+- DataStore-файл `vkmint_settings.preferences_pb` в эмуляторе был **битым** (теги несовместимы): `prefs read: callsSessionKey=BLANK uid=0` — DataStore возвращал пустые значения, хотя ключ в файле был.
 - Ручной патч proto-файла → `CorruptionException: Value not set` / `Unable to parse preferences proto` (краш при старте).
 - `adb shell input text` **обрезает** длинные строки (~90 символов) и `-w` в начале трактует как флаг adb (добавляет лишние `-`). UI-ввод через input text ненадёжен для session_key (156 символов).
-- **Рабочее решение:** временный DEBUG-блок в `SovaApp.onCreate` (ПОСЛЕ `prefs = SovaPrefs(this)`, иначе `UninitializedPropertyAccessException`) — `appScope.launch { prefs.setCallsSessionKey(FULL); prefs.setCallsSessionUid(584520805550L) }`. Запись прошла (файл 5089 байт, full key = True).
+- **Рабочее решение:** временный DEBUG-блок в `VkMintApp.onCreate` (ПОСЛЕ `prefs = VkMintPrefs(this)`, иначе `UninitializedPropertyAccessException`) — `appScope.launch { prefs.setCallsSessionKey(FULL); prefs.setCallsSessionUid(584520805550L) }`. Запись прошла (файл 5089 байт, full key = True).
 - Полный session_key = `-w-fl0000MtRwXi530010Gapu8Z100000000w4P63DsGhCrcH5OAp6oqxCoC1Dm4j6oAF5OCx6NOV6py16rGxI00000g4zjoRR000000g1poBn00hP1vfN2yQIklvUZRD2QovPTE5zvSf6Cc8hvAgT6pQB2f` (156 симв.), uid=584520805550 (из localStorage `_okcls_anonymLogin`, дамп 2208/log.txt).
 - При обрезанном session_key (67 симв.) vchat отвечал `103 PARAM_SESSION_KEY: Session key is corrupted`. С полным ключом (проверить в след. сессии) — должен пройти.
-- **ВАЖНО:** DEBUG-блок в SovaApp.kt надо УБРАТЬ после подтверждения (помечен `// DEBUG-CALLS-FIX (временный)`).
+- **ВАЖНО:** DEBUG-блок в VkMintApp.kt надо УБРАТЬ после подтверждения (помечен `// DEBUG-CALLS-FIX (временный)`).
 
 **5. queue.subscribe на эмуляторе: OK** (key=26916bbf, ts=1867533767) — входящие звонки (LP 115) слушаются.
 
@@ -9959,26 +9959,26 @@ PiP снова показывает старый клип.
 - uiautomator на MIUI падает с `theme_compatibility.xml: ENOENT` (некритично, дамп всё равно создаётся).
 - Батарея 40%, заряжается, 29.6°C.
 
-**7. Эмулятор Android16** — перезапускался (умирал от перегрузки 3GB RAM при tcpdump+звонке+uiautomator), PinoK переустанавливался несколько раз. После каждого install -r разрешения (RECORD_AUDIO/POST_NOTIFICATIONS) сбрасываются — выдавать заново.
+**7. Эмулятор Android16** — перезапускался (умирал от перегрузки 3GB RAM при tcpdump+звонке+uiautomator), VK Mint переустанавливался несколько раз. После каждого install -r разрешения (RECORD_AUDIO/POST_NOTIFICATIONS) сбрасываются — выдавать заново.
 
 ### Сборка: BUILD SUCCESSFUL (без warnings), APK установлен.
 
 ### Стартовая точка для следующей сессии:
 
 **Приоритет:**
-1. **Проверить звонок с полным session_key + логикой WS-connection TURN** (обе правки уже в коде): звонит 3-е устройство на 171093180 → PinoK в эмуляторе принимает → смотреть FULL_CONNECTION (TURN из WS) → ICE.
+1. **Проверить звонок с полным session_key + логикой WS-connection TURN** (обе правки уже в коде): звонит 3-е устройство на 171093180 → VK Mint в эмуляторе принимает → смотреть FULL_CONNECTION (TURN из WS) → ICE.
 2. Если vchat всё ещё `Session key is corrupted` — проверить, что полный session_key записался (DEBUG-блок), либо залогинить сам session_key из prefs.
 3. **Сравнить TURN из WS-connection и из vchat** — если они разные, понять, какой Chrome реально использует (в pcap username `/Cm3:C2Uz`, не `1787537855:584520805550`).
 4. Если ICE всё ещё FAILED при TURN из WS — копать **DTLS роль (a=setup)** и **порядок кандидатов после onSetSuccess** (различие с эталоном).
 5. **Redmi 9** — залогинить VK (rc-grinpark@mail.ru) и использовать как 2-й участник звонка в одной сети (192.168.0.x).
-6. Убрать DEBUG-блок session_key из SovaApp.kt после подтверждения.
+6. Убрать DEBUG-блок session_key из VkMintApp.kt после подтверждения.
 7. Проверить имя/аватар звонящего в CallScreen (был вопрос — refreshIncomingCaller вызывает usersGetByIds, но с `fields=photo_100,photo_200`; в эмуляторе отображался заголовок без аватарки — проверить после успешного accept).
 
 ---
 
 ## Сессия 2026-08-24 (утро) — полный cookie-set + CookieJar + автополучение session_key, ручной ввод убран
 
-### Проект: PinoK
+### Проект: VK Mint
 
 ### Что реализовано (автополучение credentials как у браузера):
 
@@ -9988,29 +9988,29 @@ PiP снова показывает старый клип.
 - `ExternalBrowserAuth`: `ExistingAuthResult` + проброс stid/stlid из captured.
 - `ExchangeAuthRepository.backfillRemixsidFromCookieManager`: проверка наличия + сохранение stid/stlid.
 
-**2. Глобальный CookieJar — НОВЫЙ класс `VkCookieJar` (re.pinok.mods.network):**
+**2. Глобальный CookieJar — НОВЫЙ класс `VkCookieJar` (vk.mint.mods.network):**
 - OkHttp CookieJar, подставляет полный браузерный cookie-set из ExchangeTokenStorage в исходящие запросы.
 - Доменное маппирование как у браузера: remixsid/remixnsid/remixstid/remixstlid/remixdmgr/remixuacck/remixuas/remixmvk-fp на vk.ru/vk.com/m.vk.ru/web.api.vk.ru/id.vk.com; httoken на .api.vk.ru; p на login.vk.com.
 - `saveFromResponse`: Set-Cookie от VK сохраняется в storage (patch-семантика).
-- Подключён в `SovaApp` конструктор OkHttp: `.cookieJar(re.pinok.mods.network.VkCookieJar(exchangeStorage))` (exchangeStorage создаётся раньше httpClient — доступен).
+- Подключён в `VkMintApp` конструктор OkHttp: `.cookieJar(vk.mint.mods.network.VkCookieJar(exchangeStorage))` (exchangeStorage создаётся раньше httpClient — доступен).
 
-**3. Автополучение session_key — `SovaApp.ensureCallsSessionKey()` (suspend, public):**
+**3. Автополучение session_key — `VkMintApp.ensureCallsSessionKey()` (suspend, public):**
 - Вызывается в `startCallSignaling()` (шаг 0) — при старте приложения.
-- Цепочка как у браузера: `get_anonym_token` (oauth.vk.ru) → `auth.anonymLogin` (calls.okcdn.ru) → {session_key, session_secret_key, uid} → сохраняет в SovaPrefs (callsSessionKey/callsSessionUid).
+- Цепочка как у браузера: `get_anonym_token` (oauth.vk.ru) → `auth.anonymLogin` (calls.okcdn.ru) → {session_key, session_secret_key, uid} → сохраняет в VkMintPrefs (callsSessionKey/callsSessionUid).
 - Теперь с CookieJar есть шанс, что get_anonym_token пройдёт (раньше 401 AUTH_LOGIN из-за отсутствия антифрод-кук).
-- DEBUG-блок принудительной записи session_key **убран** из SovaApp.
+- DEBUG-блок принудительной записи session_key **убран** из VkMintApp.
 
 **4. Настройки — ручной ввод УБРАН (SettingsScreen.CallsTab):**
 - Удалены поля: queue key, queue ts, session_key (vchat), okcdn uid + кнопки «Сохранить session_key» / «Подключить queuev4».
 - Вместо них: Card «Входящие звонки» со статусом (активно/не подключено, session_key получен?, queuev4 слушаем?) + кнопка «Переподключить» (вызывает ensureCallsSessionKey + queueSubscribe + queuev4Client.start) + «Остановить».
 
-**5. Устранён warning:** `Notification.Builder.setPriority` deprecated → `@Suppress("DEPRECATION")` (SovaApp.kt, уведомление входящего звонка).
+**5. Устранён warning:** `Notification.Builder.setPriority` deprecated → `@Suppress("DEPRECATION")` (VkMintApp.kt, уведомление входящего звонка).
 
 ### Сборка: BUILD SUCCESSFUL без warnings. APK собран (24.08 12:01, 133MB).
 
 ### Открытые вопросы:
 - Проверить, что get_anonym_token теперь проходит с куками (главный тест). Если 401 сохраняется — смотреть client_secret (в комментарии VKApiClient.kt:10886 desktop передаёт client_secret, у нас его нет) или снифф браузера.
-- `$`-callToken (calls_token_with_url_<uid>) генерирует m.vk.ru SPA при логине — PinoK его не создаёт; может потребоваться аналог.
+- `$`-callToken (calls_token_with_url_<uid>) генерирует m.vk.ru SPA при логине — VK Mint его не создаёт; может потребоваться аналог.
 
 ### Стартовая точка для следующей сессии:
 1. **Установить APK на эмулятор/телефон → логин → проверить автополучение session_key** (лог `ensureCallsSessionKey`), что get_anonym_token прошёл.
@@ -10021,19 +10021,19 @@ PiP снова показывает старый клип.
 
 ---
 
-## Сессия 2026-08-24 (вечер) — исходящий звонок PinoK→Redmi9, разгадка токенов vchat
+## Сессия 2026-08-24 (вечер) — исходящий звонок VK Mint→Redmi9, разгадка токенов vchat
 
-### Проект: PinoK
+### Проект: VK Mint
 
 ### Что сделано
 
 **1. CookieJar + автополучение session_key — РАБОТАЕТ:**
 - `VkCookieJar` (OkHttp CookieJar) подключён; `saveFromResponse` обновляет куки (remixsid/stid/stlid), ошибка `unexpected domain: .vk.ru` исправлена (убрана ведущая точка).
-- `ensureCallsSessionKey()` + `getCallConversationParams()` (SovaApp): при старте/звонке session_key автоматически (если протух — авто-рефреш). Ручной ввод из Настроек УБРАН (вместо полей — статус + «Переподключить»).
-- **Входящий звонок (Redmi 9 → PinoK):** дошёл до `vchat.getConversationParams`, но **102 PARAM_SESSION_EXPIRED** — старый session_key (из дампа 22.08) протух.
+- `ensureCallsSessionKey()` + `getCallConversationParams()` (VkMintApp): при старте/звонке session_key автоматически (если протух — авто-рефреш). Ручной ввод из Настроек УБРАН (вместо полей — статус + «Переподключить»).
+- **Входящий звонок (Redmi 9 → VK Mint):** дошёл до `vchat.getConversationParams`, но **102 PARAM_SESSION_EXPIRED** — старый session_key (из дампа 22.08) протух.
 
-**2. Исходящий звонок (PinoK → Redmi 9):**
-- Реализован flow: `messages.startCall` → call_id → queue.subscribe → `getCallConversationParams` → `engine.setIceServers` → `signaling.start` → `engine.startCall(isInitiator=true)` → createOffer → sendSdp (WS). Вызов из PinoK создаёт call_id (`b5202b29-...`), queuev4 стартует.
+**2. Исходящий звонок (VK Mint → Redmi 9):**
+- Реализован flow: `messages.startCall` → call_id → queue.subscribe → `getCallConversationParams` → `engine.setIceServers` → `signaling.start` → `engine.startCall(isInitiator=true)` → createOffer → sendSdp (WS). Вызов из VK Mint создаёт call_id (`b5202b29-...`), queuev4 стартует.
 - **БЛОКЕР:** `vchat.getConversationParams` с новым session_key → **100 "session_key must be specified"** (в приложении с куками) / `103 Session key is corrupted` (с ПК без кук). Redmi 9 звонок не получает.
 
 **3. Разгадка токенов vchat (важное!):**
@@ -10048,7 +10048,7 @@ PiP снова показывает старый клип.
   4. `auth.anonymLogin` с `$`-токеном (version=3) → session_key (правильный формат).
 - **Вывод:** для рабочего session_key нужен `$`-токен из `messages.getAnonymCallToken`, который требует: (а) anonym.eyJ-токен (есть), (б) **решение капчи error 14** (PoW captchaNotRobot — реализовано в vk-turn-proxy), (в) правильный `secret` из getCallPreview + `link`.
 
-**4. Redmi 9 (второй участник):** официальный VK 8.192 запущен, залогинен под rc-grinpark@mail.ru, открыт диалог с «Сергей Ширабоко» (171093180). VK на Redmi звонок от PinoK НЕ получил (нет экрана/уведомления) — потому что исходящий в PinoK не завершён.
+**4. Redmi 9 (второй участник):** официальный VK 8.192 запущен, залогинен под rc-grinpark@mail.ru, открыт диалог с «Сергей Ширабоко» (171093180). VK на Redmi звонок от VK Mint НЕ получил (нет экрана/уведомления) — потому что исходящий в VK Mint не завершён.
 
 ### Сборка: BUILD SUCCESSFUL без warnings. APK установлен на эмулятор.
 
@@ -10068,7 +10068,7 @@ PiP снова показывает старый клип.
 
 ## Сессия 2026-08-24 (продолжение) — $-токен РАБОТАЕТ, исходящий дошёл до WS, блокер INITIALLY_CLOSED
 
-### Проект: PinoK
+### Проект: VK Mint
 
 ### ПРОРЫВ: $-токен получается через WebView-логин (без капчи!)
 
@@ -10080,7 +10080,7 @@ PiP снова показывает старый клип.
 - **РЕЗУЛЬТАТ:** `messages.getCallToken OK (len=70)` → `$LRuT5ZJh55u...` сохранён. Полная цепочка работает: $Ksd → auth.anonymLogin(version=3) → session_key -w-fl (156) → vchat.getConversationParams OK.
 
 ### Что реализовано (код):
-- `SovaPrefs.callsCallToken` — хранение $Ksd-токена.
+- `VkMintPrefs.callsCallToken` — хранение $Ksd-токена.
 - `ensureCallsSessionKey(force)` — использует $Ksd-токен → anonymLogin(version=3) → session_key + **okcdn uid (lastAnonymUid)**.
 - `vchatAnonymLogin` — снова с auth_token (version=3), т.к. это рабочий путь.
 - `VKApiClient.vchatStartConversation` — vchat.startConversation (для исходящего). Выяснено: **uids ОБЯЗАТЕЛЕН** (иначе 1104 no_participants_provided), createJoinLink=true создаёт активную conversation. Response содержит **id conversation (НЕ call_id!)** — WS подключается именно с ним.
@@ -10095,7 +10095,7 @@ PiP снова показывает старый клип.
 - Причина INITIALLY_CLOSED НЕ выяснена. Гипотезы: (а) сервер закрывает conversation, пока не получен offer/первый transmit-data; (б) неверный формат подключения (token/entityType); (в) нужен другой endpoint (в Yandex Browser calls_token_with_url указывал на **h-xd.okcdn.ru**, не calls.okcdn.ru).
 
 ### Важные находки:
-- **Yandex Browser на ПК** (`C:\Users\Pinokio240\AppData\Local\Yandex\YandexBrowser\User Data\Default\Local Storage\leveldb`) содержит VK-сессию 171093180: `calls_token_with_url_171093180 = $Ksd1qVP...///h-xd.okcdn.ru` (тот же $Ksd, что в Chrome эмулятора!) + session_key -w-fl (156) + uid 584520805550. Доступ к данным есть.
+- **Yandex Browser на ПК** (`C:\Users\VkMintio240\AppData\Local\Yandex\YandexBrowser\User Data\Default\Local Storage\leveldb`) содержит VK-сессию 171093180: `calls_token_with_url_171093180 = $Ksd1qVP...///h-xd.okcdn.ru` (тот же $Ksd, что в Chrome эмулятора!) + session_key -w-fl (156) + uid 584520805550. Доступ к данным есть.
 - `messages.startCall` (peer_id=152094335) возвращает call_id — но 152094335 это «Лида Кузнецова» (не Redmi). Redmi залогинен под rc-grinpark@mail.ru (другой uid). **Звонили не на Redmi** — отсюда TARGET_USER_UNAVAILABLE. Для звонка на Redmi нужен uid rc-grinpark.
 - `vchat.createJoinLink` → **PERMISSION_DENIED: blocked for 512002378693 from IP 95.26.26.148** — метод заблокирован (антифрод).
 - Redmi 9 (rc-grinpark) в спящем режиме не готов принимать (TARGET_USER_UNAVAILABLE) — нужно разбудить + VK на переднем плане.
@@ -10105,17 +10105,17 @@ PiP снова показывает старый клип.
 2. **Порядок сигналинга исходящего** — в SDK startCall → _startConversation(opponentIds) → _processConnection(p) → allocateTransport → readyToSend → offer. Сверить с нашим: возможно, нужен accept-call/join после startConversation, или offer отправляется на peerId из opponentIds (не из connection).
 3. **participantId для исходящего** — в SDK offer идёт на конкретного opponent (participantId известен из startConversation/accept). Проверить, как получить.
 4. Звонок на Redmi — нужен uid rc-grinpark (или позвонить на Лиду 152094335 как тестового собеседника).
-5. Проверить входящий звонок на PinoK — тоже упирался в conversation-ended.
+5. Проверить входящий звонок на VK Mint — тоже упирался в conversation-ended.
 
 ---
 
 ## Сессия 2026-08-24 (вечер) — ЭТАЛОННЫЙ звонок Yandex Browser на ПК (171093180)
 
-### Проект: PinoK
+### Проект: VK Mint
 
 ### Что сделано
 **Доступ к Yandex Browser на ПК получен и подтверждён:**
-- Профиль: `C:\Users\Pinokio240\AppData\Local\Yandex\YandexBrowser\User Data\Default`
+- Профиль: `C:\Users\VkMintio240\AppData\Local\Yandex\YandexBrowser\User Data\Default`
 - Local Storage (leveldb) **читается**: VK-сессия 171093180 найдена.
 - Данные в localStorage Yandex:
   - `calls_token_with_url_171093180` = `$Ksd1qVPbC1un9bouSZLLMIWrnOWoUgqgWS1cnUjOj8M8SDtUFBVbVSAZ9mrVfwgMKpu51///h-xd.okcdn.ru` (тот же $Ksd, что в Chrome эмулятора!)
@@ -10134,15 +10134,15 @@ PiP снова показывает старый клип.
 
 **После звонка:** TURN и UDP-медиа закрыты; session_key -w-fl (156) остался в localStorage (рабочий).
 
-### КЛЮЧЕВЫЕ ВЫВОДЫ для PinoK:
-1. **Yandex Browser использует TURN по TCP: 95.163.34.144:19302** — это ТОТ ЖЕ сегмент, что в conversation params PinoK (95.163.34.x были в turn_server: `turn:95.163.34.176:19302`!). Значит, TURN-серверы совпадают.
+### КЛЮЧЕВЫЕ ВЫВОДЫ для VK Mint:
+1. **Yandex Browser использует TURN по TCP: 95.163.34.144:19302** — это ТОТ ЖЕ сегмент, что в conversation params VK Mint (95.163.34.x были в turn_server: `turn:95.163.34.176:19302`!). Значит, TURN-серверы совпадают.
 2. **session_key формат -w-fl (156)** — подтверждён рабочий (совпадает с нашим).
 3. **h-xd.okcdn.ru** — calls_token указывает на этот endpoint (НЕ calls.okcdn.ru!) — проверить, не тут ли сигналинг.
 4. Медиа идёт через **TURN TCP** (не только UDP).
-5. **Звонок Yandex РАБОТАЕТ с теми же credentials (session_key 156, TURN 95.163.x), что получает PinoK.** Разница только в **сигналинге** (INITIALLY_CLOSED в PinoK) — проблема PinoK НЕ в credentials/TURN, а в порядке/формате WS-сигналинга.
+5. **Звонок Yandex РАБОТАЕТ с теми же credentials (session_key 156, TURN 95.163.x), что получает VK Mint.** Разница только в **сигналинге** (INITIALLY_CLOSED в VK Mint) — проблема VK Mint НЕ в credentials/TURN, а в порядке/формате WS-сигналинга.
 
 ### Стартовая точка для следующей сессии:
-1. **Сравнить сигналинг Yandex vs PinoK** — снять WS-трафик Yandex (websocket к videowebrtc/h-xd) во время звонка, сравнить URL/параметры/команды с нашим CallSignalingClient.
+1. **Сравнить сигналинг Yandex vs VK Mint** — снять WS-трафик Yandex (websocket к videowebrtc/h-xd) во время звонка, сравнить URL/параметры/команды с нашим CallSignalingClient.
 2. Проверить **h-xd.okcdn.ru** — какой endpoint для calls (Yandex использует его в calls_token_with_url).
 3. Разобрать INITIALLY_CLOSED — с учётом эталона: Yandex подключает WS и НЕ получает conversation-ended (значит, у нас неверный порядок: возможно, нужен accept-call/join сразу после onOpen, или другой token в WS URL).
 4. Захватить полный WS-трафик Yandex (через WebSocket Inspector в DevTools Yandex — порт 9222, remote debugging) для сравнения.
@@ -10151,7 +10151,7 @@ PiP снова показывает старый клип.
 
 ## Сессия 2026-08-24 (поздний вечер) — ИСХОДЯЩИЙ звонок Yandex Browser (снапшоты соединений)
 
-### Проект: PinoK
+### Проект: VK Mint
 
 ### Эталонный ИСХОДЯЩИЙ звонок Yandex Browser на ПК (17:02):
 
@@ -10165,14 +10165,14 @@ PiP снова показывает старый клип.
 **После завершения:** TURN и UDP-медиа закрыты, session_key/calls_token в localStorage Default НЕ появились (после перезапуска Yandex с --remote-debugging-port=9222 calls-данные создаются в другом контексте — НЕ в Default leveldb).
 
 ### КЛЮЧЕВОЕ ПОДТВЕРЖДЕНИЕ:
-- **Yandex использует TURN по TCP: 90.156.236.115:19302** — ТОТ ЖЕ сегмент, что PinoK получает в conversation params (`turn:90.156.236.79`, `turn:90.156.236.82`).
+- **Yandex использует TURN по TCP: 90.156.236.115:19302** — ТОТ ЖЕ сегмент, что VK Mint получает в conversation params (`turn:90.156.236.79`, `turn:90.156.236.82`).
 - Медиа — UDP через WebRTC SRTP.
-- **Credentials у PinoK ПРАВИЛЬНЫЕ и совпадают с Yandex** (session_key -w-fl 156, TURN 90.156.236.x).
-- **Блокер PinoK — ТОЛЬКО порядок/формат WS-сигналинга (INITIALLY_CLOSED).** Yandex делает то же самое (те же TURN, тот же session_key), но корректно.
+- **Credentials у VK Mint ПРАВИЛЬНЫЕ и совпадают с Yandex** (session_key -w-fl 156, TURN 90.156.236.x).
+- **Блокер VK Mint — ТОЛЬКО порядок/формат WS-сигналинга (INITIALLY_CLOSED).** Yandex делает то же самое (те же TURN, тот же session_key), но корректно.
 - Попытка включить remote debugging Yandex (`--remote-debugging-port=9222`) — порт НЕ слушается (Yandex игнорирует флаг/требует доп. настройки). Звонок при этом работает.
 
 ### Стартовая точка для следующей сессии:
-1. **Снять WS-трафик Yandex** для сравнения с PinoK. Варианты: (а) включить DevTools Yandex иначе (--remote-debugging-port через ярлык/профиль), (б) прокси (mitmproxy/Fiddler) на https к videowebrtc/h-xd, (в) сниффить сетевым анализатором на хосте (нет tshark — поставить Wireshark/tshark).
+1. **Снять WS-трафик Yandex** для сравнения с VK Mint. Варианты: (а) включить DevTools Yandex иначе (--remote-debugging-port через ярлык/профиль), (б) прокси (mitmproxy/Fiddler) на https к videowebrtc/h-xd, (в) сниффить сетевым анализатором на хосте (нет tshark — поставить Wireshark/tshark).
 2. Сравнить WS URL/параметры/команды Yandex vs наш CallSignalingClient — найти причину INITIALLY_CLOSED.
 3. Проверить **h-xd.okcdn.ru** endpoint (Yandex calls_token указывает на него).
 
@@ -10182,7 +10182,7 @@ PiP снова показывает старый клип.
 
 ## Запрос 2026-08-24 (вечер) — Chrome desktop vk.ru: эталонный сигналинг найден, startConversation исправлен
 
-### Устройство: PinoK
+### Устройство: VK Mint
 
 ### Суть: нашли настоящий протокол звонка VK через Chrome DevTools (порт 9222)
 
@@ -10238,9 +10238,9 @@ PiP снова показывает старый клип.
 - Следующий блокер: `Parameter appVersion is required` при WS-коннекте — проверить/добавить параметр appVersion в WS URL.
 
 ### Ключевые файлы:
-- `app/src/main/java/re/pinok/api/VKApiClient.kt` — vchatStartConversation (externalIds/payload/onlyAdminCanShareMovie), vchatSystemGetInfo, client_version=1.1.
-- `app/src/main/java/re/pinok/ui/screens/calls/CallScreen.kt` — вызов system.getInfo перед startConversation.
-- `app/src/main/java/re/pinok/realtime/CallSignalingClient.kt` — WS (endpoint videowebrtc.okcdn.ru/ws2, appVersion в query).
+- `app/src/main/java/vk/mint/api/VKApiClient.kt` — vchatStartConversation (externalIds/payload/onlyAdminCanShareMovie), vchatSystemGetInfo, client_version=1.1.
+- `app/src/main/java/vk/mint/ui/screens/calls/CallScreen.kt` — вызов system.getInfo перед startConversation.
+- `app/src/main/java/vk/mint/realtime/CallSignalingClient.kt` — WS (endpoint videowebrtc.okcdn.ru/ws2, appVersion в query).
 
 ---
 
@@ -10249,7 +10249,7 @@ PiP снова показывает старый клип.
 ### Ключевые находки:
 
 1. **Найден полный calls SDK** — файл `vendors~calls-sdk.54b78d09c90ef0b5.js` в папке:
-   `C:\Users\Pinokio240\Desktop\ссылки\Pluton tut_ сообщения на рабочий\Pluton tut_ сообщения_files\vendors~calls-sdk.54b78d09c90ef0b5.js`
+   `C:\Users\VkMintio240\Desktop\ссылки\Pluton tut_ сообщения на рабочий\Pluton tut_ сообщения_files\vendors~calls-sdk.54b78d09c90ef0b5.js`
    (также дублируется в `Сообщения и вызовы_files\`)
 
 2. **Все 13 методов `vchat.*` через fb.do (HTTP POST):**
@@ -10266,13 +10266,13 @@ PiP снова показывает старый клип.
 3. **Главный вывод:** Chrome desktop (vk.ru) принимает звонки через `vchat.joinConversation` (HTTP POST к fb.do), а НЕ через WebSocket. WS нужен только для мобильного SDK. Для совместимости с Chrome desktop нужно реализовать `vchat.joinConversation` в VKApiClient.
 
 ### Создан CallsWebViewScreen:
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsWebViewScreen.kt` — открывает `https://vk.ru/calls` в WebView с desktop User-Agent и авторизацией (cookies из ExchangeTokenStorage)
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsWebViewScreen.kt` — открывает `https://vk.ru/calls` в WebView с desktop User-Agent и авторизацией (cookies из ExchangeTokenStorage)
 - Заменяет старый `CallsHistoryScreen` в боковом меню (route `Screen.CallsWebView`)
 - Проблема: cookies не всегда подхватываются — нужна доработка синхронизации
 
 ### APK:
 - Собран и установлен на Cyber 15 и эмулятор (v2.0.0-debug)
-- `C:\Users\Pinokio240\Documents\MultiTool\Android_PinoK\app\build\outputs\apk\debug\app-debug.apk`
+- `C:\Users\VkMintio240\Documents\MultiTool\Android_VK Mint\app\build\outputs\apk\debug\app-debug.apk`
 
 ---
 
@@ -10281,14 +10281,14 @@ PiP снова показывает старый клип.
 ### Что сделано:
 
 1. **Создан CallsMainScreen** — полностью новый нативный UI звонков (Compose), заменяет CallsWebViewScreen:
-   - `app/src/main/java/re/pinok/ui/screens/calls/CallsMainScreen.kt`
+   - `app/src/main/java/vk/mint/ui/screens/calls/CallsMainScreen.kt`
    - Правая боковая панель с 8 табами: Главная, Позвонить друзьям, Активные, Запланированные, История, Пропущенные, Записи звонков, Расшифровки
    - Разделители между группами (после Друзья, Запланированные, Пропущенные)
    - Боковая панель сворачивается/разворачивается по кнопке-флажку (стрелка)
    - Шапка: Создать звонок, Запланировать, Подключиться
 
 2. **Создан CallsHistorySection** — компонент истории звонков с загрузкой из VK API:
-   - `app/src/main/java/re/pinok/ui/screens/calls/CallsHistorySection.kt`
+   - `app/src/main/java/vk/mint/ui/screens/calls/CallsHistorySection.kt`
    - Загрузка через `messagesGetInboundCalls(30)`
    - Аватар, имя, иконка направления (входящий/исходящий/пропущенный), время, статус
    - Состояния: загрузка, ошибка с retry, пусто
@@ -10300,14 +10300,14 @@ PiP снова показывает старый клип.
 4. **Навигация:** Screen.CallsHistory → CallsMainScreen (вместо CallsWebViewScreen)
 
 5. **UI спаршен из снапшотов VK desktop:**
-   - `C:\Users\Pinokio240\Desktop\ссылки\Новая папка\2608\` — 6 HTML-снапшотов
-   - `C:\Users\Pinokio240\Desktop\ссылки\Pluton tut_ сообщения на рабочий\Pluton tut_ сообщения_files\vendors~calls-sdk.54b78d09c90ef0b5.js` — calls SDK
+   - `C:\Users\VkMintio240\Desktop\ссылки\Новая папка\2608\` — 6 HTML-снапшотов
+   - `C:\Users\VkMintio240\Desktop\ссылки\Pluton tut_ сообщения на рабочий\Pluton tut_ сообщения_files\vendors~calls-sdk.54b78d09c90ef0b5.js` — calls SDK
 
 ### Ключевые файлы:
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsMainScreen.kt` — главный экран (8 табов, сворачиваемая панель)
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsHistorySection.kt` — история звонков из API
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsWebViewScreen.kt` — старый WebView (не используется)
-- `app/src/main/java/re/pinok/api/VKApiClient.kt` — vchatJoinConversation, vchatHangupConversation
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsMainScreen.kt` — главный экран (8 табов, сворачиваемая панель)
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsHistorySection.kt` — история звонков из API
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsWebViewScreen.kt` — старый WebView (не используется)
+- `app/src/main/java/vk/mint/api/VKApiClient.kt` — vchatJoinConversation, vchatHangupConversation
 
 ### Итог сессии 2026-08-27 (день) — CallsMainScreen: 8 табов, API, сворачиваемая панель
 
@@ -10332,16 +10332,16 @@ PiP снова показывает старый клип.
 **APK:** установлен на Cyber 15 (Success)
 
 ### Ключевые файлы:
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsMainScreen.kt` — главный экран (262 строки)
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsHistorySection.kt` — история (217 строк)
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsActiveSection.kt` — активные звонки
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsMissedSection.kt` — пропущенные
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsHomeSection.kt` — главная
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsFriendsSection.kt` — друзья
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsScheduledSection.kt` — запланированные
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsRecordingsSection.kt` — записи
-- `app/src/main/java/re/pinok/ui/screens/calls/CallsTranscriptsSection.kt` — расшифровки
-- `app/src/main/java/re/pinok/api/VKApiClient.kt` — vchatJoinConversation, vchatHangupConversation
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsMainScreen.kt` — главный экран (262 строки)
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsHistorySection.kt` — история (217 строк)
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsActiveSection.kt` — активные звонки
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsMissedSection.kt` — пропущенные
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsHomeSection.kt` — главная
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsFriendsSection.kt` — друзья
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsScheduledSection.kt` — запланированные
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsRecordingsSection.kt` — записи
+- `app/src/main/java/vk/mint/ui/screens/calls/CallsTranscriptsSection.kt` — расшифровки
+- `app/src/main/java/vk/mint/api/VKApiClient.kt` — vchatJoinConversation, vchatHangupConversation
 
 ### План на завтра:
 1. **Проверить работу всех разделов** на Cyber 15 — открыть каждый таб, убедиться что API вызывается и данные отображаются
@@ -10382,8 +10382,8 @@ PiP снова показывает старый клип.
   (`CallModels.kt`, `CallSignalingClient.kt`, `WebRtcEngine.kt`,
   `ConversationParamsDecoder.kt`, `Queuev4Client.kt`), API-методы
   (`VKApiClient.kt` §calls — ~15 методов VK API + 6 vchat-методов),
-  оркестрация (`SovaApp.kt`: notifier, session_key, conversation params,
-  уведомления), навигация (`SovaNavHost.kt`, кнопка звонка в
+  оркестрация (`VkMintApp.kt`: notifier, session_key, conversation params,
+  уведомления), навигация (`VkMintNavHost.kt`, кнопка звонка в
   `ChatDetailScreen.kt`), права (`AndroidManifest.xml`).
 - Консолидированы существующие документы `CALLS_MAP.md` (маршрутная карта
   протокола из декомпилятов VK/Calls APK + JS calls SDK) и
@@ -10464,7 +10464,7 @@ PiP снова показывает старый клип.
 **Контекст:** после OPTIN-FIX сборка прошла, тестовый звонок сделан — экранная
 диагностика (#CALLS-DIAG) сработала и сразу показала затык: «WS подключён •
 PC есть • ICE —», «Сигналинг: accepted-call». Лог (фильтр
-WebRtcEngine|CallSignaling|SovaApp) дал полную хронологию.
+WebRtcEngine|CallSignaling|VkMintApp) дал полную хронологию.
 
 **Хронология из лога (20:31:2x):**
 - 24.540 — offer создан (setLocalDescription SUCCESS), WS ещё НЕ открыт → offer в кэше;
@@ -10509,7 +10509,7 @@ offer отправляется/переотправляется.)
 
 **Отдельная проблема из того же лога (не звонковая цепочка исходящего):**
 `events_queue subscribe вернул null … входящие звонки недоступны` — long-poll
-очередь входящих не поднялась (SovaApp:1357/1377). ВХОДЯЩИЕ звонки остаются
+очередь входящих не поднялась (VkMintApp:1357/1377). ВХОДЯЩИЕ звонки остаются
 недоступны — отдельная задача.
 
 **Файлы:** CallScreen.kt (+76/-13), звонки.md (§8.3 registered-peer, §16,
@@ -10545,7 +10545,7 @@ vchatGetConversationParams перебирает 3 хоста × 4 ключа П�
 1. VKApiClient.vchatGetConversationParams: per-call timeout 10с
    (`httpClient.newCall(req).apply { timeout().timeout(10s) }`) — в норме
    vchat отвечает <1с; 45с-бюджет long-poll сюда не годится.
-2. SovaApp.getCallConversationParams: лог `getCallParams: vchat null
+2. VkMintApp.getCallConversationParams: лог `getCallParams: vchat null
    (attempt N, convId=…)` — сбой теперь виден.
 3. CallScreen «Принять»: phase=CONNECTING → ждёт params через
    CompletableDeferred (≤20с) → если сигналинг не поднят — поднимает
@@ -10559,7 +10559,7 @@ vchatGetConversationParams перебирает 3 хоста × 4 ключа П�
    звонок продолжал звонить на других устройствах).
 5. CallSignalingClient.isWsReady() — public `running && wsOpen`.
 
-**Файлы:** CallScreen.kt (+90/-25), CallSignalingClient.kt (+3), SovaApp.kt (+5),
+**Файлы:** CallScreen.kt (+90/-25), CallSignalingClient.kt (+3), VkMintApp.kt (+5),
 VKApiClient.kt (+8/-1), звонки.md (§16, §19, новый §20), HISTORY.md, worklog.md.
 
 **Сборка:** на стороне пользователя: git pull → assembleDebug → входящий тест:
@@ -10732,14 +10732,14 @@ answer —, answer×N), «сервер отверг команду» (ошибк
 
 ## Сессия 2026-08-29 (7) — Task ID: CALLS-ICE-REANSWER + CALLS-NAME-FIX
 
-### Проект: PinoK
+### Проект: VK Mint
 
 ### Контекст: пользователь после сборки ffc39c3 прислал скриншот входящего звонка + лог 22:29:
 «Ошибка соединения», diag «WS подключён • PC есть • ICE FAILED», сигналинг
 «settings-update • участник 595859469344 • conv ✓ • offer ✓ • answer ✓» + «имя
 входящего с аватаркой нет» (заглушка «Входящий+звонок», аватар — буква «»).
 
-### Разбор лога 22:29 (входящий, VK Desktop ← PinoK):
+### Разбор лога 22:29 (входящий, VK Desktop ← VK Mint):
 
 1. **Сигналинг теперь БЕЗУПРЕЧЕН** (все фиксы 20b71a1..ffc39c3 сработали):
    offer + 4 кандидата звонящего приняты ДО «Принять» (буфер движка), answer
@@ -10797,7 +10797,7 @@ requestsSent/responsesReceived (наши проверки), requestsReceived/res
    callerId/profile (раньше отказ был невидим).
 
 **Файлы:** CallScreen.kt (+126), WebRtcEngine.kt (+59), Screen.kt (+17/-12),
-SovaApp.kt (+4), звонки.md (§8.2, §16, §19, §20.4), HISTORY.md, worklog.md.
+VkMintApp.kt (+4), звонки.md (§8.2, §16, §19, §20.4), HISTORY.md, worklog.md.
 
 **Сборка:** на стороне пользователя: git pull → assembleDebug → входящий звонок
 → что смотреть: `REANSWER #N (topology-SERVER)` после topology-changed;
@@ -10812,7 +10812,7 @@ SovaApp.kt (+4), звонки.md (§8.2, §16, §19, §20.4), HISTORY.md, worklo
 **Симптом:** после 59391ed «у того кто звонит уже начинается секундный отсчет,
 но пинок не поднимает трубку» — таймер звонящего идёт (наш accept ушёл, сервер
 считает звонок отвечённым, doReanswer из 59391ed сработал), но медиа-фаза на
-PinoK не доходит до ACTIVE.
+VK Mint не доходит до ACTIVE.
 
 **Корень:** для состояния «answer отправлен, ICE не подключился» не было НИКАКОГО
 таймаута (IN-Watchdog 45с работал только при !answerSent) — вечное «Соединение…»
@@ -10929,7 +10929,7 @@ TURN-аллокация у нас работает (relay=4), но пар=0 = к
 
 ## 🚀 Стартовая точка для завтра (2026-08-31)
 
-### Ветка: `PinoK` (origin: github.com/pinokio240/PinoK_1)
+### Ветка: `VK Mint` (origin: github.com/vkmint/vkmint)
 ### Голова: `a42fe52` (fix #CALLS-RX-DEBUG) — запушен, рабочая копия чистая
 
 ### Контекст задачи
@@ -10954,7 +10954,7 @@ TURN-аллокация у нас работает (relay=4), но пар=0 = к
      `onMessage` INFO-лог) → добавляем маппинг;
    - прин:N>0 при пар=0 → кандидаты приходят, но не применяются → чиним
      наш буфер/дренаж;
-   - собеседник-PinoK без relay в «канд:» → сравнить setIceServers обеих сторон.
+   - собеседник-VK Mint без relay в «канд:» → сравнить setIceServers обеих сторон.
 
 ### Открытые вопросы
 - Почему 22:29 пары были (reqS>0), а 00:17 пар=0 — разные сети/стороны?
@@ -11005,9 +11005,9 @@ CALLS-категория включается сама при звонке, WARN
 звонит, Cyber принимает). Фикс размера подтвердился (offer 1353Б), но offer
 снова не дошёл (0 × eff=offer у вызываемого). РОСКОРЫТИЕ — второй звонок был от
 ОФИЦИАЛЬНОГО клиента VK (WEB_TRANSPORT-пир): его offer 4089Б ДОШЁЛ до Cyber в
-форме `data.sdp={"type":"offer","sdp":"…"}` (ОБЪЕКТ), PinoK прошёл всю цепочку
+форме `data.sdp={"type":"offer","sdp":"…"}` (ОБЪЕКТ), VK Mint прошёл всю цепочку
 приёма (setRemoteSdp SUCCESS → answer → ICE CHECKING), но ICE FAILED — потому
-что answer PinoK шлёт той же строковой формой и сервер выбросил и его. Вердикт:
+что answer VK Mint шлёт той же строковой формой и сервер выбросил и его. Вердикт:
 сервер OK валидирует ФОРМУ data.sdp (строка → тихий дроп при ack'е, объект →
 доставка); размер кадра ни при чём (1353Б строка гибнет, 4089Б объект доходит).
 - Фикс #CALLS-SDP-OBJECT (CallSignalingClient.sendSdp): SDP отправляется
@@ -11029,11 +11029,11 @@ embedded-SDP. Обе «свежие» ciber-ссылки вернули стар
 разбор по одной стороне; в следующий раз экспортировать Cyber заново.
 Разбор — звонки.md §29.
 
-### 2026-08-30 (продолжение 4) — тест 16:03 (официальный → PinoK): эталон изучен по JS официального веб-клиента OK; три фикса (#CALLS-ANSWER-FIRST, #CALLS-PARTICIPANT-U, #CALLS-HANGUP-FORMAT)
-Тест 4 (Redmi официальный caller → Cyber PinoK callee, одна Wi-Fi-сеть): offer + 4
+### 2026-08-30 (продолжение 4) — тест 16:03 (официальный → VK Mint): эталон изучен по JS официального веб-клиента OK; три фикса (#CALLS-ANSWER-FIRST, #CALLS-PARTICIPANT-U, #CALLS-HANGUP-FORMAT)
+Тест 4 (Redmi официальный caller → Cyber VK Mint callee, одна Wi-Fi-сеть): offer + 4
 trickle-кандидата официального ДОШЛИ и применились (pending=4 → setRemoteSdp SUCCESS) —
 доставка trickle доказана, гипотеза §29 «trickle сервер не пропускает» опровергнута.
-PinoK ушёл кандидатами (38.4с) на ~3с РАНЬШЕ answer (41.4с, 3с ожидания gathering) —
+VK Mint ушёл кандидатами (38.4с) на ~3с РАНЬШЕ answer (41.4с, 3с ожидания gathering) —
 и именно это убивает звонок: у официального caller-а транспорт уже открыт, remote
 description пуст, addIceCandidate до setRemoteDescription отклоняется, а обработчик
 ошибки у эталона закрывает ВЕСЬ транспорт → наш поздний answer применять некому →
@@ -11051,7 +11051,7 @@ conversationId; скорректирован вывод §28 — дроп SDP-с
 Разбор — звонки.md §30.
 
 ### 2026-08-30 (продолжение 5) — тест 17:17: «u<id>» в ws2 отвергается сервером — откат на числовой participantId (#CALLS-PARTICIPANT-U-REVERT)
-Тест 5 (Redmi официальный caller → Cyber PinoK callee, первая сборка с фиксами §30):
+Тест 5 (Redmi официальный caller → Cyber VK Mint callee, первая сборка с фиксами §30):
 порядок отправки теперь эталонный (answer через 3 мс после setLocal, кандидаты следом,
 offer официального + его trickle дошли и применились), НО сервер отверг ВСЕ 5 наших
 transmit-data (answer 3613Б + 4 кандидата): SERVER_ERROR "Invalid message format:
@@ -11064,7 +11064,7 @@ transmit-data — 0 ошибок; отвергнут только старый h
 в participantId ЧИСЛО. Фикс: composeParticipantId = raw (число). Остальное из §30 в силе.
 Разбор — звонки.md §31.
 
-### 2026-08-30 (продолжение 6) — 🎉 тест 17:55: ПЕРВЫЙ УСПЕШНЫЙ ЗВОНОК PinoK ↔ официальный клиент (23 с, ICE CONNECTED за 0.5 с); добиты огрехи завершения (#CALLS-HANGUP-REASON-ENUM, #CALLS-WS-PONG, #CALLS-HANGUP-GRACE)
+### 2026-08-30 (продолжение 6) — 🎉 тест 17:55: ПЕРВЫЙ УСПЕШНЫЙ ЗВОНОК VK Mint ↔ официальный клиент (23 с, ICE CONNECTED за 0.5 с); добиты огрехи завершения (#CALLS-HANGUP-REASON-ENUM, #CALLS-WS-PONG, #CALLS-HANGUP-GRACE)
 Откат числового participantId (96634cc) закрыл вопрос сигналинга: answer + 10 trickle-кандидатов
 приняты сервером без единой ошибки, ICE CONNECTED через 0.44 с после CHECKING, разговор 23 с.
 Остаточные огрехи при завершении: (1) hangup отвергнут сервером "Invalid message format" —
@@ -11077,7 +11077,7 @@ decline→REJECTED) — из-за этого сервер не закрывал 
 Фиксы: reason нормализуется в enum (HUNGUP/FAILED/CANCELED/REJECTED), pong на ping,
 stop() с грейсом 300 мс. Разбор — звонки.md §32.
 
-### 2026-08-30 (продолжение 7) — направление PinoK (caller) → официальный VK (callee): статический разбор «звонок с пинок не проходит» — 4 фикса (#CALLS-OUT-QUEUE-FIX, #CALLS-OUT-ACCEPTED-PHASE, #CALLS-HANGUP-STATE-ENUM, #CALLS-OUT-DIAG)
+### 2026-08-30 (продолжение 7) — направление VK Mint (caller) → официальный VK (callee): статический разбор «звонок с пинок не проходит» — 4 фикса (#CALLS-OUT-QUEUE-FIX, #CALLS-OUT-ACCEPTED-PHASE, #CALLS-HANGUP-STATE-ENUM, #CALLS-OUT-DIAG)
 Обратное направление после #CALLS-SDP-OBJECT не тестировалось ни разу (последний тест
 роли caller — §27, когда offer уходил строкой). Лога к сообщению пользователя нет (прошлый
 истёк — tmpfiles хранит ~1 час), разбор статический. Главный дефект: collect queuev4 для
@@ -11095,11 +11095,11 @@ OUTGOING-SETUP OK (callId/conv/uid/peerId/turn). Проверены и откл�
 peerId=VK-id собеседника в WS URL (сервер принимает любые transport-label, маршрутизация
 по participantId) и цепочка сессии (соответствует эталону §5). Разбор — звонки.md §33.
 
-2026-08-30 §34 — РАЗГАДКА «исходящий не проходит» (тест 20:49): сигналинг PinoK безупречен
+2026-08-30 §34 — РАЗГАДКА «исходящий не проходит» (тест 20:49): сигналинг VK Mint безупречен
 (startCall→registered-peer→offer доставлен→answer применён→accepted-call, 0 SERVER_ERROR),
 сорвался МЕДИА: у собеседника (официальный, другая сеть) UDP полностью заблокирован —
 в answer только 2 host-кандидата без srflx/relay, наш агент 253 проверки → 0 ответов;
-их клиент сам запросил topology-changed{SERVER} = SFU (медиа-сервер ОК), которого у PinoK
+их клиент сам запросил topology-changed{SERVER} = SFU (медиа-сервер ОК), которого у VK Mint
 нет → они сбросили через 11с. Тест 6 (успех) был в ОДНОЙ сети — доказано совпадением
 srflx 95.26.26.106. Эталонный SDK несёт SFU-команды allocate-consumer/accept-producer —
 дорожная карта. Фиксы: #CALLS-TOPOLOGY-RESTART (ICE restart + свежий offer на
@@ -11109,7 +11109,7 @@ topology-SERVER вместо бесполезной переотправки с�
 
 2026-08-30 §35 — Серия 21:49–21:51: ИСХОДЯЩИЙ РАБОТАЕТ (4/4 звонка OK, Wi-Fi→мобильная сеть),
 двойной answer от сервера корректно игнорируется. ПЕРВЫЙ КРАШ: входящий ВИДЕО-звонок —
-официальный offer с 3 m-линиями (audio+video+data), PinoK ответил АКТИВНЫМ m=video a=recvonly
+официальный offer с 3 m-линиями (audio+video+data), VK Mint ответил АКТИВНЫМ m=video a=recvonly
 (OfferToReceiveVideo=false — Plan B-констрейнта, UnifiedPlan её игнорирует, авто-транссивер),
 при включении камеры собеседником (media-settings-changed isVideoEnabled=true, единственный
 за лог) H.265 пошёл в декодер → нативный краш процесса без единой Kotlin-строки (стека в логе
@@ -11129,7 +11129,7 @@ reoffer; отзыв → RECVONLY), Этап 3 исходящий видео. Р�
 prepareVideoTransceivers (videoRx OFF→INACTIVE | RECEIVE→RECVONLY), stripH265 (вырезание
 H265+rtx из answer — первый выживший кодек H264), TextureViewRenderer через AndroidView
 под контентом, onRemoteVideoTrack-колбэк, поллинг framesDecoded (рендер только при кадрах>0,
-иначе плейсхолдер с причиной), kill-switch callsVideoRx (SovaPrefs+Настройки, default ON),
+иначе плейсхолдер с причиной), kill-switch callsVideoRx (VkMintPrefs+Настройки, default ON),
 cleanup removeSink/release в onDispose. Скрытый баг: eglBase релизился сразу после создания
 factory — видео-декодер оставался бы без EGL-контекста; теперь живёт вместе с factory.
 FeedScreen initial-Snapshot дополнен (класс бага #100/#110/#189). Разбор — звонки.md §37.
@@ -11244,9 +11244,9 @@ worklog calls-2026-08-31-ciber2-texview-pcrestart.
 - Wi-Fi same-NAT (09:50): EARLYSTATS на 5-й секунде CHECKING — **пар=24, reqS=103, resR=0, reqR=0** — наш агент сформировал все пары и отправил 103 проверки (вкл. relay↔relay), НО: 0 ответов, 0 входящих проверок. При этом answer ушёл одним сообщением (4310Б, ACK), TURN-аллокации создались (UDP до TURN ходит). Пир получил answer и НЕ начал проверок вовсе → это поведение официального клиента в same-NAT против нашего ответа, не наш дефект проводки.
 - «Лимит ~4КБ» опровергнут: мобильная сеть (09:52) — ответ 4474Б (ещё больше) — пир применил, ICE CONNECTED за 2с.
 - Мобильная (09:52): media-settings isVideoEnabled=true → videoFrames 0→1354 (24fps, 57с), renderActive=true, «ПЕРВЫЙ КАДР отрисован ✓ (TextureView)» — рендер шёл до remote-hangup; экран по-прежнему чёрный у пользователя.
-- Гэп наблюдаемости: в дампе 0 строк тега PinoK/VideoTextureRenderer — новый тег не попал в фильтр logcat пользователя.
+- Гэп наблюдаемости: в дампе 0 строк тега VK Mint/VideoTextureRenderer — новый тег не попал в фильтр logcat пользователя.
 
-Ответ на вопрос пользователя: да, в полном видеозвонке аудио+видео ходят в обе стороны одновременно (каждое направление — свой RTP-поток); аудио у PinoK УЖЕ sendrecv и работает (мобильная) — двунаправленность транспорту не мешает. Но Wi-Fi падает ДО медиа (сам ICE — двусторонние STUN-пинги); recvonly-видео — легально (RFC 3264), RTCP всё равно двусторонний. Тем не менее гипотеза сделана ПРОВЕРЯЕМОЙ:
+Ответ на вопрос пользователя: да, в полном видеозвонке аудио+видео ходят в обе стороны одновременно (каждое направление — свой RTP-поток); аудио у VK Mint УЖЕ sendrecv и работает (мобильная) — двунаправленность транспорту не мешает. Но Wi-Fi падает ДО медиа (сам ICE — двусторонние STUN-пинги); recvonly-видео — легально (RFC 3264), RTCP всё равно двусторонний. Тем не менее гипотеза сделана ПРОВЕРЯЕМОЙ:
 
 Фиксы:
 1. **#CALLS-SYMMETRIC** — чёрная видеозаглушка наружу: createVideoSource + capturerObserver.push (320×180@10fps, БЕЗ камеры/CAMERA, API сверено по classes.jar 1.3.10: PCF.createVideoSource(Z), createVideoTrack(String,VideoSource), getCapturerObserver(), onFrameCaptured, JavaI420Buffer.allocate(II), VideoFrame(Buffer,I,J)), prepareVideoTransceivers → SEND_RECV/SEND_ONLY/RECV_ONLY/INACTIVE по флагам; track переиспользуется в recreateAndReanswer; старт/стоп в startCall/acceptCall/endCall/release. Тумблер «Отправлять видеозаглушку» (callsVideoTx, default ON). Это заготовка Этапа 2. Если Wi-Fi заработает с sendrecv — гипотеза подтверждена.
@@ -11278,7 +11278,7 @@ worklog calls-2026-08-31-ciber2-texview-pcrestart.
 
 Сверка git diff 122d3671..cffe08e3: CallSignalingClient с рабочей версии НЕ менялся (hangup-формат, ping/pong, SDP-объект — без изменений); менялись только WebRtcEngine+CallScreen в 7f6dbbf (sendrecv/stripH265/дедуп/фильтр). «Старое решение» в сигналинге не подтверждено. НО: лог 12:31–12:42 содержит ДВА кода под одним пакетом — 12728 = 106d0281 (ведёт себя как прежние сборки), 13022 = СТАРЫЙ APK (hangup lowercase+conversationId с CallSignalingClient.kt:266 → сервер «Invalid message format» на КАЖДЫЙ сброс → официальный клиент не узнаёт о завершении — это и есть «hangup не доходил»). Все 5 звонков 12:32:53–12:38:20 — от старого APK. versionName не различал сборки.
 
-Фиксы: дедуп SDP откачен (рубил ретрансмиты answer #3/#4, премиса не подтвердилась, эталон переотправляет без дедупа); настройки видео hoisted до initialize/startCall/acceptCall (swDecode опаздывал к factory, offer мог уйти без заглушки); BuildStamp («calls-дата-N») в SovaApp/CALL START — bump в каждом звонковом коммите, лог без метки = не та сборка.
+Фиксы: дедуп SDP откачен (рубил ретрансмиты answer #3/#4, премиса не подтвердилась, эталон переотправляет без дедупа); настройки видео hoisted до initialize/startCall/acceptCall (swDecode опаздывал к factory, offer мог уйти без заглушки); BuildStamp («calls-дата-N») в VkMintApp/CALL START — bump в каждом звонковом коммите, лог без метки = не та сборка.
 
 ---
 
@@ -11345,12 +11345,12 @@ worklog calls-2026-08-31-ciber2-texview-pcrestart.
 слой + capability-реестр (runtime hot-plug через DexClassLoader отвергнут).
 
 ### Изменения (`4db02d08`)
-- Новый модуль `:contracts` (namespace re.pinok.contracts, НОЛЬ внешних зависимостей):
+- Новый модуль `:contracts` (namespace vk.mint.contracts, НОЛЬ внешних зависимостей):
   `AppContainer`, `Capability`, `NavEntry` (иконки мапит хост — контракты без compose),
   `SettingsSection`, `PermissionNeeds`.
 - `ContainerRegistry`: register/unregister/byId/capabilities (@Synchronized) +
   inline reified `find<T>()` через `@PublishedApi capsSnapshot`.
-- `SovaApp.onCreate`: init контейнеров в runCatching + лог счётчика.
+- `VkMintApp.onCreate`: init контейнеров в runCatching + лог счётчика.
 - Правила в KDoc: `:feature:*` → только `:contracts`/`:core:*`, друг от друга — никогда.
 
 ### Мастер-план
@@ -11416,7 +11416,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ### Лог ciber.txt (12:45–12:49, 4 звонка) — «проблемы когда соединение идёт с вифи на мобильную или наоборот»
 - Wi-Fi↔Wi-Fi (звонки №3 вход, №4 исход) — CONNECTED 2.4с/2.6с, работает в обе стороны.
-- Ломается только нога, где PinoK на LTE: №1 вход — topology→SERVER → bounce тем же token → «conversation-not-found» ×2 → ZOMBIE; №2 исход — accepted-call → IceRestart на старом PC → ответ пира на НОВЫЙ offer задедуплен («повторный answer проигнорирован») → рассинхрон ufrag → FAILED.
+- Ломается только нога, где VK Mint на LTE: №1 вход — topology→SERVER → bounce тем же token → «conversation-not-found» ×2 → ZOMBIE; №2 исход — accepted-call → IceRestart на старом PC → ответ пира на НОВЫЙ offer задедуплен («повторный answer проигнорирован») → рассинхрон ufrag → FAILED.
 - Факты: token сигналинга ОДНОРАЗОВЫЙ (регистрация WS-peer'а умирает с сокетом); IceRestart противоречит эталону; булев дедуп answer терял ответ нового SDP-цикла.
 
 ### Изменения (сборка calls-2026.09.02-3)
@@ -11435,43 +11435,43 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ## 2026-09-02 — Этап 1.2-а контейнеризации: модуль :core:common (AppLog, BuildStamp, утилиты) (#ARCH-CONTAINERS)
 
-### Коммит: `a5c14cf3` (arch(containers), ветка PinoK, push origin OK) — приложение собираемо, поведение не изменено
+### Коммит: `a5c14cf3` (arch(containers), ветка VK Mint, push origin OK) — приложение собираемо, поведение не изменено
 
 ### Что сделано
-- Gradle-модуль `:core:common` по образцу `:contracts` (AGP 9.1.1 встроенный Kotlin — только `alias(libs.plugins.android.library)`; namespace `re.pinok.common`, compileSdk 36 / minSdk 24, Java 21). Внешние зависимости — только `kotlinx-coroutines-android` (ExponentialBackoff: delay/ensureActive; NetworkObserver: StateFlow).
-- `git mv` (история 100%/94%, пакеты НЕ переименовывались): `BuildStamp` (пакет `re.pinok`, STAMP = `calls-2026.09.02-3` НЕ бампался) + `AppLog`, `ExponentialBackoff`, `FormatUtils`, `VkUserAgent`, `NetworkObserver`, `NetworkSwitchState` (пакет `re.pinok.util`).
-- Остались в `:app` (замыкание зависимостей не чистое): `Linkify` (androidx.compose.ui.text), `HevcSupport` (androidx.annotation — нет алиаса в каталоге; KDoc-ссылки на SovaApp/VideoPlayerScreen), `PermissionManager` (androidx.activity/compose.runtime/core).
-- `AppLog`: убрана зависимость от BuildConfig хоста (в библиотеке недоступен) → `@Volatile` поля `appId`/`versionName`/`debugBuild` + `setAppBuildInfo()`; хост (`SovaApp.onCreate`, ДО первого лог-вызова) инжектит `BuildConfig.APPLICATION_ID/VERSION_NAME/DEBUG`. Поведение прежнее: verbose-logcat default = DEBUG-сборка, заголовки экспорта/persistent.log — те же строки.
+- Gradle-модуль `:core:common` по образцу `:contracts` (AGP 9.1.1 встроенный Kotlin — только `alias(libs.plugins.android.library)`; namespace `vk.mint.common`, compileSdk 36 / minSdk 24, Java 21). Внешние зависимости — только `kotlinx-coroutines-android` (ExponentialBackoff: delay/ensureActive; NetworkObserver: StateFlow).
+- `git mv` (история 100%/94%, пакеты НЕ переименовывались): `BuildStamp` (пакет `vk.mint`, STAMP = `calls-2026.09.02-3` НЕ бампался) + `AppLog`, `ExponentialBackoff`, `FormatUtils`, `VkUserAgent`, `NetworkObserver`, `NetworkSwitchState` (пакет `vk.mint.util`).
+- Остались в `:app` (замыкание зависимостей не чистое): `Linkify` (androidx.compose.ui.text), `HevcSupport` (androidx.annotation — нет алиаса в каталоге; KDoc-ссылки на VkMintApp/VideoPlayerScreen), `PermissionManager` (androidx.activity/compose.runtime/core).
+- `AppLog`: убрана зависимость от BuildConfig хоста (в библиотеке недоступен) → `@Volatile` поля `appId`/`versionName`/`debugBuild` + `setAppBuildInfo()`; хост (`VkMintApp.onCreate`, ДО первого лог-вызова) инжектит `BuildConfig.APPLICATION_ID/VERSION_NAME/DEBUG`. Поведение прежнее: verbose-logcat default = DEBUG-сборка, заголовки экспорта/persistent.log — те же строки.
 - `settings.gradle.kts`: `include(":core:common")`; `:app` → `implementation(project(":core:common"))` рядом с `:contracts`.
 
 ### Верификация (в песочнице НЕТ Android SDK — только статика)
 - grep: в `:app` не осталось деклараций перенесённых символов (дублей классов/функций в тех же пакетах нет);
 - grep: в `core/common` нет кодовых ссылок на `BuildConfig`/`R.*` (только комментарии) и импортов классов из `:app`;
 - импорты перенесённых файлов: только android.jar/java/kotlinx.coroutines — резолвятся;
-- горячие места: `SovaApp.onCreate` (BuildStamp/AppLog) и `CallScreen` CALL START (`re.pinok.BuildStamp.STAMP`) — FQN/пакеты прежние, резолв через `:app` → `:core:common`;
+- горячие места: `VkMintApp.onCreate` (BuildStamp/AppLog) и `CallScreen` CALL START (`vk.mint.BuildStamp.STAMP`) — FQN/пакеты прежние, резолв через `:app` → `:core:common`;
 - баланс скобок сканером (строки/шаблоны ${}/char/вложенные block-комментарии; self-test на битом файле) — 11/11 затронутых файлов OK.
 
 ### Остаток этапа 1.2
 - `:core:network` (1.2-б): VKApiClient, LongPollClient/LongPollKeepAlive, CallSignalingClient, Queuev4Client, VkNotificationsNotifier.
 - `:core:media` (1.2-в): аудиофокус, AudioRouteLogger, медиа-кэш.
-- Сборка/запуск — за пользователем: лог старта (`onCreate: PinoK starting ... stamp=calls-2026.09.02-3`) и экспорт логов должны выглядеть как раньше.
+- Сборка/запуск — за пользователем: лог старта (`onCreate: VK Mint starting ... stamp=calls-2026.09.02-3`) и экспорт логов должны выглядеть как раньше.
 ---
 
 ## 2026-09-02 — Этап 1.2-б модульной архитектуры: модуль :core:network — сигналинг звонков (#ARCH-CONTAINERS)
 
-### Коммит: `30d6b64a` (arch(containers), ветка PinoK, push origin OK) — чистый перенос без правок кода
+### Коммит: `30d6b64a` (arch(containers), ветка VK Mint, push origin OK) — чистый перенос без правок кода
 
 ### Что сделано
-- Создан Gradle-модуль `:core:network` по образцу `:core:common` (только `alias(libs.plugins.android.library)`, namespace `re.pinok.network`, compileSdk 36, minSdk 24, Java 21). Зависимости: `implementation(project(":core:common"))`, okhttp, gson, kotlinx-coroutines-android (okio.ByteString — транзитивно с okhttp; okhttp-logging не используется перенесённым кодом).
-- Замыкания разобраны для всех 17 кандидатов (`api/VKApiClient` + 16 файлов `realtime/`). Чистое — только у пары сигналинга звонков; перенесено `git mv` (100% similarity, пакеты НЕ менялись): `re.pinok.realtime.CallSignalingClient` (WS-сигналинг VK-звонков: ping/pong, transmit-data, bounce/перерегистрация, дедуп по o=) и его компаньон `re.pinok.media.ConversationParamsDecoder` (декодер payload LP 115: base64+LZ4 → JSON; парсер ответа vchat.getConversationParams; чистый object: gson + java.util.Base64).
+- Создан Gradle-модуль `:core:network` по образцу `:core:common` (только `alias(libs.plugins.android.library)`, namespace `vk.mint.network`, compileSdk 36, minSdk 24, Java 21). Зависимости: `implementation(project(":core:common"))`, okhttp, gson, kotlinx-coroutines-android (okio.ByteString — транзитивно с okhttp; okhttp-logging не используется перенесённым кодом).
+- Замыкания разобраны для всех 17 кандидатов (`api/VKApiClient` + 16 файлов `realtime/`). Чистое — только у пары сигналинга звонков; перенесено `git mv` (100% similarity, пакеты НЕ менялись): `vk.mint.realtime.CallSignalingClient` (WS-сигналинг VK-звонков: ping/pong, transmit-data, bounce/перерегистрация, дедуп по o=) и его компаньон `vk.mint.media.ConversationParamsDecoder` (декодер payload LP 115: base64+LZ4 → JSON; парсер ответа vchat.getConversationParams; чистый object: gson + java.util.Base64).
 - `settings.gradle.kts`: `include(":core:network")` после `:core:common`; `app/build.gradle.kts`: `implementation(project(":core:network"))`. Потребители в `:app` (CallScreen, WebRtcEngine — FQN) резолвятся без правок кода.
 
 ### Осталось в `:app` (блокеры — вводная для 1.3+)
-- `VKApiClient` — SovaApp, ExchangeAuthRepository, SovaPrefs, TokenStorage, 25× data.model.*, mods.* — КОРНЕВОЙ блокер (data-слой): LongPollClient/Queuev4Client/notifier-хвост переносятся только после выделения data-слоя.
-- `LongPollClient` — ctor apiClient: VKApiClient (+VKApiClient.LongPollServer), ctor prefs: SovaPrefs?, объявляет sealed LongPollEvent (ChatDetailScreen/MessagesScreen).
-- `LongPollKeepAliveService` — android.app.Service с R.*, SovaApp, deep-link PendingIntent на MainActivity/AuthActivity → этап 1.3: capability контейнера (foreground-сервис + канал уведомлений).
-- `Queuev4Client` (VKApiClient + data.model.QueueCredential/QueueEvent), `VkNotificationsNotifier` (R.*, SovaPrefs.Snapshot, VKApiClient.NotificationItem, PendingIntent на MainActivity/NotificationActionReceiver), `ChannelWebSocketClient` (STUB, 0 вызовов: LongPollEvent + неиспользуемый apiClient: VKApiClient).
-- notifier-хвост realtime/: MessageNotifier/ReplyResultNotifier (R.*, MainActivity), NotificationsPoller/SecurityAlertsPoller (SovaApp/VKApiClient/SovaPrefs), SecurityAlertNotifier (VKApiClient + MainActivity), SnNotifyFilter/VkUrlDeepLinker (VKApiClient), UnreadMessagesCounter/ClipsCounter (SovaApp в сигнатурах), NotificationActionReceiver (SovaApp.get).
+- `VKApiClient` — VkMintApp, ExchangeAuthRepository, VkMintPrefs, TokenStorage, 25× data.model.*, mods.* — КОРНЕВОЙ блокер (data-слой): LongPollClient/Queuev4Client/notifier-хвост переносятся только после выделения data-слоя.
+- `LongPollClient` — ctor apiClient: VKApiClient (+VKApiClient.LongPollServer), ctor prefs: VkMintPrefs?, объявляет sealed LongPollEvent (ChatDetailScreen/MessagesScreen).
+- `LongPollKeepAliveService` — android.app.Service с R.*, VkMintApp, deep-link PendingIntent на MainActivity/AuthActivity → этап 1.3: capability контейнера (foreground-сервис + канал уведомлений).
+- `Queuev4Client` (VKApiClient + data.model.QueueCredential/QueueEvent), `VkNotificationsNotifier` (R.*, VkMintPrefs.Snapshot, VKApiClient.NotificationItem, PendingIntent на MainActivity/NotificationActionReceiver), `ChannelWebSocketClient` (STUB, 0 вызовов: LongPollEvent + неиспользуемый apiClient: VKApiClient).
+- notifier-хвост realtime/: MessageNotifier/ReplyResultNotifier (R.*, MainActivity), NotificationsPoller/SecurityAlertsPoller (VkMintApp/VKApiClient/VkMintPrefs), SecurityAlertNotifier (VKApiClient + MainActivity), SnNotifyFilter/VkUrlDeepLinker (VKApiClient), UnreadMessagesCounter/ClipsCounter (VkMintApp в сигнатурах), NotificationActionReceiver (VkMintApp.get).
 
 ### Верификация (в песочнице НЕТ Android SDK — только статика)
 - grep: дубли деклараций CallSignalingClient/ConversationParamsDecoder в `:app` — 0; в `core/network` нет ссылок на :app-классы / BuildConfig / R.* (только AppLog из :core:common и внутренние); internal в переносе нет.
@@ -11479,7 +11479,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - сканер баланса скобок: 2 перенесённых .kt + 3 правленых .kts — OK 5/5; git mv — 100% similarity; BuildStamp НЕ бампался (calls-2026.09.02-3); в коммит — только задачные файлы (Next.js-скаффолд и чужой .gitignore не тронуты).
 
 ### Следствие для плана
-- Для 1.3 (:feature:calls): CallSignalingClient уже в `:core:network` — в контейнер переносятся только WebRtcEngine/CallScreen/SovaPrefs-тумблеры.
+- Для 1.3 (:feature:calls): CallSignalingClient уже в `:core:network` — в контейнер переносятся только WebRtcEngine/CallScreen/VkMintPrefs-тумблеры.
 - Открытый вопрос архитектуры: сетевой транспорт не отделяется от data-слоя — перед дальнейшей выноской (1.2-в / core-слой) нужна развязка данных (:core:data или интерфейсы prefs/api).
 
 
@@ -11487,14 +11487,14 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ## 2026-09-02 — Этап 1.2-в модульной архитектуры: модуль :core:media — медиа-хелперы (#ARCH-CONTAINERS)
 
-### Коммит: `a666b7ee` (arch(containers), ветка PinoK, push origin OK) — перенос + 2 механические развязки по прецеденту 1.2-а
+### Коммит: `a666b7ee` (arch(containers), ветка VK Mint, push origin OK) — перенос + 2 механические развязки по прецеденту 1.2-а
 
 ### Что сделано
-- Создан Gradle-модуль `:core:media` по образцу `:core:common` (только `alias(libs.plugins.android.library)`, namespace `re.pinok.media`, compileSdk 36, minSdk 24, Java 21). Зависимости по факту использования: `implementation(project(":core:common"))`, kotlinx-coroutines-android, okhttp, gson, androidx-documentfile, androidx-annotation (НОВЫЙ алиас в каталоге, 1.9.1 — @RequiresApi VideoPipController), ffmpeg-kit (SirenTranscoder).
+- Создан Gradle-модуль `:core:media` по образцу `:core:common` (только `alias(libs.plugins.android.library)`, namespace `vk.mint.media`, compileSdk 36, minSdk 24, Java 21). Зависимости по факту использования: `implementation(project(":core:common"))`, kotlinx-coroutines-android, okhttp, gson, androidx-documentfile, androidx-annotation (НОВЫЙ алиас в каталоге, 1.9.1 — @RequiresApi VideoPipController), ffmpeg-kit (SirenTranscoder).
 - Замыкания разобраны для всех 26 кандидатов `media/`. Перенесено `git mv` (6×100%, 2×92–98% similarity, пакеты НЕ менялись): `AudioRouteLogger` (минимум по плану), `PlaybackPositionStore` (де-факто «медиа-кэш» позиций), `DocumentFileStorage`, `ImageSaver`, `VideoPipController`, `VoiceRecorder`, `GeniusLyricsFetcher`, `SirenTranscoder`.
-- Механическая развязка №1 (прецедент Этапа 1.2-а): `AudioRouteLogger` больше не читает `SovaApp.get()` — `@Volatile appContext` + `setAppContext()`, инжект из `SovaApp.onCreate` сразу после `AppLog.setAppBuildInfo` (до первого лог-вызова; PlayerService/AudioDeviceCallback стартуют позже). Fallback-строки лога сохранены дословно («SovaApp not initialized») — прежний путь «error → catch» воспроизводится 1:1.
-- Механическая развязка №2: `SirenTranscoder`: `re.pinok.BuildConfig.DEBUG` → `AppLog.debugBuild` (тот же флаг — инжектится из BuildConfig.DEBUG в SovaApp.onCreate задолго до первого транскода).
-- `settings.gradle.kts`: `include(":core:media")` после `:core:network`; `:app` → `implementation(project(":core:media"))`. Потребители в `:app` (PlayerService, VideoDownloadManager, TrackDownloadManager, Mp4TagWriter, PlayerConnection, SovaApp, PhotoViewer, ChatDetailScreen, VideoPlayerScreen/OkWebViewPlayer, VideoPipActivity, SettingsScreen) резолвятся без правок кода (пакет `re.pinok.media` прежний, импорты не менялись).
+- Механическая развязка №1 (прецедент Этапа 1.2-а): `AudioRouteLogger` больше не читает `VkMintApp.get()` — `@Volatile appContext` + `setAppContext()`, инжект из `VkMintApp.onCreate` сразу после `AppLog.setAppBuildInfo` (до первого лог-вызова; PlayerService/AudioDeviceCallback стартуют позже). Fallback-строки лога сохранены дословно («VkMintApp not initialized») — прежний путь «error → catch» воспроизводится 1:1.
+- Механическая развязка №2: `SirenTranscoder`: `vk.mint.BuildConfig.DEBUG` → `AppLog.debugBuild` (тот же флаг — инжектится из BuildConfig.DEBUG в VkMintApp.onCreate задолго до первого транскода).
+- `settings.gradle.kts`: `include(":core:media")` после `:core:network`; `:app` → `implementation(project(":core:media"))`. Потребители в `:app` (PlayerService, VideoDownloadManager, TrackDownloadManager, Mp4TagWriter, PlayerConnection, VkMintApp, PhotoViewer, ChatDetailScreen, VideoPlayerScreen/OkWebViewPlayer, VideoPipActivity, SettingsScreen) резолвятся без правок кода (пакет `vk.mint.media` прежний, импорты не менялись).
 
 ### Факты по плану (аудиофокус / медиа-кэш)
 - АУДИОФОКУС — НЕ самостоятельный класс: он живёт внутри `WebRtcEngine` (requestAudioFocus, API 26+/legacy — остался в `:app`) → уходит в `:feature:calls` на **Этапе 1.3**; у плеера — ExoPlayer `handleAudioFocus=true` в `PlayerService`. Выделение было бы правкой логики — на 1.2-в НЕ делалось.
@@ -11502,87 +11502,87 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ### Осталось в `:app` media/ (блокеры — вводная для 1.3/1.5)
 - `WebRtcEngine` (аудиофокус + org.webrtc) и `VideoTextureRenderer` (org.webrtc.EglRenderer-рендерер звонкового видео, потребитель только CallScreen) — **этап 1.3**, переезжают консорциумом с движком; webrtc-зависимость в `:core:media` НЕ заводилась.
-- `PlayerConnection` (PlayerService + data.model + guava MoreExecutors), эквалайзер-квартет `AudioEffectsEngine`/`EqualizerHelper`/`EqualizerFeatureFlags`/`CustomPresetStore` (SovaApp + data.model.EqualizerPreset / compose.runtime.Immutable), `FilenameBuilder`/`Mp4TagWriter`/`ZipExporter` (data.model.Track) — **этап 1.5** после развязки data-слоя.
-- Download-хвост: `TrackDownloadManager` (SovaApp + data.model.Track + MediaCodec/MediaMuxer + javax.crypto), `VideoDownloadManager` (data.model.DownloadState/Status/Video), `ClipVideoDownloadManager`/`StoryVideoDownloadManager` (SovaApp + data.model.Story/Video), 4 сервиса `Clip/Music/Video/StoryVideoDownloadService` (R.*, MainActivity, android.app.Service) — **этап 1.5**.
+- `PlayerConnection` (PlayerService + data.model + guava MoreExecutors), эквалайзер-квартет `AudioEffectsEngine`/`EqualizerHelper`/`EqualizerFeatureFlags`/`CustomPresetStore` (VkMintApp + data.model.EqualizerPreset / compose.runtime.Immutable), `FilenameBuilder`/`Mp4TagWriter`/`ZipExporter` (data.model.Track) — **этап 1.5** после развязки data-слоя.
+- Download-хвост: `TrackDownloadManager` (VkMintApp + data.model.Track + MediaCodec/MediaMuxer + javax.crypto), `VideoDownloadManager` (data.model.DownloadState/Status/Video), `ClipVideoDownloadManager`/`StoryVideoDownloadManager` (VkMintApp + data.model.Story/Video), 4 сервиса `Clip/Music/Video/StoryVideoDownloadService` (R.*, MainActivity, android.app.Service) — **этап 1.5**.
 - `HevcSupport` (util/, блокер 1.2-а «нет алиаса androidx-annotation») — теперь переносим: алиас добавлен в каталог на 1.2-в.
 
 ### Верификация (в песочнице НЕТ Android SDK — только статика)
-- grep: дубли деклараций перенесённых классов в `:app` — 0; в `core/media` НЕТ кодовых ссылок на :app-классы / SovaApp / BuildConfig / R.* (только комментарии).
-- сканер баланса скобок: 8 перенесённых .kt + build.gradle.kts модуля + settings/app .kts + TOML + SovaApp.kt — OK 13/13.
+- grep: дубли деклараций перенесённых классов в `:app` — 0; в `core/media` НЕТ кодовых ссылок на :app-классы / VkMintApp / BuildConfig / R.* (только комментарии).
+- сканер баланса скобок: 8 перенесённых .kt + build.gradle.kts модуля + settings/app .kts + TOML + VkMintApp.kt — OK 13/13.
 - git mv — rename-статус (R); BuildStamp НЕ бампался (calls-2026.09.02-3); в коммит — только задачные файлы (Next.js-скаффолд и чужой .gitignore не тронуты).
 
 ### Следствие для плана
 - Этап 1.2 (core-слой `:core:common` / `:core:network` / `:core:media`) закрыт полностью.
-- Для 1.3 (:feature:calls): сигналинг уже в `:core:network`; на контейнер переносятся WebRtcEngine (+аудиофокус)/CallScreen/VideoTextureRenderer/SovaPrefs-тумблеры; `:core:media` остаётся без webrtc-зависимости.
+- Для 1.3 (:feature:calls): сигналинг уже в `:core:network`; на контейнер переносятся WebRtcEngine (+аудиофокус)/CallScreen/VideoTextureRenderer/VkMintPrefs-тумблеры; `:core:media` остаётся без webrtc-зависимости.
 - Сборка/запуск — за пользователем: лог старта (stamp прежний), BT-подключение при плеере (строки AudioRouteLogger прежнего формата), транскод Siren (ffmpeg log level: debug→WARNING, release→QUIET).
 ## Этап 1.3 — Контейнер-пионер :feature:calls (2026-09-02, коммит 15052b74)
 
 Первый :feature-контейнер. Перенесено git mv (R100, пакеты НЕ менялись) из :app в :feature:calls:
-- re.pinok.media.WebRtcEngine (аудиофокус внутри; замыкание: android.jar, org.webrtc, AppLog, ConversationParamsDecoder, CallModels) и re.pinok.media.VideoTextureRenderer;
-- re.pinok.data.model.CallModels (VkCall/CallPhase/CallDirection/CallMediaType/CallParticipant/QueueCredential/QueueEvent — файл без единого импорта; потребители :app — VKApiClient/Queuev4Client/SovaApp/CallScreen — резолвятся через implementation(":feature:calls")).
+- vk.mint.media.WebRtcEngine (аудиофокус внутри; замыкание: android.jar, org.webrtc, AppLog, ConversationParamsDecoder, CallModels) и vk.mint.media.VideoTextureRenderer;
+- vk.mint.data.model.CallModels (VkCall/CallPhase/CallDirection/CallMediaType/CallParticipant/QueueCredential/QueueEvent — файл без единого импорта; потребители :app — VKApiClient/Queuev4Client/VkMintApp/CallScreen — резолвятся через implementation(":feature:calls")).
 
 ### Контракт и контейнер
 - :contracts — CallStarter (без androidx/compose): startCall(peerId: Long, video: Boolean): Boolean; по факту вызова кнопки звонка лишь навигируют на Screen.Call, поэтому title/photo/навигатор — хук хоста через конструктор контейнера; video — задел под фазу 2 (§2.2).
-- CallsContainer (id="calls", пакет re.pinok.feature.calls): CallsNavEntry (Звонки, iconKey=calls, order=10, route=calls_history — совпадает со Screen.CallsHistory drawer), CallsSettingsSection (Звонки, order=90, route=settings_calls — новый стабильный ключ: у SettingsScreen вкладки — приватный enum без маршрутов), CallsPermissions (RECORD_AUDIO, CAMERA, BLUETOOTH_CONNECT), CallsStarterImpl. init — лог; release — идемпотентный no-op.
-- Модуль: namespace re.pinok.feature.calls, compileSdk 36, minSdk 24, Java 21, plugins android.library + kotlin.compose; зависимости api(:contracts), implementation(:core:common), (:core:network), (:core:media), libs.webrtc (io.getstream stream-webrtc-android 1.3.10 — общий алиас с :app); buildConfig=false (перенесённый код re.pinok.BuildConfig не читает); compose-зависимости — на 1.4 по факту переноса экранов.
-- Хост: SovaApp.onCreate регистрирует контейнер (runCatching, до init-цикла) — лог старта «ContainerRegistry: контейнеров=1, capability=4»; startCallHook → requestOutgoingCall (pendingOutgoingCall* в SovaApp) → LaunchedEffect в SovaNavHost открывает Screen.Call (паттерн pendingIncomingCallPayload; до 1.4 startCall никто не вызывает — поведение не меняется).
+- CallsContainer (id="calls", пакет vk.mint.feature.calls): CallsNavEntry (Звонки, iconKey=calls, order=10, route=calls_history — совпадает со Screen.CallsHistory drawer), CallsSettingsSection (Звонки, order=90, route=settings_calls — новый стабильный ключ: у SettingsScreen вкладки — приватный enum без маршрутов), CallsPermissions (RECORD_AUDIO, CAMERA, BLUETOOTH_CONNECT), CallsStarterImpl. init — лог; release — идемпотентный no-op.
+- Модуль: namespace vk.mint.feature.calls, compileSdk 36, minSdk 24, Java 21, plugins android.library + kotlin.compose; зависимости api(:contracts), implementation(:core:common), (:core:network), (:core:media), libs.webrtc (io.getstream stream-webrtc-android 1.3.10 — общий алиас с :app); buildConfig=false (перенесённый код vk.mint.BuildConfig не читает); compose-зависимости — на 1.4 по факту переноса экранов.
+- Хост: VkMintApp.onCreate регистрирует контейнер (runCatching, до init-цикла) — лог старта «ContainerRegistry: контейнеров=1, capability=4»; startCallHook → requestOutgoingCall (pendingOutgoingCall* в VkMintApp) → LaunchedEffect в VkMintNavHost открывает Screen.Call (паттерн pendingIncomingCallPayload; до 1.4 startCall никто не вызывает — поведение не меняется).
 
 ### Верификация
 - замыкания импортов перенесённых файлов ⊆ {android.jar, org.webrtc, :core:common, :core:media, :feature:calls};
 - дубли деклараций :app↔:feature:calls — 0; :core:*/:contracts звонковых типов не тянут (AppLog:255 — строковый TAG-маппинг);
-- BuildConfig/R.* в feature-модуле — 0; сканер баланса скобок — 11/11 (4 .kt новых/перенесённых+контейнер, CallStarter, BuildStamp, SovaApp, SovaNavHost, 3 .kts);
+- BuildConfig/R.* в feature-модуле — 0; сканер баланса скобок — 11/11 (4 .kt новых/перенесённых+контейнер, CallStarter, BuildStamp, VkMintApp, VkMintNavHost, 3 .kts);
 - BuildStamp → calls-2026.09.02-4 (поведение звонков не менялось — штамп для различения сборок пользователем); git mv — rename R100; в коммит — только задачные файлы.
 
 ### Остатки (вводная 1.4)
-- ui/screens/calls/* — 12 файлов/4196 строк остались в :app: все 10 живых блокированы SovaApp (CallScreen: httpClient/getCallConversationParams/prefs/apiClient/exchangeAuthRepository/queuev4Client/ensureCallsSessionKey; CallsFriendsSection — UserProfile; CallsWebViewScreen — RemixsidCapturer); CallsHomeSection/CallsScheduledSection — чистые, но мёртвые (0 потребителей) — 1.4 или удалить (§2.4);
-- тумблеры callsVideo*: SovaPrefs-часть в :app всегда (неделимый object), SettingsScreen-секция — до 1.4;
+- ui/screens/calls/* — 12 файлов/4196 строк остались в :app: все 10 живых блокированы VkMintApp (CallScreen: httpClient/getCallConversationParams/prefs/apiClient/exchangeAuthRepository/queuev4Client/ensureCallsSessionKey; CallsFriendsSection — UserProfile; CallsWebViewScreen — RemixsidCapturer); CallsHomeSection/CallsScheduledSection — чистые, но мёртвые (0 потребителей) — 1.4 или удалить (§2.4);
+- тумблеры callsVideo*: VkMintPrefs-часть в :app всегда (неделимый object), SettingsScreen-секция — до 1.4;
 - детальные блокеры по каждому файлу — контейнеры.план.md, Этап 1.3 «Остатки» и вводные 1.4 (route-константы).
 
 ## Этап 1.4 — Хост на реестре (2026-09-02, коммит b7199915)
 
 Хост :app переведён на построение UI из ContainerRegistry: с зарегистрированным CallsContainer видимые изменения — только позиция пункта «Звонки» в drawer (теперь после ядерных, по order=10); снятие контейнера с реестра убирает пункт/вкладку/кнопки, ядро не меняется.
 
-### Drawer (SovaNavHost)
+### Drawer (VkMintNavHost)
 - Screen.CallsHistory убран из хардкода: drawerScreens, sidebarEditableScreens (панель-редактор #337; сохранённые prefs-строки «calls_history» отбрасываются normalizeRouteOrder) и мёртвый companion Screen.drawer (в рендере не участвовал).
 - containerNavEntries = remember { find<NavEntry>().sortedBy(order) } — рендер ПОСЛЕ ядерной скролл-группы, перед фикс. хвостом (Офлайн→Настройки→Выход); navigation-опции как у ядерных (popUpTo+saveState/launchSingleTop/restoreState).
 - Host-маппинги: hostDestinationForRoute (calls_history→Screen.CallsHistory; неизвестный route → AppLog.w «пункт скрыт», graceful) и hostIconForKey (calls→Icons.Filled.Call — прежняя иконка; неизвестный → Icons.Outlined.Extension).
 - currentTitle и ширина drawer (longestDrawerText) учитывают контейнерные заголовки. NavHost-destination (calls_history, call/{peerId}, calls_webview) — без изменений.
 
 ### Настройки (SettingsScreen)
-- Ядерная вкладка CALLS убрана из enum SettingsTab (14 ядерных прежними местами); компосабл CallsTab ОСТАВЛЕН в :app (SovaPrefs фиче-модулю недоступен).
+- Ядерная вкладка CALLS убрана из enum SettingsTab (14 ядерных прежними местами); компосабл CallsTab ОСТАВЛЕН в :app (VkMintPrefs фиче-модулю недоступен).
 - sealed SettingsPage { Core(tab) — ключ core:<ENUM>; Container(section) — ключ container:<route> }; pages = ядерные + find<SettingsSection>().sortedBy(order); PrimaryScrollableTabRow и HorizontalPager строятся из ОДНОГО списка → индексы pager'а согласованы.
 - Контент резолвится при рендере (не захватывается в remember): Core→when(tab); Container→hostSettingsContentFor(route): settings_calls→CallsTab(s, app, scope); неизвестный route → заглушка + AppLog.w. Иконка: settings_calls→Call, неизвестная→Extension.
 - Вкладка «Звонки» осталась на прежнем месте (последняя, после «Автор»), контент тот же; дублей нет.
 
 ### Кнопки звонка → CallStarter
 - 4 места запуска (FeedScreen/FriendsScreen/ChatDetailScreen onCallClick, CallsMainScreen.onNavigateToCall) — только через registry.find<CallStarter>().firstOrNull(); экраны переведены на nullable onCallClick, кнопка — условие композиции if (onCallClick != null); video=true нигде не предлагается (фаза 2).
-- Долг title/photo закрыт: OutgoingCallMeta (SovaNavHost) — host-сайт кладёт имя/аватар синхронно до startCall, LaunchedEffect(pendingOutgoingCall) навигирует с ними; CallScreen при заглушке подтягивает профиль исходящего сам (usersGetByIds; self-fetch расширен с входящих на исходящие — починен и redial из истории).
+- Долг title/photo закрыт: OutgoingCallMeta (VkMintNavHost) — host-сайт кладёт имя/аватар синхронно до startCall, LaunchedEffect(pendingOutgoingCall) навигирует с ними; CallScreen при заглушке подтягивает профиль исходящего сам (usersGetByIds; self-fetch расширен с входящих на исходящие — починен и redial из истории).
 
 ### AttachmentRenderer (задел 1.5-а)
 - :contracts — AttachmentRenderer (Capability + canHandle(mime,kind) + rendererKey + order; без androidx/compose).
 - ChatDetailScreen: attachmentRendererFor (find<AttachmentRenderer> → sortedBy(order) → firstOrNull { canHandle }) + hostRendererComposable (rendererKey→компосабл; на 1.4 пуст); хук в фото-блоке: renderer найден и ключ известен → делегирование, иначе встроенный рендер хоста КАК СЕЙЧАС (поведение чата не изменено).
 
 ### Верификация (статическая, в песочнице нет Android SDK)
-- Сканер баланса скобок 10/10 (AttachmentRenderer, SovaNavHost, Screen, SettingsScreen, FeedScreen, FriendsScreen, ChatDetailScreen, CallScreen, SovaApp, BuildStamp).
+- Сканер баланса скобок 10/10 (AttachmentRenderer, VkMintNavHost, Screen, SettingsScreen, FeedScreen, FriendsScreen, ChatDetailScreen, CallScreen, VkMintApp, BuildStamp).
 - Grep: звонковых пунктов/вкладок из хардкода не осталось (только destination + host-маппинг); прямые nav.navigate(Screen.Call) — только 2 инфраструктурных LaunchedEffect (incoming payload / outgoing pending); SettingsTab.CALLS — 0.
 - Ментальный эксперимент «контейнер снят»: реестр пуст → пункта «Звонки» нет, вкладки нет, кнопки не рендерятся, redial-экран недостижим; входящие звонки (LP115) от реестра не зависят; чат/фото — inline как сейчас; падений нет (null-safe + заглушки + лог).
 - BuildStamp → calls-2026.09.02-5 (правлена звонковая UI-цепочка: кнопки); в коммит — только 10 задачных файлов (чужой .gitignore и Next.js-скаффолд не тронуты).
 
 ### Остатки (вводная 1.5)
 - :feature:photos: AttachmentRenderer("photos") + NavEntry; хост добавляет ветки в hostRendererComposable/hostDestinationForRoute; video/doc-делегирование — по факту публикации.
-- Экраны ui/screens/calls/* в :app (блокер SovaApp — сервис-слой/data-слой); мёртвые CallsHomeSection/CallsScheduledSection/CallsHistoryScreen — удалить в §2.4.
+- Экраны ui/screens/calls/* в :app (блокер VkMintApp — сервис-слой/data-слой); мёртвые CallsHomeSection/CallsScheduledSection/CallsHistoryScreen — удалить в §2.4.
 - Панель-редактор (#337) контейнерные пункты не редактирует (их нет без контейнера; порядок — capability.order).
 ## Этап 1.5-а — Контейнер :feature:photos (2026-09-02, коммит 51cc828c)
 
 Второй контейнер: раздел «Фото» и инлайн-рендер фото-вложений чата уехали из ядра. WIP остановленного агента доаудирован, доделан и закоммичен (Task 12); найдены и исправлены 2 дефекта (ловушка «image-слэш-звёздочка в block-комментарии» — поймана сканером скобок на актуализации KDoc контракта; устаревший KDoc AttachmentRenderer в :contracts — остался на состоянии 1.4). С зарегистрированным PhotosContainer чат рендерит фото КАК СЕЙЧАС; без контейнера — заглушка PhotoAttachmentsStub (осознанная деградация по правилу владения UI).
 
 ### Модуль :feature:photos
-- namespace re.pinok.feature.photos, compileSdk 36 / minSdk 24 / Java 21, plugins android.library + kotlin.compose, buildConfig=false. Зависимости: api(:contracts), implementation(:core:common), (:core:media — задел 1.5-б «скачать» из рендера, сегодня 0 импортов), compose-bom/ui/foundation/material3, coil-compose (coil3 3.3.0; GIF/WebP-декодеры не нужны — глобальный ImageLoader строит хост, SingletonImageLoader подхватывается). :feature:* от :app НЕ зависят.
+- namespace vk.mint.feature.photos, compileSdk 36 / minSdk 24 / Java 21, plugins android.library + kotlin.compose, buildConfig=false. Зависимости: api(:contracts), implementation(:core:common), (:core:media — задел 1.5-б «скачать» из рендера, сегодня 0 импортов), compose-bom/ui/foundation/material3, coil-compose (coil3 3.3.0; GIF/WebP-декодеры не нужны — глобальный ImageLoader строит хост, SingletonImageLoader подхватывается). :feature:* от :app НЕ зависят.
 - PhotosContainer (id="photos") публикует 2 capability → лог старта «ContainerRegistry: контейнеров=2, capability=6» (4 звонковых + 2 фото).
-- PhotosScreen (экран раздела) ОСТАЛСЯ в :app — блокер SovaApp/apiClient (перенос = data-слой/сервис-слой, отдельная работа).
+- PhotosScreen (экран раздела) ОСТАЛСЯ в :app — блокер VkMintApp/apiClient (перенос = data-слой/сервис-слой, отдельная работа).
 
 ### Capability
-- PhotosNavEntry: «Фото», iconKey "photos" → Icons.Outlined.Image (та же иконка, что была у ядерного пункта), order=20 (после «Звонки»=10), route "photos" — СОВПАДАЕТ с бывшим ядерным (Screen.Photos). Host-маппинги в SovaNavHost добавлены: hostDestinationForRoute ("photos"→Screen.Photos), hostIconForKey ("photos"→Icons.Outlined.Image); NavHost-destination composable("photos"){PhotosScreen()} жив в хосте.
+- PhotosNavEntry: «Фото», iconKey "photos" → Icons.Outlined.Image (та же иконка, что была у ядерного пункта), order=20 (после «Звонки»=10), route "photos" — СОВПАДАЕТ с бывшим ядерным (Screen.Photos). Host-маппинги в VkMintNavHost добавлены: hostDestinationForRoute ("photos"→Screen.Photos), hostIconForKey ("photos"→Icons.Outlined.Image); NavHost-destination composable("photos"){PhotosScreen()} жив в хосте.
 - PhotosAttachmentRenderer (контракт AttachmentRenderer, без androidx/compose): rendererKey "photos_inline", order=10; canHandle(mime, kind): kind="photo" + mime image-семейство (передаёт хост — у VK-фото mime отсутствует) + конкретные jpeg/png/webp/gif/heic/heif + универсальный mime-звёздочка (надмножество на будущее). kind="video" НЕ публикуется — видео-ветка хоста (VideoAttachmentCard) реестр не спрашивает, false claim дал бы регресс на заглушку.
 - SettingsSection НЕ публикуется (фото-вкладки в настройках нет; StickerPhotoScaleRow — строка ядерной вкладки чата), PermissionNeeds НЕ публикуется (сохранение делает хостовый PhotoViewer через ImageSaver).
 
@@ -11598,10 +11598,10 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 ### Drawer / панель-редактор / Dock
 - Screen.Photos убран из ядерного хардкода ВЕЗДЕ: drawerScreens, sidebarEditableScreens (#337; сохранённые prefs-строки "photos" отбрасываются normalizeRouteOrder), мёртвый companion Screen.drawer. Дублей нет.
 - В Dock/bottombar-списках Photos ОСТАВЛЕН (Правило владения UI: Dock — ядерная собственность): ярлык «Фото» навигирует на destination "photos" и работает независимо от контейнера; mainRoutes хранит "photos" (lastRoute).
-- SovaApp: регистрация PhotosContainer рядом с CallsContainer (runCatching, до init-цикла); ожидаемый лог «контейнеров=2, capability=6».
+- VkMintApp: регистрация PhotosContainer рядом с CallsContainer (runCatching, до init-цикла); ожидаемый лог «контейнеров=2, capability=6».
 
 ### Верификация (статическая, в песочнице нет Android SDK)
-- Сканер баланса скобок 11/11 (3 файла :feature:photos, ChatDetailScreen, SovaNavHost, Screen, PanelEditorTab, SovaApp, 2 .kts, AttachmentRenderer). Ловушка: литерал image-слэш-звёздочка в block-комментарии открывает вложенный комментарий Kotlin (весь хвост файла становится комментарием) — поймана сканером, исправлена формулировкой «mime-семейство image-звёздочка» (прецедент зафиксирован и в KDoc PhotosContainer).
+- Сканер баланса скобок 11/11 (3 файла :feature:photos, ChatDetailScreen, VkMintNavHost, Screen, PanelEditorTab, VkMintApp, 2 .kts, AttachmentRenderer). Ловушка: литерал image-слэш-звёздочка в block-комментарии открывает вложенный комментарий Kotlin (весь хвост файла становится комментарием) — поймана сканером, исправлена формулировкой «mime-семейство image-звёздочка» (прецедент зафиксирован и в KDoc PhotosContainer).
 - Импорты :feature:photos ⊆ {android.jar, compose, coil3, :contracts, :core:common} — grep; :app-типов нет; BuildConfig/R. — 0.
 - Дубли деклараций 0 (InlinePhotoItem/PhotosInlineRenderer/PhotosContainer/PhotosNavEntry/PhotosAttachmentRenderer вне модуля не объявляются; PhotoAttachmentsStub — private в :app).
 - mime-таблица canHandle ⊇ все типы удалённого inline-рендера (хост спрашивает image-семейство + kind="photo" → true; удалённый код рендерил любой type=="photo").
@@ -11611,39 +11611,39 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ### Остатки (вводная 1.5-б и далее)
 - :feature:audio (плеер/эквалайзер — музыка.md, EQUALIZER_INTEGRATION_PLAN.md; media-хвост 1.2-в: PlayerConnection/AudioEffectsEngine/EqualizerHelper/FilenameBuilder/Mp4TagWriter/ZipExporter/download-подсистема).
-- PhotosScreen в :app (блокер SovaApp/apiClient — data-слой); video/doc-рендереры (kind="video") — по факту переноса видео-ветки; компакт-сетка фото в превью пересланных — кандидат на делегирование.
-- Экраны ui/screens/calls/* в :app (блокер SovaApp — сервис-слой/data-слой); мёртвые CallsHomeSection/CallsScheduledSection/CallsHistoryScreen — удалить в §2.4.
+- PhotosScreen в :app (блокер VkMintApp/apiClient — data-слой); video/doc-рендереры (kind="video") — по факту переноса видео-ветки; компакт-сетка фото в превью пересланных — кандидат на делегирование.
+- Экраны ui/screens/calls/* в :app (блокер VkMintApp — сервис-слой/data-слой); мёртвые CallsHomeSection/CallsScheduledSection/CallsHistoryScreen — удалить в §2.4.
 ---
 
 ## 2026-09-02 — Этап 1.5-б модульной архитектуры: контейнер :feature:audio (#ARCH-CONTAINERS, Часть 1 завершена)
 
-### Коммиты: arch(containers) + docs (ветка PinoK, push origin OK) — Task 13
+### Коммиты: arch(containers) + docs (ветка VK Mint, push origin OK) — Task 13
 
 ### Разведка (факты до кода)
-- музыка.md — исследование VK-web-плеера: к коду PinoK на этапе прямого отношения не имеет (audioUnmaskSource уже портирован в :app api/AudioUrlUnmasker); §13–14 подтверждают: реальный эквалайзер в PinoK УЖЕ есть (AudioEffectsEngine/EqualizerHelper, EQUALIZER_INTEGRATION_PLAN.md).
-- EQUALIZER_INTEGRATION_PLAN.md: AudioEffectsEngine (этап 1), EqualizerScreen (этап 2), CustomPresetStore (этап 4) реализованы, но живут в :app с импортами SovaApp.get() + data.model.EqualizerPreset — фиче-модулю недоступны (проверено grep'ом импортов). Полное владение плеером/эквалайзером = блокер data-слой.
-- Настройки: в SettingsTab две аудио-вкладки — MUSIC (тумблеры SovaPrefs: качество API/MP3, фон, авто-загрузка; потребители apiClient/PlayerConnection/TrackDownloadManager в :app) и EQUALIZER (5 тумблеров EqualizerFeatureFlags). Контейнер взял EQUALIZER; MUSIC осталась ядерной (домен download-подсистемы, перенос ownership без домена = осколок).
+- музыка.md — исследование VK-web-плеера: к коду VK Mint на этапе прямого отношения не имеет (audioUnmaskSource уже портирован в :app api/AudioUrlUnmasker); §13–14 подтверждают: реальный эквалайзер в VK Mint УЖЕ есть (AudioEffectsEngine/EqualizerHelper, EQUALIZER_INTEGRATION_PLAN.md).
+- EQUALIZER_INTEGRATION_PLAN.md: AudioEffectsEngine (этап 1), EqualizerScreen (этап 2), CustomPresetStore (этап 4) реализованы, но живут в :app с импортами VkMintApp.get() + data.model.EqualizerPreset — фиче-модулю недоступны (проверено grep'ом импортов). Полное владение плеером/эквалайзером = блокер data-слой.
+- Настройки: в SettingsTab две аудио-вкладки — MUSIC (тумблеры VkMintPrefs: качество API/MP3, фон, авто-загрузка; потребители apiClient/PlayerConnection/TrackDownloadManager в :app) и EQUALIZER (5 тумблеров EqualizerFeatureFlags). Контейнер взял EQUALIZER; MUSIC осталась ядерной (домен download-подсистемы, перенос ownership без домена = осколок).
 - Чат: AudioAttachmentRow (#59, type="audio") — тело только track.title/artist/duration + textColor + onClick → ЧИСТЫЙ перенос по паттерну photos. VoiceMessageBubble (type="doc"+isVoiceMessage) тянет Attachment.Doc + VoicePlaybackController (:app) → НЕ перенесён, voice остался host-inline (реестр для voice не спрашивается).
 - Экран аудио вне Dock: ЕСТЬ — ядерная кнопка «Эквалайзер» в drawer (Screen.Equalizer → EqualizerScreen) → NavEntry публикуется (случай Звонки/Фото). Dock «Музыка» — ядро навсегда.
 - PermissionNeeds по фактам: MODIFY_AUDIO_SETTINGS (эквалайзер, normal-permission манифеста); RECORD_AUDIO не публикуем (запись войсов — чат хоста: ChatDetailScreen + VoiceRecorder :core:media), BLUETOOTH_CONNECT не публикуем (PlayerService).
 
 ### Что сделано
-- Модуль :feature:audio (по образцу :feature:photos): plugins android.library + kotlin.compose; namespace re.pinok.feature.audio; compileSdk 36 / minSdk 24 / Java 21; buildConfig=false. Зависимости: api(:contracts), implementation(:core:common), compose-bom/ui/foundation/material3 + material-icons-extended (Icons.Filled.PlayArrow — тот же артефакт, что у хоста). :core:media НЕ подключён (0 потребителей). settings.gradle.kts include + комментарий; app/build.gradle.kts implementation(:feature:audio).
+- Модуль :feature:audio (по образцу :feature:photos): plugins android.library + kotlin.compose; namespace vk.mint.feature.audio; compileSdk 36 / minSdk 24 / Java 21; buildConfig=false. Зависимости: api(:contracts), implementation(:core:common), compose-bom/ui/foundation/material3 + material-icons-extended (Icons.Filled.PlayArrow — тот же артефакт, что у хоста). :core:media НЕ подключён (0 потребителей). settings.gradle.kts include + комментарий; app/build.gradle.kts implementation(:feature:audio).
 - AudioContainer (id="audio"), 4 capability (лог «контейнеров=3, capability=10» = 4 calls + 2 photos + 4 audio): AudioNavEntry («Эквалайзер», route "equalizer" — прежний route ядерного пункта, iconKey "equalizer", order=30); AudioSettingsSection («Эквалайзер», route "settings_audio", order=80 — до Звонки(90)); AudioAttachmentRenderer (kind="audio", mime-семейство audio-звёздочка + конкретные audio-типы + звёздочка-звёздочка задел, rendererKey "audio_inline", order=10); AudioPermissions ([MODIFY_AUDIO_SETTINGS]). init/release — идемпотентные no-op с логом.
 - AudioInlineRenderer: тело бывшего AudioAttachmentRow 1:1 (строка ▶ + название/артист/длительность «M:SS», фон textColor/8%, скругление 8dp), сигнатура только примитивы + лямбды (title, artist, durationSec, textColor, onPlay, onLongPress); selection Fix #244 остался в хосте (контейнер CompositionLocal хоста не знает — прецедент PhotosInlineRenderer).
 - ChatDetailScreen: AudioAttachmentRow удалена (уехала 1:1); ветка type=="audio" → attachmentRendererFor("audio/*","audio") → hostAudioRendererComposable (вторая host-функция: одно вложение = строка, не список; ветка "audio_inline") → делегирование; fallback без контейнера — AudioAttachmentsStub (по образцу PhotoAttachmentsStub; тап → onAudioClick → PlayerConnection: воспроизведение живо без рендерера); комментарий Fix #244 актуализирован. Voice-ветка не тронута.
-- SettingsScreen: EQUALIZER убрана из SettingsTab enum + when-ветка (вкладка из реестра, без дублей); hostSettingsIconFor("settings_audio") → Icons.Outlined.Equalizer (иконка прежней вкладки); hostSettingsContentFor("settings_audio") → EqualizerTab() (контент в :app — EqualizerFeatureFlags тянет SovaApp/EqualizerHelper).
-- SovaNavHost: hostDestinationForRoute("equalizer") → Screen.Equalizer; hostIconForKey("equalizer") → Icons.Filled.Equalizer; Screen.Equalizer убран из drawerScreens + sidebarEditableScreens (prefs-строки "equalizer" отбрасываются normalizeRouteOrder — прецедент photos); в bottomBarEditableScreens ОСТАВЛЕН (Dock/нижняя панель — ядро, ярлык работает независимо); destination/hasOwnTopBar/onOpenFullEqualizer (из плеера) — не тронуты; mainRoutes "equalizer" не содержит (own TopAppBar).
-- PanelEditorTab: Screen.Equalizer убран из SIDEBAR_EDITABLE_SCREENS, оставлен в BOTTOMBAR_EDITABLE_SCREENS (зеркало SovaNavHost).
-- SovaApp: регистрация AudioContainer рядом с Calls/Photos (runCatching, до init-цикла); комментарий «Ожидаемый лог: контейнеров=3, capability=10» с расшифровкой по контейнерам.
+- SettingsScreen: EQUALIZER убрана из SettingsTab enum + when-ветка (вкладка из реестра, без дублей); hostSettingsIconFor("settings_audio") → Icons.Outlined.Equalizer (иконка прежней вкладки); hostSettingsContentFor("settings_audio") → EqualizerTab() (контент в :app — EqualizerFeatureFlags тянет VkMintApp/EqualizerHelper).
+- VkMintNavHost: hostDestinationForRoute("equalizer") → Screen.Equalizer; hostIconForKey("equalizer") → Icons.Filled.Equalizer; Screen.Equalizer убран из drawerScreens + sidebarEditableScreens (prefs-строки "equalizer" отбрасываются normalizeRouteOrder — прецедент photos); в bottomBarEditableScreens ОСТАВЛЕН (Dock/нижняя панель — ядро, ярлык работает независимо); destination/hasOwnTopBar/onOpenFullEqualizer (из плеера) — не тронуты; mainRoutes "equalizer" не содержит (own TopAppBar).
+- PanelEditorTab: Screen.Equalizer убран из SIDEBAR_EDITABLE_SCREENS, оставлен в BOTTOMBAR_EDITABLE_SCREENS (зеркало VkMintNavHost).
+- VkMintApp: регистрация AudioContainer рядом с Calls/Photos (runCatching, до init-цикла); комментарий «Ожидаемый лог: контейнеров=3, capability=10» с расшифровкой по контейнерам.
 
 ### Drawer / настройки / чат — видимые отличия (механизм 1.4)
 - Вкладка «Эквалайзер» в настройках теперь ПОСЛЕ «Автор» (контейнерные секции всегда после ядерных — как «Звонки» последней), была между «Офлайн» и «Видео». Всего 15 вкладок (13 ядерных + Эквалайзер + Звонки).
 - Пункт «Эквалайзер» в drawer — в контейнерной группе после «Фото» (был последним в ядерной скролл-группе); из панель-редактора sidebar пропал (контейнерные пункты не редактируются — прецедент Звонки/Фото), ярлык на нижней панели остался.
 
 ### Верификация (статическая, в песочнице нет Android SDK)
-- Сканер баланса скобок 12/12 OK (2 новых .kt, 2 .kts модуля, settings/app .kts, SovaApp, SovaNavHost, SettingsScreen, PanelEditorTab, ChatDetailScreen). Ловушка «audio-слэш-звёздочка в block-комментарии» учтена заранее (прецедент 1.5-а): в комментариях формулировка «audio-звёздочка», литерал только в строках кода.
-- Импорты :feature:audio ⊆ {android.jar, compose, :contracts, :core:common} — grep 27 импортов; re.pinok.{data,ui,api,service,media}/SovaApp/BuildConfig — 0.
+- Сканер баланса скобок 12/12 OK (2 новых .kt, 2 .kts модуля, settings/app .kts, VkMintApp, VkMintNavHost, SettingsScreen, PanelEditorTab, ChatDetailScreen). Ловушка «audio-слэш-звёздочка в block-комментарии» учтена заранее (прецедент 1.5-а): в комментариях формулировка «audio-звёздочка», литерал только в строках кода.
+- Импорты :feature:audio ⊆ {android.jar, compose, :contracts, :core:common} — grep 27 импортов; vk.mint.{data,ui,api,service,media}/VkMintApp/BuildConfig — 0.
 - Дубли деклараций 0: AudioContainer/AudioNavEntry/AudioSettingsSection/AudioAttachmentRenderer/AudioPermissions/AudioInlineRenderer — только в :feature:audio; AudioAttachmentsStub — private в :app; AudioAttachmentRow удалена без остатков (grep — только исторические упоминания).
 - Ключи согласованы: "equalizer" (NavEntry ↔ hostDestinationForRoute ↔ hostIconForKey ↔ существующий destination), "settings_audio" (SettingsSection ↔ иконка ↔ контент; в enum — 0), "audio_inline" (rendererKey ↔ hostAudioRendererComposable).
 - Сквозные пути (чтением): drawer NavEntry(order=30) → containerNavEntries → hostDestinationForRoute → EqualizerScreen; настройки SettingsSection(order=80) → pages → hostSettingsContentFor → EqualizerTab → EqualizerFeatureFlags; чат type=="audio" → canHandle → "audio_inline" → AudioInlineRenderer → onPlay → selection-toggle ИЛИ onAudioClick → PlayerConnection.
@@ -11651,16 +11651,16 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - BuildStamp НЕ бампанут (calls-2026.09.02-5): звонковая логика не затронута. В коммит — только задачные файлы (чужой .gitignore и Next.js-скаффолд не тронуты).
 
 ### Итог Части 1 (1.1–1.5) и остатки
-- ЧАСТЬ 1 ВЫПОЛНЕНА: ядро + 3 контейнера (calls/photos/audio), 10 capability, host-маппинги панель/настройки/рендереры/кнопки. Оговорки: экраны разделов (PhotosScreen, ui/screens/calls/*) и плеер/эквалайзер-движки остались в :app — блокер data-слой (SovaApp/apiClient/data.model/Service); выделение data-слоя — отдельная работа (Часть 3-кандидат).
+- ЧАСТЬ 1 ВЫПОЛНЕНА: ядро + 3 контейнера (calls/photos/audio), 10 capability, host-маппинги панель/настройки/рендереры/кнопки. Оговорки: экраны разделов (PhotosScreen, ui/screens/calls/*) и плеер/эквалайзер-движки остались в :app — блокер data-слой (VkMintApp/apiClient/data.model/Service); выделение data-слоя — отдельная работа (Часть 3-кандидат).
 - Остатки audio (после data-слоя): PlayerConnection, PlayerService, AudioEffectsEngine/EqualizerHelper/EqualizerFeatureFlags/CustomPresetStore, экраны AudioPlayerScreen/EqualizerScreen/AudioQueueScreen/MusicScreen/MusicLibraryScreens/GlobalMiniPlayer/AudioAttachmentList, FilenameBuilder/Mp4TagWriter/ZipExporter, download-менеджеры/сервисы, voice-рендерер чата (Attachment.Doc + VoicePlaybackController).
-- Остатки прочих: photos — PhotosScreen (SovaApp/apiClient), компакт-сетка превью пересланных; calls — экраны ui/screens/calls/* (SovaApp), мёртвые CallsHomeSection/CallsScheduledSection/CallsHistoryScreen (§2.4); video/doc-рендереры AttachmentRenderer; потребители PermissionNeeds.
+- Остатки прочих: photos — PhotosScreen (VkMintApp/apiClient), компакт-сетка превью пересланных; calls — экраны ui/screens/calls/* (VkMintApp), мёртвые CallsHomeSection/CallsScheduledSection/CallsHistoryScreen (§2.4); video/doc-рендереры AttachmentRenderer; потребители PermissionNeeds.
 
 
 ---
 
 ## 2026-09-02 — Фикс компиляции :feature:calls по логу сборки пользователя (#NULL-EXPLICIT, Task 17)
 
-### Коммит: fix(calls) c6f80bc6 (ветка PinoK, push origin OK)
+### Коммит: fix(calls) c6f80bc6 (ветка VK Mint, push origin OK)
 
 ### Факт до кода
 - Лог пользователя: :feature:calls:compileDebugKotlin — 4 ошибки «Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'ConversationParamsDecoder.IceServer?'» (WebRtcEngine.kt 510:42/511:42/533:46/534:46 — setUsername/setPassword на turn.username/turn.credential).
@@ -11684,7 +11684,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ## 2026-09-02 — Фикс конфигурации :feature:calls: Compose-плагин без runtime (Task 18)
 
-### Коммит: fix(calls) 3dd616c1 (ветка PinoK, push origin OK)
+### Коммит: fix(calls) 3dd616c1 (ветка VK Mint, push origin OK)
 
 ### Факт до кода
 - Второй лог сборки пользователя: :feature:calls:compileDebugKotlin — IrGenerationExtensionException «The Compose Compiler requires the Compose Runtime to be on the class path» (fir2ir-фаза). Прежних 4 null-ошибок НЕТ — фикс c6f80bc6 прошёл фронтенд-анализ. Ошибка КОНФИГУРАЦИИ, не код и не null-операторы.
@@ -11703,18 +11703,18 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ## 2026-09-02 — Фикс компиляции :app: хост-хук CallStarter к контракту (Task 19)
 
-### Коммит: fix(calls) 80b6db01 (ветка PinoK, push origin OK)
+### Коммит: fix(calls) 80b6db01 (ветка VK Mint, push origin OK)
 
 ### Факт до кода
-- Третий лог сборки: все :core/:feature скомпилировались, :app:compileDebugKotlin — ровно ОДНА ошибка на весь модуль: SovaApp.kt:654 «Return type mismatch: expected 'Boolean', actual 'Unit'».
+- Третий лог сборки: все :core/:feature скомпилировались, :app:compileDebugKotlin — ровно ОДНА ошибка на весь модуль: VkMintApp.kt:654 «Return type mismatch: expected 'Boolean', actual 'Unit'».
 - Контракт CallStarter.startCall: Boolean (true — принят в работу; false — краш хука, ловится CallsStarterImpl try/catch). Хост-хук requestOutgoingCall возвращал Unit.
 
 ### Что сделано
-- requestOutgoingCall → Boolean, всегда true: pending-механизм отказать не может, валидность peerId/навигатор решаются при consumeOutgoingCall в SovaNavHost. Контракт и CallsContainer не тронуты; потребители (SovaNavHost:336/1563) результат не читают — поведение не менялось.
+- requestOutgoingCall → Boolean, всегда true: pending-механизм отказать не может, валидность peerId/навигатор решаются при consumeOutgoingCall в VkMintNavHost. Контракт и CallsContainer не тронуты; потребители (VkMintNavHost:336/1563) результат не читают — поведение не менялось.
 - BuildStamp calls-2026.09.02-6 → -7 (штамп отличит сборку в логе звонка).
 
 ### Верификация
-- Сканер скобок OK (SovaApp, BuildStamp). Инцидент: MultiEdit не атомарен (первая правка легла, вторая упала) — состояние сверено по sed/grep до коммита.
+- Сканер скобок OK (VkMintApp, BuildStamp). Инцидент: MultiEdit не атомарен (первая правка легла, вторая упала) — состояние сверено по sed/grep до коммита.
 
 ### Счётчик ошибок по логам
 - 9 (резолв-каскад TOML) → 4 (nullable-ресивер, код) → 1 (конфиг compose) → 1 (тип-контракт, код). :app — последний модуль; далее dex/упаковка механические. Цель: assembleDebug → тест звонков (штамп calls-2026.09.02-7).
@@ -11723,21 +11723,21 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ## 2026-09-03 — #ARCH-DATA: data-слой (:core:data) + фасады CallsApi — 6742de6c доведён до собираемости (Task 20)
 
-### Коммит: arch(calls) d609f275 (ветка PinoK, push origin OK)
+### Коммит: arch(calls) d609f275 (ветка VK Mint, push origin OK)
 
 ### Факт до кода
-- Коммит пользователя 6742de6c (12 экранов звонков в :feature:calls + CallsDependencies): 5/8 членов-типов из :app — цикл :app -> :feature:calls -> :app запрещён Gradle; gson/okhttp не на classpath; провайдера LocalCallsDeps в :app нет. VKApiClient — 14304 строки + import re.pinok.SovaApp (перенос невозможен).
+- Коммит пользователя 6742de6c (12 экранов звонков в :feature:calls + CallsDependencies): 5/8 членов-типов из :app — цикл :app -> :feature:calls -> :app запрещён Gradle; gson/okhttp не на classpath; провайдера LocalCallsDeps в :app нет. VKApiClient — 14304 строки + import vk.mint.VkMintApp (перенос невозможен).
 
 ### Что сделано (состав членов 6742de6c НЕ сужен)
-- :core:data — новый модуль (data-слой, Часть 3-старт): git mv SovaPrefs (+Snapshot), BuildConfig.DEBUG -> параметр debugDefault (инжект из SovaApp).
+- :core:data — новый модуль (data-слой, Часть 3-старт): git mv VkMintPrefs (+Snapshot), BuildConfig.DEBUG -> параметр debugDefault (инжект из VkMintApp).
 - ExchangeAuthRepository -> :core:network; PermissionManager -> :feature:calls (пакеты сохранены).
 - Фасады CallsApi (16 членов)/CallsQueue/CallsLongPoll в :feature:calls; VKApiClient/Queuev4Client/LongPollClient реализуют их override-маркерами без правки сигнатур (дефолты аргументов легальны поверх интерфейса без дефолтов; рантайм — те же объекты).
-- getCallConversationParams -> Pair<String?, JsonObject?> (сигнатура SovaApp:1615).
-- SovaApp реализует CallsDependencies; провайдер CompositionLocalProvider(LocalCallsDeps provides app) в MainActivity.setContent; 6 вызовов экранов — явные аргументы (= прежние дефолты).
+- getCallConversationParams -> Pair<String?, JsonObject?> (сигнатура VkMintApp:1615).
+- VkMintApp реализует CallsDependencies; провайдер CompositionLocalProvider(LocalCallsDeps provides app) в MainActivity.setContent; 6 вызовов экранов — явные аргументы (= прежние дефолты).
 - Build-файлы: :feature:calls += gson/okhttp/coroutines/core-ktx/:core:data; :core:network += :core:data; :app += :core:data. Штамп calls-2026.09.03-8.
 
 ### Верификация
-- Сканер 18/19 OK; VKApiClient — артефакт сканера на строковых шаблонах (оригинал падает на той же строке, баланс не изменён); override 16+2 (okhttp-колбэки прежние); единственный конструктор SovaPrefs в :app — SovaApp:875.
+- Сканер 18/19 OK; VKApiClient — артефакт сканера на строковых шаблонах (оригинал падает на той же строке, баланс не изменён); override 16+2 (okhttp-колбэки прежние); единственный конструктор VkMintPrefs в :app — VkMintApp:875.
 
 ### Остатки/риски
 - Модули впервые компилируются — возможны новые ошибки Kotlin; при появлении — лог в работу. Цель: assembleDebug -> тест звонков (штамп calls-2026.09.03-8).
@@ -11746,21 +11746,21 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ## 2026-09-03 — Task 21: откат ExchangeAuthRepository в :app, фасад CallsAuth (330 ошибок)
 
-### Коммит: fix(calls) 164c68be (ветка PinoK, push origin OK)
+### Коммит: fix(calls) 164c68be (ветка VK Mint, push origin OK)
 
 ### Факт до кода
 - Лог 2026-09-03: 330 ошибок, ВСЕ в core/network/.../ExchangeAuthRepository.kt — 46x AuthState, 26x AuthErrorKind, 14x remixsid, 11x ExchangeTokenResult и др.
-- Корень: Task 20 перенёс файл в :core:network, но пакет re.pinok.auth.exchange в :app — кластер 14 файлов; same-package ссылки не требуют import (проверка Task 20 шла по явным import'ам — слепое пятно). Перенос кластера целиком = WorkManager/androidx.browser в core — каскад без границ.
+- Корень: Task 20 перенёс файл в :core:network, но пакет vk.mint.auth.exchange в :app — кластер 14 файлов; same-package ссылки не требуют import (проверка Task 20 шла по явным import'ам — слепое пятно). Перенос кластера целиком = WorkManager/androidx.browser в core — каскад без границ.
 
 ### Что сделано
 - git mv ExchangeAuthRepository.kt обратно в :app (100% rename).
 - Фасад CallsAuth { fun userId(): Long; fun remixsid(): String? } в :feature:calls; ExchangeAuthRepository реализует override-маркерами (userId:1524, remixsid:1563 — тела без правок). Член CallsDependencies.exchangeAuthRepository -> CallsAuth, состав не сужен (census: userId() x4, remixsid() x1).
 - :core:network: снята implementation(:core:data) — после отката никем не нужна.
-- Подтверждения компилятором из упавшего билда: :core:data (SovaPrefs) и :feature:calls (PermissionManager) собрались — упал только :core:network.
+- Подтверждения компилятором из упавшего билда: :core:data (VkMintPrefs) и :feature:calls (PermissionManager) собрались — упал только :core:network.
 - BuildStamp calls-2026.09.03-9.
 
 ### Верификация
-- Сканер скобок 4/4 OK; grep re.pinok.data.local по core/network — пусто.
+- Сканер скобок 4/4 OK; grep vk.mint.data.local по core/network — пусто.
 
 ### Урок
 - Анализ переносимости файла — по всем same-package ссылкам, не только по import. Слепая зона: классы одного пакета не импортируются.
@@ -11772,9 +11772,9 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - Группы: (A) Unresolved UserProfile x19; (B) try-catch вокруг composable x14 (7 файлов); (C) каскад инференса CallScreen x14 (от A); (D) force без значения x2; (E) Unresolved 'app' x2; (F) Unresolved 'auth'/RemixsidCapturer x3.
 
 ### Что сделано
-- (A+C) UserProfile перенесён из :app (Models.kt:13-98) в :core:data (core/data/src/main/java/re/pinok/data/model/UserProfile.kt), пакет re.pinok.data.model сохранён; в :core:data добавлен gson. Класс самодостаточен (только @SerializedName + вложенные классы). Потребители :app видят без правок (same-package через classpath; прецедент — PermissionManager -> AppLog из упавшего билда Task 21).
+- (A+C) UserProfile перенесён из :app (Models.kt:13-98) в :core:data (core/data/src/main/java/vk/mint/data/model/UserProfile.kt), пакет vk.mint.data.model сохранён; в :core:data добавлен gson. Класс самодостаточен (только @SerializedName + вложенные классы). Потребители :app видят без правок (same-package через classpath; прецедент — PermissionManager -> AppLog из упавшего билда Task 21).
 - (B) Локальный паттерн-баг 7 файлов: LocalCallsDeps.current (@Composable-чтение) внутри try внутри LaunchedEffect/DisposableEffect. Чтение вынесено на compose-уровень перед effect-блоком. Отсутствие провайдера теперь fail-fast при композиции (замысел staticCompositionLocalOf), а не глотается catch'ем.
-- (D) deps.ensureCallsSessionKey() x2 -> force = false (прежний дефолт SovaApp:1518; до миграции вызывалось app.ensureCallsSessionKey()).
+- (D) deps.ensureCallsSessionKey() x2 -> force = false (прежний дефолт VkMintApp:1518; до миграции вызывалось app.ensureCallsSessionKey()).
 - (E) CallsHistoryScreen 75-76: унаследованные app.apiClient -> deps.apiClient; messagesGetInboundCalls добавлен в CallsApi (17-й член; пропуск census Task 20: вызов стоял под app., grep по deps. его не видел) + override в VKApiClient:11499.
 - (F) buildVkCookieHeader() добавлен в фасад CallsAuth; ExchangeAuthRepository делегирует в RemixsidCapturer (same-package, перенос невозможен — кластер auth.exchange, урок Task 21); CallsWebViewScreen вызывает через deps.exchangeAuthRepository. Рантайм тот же.
 - Доведён незавершённый Task 21: ExchangeAuthRepository объявлен ': CallsAuth' (override-маркеры лежали в дереве без супертипа — 'overrides nothing' при следующей сборке); :core:network снята implementation(:core:data).
@@ -11782,12 +11782,12 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ### Верификация
 - Скобочный сканер восстановлен (.zscripts/bracket_scanner.py, статус-машина с корректной обработкой ${-шаблонов) — 14/14 OK, включая VKApiClient 14304 строки.
-- Ре-аудит: все re.pinok.* import'ы :feature:calls резолвятся; census deps.*/apiClient.* = 100% фасадам; NULL-EXPLICIT: 0 новых !!/?. в диффе.
+- Ре-аудит: все vk.mint.* import'ы :feature:calls резолвятся; census deps.*/apiClient.* = 100% фасадам; NULL-EXPLICIT: 0 новых !!/?. в диффе.
 - Состав членов CallsDependencies НЕ сужен; расширены только фасады CallsApi 16->17 и CallsAuth 2->3 (по реальным вызовам экранов).
 
 ## 2026-09-04 — День Этапа 3.7-1: контейнер фото + две волны смарт-кастов + ANR-хотфикс
 
-### Коммиты (ветка PinoK, push origin OK)
+### Коммиты (ветка VK Mint, push origin OK)
 - `59c50ea3` arch(containers) — Этап 3.7-1: PhotosScreen → :feature:photos, PhotosApi (дефолты в интерфейсе), data.model целиком → :core:data, ErrorView → НОВЫЙ :core:ui.
 - `b4726c7f` fix(containers) — волна 1: межмодульные смарт-касты, 17 точек в 8 файлах → захват в локальный val.
 - `a1c0d8ae` fix(containers) — волна 2: 43 ошибки :app (формы вне зон сканера + second-order инференс), 30 точек в 12 файлах.
@@ -11815,7 +11815,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 2026-09-03 — Запрос пользователя: «Есть проблемы в разделе музыка, при поиске может закрыться приложение или выдает ANR. Приготовь документацию, исправь и опубликуй всё на гит».
 2026-09-03 — Диагноз (3 корня): (1) CRASH — артисты из catalog.getAudioSearch links[] приходят с id=0 у всех → дубликат ключа LazyRow «artist_0» → IllegalArgumentException «Key was already used» → процесс падал; (2) ANR — AppLog.appendToFile делал write+flush+file.length() на потоке вызывающего (включая main) под persistLock — всплеск логов при поиске + фоновый спам поллеров = дисковый I/O и ожидание лока на UI-потоке; (3) ANR-контрибьютор — audioSearchWithSections делал до 5 HTTP-вызовов, 3× re-download 200-500KB catalog.getAudioSearch под rate-limit 3 rps; UI-баг — LaunchedEffect(searchQuery)+collect глотал CancellationException и затирал результаты при наборе.
-2026-09-03 — Исправление: VKApiClient — catalogGetAudioSearchRaw (ОДИН catalog-вызов, переиспользование ответа: артисты из links[], плейлисты из albums[]/playlists[]), finalizeAudioSearchResult (дедуп треков/артистов/плейлистов), audioSearch(allowCatalogFallback=false из withSections), парсеры вынесены в parseArtistsFromCatalogSearchLinks/parsePlaylistsFromCatalogSearch (публичные сигнатуры audioSearchArtists/audioSearchAlbums не изменены); MusicScreen — itemsIndexed-ключи с индексом ×3 (crash-proof), LaunchedEffect(Unit)+snapshotFlow+debounce+collectLatest (отмена in-flight при новом вводе), rethrow CancellationException ×2 (поиск, loadMoreTracks); AppLog (:core:common) — асинхронная файловая запись (однопоточный executor «PinoK-LogWriter», batch-flush при исчерпании очереди, rotation только на writer-потоке), flushSync+дренаж в clear(), in-memory буфер/LogViewer/export — без изменений.
+2026-09-03 — Исправление: VKApiClient — catalogGetAudioSearchRaw (ОДИН catalog-вызов, переиспользование ответа: артисты из links[], плейлисты из albums[]/playlists[]), finalizeAudioSearchResult (дедуп треков/артистов/плейлистов), audioSearch(allowCatalogFallback=false из withSections), парсеры вынесены в parseArtistsFromCatalogSearchLinks/parsePlaylistsFromCatalogSearch (публичные сигнатуры audioSearchArtists/audioSearchAlbums не изменены); MusicScreen — itemsIndexed-ключи с индексом ×3 (crash-proof), LaunchedEffect(Unit)+snapshotFlow+debounce+collectLatest (отмена in-flight при новом вводе), rethrow CancellationException ×2 (поиск, loadMoreTracks); AppLog (:core:common) — асинхронная файловая запись (однопоточный executor «VK Mint-LogWriter», batch-flush при исчерпании очереди, rotation только на writer-потоке), flushSync+дренаж в clear(), in-memory буфер/LogViewer/export — без изменений.
 2026-09-03 — Документация: MUSIC_SEARCH_ANR_FIX.md (симптомы, механика корней, таблица было/стало, матрица проверки 7 пунктов, техдетали). BuildStamp НЕ бампнут (звонковая цепочка не затронута, calls-2026.09.06-5 в силе).
 
 ---
@@ -11849,10 +11849,10 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 **Оркестрация (все Task ID в worklog.md):**
 - `PROFILE-P0-2` (П-0 API): аудит показал 19/22 методов уже в коде (c4708dff); добор newsfeedDeleteBan, photosGetProfileUploadServer, photosSave; UserProfile +21 nullable-поле (mutual/ownerState/canCall/canSeeWishes/blacklisted*, verified-кластер) + Counters.clips*; fields usersGetFullExtended = веб-набор. Коммит 81f04877.
-- `SNAP-PARSE-2a`: Музыка.zip (5 музыкальных страниц cp1251, 45+ AudioApi-методов, wire: audio.search{q,search_own:1}, audio.get{extended:1,fields:can_see_audio}, searchPlaylists→items+groups+profiles; рекомендованы audio.searchAlbums/getSearchSuggestions/search.getSearchAllWeb2); 2308.zip (бандл-срез + log.txt web-storage с живым access_token — ЧУВСТВИТЕЛЬНО, в git не идёт); 2608.zip побайтно = уже распакованный snap2608 (страницы звонков, prefetch только account.getLeftAds); ciber.txt = logcat re.pinok.debug с HOTWAV Cyber 15 (SSL pinning disabled, queue.subscribe failed — входящие звонки недоступны); Профиль.zip ПОЛОН (1344=1344). → профиль.снапшоты.парсинг.полный.md
+- `SNAP-PARSE-2a`: Музыка.zip (5 музыкальных страниц cp1251, 45+ AudioApi-методов, wire: audio.search{q,search_own:1}, audio.get{extended:1,fields:can_see_audio}, searchPlaylists→items+groups+profiles; рекомендованы audio.searchAlbums/getSearchSuggestions/search.getSearchAllWeb2); 2308.zip (бандл-срез + log.txt web-storage с живым access_token — ЧУВСТВИТЕЛЬНО, в git не идёт); 2608.zip побайтно = уже распакованный snap2608 (страницы звонков, prefetch только account.getLeftAds); ciber.txt = logcat vk.mint.debug с HOTWAV Cyber 15 (SSL pinning disabled, queue.subscribe failed — входящие звонки недоступны); Профиль.zip ПОЛОН (1344=1344). → профиль.снапшоты.парсинг.полный.md
 - `SNAP-PARSE-2b` (дельта vs инвентарь): prefetch = 25 записей (пропущен account.getSilentModeStatus{}), users.get = 106 полей; карта 66 API-неймспейсов через обход webpack ApiNamespace/makeMethod: status.set/get/removeStatus (инвентарь ошибочно «не обнаружено»), wall.getPostingSettings/reportPost, account.getBalance/setOnline, payments.*×14, notifications.*×15, friends.*×21, fave.*×35, newsfeed.*×18, reports.add/getReasons, wishlists.*, bestFriends.*, owners.*×20, settingsGeneral.getAccountSettings; wire-параметры: wall.get{extended:1, fields:23, filters:20 блоков, filter∈main|all|owner|others|postponed|suggests|donut|archived|drafts, start_from-пагинация}, audio.get{photo_sizes:1}, video.get{need_privacy:1}, photos.getAll{photo_sizes:1,extended:1,skip_hidden:1}, вкладка Фото = photos.photoFeedGet{count:6}, gifts.get{user_id,count:6}+retry×3, gifts → thumb_512/256/96/48, users.getSubscriptions{fields:photo_200,photo_100,description,status,is_nft, count:5, extended:1}; q_frame = транспорт long-poll (не виджет). → профиль.снапшоты.дельта-парсинг.md
 - `PROFILE-P1-3a` (П-1 свой профиль, ProfileScreen 788→1538): правка статуса (statusSet, пустой=очистка), подвкладки стены all/owner/archived (Архив гейтерится usersGetWallTabs), вкладки контента Стена/Музыка/Видео/Фото (ленивые: audioGet→playTrackList, videoGet→onVideoClick, photosGetAll→PhotoViewer; sizes-парсер в composable), обложка cover (загрузка переведена на usersGetFullExtended), подарки (thumb_* по живому снапшоту).
-- `PROFILE-P2-3b` (П-2 чужой профиль, UserProfileScreen 451→733 + SovaNavHost +4): Подписаться/Отписаться (state isSubscribed, скрыта при friendStatus==3), Позвонить (CallStarter-паттерн FriendsScreen, onCallClick в SovaNavHost:2094), «⋯»-меню: Пожаловаться (usersReport type="spam" — честное отклонение: «user» не входит в допустимые типы VKA), Скопировать ссылку (ClipboardManager, паттерн Fix #193), В закладки (faveAddUser/RemoveUser + state is_favorite), Скрыть/Вернуть в ленту (newsfeedAddBan/DeleteBan), Подарки (оба формата VK).
+- `PROFILE-P2-3b` (П-2 чужой профиль, UserProfileScreen 451→733 + VkMintNavHost +4): Подписаться/Отписаться (state isSubscribed, скрыта при friendStatus==3), Позвонить (CallStarter-паттерн FriendsScreen, onCallClick в VkMintNavHost:2094), «⋯»-меню: Пожаловаться (usersReport type="spam" — честное отклонение: «user» не входит в допустимые типы VKA), Скопировать ссылку (ClipboardManager, паттерн Fix #193), В закладки (faveAddUser/RemoveUser + state is_favorite), Скрыть/Вернуть в ленту (newsfeedAddBan/DeleteBan), Подарки (оба формата VK).
 
 **Приёмка оркестратором:** скобки 0/0 (char-literal-aware сканер) ×3 файла; сигнатуры всех вызванных API-методов сверены rg-ом (usersGetFullExtended:13219, wallGetWithFilter:13170, usersReport:15890, newsfeedAddBan/DeleteBan, faveAdd/RemoveUser, giftsGet, statusSet…); дубли имён = 0; check-nested-comments CLEAN; запретные зоны (MusicScreen/VKA/звонки) не тронуты. Компиляция Android в песочнице недоступна (AGP offline) — сборка `assembleDebug` юзером обязательна.
 
@@ -11865,17 +11865,17 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 **Запрос:** «Продолжай» — продолжение П-плана Профиля после П-0/П-1/П-2 (ff839db3).
 
 **Волна A — этапы П-3/П-4 (параллельно, opus):**
-- `PROFILE-P3-4a` (П-3 редактирование): НОВЫЙ EditProfileScreen.kt (918 строк) — префилл accountGetProfileInfo (терпеливый JsonObject-парсинг), сохранение account.saveProfileInfo dirty-diff (только изменённые поля; changed=1 → Toast+возврат, ошибка/captcha → форма остаётся); АВАТАР: photosGetProfileUploadServer → photosUploadWallPhoto (транспорт) → photosSave(albumId=-6); ОБЛОЖКА: photosGetOwnerCoverPhotoUploadServer(upload_v2) → локальный OkHttp-multipart полем "file" (VKA-транспорт шлёт "photo" — для cover-сервера не годится) → photosSaveOwnerCoverPhoto(responseJson, upload_v2), «Удалить обложку» при cover.enabled → photosRemoveOwnerCoverPhoto(null); relation 0–8, sex FilterChip; маршрут Screen.ProfileEdit + composable в SovaNavHost; кнопка «Редактировать профиль» в ProfileScreen (onEditProfileClick, дефолт {}). Отклонения честные: город read-only (city принимает ID, cities-поиска в VKA нет), «О себе/Сайт» вне сигнатуры saveProfileInfo, обложка без crop, bdate текстом. Верификация: скобки аддитивно 0-дельта, 15 именованных аргументов saveProfileInfo ⊆ сигнатуре, дубли 0, импорты 100%.
-- `PROFILE-P4-4b` (П-4 настройки): НОВЫЙ PrivacySettingsScreen.kt (588 строк) — VK-приватность целиком на BFF settingsGeneralGet/SetPrivacySettings: динамический рендер секций, toggle→settingsGeneralToggleNotify, select→SetPrivacySettings, индикатор «Сохранение…/Изменения сохранены» (§1.4) с авто-скрытием 2с, оптимистичный откат+Toast, PullToRefreshBox; НОВЫЙ BlacklistScreen.kt (707 строк) — самостоятельный чёрный список §1.6: accountGetBanned c пагинацией, фильтр bl-filter, unban с подтверждением, «Добавить» (bl-add-btn): парсинг числовой id±/id123/club123/ссылки vk.com|m.vk.com|vk.ru/короткого имени → resolveScreenName → превью usersGet/groupsGetById → accountBan (отрицательный id сообществам); NotificationSettingsScreen: секция «Заблокированные» ПЕРЕНЕСЕНА (state/загрузка/BannedUserRow удалены), добавлена «Уведомления сообщест» (groupsGet(filter="editor") + groupsEditNotifications, тумблер уровня группы); SettingsScreen: серверная строка «Настройки приватности VK» в PRIVACY-табе перед локальными тумблерами + строка «Чёрный список» в NOTIFICATIONS-табе; Screen.kt +2 маршрута (settings_privacy, blacklist), SovaNavHost +2 composable по callback-паттерну. Отклонения честные: 16 событийных тумблеров §1.5 + «Удалить источник» — legacy al_settings.php (wire нет), начальное положение тумблера группы API не отдаёт (VK-дефолт «вкл»), privacy-«button» — честный Toast; sn_*/nm_*/nf_* §1.4 — SSR-testid'ы, не API-ключи (BFF отдаёт секции as-is — фейков нет).
-- Слив параллельных правок SovaNavHost.kt/Screen.kt: хунки не пересеклись (оркестратор: маршруты 3/3 уникальны, composable 3/3).
+- `PROFILE-P3-4a` (П-3 редактирование): НОВЫЙ EditProfileScreen.kt (918 строк) — префилл accountGetProfileInfo (терпеливый JsonObject-парсинг), сохранение account.saveProfileInfo dirty-diff (только изменённые поля; changed=1 → Toast+возврат, ошибка/captcha → форма остаётся); АВАТАР: photosGetProfileUploadServer → photosUploadWallPhoto (транспорт) → photosSave(albumId=-6); ОБЛОЖКА: photosGetOwnerCoverPhotoUploadServer(upload_v2) → локальный OkHttp-multipart полем "file" (VKA-транспорт шлёт "photo" — для cover-сервера не годится) → photosSaveOwnerCoverPhoto(responseJson, upload_v2), «Удалить обложку» при cover.enabled → photosRemoveOwnerCoverPhoto(null); relation 0–8, sex FilterChip; маршрут Screen.ProfileEdit + composable в VkMintNavHost; кнопка «Редактировать профиль» в ProfileScreen (onEditProfileClick, дефолт {}). Отклонения честные: город read-only (city принимает ID, cities-поиска в VKA нет), «О себе/Сайт» вне сигнатуры saveProfileInfo, обложка без crop, bdate текстом. Верификация: скобки аддитивно 0-дельта, 15 именованных аргументов saveProfileInfo ⊆ сигнатуре, дубли 0, импорты 100%.
+- `PROFILE-P4-4b` (П-4 настройки): НОВЫЙ PrivacySettingsScreen.kt (588 строк) — VK-приватность целиком на BFF settingsGeneralGet/SetPrivacySettings: динамический рендер секций, toggle→settingsGeneralToggleNotify, select→SetPrivacySettings, индикатор «Сохранение…/Изменения сохранены» (§1.4) с авто-скрытием 2с, оптимистичный откат+Toast, PullToRefreshBox; НОВЫЙ BlacklistScreen.kt (707 строк) — самостоятельный чёрный список §1.6: accountGetBanned c пагинацией, фильтр bl-filter, unban с подтверждением, «Добавить» (bl-add-btn): парсинг числовой id±/id123/club123/ссылки vk.com|m.vk.com|vk.ru/короткого имени → resolveScreenName → превью usersGet/groupsGetById → accountBan (отрицательный id сообществам); NotificationSettingsScreen: секция «Заблокированные» ПЕРЕНЕСЕНА (state/загрузка/BannedUserRow удалены), добавлена «Уведомления сообщест» (groupsGet(filter="editor") + groupsEditNotifications, тумблер уровня группы); SettingsScreen: серверная строка «Настройки приватности VK» в PRIVACY-табе перед локальными тумблерами + строка «Чёрный список» в NOTIFICATIONS-табе; Screen.kt +2 маршрута (settings_privacy, blacklist), VkMintNavHost +2 composable по callback-паттерну. Отклонения честные: 16 событийных тумблеров §1.5 + «Удалить источник» — legacy al_settings.php (wire нет), начальное положение тумблера группы API не отдаёт (VK-дефолт «вкл»), privacy-«button» — честный Toast; sn_*/nm_*/nf_* §1.4 — SSR-testid'ы, не API-ключи (BFF отдаёт секции as-is — фейков нет).
+- Слив параллельных правок VkMintNavHost.kt/Screen.kt: хунки не пересеклись (оркестратор: маршруты 3/3 уникальны, composable 3/3).
 
 **Волна B — закрытие остатков скоупов П-1/П-2 (последовательно, общий файл ProfileScreen.kt):**
 - `PROFILE-GAP-6a` («Действия» поста + лайк, §5 п.2): лайк на стене профиля — likesAdd/likesDelete (Int!), optimistic likeStates-мапа + откат + Toast, старт из post.likes.userLikes (модель не тронута); «⋯»-меню WallPostCard (видимость: владелец стены ИЛИ can_edit/can_delete): Закрепить/Открепить (wallPin/wallUnpin, optimistic isPinned + сортировка вверх), Удалить (wallDelete + AlertDialog), Редактировать (wallEdit — ТОЛЬКО текстовые записи: сброс непереданных полей невозможен восстановить для link/poll/playlist/sticker/copy_history — пункт скрыт для постов с вложениями, иначе молчаливая потеря данных); обновление локальным стейтом. wall.markAsSpam — VKA MISS, «Пожаловаться на пост» не имитировалась.
-- `PROFILE-GAP-6b` (вкладки Клипы/Статьи/Закладки + «Возможно, вы знакомы», §5 п.2/п.3): чип-ряд контента 4→7 вкладок (горизонтально-скроллируемый), та же ленив-механика П-1; Клипы: shortVideoGetOwnerVideos → карточки 9:16 → VideoPlayerScreen (дорезолвит files/hls); Статьи: articlesGetOwnerPublished → patient-парсинг → браузер (openUrlExternal); Закладки: faveGet → тапы post→PostDetail/video→плеер/photo→PhotoViewer/link→браузер/user→чужой профиль, пагинация «Загрузить ещё» с дедупом; «Возможно, вы знакомы»: friendsGetRecommendations → LazyRow над лентой, «+» → friendsAdd (заявка отправлена), пусто/ошибка → секция не рисуется; SovaNavHost +onUserClick/onPostClick wiring.
+- `PROFILE-GAP-6b` (вкладки Клипы/Статьи/Закладки + «Возможно, вы знакомы», §5 п.2/п.3): чип-ряд контента 4→7 вкладок (горизонтально-скроллируемый), та же ленив-механика П-1; Клипы: shortVideoGetOwnerVideos → карточки 9:16 → VideoPlayerScreen (дорезолвит files/hls); Статьи: articlesGetOwnerPublished → patient-парсинг → браузер (openUrlExternal); Закладки: faveGet → тапы post→PostDetail/video→плеер/photo→PhotoViewer/link→браузер/user→чужой профиль, пагинация «Загрузить ещё» с дедупом; «Возможно, вы знакомы»: friendsGetRecommendations → LazyRow над лентой, «+» → friendsAdd (заявка отправлена), пусто/ошибка → секция не рисуется; VkMintNavHost +onUserClick/onPostClick wiring.
 
 **Решение П-5** (профиль.этап-П5.решение.md): принят вариант (а) — «Контейнер Профиль» = прототип UI-идей, НЕ контейнеризовать (профиль — ядерный раздел по канону §3.7; прототип не собирается — 5+ дефектов компиляции §3.2; конфликт маршрута "profile"; no-stub-нарушения). Сверка плана прототипа (интеграция.план.md, 15 пунктов) с ядром: 14/15 закрыты П-0…П-6, пункт 1 (контейнеризация) отклонён. Сырые снапшоты остаются в upload/ (не трекается).
 
-**Приёмка оркестратором (сквозная):** string-aware скобочный баланс 8 файлов = OK (ProfileScreen 583/583 + (1160/1160), SovaNavHost 532/532, все новые самобалансны); check-nested-comments ALL CLEAN (164 файла); кросс-агентные дубли деклараций = 0 (21+15+16 новых имён — по 1); VKApiClient.kt не тронут (0 diff-строк) во всех 4 волнах; маршруты Screen.ProfileEdit/SettingsPrivacy/Blacklist уникальны; забытых banned-ссылок в NotificationSettingsScreen нет (перенос чистый); сигнатуры 14 вызываемых VKA-методов = по 1 декларации каждая. Компиляция в песочнице невозможна — сборка юзером обязательна.
+**Приёмка оркестратором (сквозная):** string-aware скобочный баланс 8 файлов = OK (ProfileScreen 583/583 + (1160/1160), VkMintNavHost 532/532, все новые самобалансны); check-nested-comments ALL CLEAN (164 файла); кросс-агентные дубли деклараций = 0 (21+15+16 новых имён — по 1); VKApiClient.kt не тронут (0 diff-строк) во всех 4 волнах; маршруты Screen.ProfileEdit/SettingsPrivacy/Blacklist уникальны; забытых banned-ссылок в NotificationSettingsScreen нет (перенос чистый); сигнатуры 14 вызываемых VKA-методов = по 1 декларации каждая. Компиляция в песочнице невозможна — сборка юзером обязательна.
 
 **Остаток П-плана:** П-7-кандидаты (по запросу): экраны подписчиков/подписок (API готов), wall.markAsSpam, реакции постов, города-поиск; полный список честных отклонений — профиль.этап-П5.решение.md §3.
 
@@ -11885,7 +11885,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 **Запрос:** «Почему при воспроизведении плейлиста в 100 треков или более в список на воспроизведения не соответствует количеству треко».
 
-**Диагноз:** VK отдаёт `audio.get{album_id}` страницами (кап ~100/запрос); PinoK грузил плейлист ОДНОЙ страницей в 5 местах: `openPlaylistAndPlay` (дефолт 50!), `PlaylistDetailScreen` (100), PlaylistsDialog ×3 (дефолт 50), `PlaylistAttachmentCard` (100). Очередь `PlayerConnection` лимита не имеет — узкое место только в загрузке.
+**Диагноз:** VK отдаёт `audio.get{album_id}` страницами (кап ~100/запрос); VK Mint грузил плейлист ОДНОЙ страницей в 5 местах: `openPlaylistAndPlay` (дефолт 50!), `PlaylistDetailScreen` (100), PlaylistsDialog ×3 (дефолт 50), `PlaylistAttachmentCard` (100). Очередь `PlayerConnection` лимита не имеет — узкое место только в загрузке.
 
 **Фикс (центральный, API-слой):** (1) `audioGetPlaylistTracks` — авто-догрузчик: цикл страниц `count.coerceIn(10,100)` до `total`/пустой/неполной страницы, дедуп (ownerId,id) паттерном Fix #281, `MAX_PLAYLIST_PAGES=60` (≤6000), `quality=hq` читается до цикла; (2) `audioGetPlaylistById` — inline `audios[]` = первая страница + догрузка до `playlist.count`, dedup на стыке offset; trailing `onProgress(loaded,total)` (дефолт null — вызовы совместимы); ветка сообществ покрыта авто-догрузчиком; (3) `PlaylistDetailScreen` — «Загружено N из M…» под спиннером; (4) `openPlaylistAndPlay` — count=100. Парсер/audioGet/поиск/PlayerConnection не тронуты. Фильтр url-less перед playTrackList сохранён (рестрикты невоспроизводимы — честно).
 
@@ -11903,7 +11903,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 1. `ProfileScreen.kt:2438` (П-6b, ArticlesTabSection): `itemsIndexed(...)` — extension на `LazyListScope` — вызывалась внутри обычного `Column` (5 остальных вызовов файла — внутри LazyRow, там валидно). K2-каскад: Cannot infer type 'idx'/'item', Unresolved 'title', @Composable invocations. Фикс: статьи ≤20 — ленивость не нужна → `items.forEach { item -> ProfileArticleRow(...) }` (+ комментарий FIX-COMPILE). Импорт itemsIndexed остаётся — 5 живых вызовов.
 2. `BlacklistScreen.kt:234` (П-4): `Unresolved reference 'LaunchedEffect'` — пропущен импорт `androidx.compose.runtime.LaunchedEffect` (аудит импортов П-4 его не поймал). Фикс: импорт добавлен (алфавитная позиция Composable→LaunchedEffect→getValue).
 
-**Аудит того же класса дефектов по файлам волны (проактивно):** (a) импорт-аудит 28 compose/runtime/foundation символов по 7 файлам (Profile/EditProfile/Privacy/Blacklist/NotifSettings/Settings/SovaNavHost) — других пропусков нет (2 флага SovaNavHost — false positive: rememberSaveable импортирован из runtime.saveable, AnimatedVisibility — fully-qualified вызов); (b) все 4 вызова `items(...)` (PrivacySettings:304, Blacklist:347, NotifSettings:268/342) подтверждены внутри LazyColumn-скоупов; (c) EditProfileScreen — lazy-вызовов нет вовсе.
+**Аудит того же класса дефектов по файлам волны (проактивно):** (a) импорт-аудит 28 compose/runtime/foundation символов по 7 файлам (Profile/EditProfile/Privacy/Blacklist/NotifSettings/Settings/VkMintNavHost) — других пропусков нет (2 флага VkMintNavHost — false positive: rememberSaveable импортирован из runtime.saveable, AnimatedVisibility — fully-qualified вызов); (b) все 4 вызова `items(...)` (PrivacySettings:304, Blacklist:347, NotifSettings:268/342) подтверждены внутри LazyColumn-скоупов; (c) EditProfileScreen — lazy-вызовов нет вовсе.
 
 **Верификация:** string-aware скобки ProfileScreen {582,582}/(1159,1159) (дельта −1/−1 = ровно убранный itemsIndexed-лямбда-блок с key-лямбдой), BlacklistScreen {151,151}/(280,280); check-nested-comments ALL CLEAN (164 файла); dangling-импортов нет.
 
@@ -11917,7 +11917,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 **П-7-AB (подписчики/подписки + жалобы):**
 - Новый `FollowersSubscriptionsScreen.kt` (608 строк): список подписчиков (usersGetFollowers @9313, страницы по 50, строки аватар+имя → UserProfile) И подписок (usersGetSubscriptions @15929 — VKA отдаёт response в формате снапшота `{count, users:{items}, groups:{items}}`, парсинг терпит и `profiles[]/groups[]`-формат дефенсивно); пагинация «Загрузить ещё» (hasMore = страница полная — total API не отдаёт), фильтр по имени, PullToRefresh, честные empty/error (различение по lastApiError).
-- Маршрут `Screen.FollowList = follow_list/{userId}?mode={followers|subscriptions}` (+19 Screen.kt / +57 SovaNavHost.kt — чисто аддитивно, добавлен в hasOwnTopBar).
+- Маршрут `Screen.FollowList = follow_list/{userId}?mode={followers|subscriptions}` (+19 Screen.kt / +57 VkMintNavHost.kt — чисто аддитивно, добавлен в hasOwnTopBar).
 - Входы: чип «Подписчики» в CountersRow теперь кликабелен (свой и чужой профиль), «Друзья» (свой) → существующий Screen.Friends; строка «Подписки (N)» под счётчиками (SubscriptionsEntryRow; счётчик — параллельный добор usersGetSubscriptions(count=1), паттерн подарков; поля subscriptions в модели Counters нет — модель не тронута, чип не добавлялся).
 - Группы в подписках → Screen.Community (маршрут Fix #67); строки помечены «Сообщество».
 - «Пожаловаться на запись»: wallMarkAsSpam @16117 в «⋯»-меню WallPostCard — ТОЛЬКО для чужих записей (showReport считает call-site: ProfileScreen post.ownerId≠p.id, UserProfileScreen !isSelf); AlertDialog-подтверждение → тост результата; Delete получил явный гейт showActions && canManage (поведение П-6a при showActions=true бит-в-бит сохранено) → на чужой стене меню открывается только с «Пожаловаться».
@@ -11928,7 +11928,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - EditProfileScreen: «Город» read-only → кликабельная строка (стиль EditRelationRow) → AlertDialog-поиск: TextField + LaunchedEffect debounce 350мс (отмена прошлой корутины + staleness-гвард), пустой q не отправляется, честные состояния (Поиск…/ошибка/Начните вводить/Ничего не найдено), список ≤30 через Column.verticalScroll+forEach (Fix #284-паттерн). Выбор → selectedCityId/Title; dirty-diff: cityId уходит в saveProfileInfo ТОЛЬКО при реальной смене (сигнатура cityId/countryId уже была — save не расширялся). Prefill: city.id читается из account.getProfileInfo (editProfileNestedId), иначе база null — смена через поиск корректна.
 - Отклонения (KDoc): countryId=1 (Россия) при отсутствии страны в профиле, выбора страны нет; «очистить город» не реализовано (city=0 в VK не документирован — no-stub); homeTown («Родной город») не задет — отдельное поле.
 
-**Приёмка оркестратора:** скобки string-aware 7 файлов — 6 OK; VKApiClient {1135,1133} stack_left=2 = ТОЧНО базлайн HEAD (преждесуществующий артефакт сканера, дельта волны 0); nested-comments ALL CLEAN (165); дубли деклараций = 0 (FollowList/CitySuggestion/databaseGetCities/FollowersSubscriptionsScreen/SubscriptionsEntryRow/CountersRow/EditCitySearchDialog/EditCityRow — по 1); Screen.kt/SovaNavHost.kt 0 удалений; вызовы databaseGetCities (:1049) и wallMarkAsSpam (:670/:319) сверены с декларациями; VKApiClient — 1 аддитивный hunk; модели core/data не тронуты; работа одного агента не пересекается с файлами другого (git-union = ровно 7 код-файлов).
+**Приёмка оркестратора:** скобки string-aware 7 файлов — 6 OK; VKApiClient {1135,1133} stack_left=2 = ТОЧНО базлайн HEAD (преждесуществующий артефакт сканера, дельта волны 0); nested-comments ALL CLEAN (165); дубли деклараций = 0 (FollowList/CitySuggestion/databaseGetCities/FollowersSubscriptionsScreen/SubscriptionsEntryRow/CountersRow/EditCitySearchDialog/EditCityRow — по 1); Screen.kt/VkMintNavHost.kt 0 удалений; вызовы databaseGetCities (:1049) и wallMarkAsSpam (:670/:319) сверены с декларациями; VKApiClient — 1 аддитивный hunk; модели core/data не тронуты; работа одного агента не пересекается с файлами другого (git-union = ровно 7 код-файлов).
 
 ---
 
@@ -11969,7 +11969,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - VkIdAccountScreen (NEW 488) «Аккаунт VK ID»: секция «Аккаунты» (строки мультипрофиля, текущий помечен is_logged_in|id-match; ПЕРЕКЛЮЧЕНИЕ честно НЕ реализовано — ExchangeTokenStorage односессионный, token-exchange wire не снят; отклонение в 4 местах + видимая подпись); секция «Безопасность» + «VK Pay» — deeplink-ячейки openUrlExternal (id.vk.com/ru/manage/{security,services}, vkpay) с подписью «Откроется в браузере»; «Редактировать профиль» → существующий Screen.ProfileEdit (анкета не дублируется); 2FA — только ссылка (account.getInfo в бандле отсутствует, статус не подтверждён — no-stub); НЕ нарисованы: passkey, телеметрия, FAQ, удаление аккаунта, сессии/сервисы-списки (wire нет).
 - Маршрут Screen.VkIdAccount ("vkid_account", hasOwnTopBar); вход: SettingsScreen SECURITY-таб строка «Аккаунт VK ID» (callback onOpenVkIdAccount).
 
-**Приёмка оркестратора:** diff-union ровно ожидаемые 6 модиф. + 2 новых экрана + 2 дока; скобки 7/7 OK (VKA {1136,1134} = базлайн-артефакт −2, дельта волны нейтральна); nested-comments ALL CLEAN (167); маршруты 1×; callbacks симметричны (12 упоминаний Settings↔SovaNavHost); VKA = 2 согласованных аддитивных точки (newsfeedGet.sourceIds, accountGetMulti), остальные 0; модели core/data, FeedScreen-зоны агентов не пересеклись; worklog: 5 секций (SNAP-FEED-PARSE, SNAP-VKID-PARSE-2, IMP-FEED-1, IMP-FEED-2, IMP-VKID).
+**Приёмка оркестратора:** diff-union ровно ожидаемые 6 модиф. + 2 новых экрана + 2 дока; скобки 7/7 OK (VKA {1136,1134} = базлайн-артефакт −2, дельта волны нейтральна); nested-comments ALL CLEAN (167); маршруты 1×; callbacks симметричны (12 упоминаний Settings↔VkMintNavHost); VKA = 2 согласованных аддитивных точки (newsfeedGet.sourceIds, accountGetMulti), остальные 0; модели core/data, FeedScreen-зоны агентов не пересеклись; worklog: 5 секций (SNAP-FEED-PARSE, SNAP-VKID-PARSE-2, IMP-FEED-1, IMP-FEED-2, IMP-VKID).
 
 **Честные отказы (обоснованы в доках):** VK Pay/платежи/голоса/подписки-биллинг (мини-апп, endpoint'ов нет), 16 тумблеров al_settings, сортировка ленты (statlog-only), passkey (Credential Manager вне скоупа), переключение аккаунтов (token-exchange wire не снят), жалоба на коммент (reports.php legacy).
 
@@ -11979,7 +11979,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 **Запрос:** лог компиляции (16 ошибок VkMultiAccount) + «что можно вытащить из OpenVK/mobile-android-legacy?» (распределить по лучшим суб-агентам) + «изучи как файлы прикрепляются в веб версии вк, унифицируй это меню везде… как из самого вк так и из внешних источнико» + «изучи раздел настроек и проверь работоспособность, а не просто заглушки».
 
-**Fix #285 (оркестратор):** `VkMultiAccount` — вложенный data class внутри VKApiClient (:16231), экран импортировал несуществующий top-level `re.pinok.api.VkMultiAccount` → все 16 ошибок. Фикс 3 правками VkIdAccountScreen.kt (импорт `re.pinok.api.VKApiClient` + `VKApiClient.VkMultiAccount` ×2 — паттерн `VKApiClient.CitySuggestion` EditProfileScreen:1030). VKA не тронут.
+**Fix #285 (оркестратор):** `VkMultiAccount` — вложенный data class внутри VKApiClient (:16231), экран импортировал несуществующий top-level `vk.mint.api.VkMultiAccount` → все 16 ошибок. Фикс 3 правками VkIdAccountScreen.kt (импорт `vk.mint.api.VKApiClient` + `VKApiClient.VkMultiAccount` ×2 — паттерн `VKApiClient.CitySuggestion` EditProfileScreen:1030). VKA не тронут.
 
 **Исследовательская волна (3 opus-агента параллельно, код не тронут):**
 - `opvk.изучение.вытянуть.md` (Task 2-a): OpenVK legacy изучен целиком (275 Java, 39 экранов, 46 API-методов, 15 кандидатов; лицензия AGPL-3.0 — только идеи). Топ: «Информация» профиля P1 (данные уже приходят), «Участники сообщества» P1 (groupsGetMembers в VKA), заметки P2 (нужен VKA-контур notes.*), офлайн-кэш ленты P2, post_source.platform P3.
@@ -11990,8 +11990,8 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 **Внедрение (3 opus-агента параллельно, зоны строго непересекающиеся):**
 - **3-a ATTACH-UNIFY** (6 файлов, +1451/−156): P0 — фото комментария ленты → uploadPhotoForComment (attach `photo{owner}_{id}`, 1:1 с PostDetail), камера честно прокинута в Feed/PostDetail (TakePicture+FileProvider+rememberSaveable, паттерн чата), CreatePostDialog multi-фото ≤10 (PickMultipleVisualMedia); P1 — AttachmentPickerSheet +табы «Фото» (photosGetAll) и «Документы» (docsGet) = источник «Из VK», UnifiedAttachMenu порядок по спеке, «Из VK» во всех 4 поверхностях (только дефолтные параметры); P2 — «Видео с устройства» (videoSave isClips=false + videoUploadFile), «Видео по ссылке» (videoSave linkUrl), конструктор «Опрос» (вопрос + 2-10 вариантов + анонимность → pollsAdd → `poll{owner}_{id}`), единый хелпер `buildVkAttachment` (1 декларация, все рукописные строки переведены). ChatDetail — минимальный дифф 58.
-- **3-b SETTINGS-FIX** (6 файлов, +524/−107): P1 — Прокси реально применяется (OkHttp builder.proxy в SovaApp:993-зоне; честно «после перезапуска» + тост; SOCKS не рисован — no-stub), пути загрузок reconfigurePath при старте (Track/VideoDownloadManager), «Звук уведомлений о сообщениях» переименован в честное «Заглушение чато»; P2 — mic/camera-дефолты звонков читаются CallScreen'ом (mic → setCommunicationDevice; камера — честное отклонение: WebRtcEngine без видеозахвата), EmailNotifyCard → серверный контур settingsGeneralGetNotifySettings(page="email") + ToggleNotify (оптимистично, откат), obscene-фильтр — честная подпись (геттера в VK API нет); P3 — мёртвый «Сбросить» удалён, select-без-options без шеврона, мёртвые SovaPrefs-поля помечены @Deprecated-KDoc (используются в FeedScreen Snapshot — не удалены), «Оповещения о входе» синхронизированы.
-- **3-c OPVK-EXTRACT** (5 файлов +1 новый, +170/−2): UserProfileScreen +92 — секция «Информация» (6 строк из непустых about/activities/interests/music/movies/books уже загруженного usersGetFullExtended; bdate/city не дублируются — в хедере; quotes не парсится в модель — честное отклонение); GroupMembersScreen NEW 346 (эталон FollowersSubscriptionsScreen: пагинация 50/hasMore=полная страница/фильтр/PTR/error-стейт; groupsGetMembers:4106 отдаёт профили сразу — обогащение не понадобилось); CommunityScreen — кликабельный счётчик участников (+33/−2); Screen.GroupMembers ("group_members/{groupId}", hasOwnTopBar) + SovaNavHost composable (+28).
+- **3-b SETTINGS-FIX** (6 файлов, +524/−107): P1 — Прокси реально применяется (OkHttp builder.proxy в VkMintApp:993-зоне; честно «после перезапуска» + тост; SOCKS не рисован — no-stub), пути загрузок reconfigurePath при старте (Track/VideoDownloadManager), «Звук уведомлений о сообщениях» переименован в честное «Заглушение чато»; P2 — mic/camera-дефолты звонков читаются CallScreen'ом (mic → setCommunicationDevice; камера — честное отклонение: WebRtcEngine без видеозахвата), EmailNotifyCard → серверный контур settingsGeneralGetNotifySettings(page="email") + ToggleNotify (оптимистично, откат), obscene-фильтр — честная подпись (геттера в VK API нет); P3 — мёртвый «Сбросить» удалён, select-без-options без шеврона, мёртвые VkMintPrefs-поля помечены @Deprecated-KDoc (используются в FeedScreen Snapshot — не удалены), «Оповещения о входе» синхронизированы.
+- **3-c OPVK-EXTRACT** (5 файлов +1 новый, +170/−2): UserProfileScreen +92 — секция «Информация» (6 строк из непустых about/activities/interests/music/movies/books уже загруженного usersGetFullExtended; bdate/city не дублируются — в хедере; quotes не парсится в модель — честное отклонение); GroupMembersScreen NEW 346 (эталон FollowersSubscriptionsScreen: пагинация 50/hasMore=полная страница/фильтр/PTR/error-стейт; groupsGetMembers:4106 отдаёт профили сразу — обогащение не понадобилось); CommunityScreen — кликабельный счётчик участников (+33/−2); Screen.GroupMembers ("group_members/{groupId}", hasOwnTopBar) + VkMintNavHost composable (+28).
 
 **Приёмка оркестратора:** git-union ровно 18 код-файлов (3 зоны + VKA/VkIdAccount оркестратора) + 3 дока + worklog; скобки 17/19 OK, 2 MISMATCH = преждесуществующие артефакты с нейтральными дельтами (VKA {2616,2617}→{2626,2627} +10/+10; SettingsScreen {1112,1113}→{1168,1169} +56/+56); nested-comments ALL CLEAN (168); дубли ключевых символов = 0 (buildVkAttachment/pollsAdd/CreatedPoll/GroupMembersScreen/onMembersClick — по 1 декларации; посторонние pollsAdd-матчи = преждесуществующий pollsAddVote); spot-check P0 (photo-пайплайн) и proxy-проводки — корректны; Models.kt/core-data-модели не тронуты.
 
@@ -12009,10 +12009,10 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 **Фикс (3 точки, оркестратор):**
 1. `ExchangeAuthRepository.ensureFreshToken`: при force=true — `refreshSessionCookiesFromCookieManager()` ДО Path 1.5 (локальный sync CookieManager→storage, без сети; контракт Fix #49 сохранён — отвержение уже свежего куки = честная смерть сессии).
-2. `SovaApp.registerGlobalNetworkWatcher`: проактивный блок = sync → гвард silent-средств → ensureFreshToken(force=true); #SESSION-HOLD инлайн (поведение сохранено).
+2. `VkMintApp.registerGlobalNetworkWatcher`: проактивный блок = sync → гвард silent-средств → ensureFreshToken(force=true); #SESSION-HOLD инлайн (поведение сохранено).
 3. `VKApiClient` err=5-хендлер (attempt==0 и attempt>0): `graceEligible = recentlySwitched || isIpMismatch` — subcode 1130 сам является доказательством смены IP → grace-семантика без ожидания тика колбэка.
 
-**Приёмка:** VKA скобка-дельта 0; SovaApp +1/+1; ExRepo +2/+2; nested-comments ALL CLEAN (168); diff-union ровно 3 файла. Контракты #49/#175/#230/#IP-BINDING-RETRY/#GRACE-NO-CLEAR/#SESSION-HOLD сохранены.
+**Приёмка:** VKA скобка-дельта 0; VkMintApp +1/+1; ExRepo +2/+2; nested-comments ALL CLEAN (168); diff-union ровно 3 файла. Контракты #49/#175/#230/#IP-BINDING-RETRY/#GRACE-NO-CLEAR/#SESSION-HOLD сохранены.
 
 **Проверка юзером:** смена Wi-Fi↔mobile → ни AuthActivity, ни потери ленты; logcat-метки `#NET-SWITCH-AUTH-FIX` / `silent refresh via remixsid OK` / `НЕ чистим токен…`.
 
@@ -12037,8 +12037,8 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 **Root-cause:** видео — оверлей (VideoHolder/VideoPlatformRouter, #90) поверх NavHost: в живой сессии возврат корректен всегда. Но долгий просмотр → система убивает процесс (память/сворачивание) → холодный старт ставит startDestination = lastRoute, где Community — detail-экран и не сохраняется (пишутся только mainRoutes) → пользователь попадает в последнее main-таб = список групп.
 
 **Фикс (3 файла):**
-1. SovaPrefs: `lastCommunityId` / `lastCommunityScroll` (Keys + Snapshot + сеттеры).
-2. SovaNavHost: однократный restore — `rememberSaveable`-флаг `communityRestoreDone` (переживает recreation Activity — без дубля в стеке; умирает с процессом — restore нужен снова) → `data.first()` → `navigate(Screen.Community.buildRoute(id))` + handoff позиции через `CommunityRestoreHolder.pendingScroll`; очистка контекста при уходе с Community (watcher: prevRawRoute==Community && rawRoute!=Community — смерть процесса watcher не запускает, контекст выживает).
+1. VkMintPrefs: `lastCommunityId` / `lastCommunityScroll` (Keys + Snapshot + сеттеры).
+2. VkMintNavHost: однократный restore — `rememberSaveable`-флаг `communityRestoreDone` (переживает recreation Activity — без дубля в стеке; умирает с процессом — restore нужен снова) → `data.first()` → `navigate(Screen.Community.buildRoute(id))` + handoff позиции через `CommunityRestoreHolder.pendingScroll`; очистка контекста при уходе с Community (watcher: prevRawRoute==Community && rawRoute!=Community — смерть процесса watcher не запускает, контекст выживает).
 3. CommunityScreen: запись id после успешной загрузки; позиция стены пишется на каждой остановке скролла и после загрузки постов (posts в ключах — против протухшего индекса); однократный `scrollToItem` после загрузки (индексы в координатах LazyColumn идентичны — хедер+табы+посты).
 
 **Семантика:** смерть на сообществе → возврат в то же сообщество на той же позиции стены; обычный back из сообщества → авто-возврата при следующем запуске нет. Аналог — восстановление чата в Telegram.
@@ -12076,7 +12076,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 **Симптом:** посты с 3+ фото показывались сеткой без листания; правой колонки VK web (друзья онлайн / возможные друзья / сообщества / закладки) не было.
 
 **Фикс (4 файла, субагент opus; правки легли, отчёт оборвался таймаутом — приняты интегратором хунк-в-хунк):**
-1. Карусель: настройка «Карусель фото в ленте» (SettingsScreen → «Лента», default ВКЛ) → SovaPrefs.feedCarouselEnabled; при включении ЛЮБОЕ число фото >1 в пост-карточке листается: HorizontalPager + стрелки < > по краям (на краях списка скрыты) + счётчик «n/N» + плавная смена высоты под пропорцию текущего фото; клик стрелки не открывает фотопросмотр. Выключено — прежний вид (1-2 фото листаются, 3+ сетка) бит-в-бит.
+1. Карусель: настройка «Карусель фото в ленте» (SettingsScreen → «Лента», default ВКЛ) → VkMintPrefs.feedCarouselEnabled; при включении ЛЮБОЕ число фото >1 в пост-карточке листается: HorizontalPager + стрелки < > по краям (на краях списка скрыты) + счётчик «n/N» + плавная смена высоты под пропорцию текущего фото; клик стрелки не открывает фотопросмотр. Выключено — прежний вид (1-2 фото листаются, 3+ сетка) бит-в-бит.
 2. Правое меню: кнопка в верхней зоне ленты → выезжающая справа панель с секциями «Друзья онлайн», «Возможные друзья» (+ «Показать ещё»), «Рекомендуемые сообщества», «Мои закладки» — все секции реальными API-вызовами (friends.getOnline / friends.getSuggestions / groups.getCatalog / fave.get) с загрузкой/пусто/ошибка+«Повторить»; тапы открывают профиль/сообщество/пост/фотопросмотр. «Дни рождения» честно не включены: friends.get с bdate в VKA нет (VKA заморожен) — секция не рендерится вместо фейка.
 
 **Проверка юзером:** пост с 5 фото → стрелки/свайп/счётчик; настройки → «Лента» → выключить карусель → сетка как раньше; кнопка правого меню над лентой → все 4 секции грузятся, «Показать ещё» дозагружает друзей; лог-метки нет (чистый UI).
@@ -12087,7 +12087,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 **Симптом (формулировка юзера):** «Раздел Уведомления пересмотри с учётом, что фильтр берётся из „Ленты“»; сплывающие и список шли вперемешку — новостные уведомления заслоняли сообщения.
 
-**Root-cause:** в VK web «Уведомления» — секция ленты (vk.com/feed?section=notifications), фильтры — ленточного паттерна; в PinoK — самодельный dropdown с архивным списком из 58 категорий; сортировки не было ни в списке, ни в шторке.
+**Root-cause:** в VK web «Уведомления» — секция ленты (vk.com/feed?section=notifications), фильтры — ленточного паттерна; в VK Mint — самодельный dropdown с архивным списком из 58 категорий; сортировки не было ни в списке, ни в шторке.
 
 **Фикс (3 файла, субагент opus):**
 1. Фильтр = ленточный паттерн: bottom-sheet «Фильтр» со списком категорий и чекмарком на активной; список 58→17 по принципу «ядро VK web (Все/Комментарии/Упоминания/Реакции/Репосты/Подписки) + категории реально приходящих типов getRedesign»; каждое слияние/удаление/переименование обосновано в KDoc (честный след, без молчаливых потерь; матч «Приглашений» починен на invite_group).
@@ -12220,7 +12220,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 **Фиксы:**
 - **Fix #351 (22-A, FeedScreen):** CommentsBottomSheet самодостаточен (колбэк onSubmitComment удалён — он терял replyToComment и игнорировал результат): replyingToComment, кнопка «Ответить» в CommentRow (кроме оптимистичных id<0), «Ответ {имя}» над текстом (фолбэк «Ответ пользователю» — VK скрывает профиль), превью цели над композером (аватар+имя+текст 60 симв+✕), wallCreateComment(replyToComment=…) внутри шита; успех → перезагрузка wallGetComments (список теперь обновляется с сервера!), оптимистичные чистятся ТОЛЬКО при успешной перезагрузке (сеть упала после отправки — комментарий не исчезает); провал → откат по id + честный тост с lastApiError (#STALE-ERR-FIX).
 - **Fix #352 (22-A/22-B):** общий `ui/components/CommentAttachmentsView` — фото-сетка/видео-превью/аудио/doc/voice/ссылка/СТИКЕР (renderUrl при наличии images, иначе CDN-паттерн); подключён в CommentRow ленты (аттачменты в инлайн-комментариях появились) и в PostDetail CommentItem+ReplyItem (стикер заработал). Честные отклонения в KDoc: poll/graffiti/gift в комментариях не рендерятся (как VK web-упрощение).
-- **#POST-CAROUSEL-EVERYWHERE (22-B):** общий `ui/components/PostPhotoGrid` (семантика 1:1 из ленты: свайп + полновысотные стрелки vkuiCarouselBase + счётчик; выкл → прежний вид); подключён: лента (вместо приватных PhotoGrid+FeedPhotoCarousel, −242 строки дубля), сообщество (пост+репост), профиль (пост+RepostBlock), открытый пост (фото одним блоком после вложений — как VK web, KDoc #22B-POST-PHOTOS), чужой профиль (follow-up оркестратора). ОДИН флаг `SovaPrefs.feedCarouselEnabled` управляет всеми поверхностями.
+- **#POST-CAROUSEL-EVERYWHERE (22-B):** общий `ui/components/PostPhotoGrid` (семантика 1:1 из ленты: свайп + полновысотные стрелки vkuiCarouselBase + счётчик; выкл → прежний вид); подключён: лента (вместо приватных PhotoGrid+FeedPhotoCarousel, −242 строки дубля), сообщество (пост+репост), профиль (пост+RepostBlock), открытый пост (фото одним блоком после вложений — как VK web, KDoc #22B-POST-PHOTOS), чужой профиль (follow-up оркестратора). ОДИН флаг `VkMintPrefs.feedCarouselEnabled` управляет всеми поверхностями.
 - **Настройка:** Настройки → Лента → «Карусель фото в постах» (переименована, подзаголовок про все поверхности). **По умолчанию карусель ВКЛЮЧЕНА** (default true = как в VK web) — менялось только название, ключ prefs прежний.
 
 **Проверка юзером:** (1) лента → комментарий поста → «Ответить» под чужим комментарием → превью «Ответ X» → отправить → комментарий с «Ответ X» появляется, список обновился; (2) комментарий со стикером/видео — содержимое видно (стикер-картинка, видео-превью с play); то же в открытом посте; (3) пост с 3+ фото в сообществе/профиле/открытом посте — карусель со свайпом/стрелками/счётчиком; выключение в Настройки → Лента → «Карусель фото в постах» убирает её ВЕЗДЕ; (4) клипы (ClipInteractionsSheet) — reply там ещё НЕТ (P1 следующей волны, честно).
@@ -12229,14 +12229,14 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ## 2026-09-09 — feat+fix(feed/notifications): волна 23 — Fix #353 меню ленты как в VK web (#FEED-MENU-VKWEB), Fix #354 фильтр уведомлений почти не работает (#NOTIF-FILTER-ACTION)
 
-**Симптом (скриншоты юзера 08.09 18:47):** (1) «Меню ленты» PinoK показывает «Друзья онлайн / Возможные друзья / Рекомендуемые сообщества / Мои закладки», а юзер хочет меню как в VK web — «Лента / Фотографии / Друзья / Поиск / Реакции» с рабочим функционалом разделов: «что я хотел и функционал как у ленты как веб вк, что было не понятно? Зачем мне там закладки и прочая ерунда?»; (2) «в уведомлениях фильтр почти не работает».
+**Симптом (скриншоты юзера 08.09 18:47):** (1) «Меню ленты» VK Mint показывает «Друзья онлайн / Возможные друзья / Рекомендуемые сообщества / Мои закладки», а юзер хочет меню как в VK web — «Лента / Фотографии / Друзья / Поиск / Реакции» с рабочим функционалом разделов: «что я хотел и функционал как у ленты как веб вк, что было не понятно? Зачем мне там закладки и прочая ерунда?»; (2) «в уведомлениях фильтр почти не работает».
 
 **Root-cause:**
 1. **Меню (Fix #353):** FeedRightPanel (19-A) повторял НЕ то, что в VK web. Правое меню ленты VK web (лента.снапшоты.парсинг.полный.md §1.0.2, data-testid="rightmenu", aria «Список ленты») — это НАВИГАЦИЯ РАЗДЕЛОВ: feed_right_menu_news «Лента» (/feed), sources_photos «Фотографии», sources_friends «Друзья» (лента постов друзей, §1.2 — НЕ «возможные друзья»), global_search «Поиск», wall_likes «Реакции», sources_action_edit «Редактировать» (менеджер скрытых). Секций «друзья онлайн/закладки» там нет вообще.
 2. **Фильтр уведомлений (Fix #354):** для web-токенов парсер redesign (Fix #254) вычислял type уведомления из action.entity.type — то есть из ТИПА ОБЪЕКТА: «Костя оценил фотографию» → type="photo", «подписался» → type="new_posts". Экранные фильтры («Реакции» → like*, «Подписки» → follow/friend*, «Репосты» → copy, «Упоминания» → mention*) на таких типах матчили 0 items → половина категорий фильтра «пустая».
 
 **Фиксы:**
-- **Fix #353:** FeedRightPanel переписан (779→276 строк) в «Список ленты» VK web: 5 разделов с чекмарком на активном, выбор переключает раздел ТЕКУЩЕЙ ленты (feedFilterName + reloadFeed — разделы уже работали: FeedFilter ALL/PHOTOS/FRIENDS/SEARCH/LIKES с IMP-FEED-1); «Редактировать» → существующий Screen.FeedHidden «Скрытые источники» (newsfeed.getBanned+unban, IMP-FEED-2; FeedScreen +параметр onOpenHiddenSources, wiring в SovaNavHost). «Рекомендации» — только в заголовочном dropdown (как таб «Все новости/Рекомендации» web). Удалены junk-секции (друзья онлайн/возможные друзья/сообщества/закладки — закладки остаются экраном из профиля, ярлык из меню убран) И блок «возможных друзей» над лентой раздела «Друзья» — VK web §1.2: чистая лента постов друзей (−state recommendedFriends/friendsLoading, −LaunchedEffect friendsGetRecommendations, −79 строк UI).
+- **Fix #353:** FeedRightPanel переписан (779→276 строк) в «Список ленты» VK web: 5 разделов с чекмарком на активном, выбор переключает раздел ТЕКУЩЕЙ ленты (feedFilterName + reloadFeed — разделы уже работали: FeedFilter ALL/PHOTOS/FRIENDS/SEARCH/LIKES с IMP-FEED-1); «Редактировать» → существующий Screen.FeedHidden «Скрытые источники» (newsfeed.getBanned+unban, IMP-FEED-2; FeedScreen +параметр onOpenHiddenSources, wiring в VkMintNavHost). «Рекомендации» — только в заголовочном dropdown (как таб «Все новости/Рекомендации» web). Удалены junk-секции (друзья онлайн/возможные друзья/сообщества/закладки — закладки остаются экраном из профиля, ярлык из меню убран) И блок «возможных друзей» над лентой раздела «Друзья» — VK web §1.2: чистая лента постов друзей (−state recommendedFriends/friendsLoading, −LaunchedEffect friendsGetRecommendations, −79 строк UI).
 - **Fix #354:** VKApiClient.parseRedesignNotificationItem: dots_menu теперь разбирается — {type:"open_setting"/"unsubscribe", name:…} (доказано VK_IMPORT_API.MD ЧАСТЬ 34, лог 211KB: name="new_posts") → новый resolveRedesignNotificationType с приоритетом: (1) имя настроек VK substring-маппингом (friend/birthday/gift/invite/mention/like/comment/cop/follow|subscri/market/podcast/topic/story/clip/photo/video/app/post|wall); (2) фолбэк — глагол действия из item.text («ответил»→reply_comment, «оценил|реакцию»→like, «прокомментировал|комментарий»→comment, «упомянул»→mention, «поделил|репост»→copy, «подписал»→follow, «в друзья|заявк»→friend_accepted, «подарил»→gift, «день рождения»→birthday_reminder, «пригласил»→group_invites); (3) прежний маппинг entity.type (контент без глагола: «новая фотография» остаётся photo — фильтры Фото/Видео/Клипы не сломаны); (4) ""→new_posts. Фильтры/иконки экрана НЕ менялись — их матчи уже покрывают новые значения. VkNotificationsNotifier: channelForType/titleForType/pluralTitle/buildActionVerb/canReplyToType принимают точные generic-типы "like"/"comment" (каналы, заголовки и группировка push теперь тоже корректны).
 
 **Проверка юзером:** (1) лента → кнопка правого меню → в меню «Лента / Фотографии / Друзья / Поиск / Реакции» + «Редактировать»; тап по разделу закрывает меню и переключает ленту (чекмарк на активном); «Редактировать» открывает «Скрытые источники»; (2) раздел «Друзья» — только посты друзей, без «возможных друзей» сверху; (3) Уведомления → «Фильтр» → «Реакции»/«Репосты»/«Подписки (друзья)»/«Упоминания» теперь показывают соответствующие уведомления (для web-аккаунтов), «Комментарии»/«Фото»/«Новые посты» — как раньше; пуш-уведомления лайков ложатся в канал «Лайки» с заголовком «Новый лайк».
@@ -12251,7 +12251,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 **Фиксы:**
 - **Fix #355 (VKA+UI):** НОВЫЙ `messagesSearchConversations(query, count=20)` — messages.searchConversations {q, count, extended=1, fields="photo_100,photo_200,online,last_seen"}; парсинг терпеливый (снапшот §7.2 — wire не снят живым ответом): items понимаются И как обёртка {conversation:…} (как у getConversations), И как ПЛОСКИЕ объекты conversation; last_message может отсутствовать → lastMessage=null; parsePeerMaps/parseConversationItem/resolveMissingPeerInfo — 1:1 паттерн messagesGetConversations. `MessageSearchResult.peerTitle` (+поле, дефолт null — обратная совместимость in-chat поиска) резолвится из extended profiles[]/groups[]. UI MessagesScreen: q ≥ 2 символов → серверный режим (debounce 400мс через LaunchedEffect(searchQuery) с отменой), две секции «Чаты» (локальные совпадения + серверные dedup по peer.id — уникальность ключей LazyColumn) и «Сообщения» (MessageSearchResultRow: титул/дата toChatDate/сниппет; тап → onChatClick — ChatDetail сам резолвит титул, прецедент Fix #348). err → честный текст «Ошибка поиска: … — показаны только локальные совпадения» в пустом стейте (тосты на каждый кейстрок — шум, выбран инлайн-текст).
-- **Fix #356 (VKA+prefs+UI):** НОВЫЕ `messagesArchiveConversation(peerId)` / `messagesUnarchiveConversation(peerId)` (response 1 / boolean true — паттерн markAsImportantConversation). НОВЫЙ `ArchivedConversationsRepository` (1:1 PinnedConversationsRepository: JSON-массив Long в SovaPrefs.archivedConvsData — Keys.ARCHIVED_CONVS_DATA + Snapshot.archivedConvsData + setArchivedConvsData; FeedScreen dummy-snapshot дополнен — Snapshot расширился). SovaApp: archivedConvsRepository. UI: FilterChip «Архив (N)» над списком (аналог кнопки шапки m.vk.ru; открытие догружает messagesGetConversations(filter="archived") — серверный архив мерджится с локальным, dedup); filteredChats исключает localArchivedIds (чат в `chats` НЕ удаляется → разархивация мгновенно возвращает без перезагрузки); ChatCard +isArchived/+showArchiveAction/+showListActions: пункт «Убрать чат из списка»/«Вернуть из архива» (Archive/Unarchive-иконки), для карточек вне основного списка (архив/поиск) pin/mute/unread/delete СКРЫТЫ (обработчики не подключены — иначе мёртвые кнопки, honest UI); long-press в результатах поиска не открывает пустое меню. Обработчик — паттерн pin: локальный список = source of truth (персист), API best-effort в фоне, НЕ откатываем при err=8/15 (честный AppLog), тосты «Убрано в архи»/«Возвращено из архива».
+- **Fix #356 (VKA+prefs+UI):** НОВЫЕ `messagesArchiveConversation(peerId)` / `messagesUnarchiveConversation(peerId)` (response 1 / boolean true — паттерн markAsImportantConversation). НОВЫЙ `ArchivedConversationsRepository` (1:1 PinnedConversationsRepository: JSON-массив Long в VkMintPrefs.archivedConvsData — Keys.ARCHIVED_CONVS_DATA + Snapshot.archivedConvsData + setArchivedConvsData; FeedScreen dummy-snapshot дополнен — Snapshot расширился). VkMintApp: archivedConvsRepository. UI: FilterChip «Архив (N)» над списком (аналог кнопки шапки m.vk.ru; открытие догружает messagesGetConversations(filter="archived") — серверный архив мерджится с локальным, dedup); filteredChats исключает localArchivedIds (чат в `chats` НЕ удаляется → разархивация мгновенно возвращает без перезагрузки); ChatCard +isArchived/+showArchiveAction/+showListActions: пункт «Убрать чат из списка»/«Вернуть из архива» (Archive/Unarchive-иконки), для карточек вне основного списка (архив/поиск) pin/mute/unread/delete СКРЫТЫ (обработчики не подключены — иначе мёртвые кнопки, honest UI); long-press в результатах поиска не открывает пустое меню. Обработчик — паттерн pin: локальный список = source of truth (персист), API best-effort в фоне, НЕ откатываем при err=8/15 (честный AppLog), тосты «Убрано в архи»/«Возвращено из архива».
 
 **Проверка юзером:** (1) список диалогов → поиск → набрать 2+ символа → секции «Чаты» и «Сообщения» с серверными результатами (включая чаты за пределами первой страницы и тексты сообщений); тап по сообщению открывает диалог; (2) long-press на чате → «Убрать чат из списка» → чат исчез из списка, появился тост; чип «Архив (N)» над списком → раздел «Архи» → чат на месте → long-press → «Вернуть из архива» → чат вернулся в основной список; (3) из поиска long-press не открывает меню (действия там не подключены — честно); (4) архив переживает перезапуск приложения (локальное хранилище).
 
@@ -12264,16 +12264,16 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 **Root-cause:**
 1. **Fix #357:** `json.get("response")` отдаёт `JsonElement` — свойство `isBoolean` есть только у `JsonPrimitive` (волна 24, messagesArchive/UnarchiveConversation). Класс: статический тип не приводится к примитиву.
 2. **Fix #358:** выбор «Поиск»/«Реакции» в меню ленты → `reloadFeed()` → `fetchFeedPage` для этих разделов УМЫШЛЕННО возвращает пустой NewsfeedResult (Реакции грузятся отдельным LaunchedEffect likes.getList, Поиск ждёт запрос) → `allPosts.isEmpty()` → `errorText = "Лента пуста"` (908/1036) → гейт `errorText != null && posts.isEmpty()` (1246) показывал ErrorView ВМЕСТО всего контента: поле поиска, подтабы Реакций и списки становились недостижимы. Вкладки Реакций сверены со снапшотом §1.5 — Все/Посты/Комментарии/Клипы/Видео + блок «Фотографии» в «Все» уже соответствуют 1:1, добавлять нечего — они были недостижимы.
-3. **Fix #359:** кнопка меню была внутри первого item LazyColumn — уезжала при скролле («должна быть на верхней панели ленты»); глобальный TopAppBar в SovaNavHost вне зоны FeedScreen.
+3. **Fix #359:** кнопка меню была внутри первого item LazyColumn — уезжала при скролле («должна быть на верхней панели ленты»); глобальный TopAppBar в VkMintNavHost вне зоны FeedScreen.
 4. **Fix #360:** блок «Возможно, вы знакомы» (П-6b) рисовался всегда, если VK вернул рекомендации; переключателя не существовало.
-5. **Fix #361:** аудит: навигация (SettingsPrivacy/Devices/VkIdAccount), API (settingsGeneral.*, accountPersonal.getActivityHistoryDevices/resetSessions/resetAllSessions), privacy-флаги (PrivacyMods/маска/скрытие last seen через accountSetOnline no-op), SecurityAlertsPoller (SovaApp 1339), logoutHash — ВСЁ реально подключено; главный «не работают вообще» — волна 24 не собиралась из-за п.1, юзер сидел на нерабочем APK.
+5. **Fix #361:** аудит: навигация (SettingsPrivacy/Devices/VkIdAccount), API (settingsGeneral.*, accountPersonal.getActivityHistoryDevices/resetSessions/resetAllSessions), privacy-флаги (PrivacyMods/маска/скрытие last seen через accountSetOnline no-op), SecurityAlertsPoller (VkMintApp 1339), logoutHash — ВСЁ реально подключено; главный «не работают вообще» — волна 24 не собиралась из-за п.1, юзер сидел на нерабочем APK.
 6. **Fix #362:** аудит меню ⋮: «Редактировать трек» и «Открыть альбом» — `onEdit`/`onOpenAlbum` НЕ переданы (мёртвые лямбды `{}` по умолчанию); «Удалить»/«Восстановить»/«Не нравится» — API-вызовы работали, но без обновления списка и без фидбека («в молоко»); «Показать похожие» — audioGetRecommendations БЕЗ target_audio (не по треку); «Воспроизвести следующей» — `onSetNext` не подключён, playNext в плеере не существовал.
 
 **Фиксы:**
 - **Fix #357 (VKA ×2):** `val prim = resp.asJsonPrimitive; if (prim.isBoolean) prim.asBoolean else prim.asInt == 1` — после уже стоящей проверки `isJsonPrimitive`.
 - **Fix #358 (#FEED-SECTION-EMPTY-GATE):** reloadFeed и первичный LaunchedEffect(Unit) ставят «Лента пуста»/«Ошибка API» ТОЛЬКО вне разделов LIKES/SEARCH (эти разделы управляют своим контентом; пусто там — норма).
 - **Fix #359 (#FEED-MENU-TOPBAR):** закреплённая верхняя панель ленты: Column { Row(48dp, кнопка MenuOpen справа) + Box(weight 1f){ PullToRefreshBox + FAB } } — панель всегда видна, контент скроллится под ней; из stories_row кнопка удалена.
-- **Fix #360 (#PROFILE-SUGGEST-TOGGLE):** SovaPrefs + Keys.PROFILE_FRIEND_SUGGESTIONS / Snapshot.profileFriendSuggestions / setProfileFriendSuggestions (default FALSE = секция скрыта — по требованию юзера); SettingsScreen → Приватность: секция «Профиль» + тумблер «Блок „Возможно, вы знакомы“ в профиле»; ProfileScreen: загрузка friends.getRecommendations И рендер секции гейтятся флагом (выключено → и запрос не делаем); FeedScreen dummy-snapshot дополнен (класс бага #276/#356).
+- **Fix #360 (#PROFILE-SUGGEST-TOGGLE):** VkMintPrefs + Keys.PROFILE_FRIEND_SUGGESTIONS / Snapshot.profileFriendSuggestions / setProfileFriendSuggestions (default FALSE = секция скрыта — по требованию юзера); SettingsScreen → Приватность: секция «Профиль» + тумблер «Блок „Возможно, вы знакомы“ в профиле»; ProfileScreen: загрузка friends.getRecommendations И рендер секции гейтятся флагом (выключено → и запрос не делаем); FeedScreen dummy-snapshot дополнен (класс бага #276/#356).
 - **Fix #361 (аудит, документирован):** интерактивные элементы «Защита» и «Приватность» проверены — все колбэки/API на месте; реальный блокер был в п.1; + новый тумблер из Fix #360 в «Приватности».
 - **Fix #362 (#AUDIO-MENU-REAL):** VKA + `audioEdit(ownerId, audioId, artist, title)` (audio.edit, честный вызов; web-токен может получить отказ прав — тост с реальной ошибкой VK); `audioGetRecommendations(+targetAudio)` → args["target_audio"]; PlayerConnection + `playNext(track)` (дедуп по (ownerId,id), вставка в playlist+ctrl.addMediaItems после текущего, publishStateImmediate, пустая очередь → playTrackList); MusicScreen: onDelete → удаление из списка+MusicTracksCache+тост «Удалено из моей музыки»/честная ошибка; onRestore → тост результата; onDislike → тост; onShowRecommendations → по треку (target_audio) + тост; onEdit → НОВЫЙ EditTrackDialog (артист/название, saving-стейт, проверка title, честный errorText, управляемый rememberCoroutineScope) + обновление списка/кэша; onOpenAlbum → навигация через уже существовавший параметр экрана; onSetNext → PlayerConnection.playNext.
 
@@ -12286,7 +12286,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 **Симптом (сообщения юзера):** (1) «кнопка "меню ленты" так и не перенесена на верхнюю панель ленты»; (2) «реакции вкладки есть но они не функционируют — требую тотальное изучение предоставленных снапшотов и исправления до рабочего состояния»; (3) «проблемы с просмотром карточек репостов в группах: при нажатии новость не открывается целиком, не весь текст или контент доступен для просмотра»; (4) «надо реализовать в постах где больше одного видео такую же карусель как и для картинок»; (5) аудит безопасности: в git в незашифрованном виде лежат живые личные access-токены vk1.a.* (ВК.txt, vk.id.md, reference/vk_web_localstorage_dump.txt, VK_IMPORT_API.MD, HISTORY*, комментарии WebTokenAuth.kt/app/build.gradle.kts). Ограничения юзера: эталонные FeedContainer/FeedScreen из снапшотов в нашу ленту НЕ интегрировать (только справка); секреты BuildConfig/VkSigner оставить (приложение не работает без них); файлы с токенами не удалять — заменить значения на «XXXXX».
 
 **Root-cause:**
-1. **Fix #363:** кнопка меню была в закреплённой строке над LazyColumn (Fix #359) — юзер требует в верхней панели; глобальный TopAppBar рендерится в SovaNavHost вне зоны FeedScreen, слот actions = ScreenTopBar.actions?.invoke() (SovaNavHost:1211-1213, API ScreenTopBar.kt:87-118).
+1. **Fix #363:** кнопка меню была в закреплённой строке над LazyColumn (Fix #359) — юзер требует в верхней панели; глобальный TopAppBar рендерится в VkMintNavHost вне зоны FeedScreen, слот actions = ScreenTopBar.actions?.invoke() (VkMintNavHost:1211-1213, API ScreenTopBar.kt:87-118).
 2. **Fix #364:** подтабы «Клипы»/«Видео» Реакций: likes.getList(type="video") возвращает owner_id/item_id ВИДЕО, а код прогонял их через wallGetById (ожидает ПОСТЫ) → пусто/мусор. Полных объектов видео (превью/длительность/название) взять было неоткуда — video.get по явному списку в VKA отсутствовал.
 3. **Fix #365:** репост-Card в PostCard (FeedScreen) и CommunityScreen рисовались БЕЗ onClick (клик работал только по имени автора оригинала); текст репоста — жёсткие maxLines=6/8 с Ellipsis без «Показать ещё» → «новость не открывается целиком, не весь текст доступен».
 4. **Fix #366:** видео-вложения поста при >1 рендерились вертикальным стопком VideoThumbnail; карусель существовала только у фото (PostPhotoCarousel, волна 22).
@@ -12296,7 +12296,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - **Fix #363 (#FEED-MENU-TOPBAR-2):** FeedScreen: DisposableEffect(Unit) → ScreenTopBar.configure(actions = { IconButton(MenuOpen, «Меню ленты») { showRightPanel = true } }) + onDispose { ScreenTopBar.clear(token) } — токен-паттерн Fix #256/#262 (race A→B: чужая конфигурация не затирается), прецедент NotificationsScreen:743-853. Закреплённая строка Fix #359 удалена — лента занимает весь экран; FeedFilterBar и табы Реакций не тронуты (живы и при feedShowFilter=false), гейт Fix #358 не тронут.
 - **Fix #364 (#FEED-REACTIONS-VIDEO):** VKA + `videoGet(videos: List<String>): List<Video>` (video.get { videos=<ownerId_itemId>[,…], extended=1, count≤200 } → response.items[]; парсинг id/owner_id/title/duration/views/player/access_key/is_clips/width/height/type + parseVideoFiles/parseVideoThumbs/parseLikes/withDetectedPlatform; недоступные/удалённые VK молча пропускает — результат ≤ входа). FeedScreen: ветка CLIPS/VIDEO в LaunchedEffect(feedFilterName, likesFilterName): likesGetList(type="video", count=30) → mapNotNull «ownerId_itemId» + distinct → videoGet → состояние likesVideos (сброс likesItems/likesGroups/likedComments/likedCommentAuthors — иначе посты прошлой вкладки протекали бы на «Клипы», рендер-ветка постов не гейтится по likesFilter); рендер: пусто → «Нет реакций», иначе items(likesVideos, key="like_video_…") → VideoThumbnail → onVideoClickSavePos → VideoHolder.open (overlay-плеер, позиция ленты сохраняется — Fix #100). Клипы и Видео на моб. API неразличимы (обе type=video, задокументировано FeedScreen:190-191) — вкладки синхронны; структура сверена со снапшотом «лента_ Реакции.html» (VK web /feed?section=likes: табы Все/Посты/Комментарии/Клипы/Видео + блок «Фотографии»).
 - **Fix #365 (#REPOST-OPEN):** FeedScreen PostCard: репост-Card → .clickable { onPostClick(original) } (после .clip, до .border; вложенные кликабельные потомки перехватывают раньше — имя автора, ссылки, фото); текст репоста — паттерн Fix #345: onTextLayout { hasVisualOverflow } + repostExpanded/repostOverflowed + «Показать ещё» (maxLines 6→Int.MAX_VALUE; тап по свёрнутому — развернуть, по развёрнутому/короткому — открыть пост). CommunityScreen: репост-Card → .clickable { onPostClick(repost) }, текст maxLines 8→expand (тот же паттерн); обёртка onPostClick в items-лупе выставляет PostHolder.lastGroups = mapOf(groupId to g) — в PostDetail показывается имя сообщества-оригинатора (паттерн FeedScreen:1677).
-- **Fix #366 (#VIDEO-CAROUSEL-POSTS):** НОВЫЙ ui/components/PostVideoCarousel.kt (273 строки): при carouselEnabled (тот же SovaPrefs.feedCarouselEnabled, что у PostPhotoGrid) и видео > 1 → HorizontalPager 1:1 по геометрии PostPhotoCarousel (стрелочные зоны 44dp indication=null, шеврон 28dp с тенью, счётчик «n/N», animateContentSize, рендер только применимого шеврона), слайд = thumbUrl (coil3, тёмный фон surfaceVariant) + play-круг + чип длительности «m:ss» + чип «Клип» (video.isClip); иначе (одно видео / настройка выкл) — прежний вертикальный стопк. Подключение: FeedScreen PostCard (carouselEnabled && videoAttachments.size>1 → PostVideoCarousel(videos=videoAttachments.mapNotNull{it.video})), CommunityScreen (пост + репост-блок). Клик по слайду → onVideoClick → VideoHolder.open (overlay; роутинг клип/видео по Video.isClip).
+- **Fix #366 (#VIDEO-CAROUSEL-POSTS):** НОВЫЙ ui/components/PostVideoCarousel.kt (273 строки): при carouselEnabled (тот же VkMintPrefs.feedCarouselEnabled, что у PostPhotoGrid) и видео > 1 → HorizontalPager 1:1 по геометрии PostPhotoCarousel (стрелочные зоны 44dp indication=null, шеврон 28dp с тенью, счётчик «n/N», animateContentSize, рендер только применимого шеврона), слайд = thumbUrl (coil3, тёмный фон surfaceVariant) + play-круг + чип длительности «m:ss» + чип «Клип» (video.isClip); иначе (одно видео / настройка выкл) — прежний вертикальный стопк. Подключение: FeedScreen PostCard (carouselEnabled && videoAttachments.size>1 → PostVideoCarousel(videos=videoAttachments.mapNotNull{it.video})), CommunityScreen (пост + репост-блок). Клик по слайду → onVideoClick → VideoHolder.open (overlay; роутинг клип/видео по Video.isClip).
 - **#SEC-KEYS-MASK (безопасность, по решению юзера):** замаскированы ЛИЧНЫЕ ключи в md/txt, файлы НЕ удалялись: `vk1.a.*`(8+ симв)→`vk1.a.XXXXX`, `eyJ`-JWT(40+)→`XXXXX`, sua/sui credential-блобы→`XXXXX` — в ВК.txt, vk.id.md, reference/vk_web_localstorage_dump.txt, VK_IMPORT_API.MD, HISTORY.md, HISTORY_ARCHIVE.md, комментарии app/build.gradle.kts:38 и KDoc WebTokenAuth.kt:29-30 (только комментарии — код не изменён; токен в рантайме действительно получается из localStorage WebView через evaluateJavascript — KDoc лишь цитировал дамп). Функциональные секреты СОХРАНЕНЫ: BuildConfig VK_CLIENT_ID/VK_CLIENT_SECRET (app/build.gradle.kts:26-27), VkSigner APP_ID/APP_SECRET (:45-46) — «оставляем, приложение не может работать»; публичные app_secret официальных/реверснутых клиентов в доках (HISTORY_ARCHIVE, реверс.звонки-протокол.md, VKID_SDK_ANALYSIS) — «пока не трогать». Верификация: rg по всем 484 git-файлам — живых vk1.a.*/eyJ-значений 0. Остаточный риск: токены остаются в git-ИСТОРИИ (b2f66220, 213115f4) — при хоть каком-то внешнем доступе к репо нужен git filter-repo/BFG + завершение всех сессий VK; часть logout_hash/device_id сознательно не маскировалась (хэши, не ключи).
 
 **Проверка юзером:** (1) Лента: кнопка «меню ленты» (MenuOpen) в ПРАВОМ углу верхней панели, открывает панель разделов; при переходе на другой экран кнопка исчезает, чужие actions не затираются; (2) Меню ленты → «Реакции»: вкладки «Клипы» и «Видео» показывают превью лайкнутых видео (длительность/название), клик → плеер, возврат с сохранённым скроллом; пустые вкладки → «Нет реакций»; Все/Посты/Комментарии — как раньше; (3) лента/сообщество: тап по карточке репоста (включая фото) открывает пост-оригинал ЦЕЛИКОМ; длинный текст репоста — «Показать ещё»; фото/видео внутри репоста открывают просмотр, а не пост; (4) пост с 2+ видео (при включённой «Карусель фото в постах») — карусель: свайп/стрелки/счётчик «n/N», клик → плеер; одно видео или настройка выкл — прежний вид; (5) в репо токены отображаются как vk1.a.XXXXX/XXXXX; приложение собирается и секреты работают как раньше.
@@ -12310,13 +12310,13 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 **Root-cause:**
 1. **VKApiClient #38 auto-offline**: после 3 IOException/Timeout/DNS-ошибок за 60с `callInternal` ставит `prefs.setPrivacyOfflineMode(true)` (VKApiClient:10775).
 2. **`isOffline()` учитывает этот преф** (`NetworkMods.isOfflineForced(snap)` = `snapshot.privacyOfflineMode` || сеть офлайн) → все **293 гейта** `if (isOffline())` в VKApiClient начинают молча возвращать пустоту БЕЗ сетевых запросов.
-3. **ДЕДЛОК**: преф снимался ТОЛЬКО успешной авторизацией (ExchangeAuthRepository:548/1073/2343); сетевые watcher'ы SovaApp (default-network-changed:2118, offline→online:2209) сбрасывали только счётчик ошибок, НЕ преф; если ConnectivityManager не считал сеть потерянной (isбоевый Wi-Fi, switch без onLost/onAvailable-цикла) — `isOnlineFlow` не срабатывал → режим висел до перезапуска приложения, API навсегда пустой.
+3. **ДЕДЛОК**: преф снимался ТОЛЬКО успешной авторизацией (ExchangeAuthRepository:548/1073/2343); сетевые watcher'ы VkMintApp (default-network-changed:2118, offline→online:2209) сбрасывали только счётчик ошибок, НЕ преф; если ConnectivityManager не считал сеть потерянной (isбоевый Wi-Fi, switch без onLost/onAvailable-цикла) — `isOnlineFlow` не срабатывал → режим висел до перезапуска приложения, API навсегда пустой.
 4. **Почему первым ломается Музыка**: самый тяжёлый запрашиватель (первая страница 50 треков ~163KB + фоновая предзагрузка всех страниц + плейлисты + рекомендации) — первым набирает 3 сбоя после Wi-Fi-свитча (stale keep-alive на мёртвом интерфейсе, DNS TTL, IPv6/MTU роутера — перехватываются интерцепторами не на 100%). На мобильной сети сбоев нет → режим не включается → «на мобильной всё работает».
 5. **Усилитель — бесчестный UI**: офлайн-гейт `audioGetWithCount` возвращал `Pair(0, emptyList())` молча → MusicScreen показывал «Нет музыки» (errCode=0) вместо правды; пользователь не мог понять, что случилось и как выйти.
 
 **Фиксы (Fix #367, #MUSIC-NET-DIAG):**
 - **VKApiClient**: маркер `autoOfflineAt` (момент АВТО-трипа; преф ставится в true ТОЛЬКО авто-трипом — ручного переключателя нет, снятие безопасно всегда) + `isAutoOfflineActive()` + `suspend clearAutoOffline()`; **гейт callInternal**: если авто-офлайн и кулдаун 30с истёк — запрос пропускается как self-heal probe (успех → режим снят немедленно в блоке успеха; провал → перезапуск трипа — цикл сам себя ограничивает); **успешный ответ** при авто-офлайне снимает режим сразу.
-- **SovaApp**: default-network-changed listener и offline→online collector теперь снимают застрявший авто-офлайн (`keepAliveScope.launch { clearAutoOffline() }`) — смена сети/восстановление сети = мгновенное самолечение, не только сброс счётчика.
+- **VkMintApp**: default-network-changed listener и offline→online collector теперь снимают застрявший авто-офлайн (`keepAliveScope.launch { clearAutoOffline() }`) — смена сети/восстановление сети = мгновенное самолечение, не только сброс счётчика.
 - **MusicScreen**: (1) честная предпроверка сети ДО запроса («Нет сети. Подключитесь…» вместо «Нет музыки»); (2) ветка `isAutoOfflineActive()` в when пустой первой страницы: «Музыка остановлена: 3 сетевых сбоя подряд → авто-офлайн (частая причина — нестабильный Wi-Fi). Нажмите «Повторить»»; (3) в catch — тип IOException в сообщении; (4) кнопка **«Повторить»** в блоке ошибки (MyMusicTab, новый параметр onRetry) → clearAutoOffline + перезагрузка (reloadTick); (5) авто-перезагрузка при возврате сети (isOnlineFlow collect → reloadTick++) — `LaunchedEffect(reloadTick)` вместо Unit.
 
 **Проверка юзером:** (1) подключиться к «проблемному» Wi-Fi → открыть Музыку: если сбои сети — экран покажет честную причину («Нет сети»/«3 сбоя подряд → авто-офлайн») и кнопку «Повторить» вместо вечного «Нет музыки»; (2) нажать «Повторить» → музыка возвращается (или повторный честный отказ с причиной); (3) переключить Wi-Fi↔мобильную при открытом разделе → авто-восстановление ≤30с без перезапуска приложения; (4) logcat-метки: `#MUSIC-NET-DIAG` (auto-offline cleared / probe), `NetRetry` (тип IOException: SocketTimeout/UnknownHost/ConnectException — укажет на природу роутера/провайдера); (5) если сбои продолжаются на конкретном Wi-Fi — это уже уровень сети (роутер/провайдер/DPI к аудио-CDN), приложение теперь не застревает и говорит правду.
@@ -12329,8 +12329,8 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 **Root-cause:**
 1. **Fix #368:** кнопка «меню ленты» (Fix #363, TopAppBar через ScreenTopBar.configure) писала `showRightPanel=true`, но вызов `FeedRightPanel(...)` стоял ПОСЛЕ двух ранних `return` композиции FeedScreen: `if (loading) { SkeletonFeedList; return }` и `if (errorText != null && posts.isEmpty()) { ErrorView; return }` → на скелетоне холодного старта и на error-экране (частый случай после авто-офлайна #38) панель вообще не в композиции — клик «в пустоту»; бонус-баг: showRightPanel оставался true → панель «сама выскакивала» после загрузки. Гипотезы про stale-сеттер/двойной бар/чужой стейт опровергнуты разведкой (26-1-a).
-2. **Fix #369/370:** полного logout не было на боковой панели (только глубоко в ProfileScreen без подтверждения); мёртвый код: диалог «Выйти из аккаунта?» в SovaNavHost существовал (:2498-2512), но `showLogoutDialog` нигде не ставился в true. Реальные дыры logout: (a) in-memory кэши (VideoHolder/PostHolder/FeedScrollHolder/FeedDataHolder/StoriesHolder) не сбрасывались → при входе другим аккаунтом мигала чужая лента/посты; (b) web_token оставался в localStorage m.vk.ru (clearAllWebTokenKeys — private, только внутри auth-flow) → следующий AuthActivity мог молча подобрать web_token ПРЕДЫДУЩЕГО аккаунта.
-3. **#CALLS-DNS-PIN:** DNS-пин звонков существовал только в коде: OkHttp Dns в SovaApp.onCreate с ЗАХАРДКОЖЕННЫМ IPv4 `155.212.204.12` для calls.okcdn.ru/calls-test.okcdn.ru/api.mycdn.me (OkHttp/InetAddress не резолвит calls.okcdn.ru — IPv6-проблема); UI и prefs-ключа не было вовсе — «сменить IP вручную» было невозможно.
+2. **Fix #369/370:** полного logout не было на боковой панели (только глубоко в ProfileScreen без подтверждения); мёртвый код: диалог «Выйти из аккаунта?» в VkMintNavHost существовал (:2498-2512), но `showLogoutDialog` нигде не ставился в true. Реальные дыры logout: (a) in-memory кэши (VideoHolder/PostHolder/FeedScrollHolder/FeedDataHolder/StoriesHolder) не сбрасывались → при входе другим аккаунтом мигала чужая лента/посты; (b) web_token оставался в localStorage m.vk.ru (clearAllWebTokenKeys — private, только внутри auth-flow) → следующий AuthActivity мог молча подобрать web_token ПРЕДЫДУЩЕГО аккаунта.
+3. **#CALLS-DNS-PIN:** DNS-пин звонков существовал только в коде: OkHttp Dns в VkMintApp.onCreate с ЗАХАРДКОЖЕННЫМ IPv4 `155.212.204.12` для calls.okcdn.ru/calls-test.okcdn.ru/api.mycdn.me (OkHttp/InetAddress не резолвит calls.okcdn.ru — IPv6-проблема); UI и prefs-ключа не было вовсе — «сменить IP вручную» было невозможно.
 4. **Fix #377 (глубокий сон):** H1 — web-токен истекает за сон (TTL 15мин-24ч) → первое ON_RESUME запускает SILENT AuthActivity → WebView-cookie-polling таймаут 30с на ещё-поднимающемся после Doze Wi-Fi → RESULT_CANCELED → silentFailCount++ → StartupLoadingScreen НАВСЕГДА: boot-эффект не перезапускается; Fix #341 (retry при возврате сети) подписан на EMISSION isOnlineFlow — а StateFlow давно true, новых emission не будет (сеть поднялась ДО открытия приложения); throttle'ы 15с/20с глушат повторы. Второй ON_STOP→ON_RESUME срабатывал #BG-AUTH-LOOP-FIX — потому «сворачивание/разворачивание помогало». H2 — первый API-вызов после Doze ловит err 5/1117, ensureFreshToken идёт в неготовую сеть. H3 — даже при снятии авто-офлайна (Fix #367) лента не перезагружалась: LaunchedEffect(Unit) + cache-guard FeedDataHolder не перезапускаются на resume. Усилители: NetworkObserver держал STALE isOnline (колбэки после Doze не приходили); OkHttp connection pool полон мёртвых keep-alive TCP (evictAll только на сетевых событиях); CookieManager.flush() отсутствовал в критических местах (Doze убивает WebView-процесс → незаflush'енные ротации remixsid терялись).
 5. **Fix #371-376:** профиль рендерил посты СВОИМ WallPostCard (ProfileScreen:1682-1992) без переиспользования PostCard ленты: текст maxLines=10 жёстко без «Показать ещё» и без linkifyVkText; видео всегда стопком (PostVideoCarousel не подключён); RepostBlock без clickable (репост не открывался) и с жёстким maxLines=5; onPostClick вообще не передавался в WallPostCard (клик-заглушка {}); нет лейбла «Закреплённый пост»; link/poll/doc-вложения не рендерились. Данные при этом уже полные (parsePostMini парсит copy_history/is_pinned/link/poll/doc).
 
@@ -12338,9 +12338,9 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - **Fix #368 (#FEED-MENU-RENDER):** вызов FeedRightPanel ПЕРЕНЕСЁН (не скопирован) выше обоих ранних return'ов, непосредственно перед `if (loading)`; т.к. это inline-оверлей (в отличие от ModalBottomSheet в NotificationsScreen), обёрнут в `Box(Modifier.zIndex(1f))` — иначе Scrim/панель рисовались бы ПОД карточками ленты (сиблинги в порядке композиции). При visible=false клики не перехватываются (Scrim внутри AnimatedVisibility, BackHandler enabled=visible). Все аргументы объявлены выше точки вставки.
 - **Fix #369 (#DRAWER-LOGOUT):** закреплённый хвост drawer: Настройки → **«Выйти из аккаунта»** (NavigationDrawerItem, Icons.AutoMirrored.Filled.Logout, selected=false) → Выйти из приложения (finishAffinity — это ДРУГОЕ действие, различие задокументировано в коде). onClick: закрыть drawer → показать ОЖИВЛЁННЫЙ диалог: «Выйти из аккаунта?» / «Сессия будет остановлена, куки авторизации будут очищены. Потребуется повторный вход.» / Выйти→logout, Отмена. «Выйти из аккаунта» добавлен в longestDrawerText (расчёт ширины drawer).
 - **Fix #370 (#LOGOUT-HOLDER-CLEAR / #LOGOUT-WEBTOKEN-CLEAR):** (a) holders получили public clear() (VideoHolder: last+active; PostHolder: last+lastGroups; FeedScrollHolder: position; FeedDataHolder/StoriesHolder — уже были) и вызываются ВСЕ через обёртку onLogoutWithHoldersClear ДО mainActivity-логики (longPoll stop → signOut → clearAllVkCookies 34 куки + storage.clear() → AuthActivity) — из drawer-диалога и из ProfileScreen.onLogout; (b) logout-intent несёт EXTRA_AUTH_REASON="logout" → AuthActivity → VkAuthWebViewScreenV2: на ПЕРВОЙ загруженной странице origin m.vk.ru/m.vk.com (one-shot) выполняется новый WebTokenAuth.clearAllWebTokenKeysNow(view) (не-suspend evaluateJavascript; JS вынесен в CLEAR_WEB_TOKEN_KEYS_JS, clearAllWebTokenKeys private→internal) — очистка именно после загрузки origin (localStorage привязан к документу), до логина — свежий токен новой сессии не затрагивается, старый не подбирается.
-- **#CALLS-DNS-PIN (ручной IP DNS-пина звонков):** SovaPrefs: новый ключ `calls_dns_pin_ip` (stringPreferencesKey; Keys:1427 / дефолт-маппинг :468 / Snapshot-поле callsDnsPinIp с дефолтом "" :1215 / сеттер setCallsDnsPinIp(trim) :868; оба места конструирования Snapshot — именованные, сборка не ломается). SovaApp Dns-объект: pinned-мапа → pinnedHosts setOf + file-level `AUTO_IP = "155.212.204.12"` + `isValidIpv4` (4 октета 0..255, ведущие нули запрещены — InetAddress трактует «012» как восьмеричную запись); lookup читает @Volatile prefsSnapshot на КАЖДОЕ новое соединение: непустой валидный ручной IP перекрывает AUTO_IP БЕЗ перезапуска приложения (живой WS-сигналинг не рвётся — возьмёт IP при reconnect; невалидный/пустой → авто; прокси-режим не конфликтует — hostname резолвит прокси). SettingsScreen → вкладка «Звонки» → секция «DNS-пин звонко» (после «Программный декодер видео», до «Входящие звонки»): пояснение (3 домена, сигналинг+vchat API, ICE/TURN резолвится libwebrtc отдельно — честно), OutlinedTextField с локальным remember-стейтом (не сохраняет промежуточные невалидные значения), placeholder «авто (155.212.204.12)», isError+валидация (blank разрешён), клавиатура Number с авто-заменой «,»→«.» (ru-клавиатура), кнопки «Сохранить» (тост «IP сохранён — применится для новых соединений звонко») и «Сбросить (авто)». Двойная валидация: UI (кнопка disabled) + lookup (мусор в сторе игнорируется → звонки не ломаются).
-- **Fix #377 (#DOZE-RESUME-AUTH), 5 компонент:** (1) NetworkObserver.refreshNow() — принудительный fresh-снапшот checkOnline() в _isOnline (идемпотентен), вызывается ПЕРВЫМ делом в MainActivity.onResume при isBackgrounded — весь resume-контур видит РЕАЛЬНУЮ сеть, а не значение до сна; (2) maybeProactiveTokenRefresh: токен на исходе (<5 мин до expiresAt) или invalidated → ensureFreshToken(force=true) в appScope (лёгкий HTTP Path 1.5 ~200мс, до AuthActivity; успех → authVersion++ в Main → главный экран БЕЗ AuthActivity; throttle 30с; гонок нет — launchAuth гуардится authActivityShowing/throttle/hasValidToken); (3) scheduleSilentAuthRetryAfterCancel: после RESULT_CANCELED от SILENT-попытки одноразовый retry через 20с (все guard'ы: не в фоне, не offline, токена нет, AuthActivity не показана, сеть поднялась; через общий launchAuth — вторая AuthActivity наслоиться не может); (4) Fix #341 тело retry вынесено в networkRestoredAuthRetry + НЕМЕДЛЕННАЯ однократная проверка ПЕРЕД collect (StateFlow давно true без emission — главный стопор старой петли); (5) connectionPool.evictAll() на resume при фоне >5 мин (мёртвые keep-alive после Doze → IOException-каскад и трип авто-офлайна #38); SovaApp.foregroundTicks (MutableStateFlow, инкремент немедленно в ProcessLifecycleOwner ON_RESUME до debounce) → FeedScreen LaunchedEffect: tick>0 && errorText!=null && posts.isEmpty() && !isOffline && !privacyOfflineMode → reloadFeed() (паттерн 1:1 MusicScreen Fix #367) + авто-reload при возврате сети пока экран открыт с ошибкой; CookieManager.flush() добавлен в 4 места: AuthActivity.onTokenExchange, RemixsidCapturer.capture/snapshotCookies, silent-ветка VkAuthWebViewScreenV2 после успешного обмена, SovaApp foreground cookie-sync.
-- **Fix #371-376 (#PROFILE-POST-PARITY):** (371) текст поста WallPostCard — паттерн Fix #345 + linkifyVkText (textExpanded/textOverflowed/hasVisualOverflow/«Показать ещё»; клик: свёрнутый→развернуть, развёрнутый/короткий→onPostClick; ссылки/упоминания перехватываются раньше); (372) видео поста: carouselEnabled && size>1 → PostVideoCarousel (общий компонент Fix #366), иначе прежний стопк; (373) RepostBlock: + onPostClick параметр, Card .clickable{onPostClick(repost)} после .clip (вложенные просмотр-клики перехватывают раньше), текст репоста expand 5→∞ + linkify, видео репоста — то же ветвление карусель/стопк; (374) onPostClick прокинут в вызов WallPostCard из ProfileScreen (обёртка SovaNavHost PostHolder.last+buildRoute уже работала; UserProfileScreen получил паритет автоматически); (375) лейбл «Закреплённый пост» (post.isPinnedBool) + индикатор копирайта; (376) link/page → LinkCard + PollCard (реальное голосование pollsAddVote) + DocAttachmentCard — сделаны internal в FeedScreen (только модификаторы видимости), нормализация URL Fix #51-A (trim/https-досхематизация/scheme-host/resolveActivity/честные тосты).
+- **#CALLS-DNS-PIN (ручной IP DNS-пина звонков):** VkMintPrefs: новый ключ `calls_dns_pin_ip` (stringPreferencesKey; Keys:1427 / дефолт-маппинг :468 / Snapshot-поле callsDnsPinIp с дефолтом "" :1215 / сеттер setCallsDnsPinIp(trim) :868; оба места конструирования Snapshot — именованные, сборка не ломается). VkMintApp Dns-объект: pinned-мапа → pinnedHosts setOf + file-level `AUTO_IP = "155.212.204.12"` + `isValidIpv4` (4 октета 0..255, ведущие нули запрещены — InetAddress трактует «012» как восьмеричную запись); lookup читает @Volatile prefsSnapshot на КАЖДОЕ новое соединение: непустой валидный ручной IP перекрывает AUTO_IP БЕЗ перезапуска приложения (живой WS-сигналинг не рвётся — возьмёт IP при reconnect; невалидный/пустой → авто; прокси-режим не конфликтует — hostname резолвит прокси). SettingsScreen → вкладка «Звонки» → секция «DNS-пин звонко» (после «Программный декодер видео», до «Входящие звонки»): пояснение (3 домена, сигналинг+vchat API, ICE/TURN резолвится libwebrtc отдельно — честно), OutlinedTextField с локальным remember-стейтом (не сохраняет промежуточные невалидные значения), placeholder «авто (155.212.204.12)», isError+валидация (blank разрешён), клавиатура Number с авто-заменой «,»→«.» (ru-клавиатура), кнопки «Сохранить» (тост «IP сохранён — применится для новых соединений звонко») и «Сбросить (авто)». Двойная валидация: UI (кнопка disabled) + lookup (мусор в сторе игнорируется → звонки не ломаются).
+- **Fix #377 (#DOZE-RESUME-AUTH), 5 компонент:** (1) NetworkObserver.refreshNow() — принудительный fresh-снапшот checkOnline() в _isOnline (идемпотентен), вызывается ПЕРВЫМ делом в MainActivity.onResume при isBackgrounded — весь resume-контур видит РЕАЛЬНУЮ сеть, а не значение до сна; (2) maybeProactiveTokenRefresh: токен на исходе (<5 мин до expiresAt) или invalidated → ensureFreshToken(force=true) в appScope (лёгкий HTTP Path 1.5 ~200мс, до AuthActivity; успех → authVersion++ в Main → главный экран БЕЗ AuthActivity; throttle 30с; гонок нет — launchAuth гуардится authActivityShowing/throttle/hasValidToken); (3) scheduleSilentAuthRetryAfterCancel: после RESULT_CANCELED от SILENT-попытки одноразовый retry через 20с (все guard'ы: не в фоне, не offline, токена нет, AuthActivity не показана, сеть поднялась; через общий launchAuth — вторая AuthActivity наслоиться не может); (4) Fix #341 тело retry вынесено в networkRestoredAuthRetry + НЕМЕДЛЕННАЯ однократная проверка ПЕРЕД collect (StateFlow давно true без emission — главный стопор старой петли); (5) connectionPool.evictAll() на resume при фоне >5 мин (мёртвые keep-alive после Doze → IOException-каскад и трип авто-офлайна #38); VkMintApp.foregroundTicks (MutableStateFlow, инкремент немедленно в ProcessLifecycleOwner ON_RESUME до debounce) → FeedScreen LaunchedEffect: tick>0 && errorText!=null && posts.isEmpty() && !isOffline && !privacyOfflineMode → reloadFeed() (паттерн 1:1 MusicScreen Fix #367) + авто-reload при возврате сети пока экран открыт с ошибкой; CookieManager.flush() добавлен в 4 места: AuthActivity.onTokenExchange, RemixsidCapturer.capture/snapshotCookies, silent-ветка VkAuthWebViewScreenV2 после успешного обмена, VkMintApp foreground cookie-sync.
+- **Fix #371-376 (#PROFILE-POST-PARITY):** (371) текст поста WallPostCard — паттерн Fix #345 + linkifyVkText (textExpanded/textOverflowed/hasVisualOverflow/«Показать ещё»; клик: свёрнутый→развернуть, развёрнутый/короткий→onPostClick; ссылки/упоминания перехватываются раньше); (372) видео поста: carouselEnabled && size>1 → PostVideoCarousel (общий компонент Fix #366), иначе прежний стопк; (373) RepostBlock: + onPostClick параметр, Card .clickable{onPostClick(repost)} после .clip (вложенные просмотр-клики перехватывают раньше), текст репоста expand 5→∞ + linkify, видео репоста — то же ветвление карусель/стопк; (374) onPostClick прокинут в вызов WallPostCard из ProfileScreen (обёртка VkMintNavHost PostHolder.last+buildRoute уже работала; UserProfileScreen получил паритет автоматически); (375) лейбл «Закреплённый пост» (post.isPinnedBool) + индикатор копирайта; (376) link/page → LinkCard + PollCard (реальное голосование pollsAddVote) + DocAttachmentCard — сделаны internal в FeedScreen (только модификаторы видимости), нормализация URL Fix #51-A (trim/https-досхематизация/scheme-host/resolveActivity/честные тосты).
 
 **Проверка юзером:** (1) Лента: кнопка «меню ленты» в верхней панели открывает меню СРАЗУ — на скелетоне загрузки, на экране ошибки/офлайна и после загрузки; после загрузки панель «сама» не выскакивает; (2) боковая панель: внизу закреплено Настройки → Выйти из аккаунта → Выйти из приложения; «Выйти из аккаунта» показывает предупреждение про остановку сессии и очистку кукисов; «Выйти» реально выходит (экран входа), «Отмена» ничего не делает; повторный вход другим аккаунтом — лента/посты/истории БЕЗ контента прежней сессии; (3) Настройки → Звонки → «DNS-пин звонко»: ввести кривой IP («300.1.1.1») — красная подсветка и «Сохранить» недоступна; ввести валидный → сохранить → значение переживает перезапуск; «Сбросить (авто)» возвращает встроенный 155.212.204.12; пусто = прежнее поведение; (4) глубокий сон: оставить телефон в сне на 15-30+ мин → открыть приложение — лента грузится САМА (при неудачном первом silent-обмене контент появится через ~20-50с сам, сворачивать не нужно); в logcat маркеры `refreshNow: stale → fresh`, `Proactive token refresh on resume`, `SILENT retry after cancel`, `foregroundTick=… — авто-reload`, `connectionPool.evictAll()`, `CookieManager.flush()`; (5) профиль: длинный пост — «Показать ещё»/разворот, тап по развёрнутому — пост целиком; 2+ видео — карусель (свайп/стрелки/«n/N», флаг «Карусель фото в постах» общий); репост кликается целиком → оригинал; закреплённая запись — лейбл; ссылки/опросы (с голосованием)/документы — рендерятся и работают; на чужом профиле то же самое.
 
@@ -12356,7 +12356,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - LazyColumn профиля обёрнут в `Column(fillMaxSize)`, сам список — `weight(1f)`; ПОД списком закреплена строка «Выйти из аккаунта» (HorizontalDivider + Row: иконка Logout 20dp primary + текст bodyMedium primary — стиль соседней строки «Редактировать профиль»; вертикальные пэддинги 12dp → touch-target ≥48dp).
 - Строка видна ВСЕГДА: сразу при входе в раздел, на любой вкладке контента (Стена/Музыка/Видео/Фото/Клипы/Статьи/Закладки), независимо от прокрутки; `navigationBarsPadding()` — не уезжает под жестовую навигацию (своего Scaffold нет — Fix #43-комментарий).
 - Добавлен диалог-подтверждение `showLogoutConfirm` — тот же текст, что у drawer-пункта (Fix #369): «Сессия будет остановлена, куки авторизации будут очищены. Потребуется повторный вход.» / Выйти / Отмена — обязательный guard, т.к. закреплённая кнопка легко нажимается случайно.
-- Confirm → `onLogout` — в SovaNavHost это уже обёртка `onLogoutWithHoldersClear` (Fix #370): сброс всех in-memory кэшей (holders) → longPoll stop → signOut → clearAllVkCookies + storage.clear() → AuthActivity. Старый последний-item Button удалён (единственная точка входа — дублирования нет; Button остаётся в error-ветке экрана).
+- Confirm → `onLogout` — в VkMintNavHost это уже обёртка `onLogoutWithHoldersClear` (Fix #370): сброс всех in-memory кэшей (holders) → longPoll stop → signOut → clearAllVkCookies + storage.clear() → AuthActivity. Старый последний-item Button удалён (единственная точка входа — дублирования нет; Button остаётся в error-ветке экрана).
 
 **Проверка юзером:** (1) открыть «Профиль» — строка «Выйти из аккаунта» с иконкой видна СРАЗУ внизу экрана, при прокрутке стены не уезжает; (2) тап → диалог с предупреждением; «Выйти» — реальный выход (экран входа), «Отмена» — ничего; (3) переключение вкладок профиля — кнопка на месте; (4) боковой drawer → «Выйти из аккаунта» работает как раньше (два входа в один и тот же безопасный logout); (5) контент профиля не перекрыт кнопкой (список заканчивается над divider).
 
@@ -12371,7 +12371,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - **Fix #380 #LOCKER-RELOCK-LOOP:** `LockerActivity.companion`: `lastUnlockAtMs` (@Volatile, private set) + `markUnlocked()` — ставится перед `finish()` в onUnlocked (охватывает и PIN-пад, и биометрию); grace-окно 5с (`unlockGraceActive()`) — onResume MainActivity пропускает перезапуск локера, флаг консюмится первым же пропущенным чеком (`consumeUnlockGrace()`) — реальный уход в фон после разблокировки блокируется как раньше; условие добавлено в оба resume-чека (cached-снапшот и cold-fallback runBlocking).
 - **Fix #380 #LOCKER-BOOT-SKIP:** `MainActivity.companion`: `lockerBootCheckDone` — static процесса (специально НЕ rememberSaveable: rotation переживает → локер не переспрашивается при повороте; process death сбрасывает → блокирует заново). Guard boot-эффекта теперь `lockerBootCheckDone && bootLocal && hasValidToken()`; флаг ставится в точке решения (токен жив) → silent re-login и process-death restore доходят до locker-чека. При logout/offline-back флаг не сбрасывается — после интерактивного входа локер не переспрашивается (паритет со старым поведением).
 - **Fix #380 #LOCKER-UX:** SecurityTab — честные подписи (subtitle-перегрузка ToggleRow): «PIN-код» — «Блокировка при запуске приложения…»/«PIN установлен.», биометрия и фон-блокировка получили пояснения; при СОЗДАНИИ PIN автоматически включается «Блокировка при возврате из фона» (иначе включённый PIN не блокировал сворачивание и выглядел нерабочим; отключается тумблером).
-- **Fix #380 #LOCKER-MANAGE:** новая строка «Сменить PIN-код» (видна при установленном PIN, стиль строк «Аккаунт VK», иконка Lock) → тот же PinSetupDialog → setLockerPinHash; устаревший комментарий SovaPrefs («подсистема ЧАСТИЧНО МЁРТВАЯ») переписан.
+- **Fix #380 #LOCKER-MANAGE:** новая строка «Сменить PIN-код» (видна при установленном PIN, стиль строк «Аккаунт VK», иконка Lock) → тот же PinSetupDialog → setLockerPinHash; устаревший комментарий VkMintPrefs («подсистема ЧАСТИЧНО МЁРТВАЯ») переписан.
 - **Fix #380 #PIN-DIALOG-FOCUS:** FocusRequester на поле подтверждения (LaunchedEffect(step)) — клавиатура печатает в активное поле после авто-перехода шага.
 
 **Проверка юзером:** (1) сборка проходит — все 7 ошибок компиляции исчезли (Fix #379); (2) Настройки → Защита → «PIN-код»: тумблер → диалог «Создайте PIN-код» → 4 цифры → авто-переход к «Подтвердите» с фокусом в поле → «Сохранить»; тумблер включается, подпись меняется на «PIN установлен», появляется строка «Сменить PIN-код»; (3) свернуть приложение и вернуться — запрашивается PIN (создание PIN включило «Блокировку при возврате из фона»); ввести верный PIN — разблокирует ОДИН раз, без повторного запроса; (4) «Сменить PIN-код» → новый PIN сохраняется, старый больше не подходит; (5) «Биометрия (требует PIN)» → на экране блокировки появляется кнопка отпечатка (если устройство поддерживает); (6) перезагрузка телефона / force-stop → открытие приложения → PIN запрашивается на холодном старте даже если токен молча обновлялся; (7) выключить «Блокировку при возврате из фона» → сворачивание/разворачивание не блокирует (по настройке), холодный старт блокирует.
@@ -12389,20 +12389,20 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - **Fix #381 #PIN-SUBTITLE-HONEST:** подпись тумблера «PIN-код» теперь three-state: хеша нет → «…При первом включении предложит создать PIN»; PIN + включено → «…PIN установлен.»; PIN + выключено → «PIN установлен, но блокировка выключена — включите тумблер.»
 - **Fix #382 #DL-DISPATCH-PERSIST:** персистентная очередь TrackDownloadManager — файл appContext.filesDir/downloads/music/.pending_queue.json (ФИКСИРОВАННЫЙ путь, не таскается при reconfigurePath/SD), JSON-массив {track (Gson, все @SerializedName-поля), subDir, index, total}; атомарная запись (persistMutex → снимок полного остатка → .tmp → rename, fallback copyTo+delete), ошибки I/O проглатываются с логом (персистентность не ломает загрузку). Хуки записи: enqueueRequest, queueWorker после каждого poll (файл = остаток очереди), removeDownload при отмене из очереди, clearAllDownloads («[]»), enqueueAll (одна запись на батч).
 - **Fix #382 #DL-DISPATCH-RESTORE:** restorePersistedQueue() ровно один раз из init-пути (после refreshFromDisk): нескачанные треки возвращаются в очередь в исходном FIFO-порядке с сохранением плейлистных subDir/index/total; dedup зеркалит enqueueRequest (COMPLETED/DOWNLOADING пропускаются, дубли очереди пропускаются); у восстановленных треков url ОБНУЛЯЕТСЯ (VK-ссылки живут часы) — свежая ссылка запрашивается через audioGetById в момент взятия трека воркером (resolve-fail → FAILED(NETWORK), retry-able). Foreground-сервис поднимается ОДИН раз на батч. Лог «DL-DISPATCH-RESTORE: restored N pending downloads from disk».
-- **Fix #382 #DL-WAKELOCK:** MusicDownloadService.onCreate — PARTIAL_WAKE_LOCK «PinoK:MusicDownload» + WifiLock WIFI_MODE_FULL_HIGH_PERF «PinoK:MusicDownloadWifi» (setReferenceCounted(false), каждый acquire в try/catch+null-check); onDestroy — release при isHeld. CPU/Wi-Fi не усыпляются, пока сервис жив (а жив он = есть активные загрузки).
+- **Fix #382 #DL-WAKELOCK:** MusicDownloadService.onCreate — PARTIAL_WAKE_LOCK «VK Mint:MusicDownload» + WifiLock WIFI_MODE_FULL_HIGH_PERF «VK Mint:MusicDownloadWifi» (setReferenceCounted(false), каждый acquire в try/catch+null-check); onDestroy — release при isHeld. CPU/Wi-Fi не усыпляются, пока сервис жив (а жив он = есть активные загрузки).
 - **Fix #382 #DL-BATTERY-HINT:** Настройки → Музыка → секция «Фоновая загрузка» — строка «Оптимизация батареи»: показывает реальное состояние (PowerManager.isIgnoringBatteryOptimizations), тап → системный диалог ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (fallback на системный список, если прошивка убрала direct-intent). Без отключения оптимизации OEM-менеджеры убивают процесс с очередью — ключевой системный рычаг. Поясняет: очередь сохраняется на диск и восстанавливается после перезапуска.
 
-**Проверка юзером:** (1) Настройки → Защита → тумблер «PIN-код» → появляется диалог с точками и ЦИФРОВЫМ ПАДОМ (без клавиатуры) → ввести 4 цифры → авто-переход «Подтвердите» → ввести те же 4 → диалог закрывается, Toast «PIN-код установлен», тумблер включился; (2) намеренно ввести другой PIN на подтверждении → вибрация + «PIN-коды не совпадают — придумайте новый» + сброс к вводу; (3) «Сменить PIN-код» → тот же пад → Toast «PIN-код изменён», старый PIN больше не подходит; (4) во время ввода PIN проскроллить список «Защиты» вверх-вниз — диалог НЕ закрывается; (5) загрузки: поставить 10-20 треков в очередь → свернуть приложение (или убить процесс / перезагрузить телефон) → открыть PinoK → нескачанные треки продолжили качаться сами (в logcat «DL-DISPATCH-RESTORE: restored N pending downloads from disk»); (6) во время фоновой загрузки 10+ минут прогресс не замирает (в logcat «DL-WAKELOCK: PARTIAL_WAKE_LOCK acquired»); (7) Настройки → Музыка → «Фоновая загрузка» → «Оптимизация батареи: ВКЛЮЧЕНА» → тап → системный диалог → «Разрешить» → строка показывает «Отключена»; (8) отменить трек из очереди → перезапуск приложения → он не resurrectился; (9) плейлист-очередь переживает рестарт с папкой и нумерацией «01. Artist — Title.m4a».
+**Проверка юзером:** (1) Настройки → Защита → тумблер «PIN-код» → появляется диалог с точками и ЦИФРОВЫМ ПАДОМ (без клавиатуры) → ввести 4 цифры → авто-переход «Подтвердите» → ввести те же 4 → диалог закрывается, Toast «PIN-код установлен», тумблер включился; (2) намеренно ввести другой PIN на подтверждении → вибрация + «PIN-коды не совпадают — придумайте новый» + сброс к вводу; (3) «Сменить PIN-код» → тот же пад → Toast «PIN-код изменён», старый PIN больше не подходит; (4) во время ввода PIN проскроллить список «Защиты» вверх-вниз — диалог НЕ закрывается; (5) загрузки: поставить 10-20 треков в очередь → свернуть приложение (или убить процесс / перезагрузить телефон) → открыть VK Mint → нескачанные треки продолжили качаться сами (в logcat «DL-DISPATCH-RESTORE: restored N pending downloads from disk»); (6) во время фоновой загрузки 10+ минут прогресс не замирает (в logcat «DL-WAKELOCK: PARTIAL_WAKE_LOCK acquired»); (7) Настройки → Музыка → «Фоновая загрузка» → «Оптимизация батареи: ВКЛЮЧЕНА» → тап → системный диалог → «Разрешить» → строка показывает «Отключена»; (8) отменить трек из очереди → перезапуск приложения → он не resurrectился; (9) плейлист-очередь переживает рестарт с папкой и нумерацией «01. Artist — Title.m4a».
 
 ---
 
 ### Симптом (пользователь)
 - «Отключение пин кода корректно, пин код не блокирует приложение, пин код в ядре приложения?» — PIN отключается нормально, но при включённом PIN приложение НЕ блокируется.
-- «При открытии Pinok виднеется черный фон от авторизации… можно както его скрыть и просто показать всплывающее сообщение о подключении к сети и указать тип сети, но если свернуть и развернуть то проходит сплеш и все работает» (скриншот Screenshot_20260909_131000.png, логкат сессии 13:09).
+- «При открытии VkMint виднеется черный фон от авторизации… можно както его скрыть и просто показать всплывающее сообщение о подключении к сети и указать тип сети, но если свернуть и развернуть то проходит сплеш и все работает» (скриншот Screenshot_20260909_131000.png, логкат сессии 13:09).
 - «Если просматривать в сообществах в разделе видео видео ролики то нет: кнопок поделится, кнопок лайк, комментариев (если доступны), количество просмотро».
 
 ### Root-cause
-- **#384 чёрный фон**: Theme.PinoK.Silent (Fix #339) делал прозрачным только ОКНО AuthActivity, но Compose-контент внутри рисовался поверх: M3 Surface красит весь экран colorScheme.surface (тёмная тема ≈ чёрный), VkAuthWebViewScreenV2 в silent-режиме рисовал WebView + оверлей «Сессия найдена, получаем токен…» — silentMode влиял только на timeout (30с) и статус-текст, но не на видимость. Логкат: чёрный экран висел 104 секунды (13:09:35→13:11:19). Свернуть/развернуть помогало, потому что resume триггерил цепочку Fix #377 (refreshNow → evictAll → proactive refresh) и приложение достраивало вход.
+- **#384 чёрный фон**: Theme.VkMint.Silent (Fix #339) делал прозрачным только ОКНО AuthActivity, но Compose-контент внутри рисовался поверх: M3 Surface красит весь экран colorScheme.surface (тёмная тема ≈ чёрный), VkAuthWebViewScreenV2 в silent-режиме рисовал WebView + оверлей «Сессия найдена, получаем токен…» — silentMode влиял только на timeout (30с) и статус-текст, но не на видимость. Логкат: чёрный экран висел 104 секунды (13:09:35→13:11:19). Свернуть/развернуть помогало, потому что resume триггерил цепочку Fix #377 (refreshNow → evictAll → proactive refresh) и приложение достраивало вход.
 - **#385 PIN**: boot-эффект MainActivity — при cold start с протухшим web_token (истекает ~15 мин, Fix #339) выполнялась ветка auth, а не локера. После успешного silent re-login LaunchedEffect перезапускался (currentAuthVersion++) и ранний return `bootLocal=true && hasValidToken()=true` ПРОПУСКАЛ ветку запуска LockerActivity → приложение открывалось без PIN. Дыра ловила ГЛАВНЫЙ повседневный сценарий (протухший web_token при каждом холодном старте).
 - **#383 видео сообществ**: путь видео сообществ уже единый с лентой (CommunityScreen → VideoHolder.open → VideoPlayerScreen) — рвался сам плеер: блок title+views+actions рендерился только в портрете (!useFillMax), в fullscreen/landscape не было НИЧЕГО; в action-row существовали только Лайк+Просмотры — «Поделиться» и «Комментарии» отсутствовали как класс (ни UI, ни API); videoGet/videoGetById не парсили comments/can_comment.
 
@@ -12411,10 +12411,10 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - **#AUTH-NETWORK-TOAST** (MainActivity.launchAuth): при SILENT-запуске Toast «Подключение к VK… (Wi-Fi / мобильная сеть / Ethernet)» или «Нет сети — подключение к VK отложено» — NetworkObserver.connectionType(). Ровно запрошенное юзером поведение: скрыть фон, показать всплывающее сообщение о сети с типом.
 - **#LOCKER-AFTER-AUTH** (MainActivity): флаг lockerVerifiedThisSession (смерть процесса сбрасывает = новая сессия) — ставится во всех трёх местах запуска локера (boot / onResume cached / onResume fallback); authLauncher RESULT_OK: PIN включён && сессия не разблокирована → LockerActivity немедленно. Повторные фоновые silent-auth посреди сессии не заваливают PIN-падом.
 - **#COMMUNITY-VIDEO-PARITY** (VideoPlayerScreen.kt + VKApiClient.kt, субагент): VideoActionsRow = Лайк (likes.add/delete type=video, реальные ownerId/videoId+access_key, оптимистичный апдейт + откат при ошибке) + Комментарии (VideoCommentsSheet: video.getComments extended + video.createComment, авторы-юзеры и сообщества, честные loading/error+«Повторить»/empty, can_comment==0 → ввод скрыт) + Поделиться (VideoShareSheet: в чат sendVideoToChat с video-attachment, на стену wallPostWithAttachments, ссылка в буфер) + Просмотры (views из video.get extended). Immersive-стрип справа для fullscreen/landscape (лайк/комменты/шер/просмотры вместе с контролами); портретный блок weight(1f)+verticalScroll. Работает для ВСЕХ видео единого плеера (лента/сообщества/профиль/закладки/VideoScreen).
-- **Ответ на «пин код в ядре приложения?»**: НЕТ — PIN живёт в app-слое: re.pinok.locker.LockerActivity (UI+хеш SHA-256 «sova2-salt:»), хуки MainActivity (boot-эффект + onResume-чек), хранение в SovaPrefs (lockerEnabled/lockerPinHash/lockerOnBackground/lockerBiometric), UI настроек — SettingsScreen «Защита». Core-модули PIN не касаются.
+- **Ответ на «пин код в ядре приложения?»**: НЕТ — PIN живёт в app-слое: vk.mint.locker.LockerActivity (UI+хеш SHA-256 «vkmint-salt:»), хуки MainActivity (boot-эффект + onResume-чек), хранение в VkMintPrefs (lockerEnabled/lockerPinHash/lockerOnBackground/lockerBiometric), UI настроек — SettingsScreen «Защита». Core-модули PIN не касаются.
 
 ### Проверка пользователем (сборка волны 28 на Windows)
-1. **Чёрный фон**: открыть PinoK при протухшей сессии — чёрного экрана с «Сессия найдена…» быть НЕ должно; виден сплеш/последний кадр + toast «Подключение к VK… (Wi-Fi)» с типом сети; после silent-auth приложение открывается само (свернуть/развернуть больше не требуется).
+1. **Чёрный фон**: открыть VK Mint при протухшей сессии — чёрного экрана с «Сессия найдена…» быть НЕ должно; виден сплеш/последний кадр + toast «Подключение к VK… (Wi-Fi)» с типом сети; после silent-auth приложение открывается само (свернуть/развернуть больше не требуется).
 2. **PIN**: включить PIN в Настройки→Защита → убить приложение → открыть снова: PIN-пад обязан появиться и при живом токене, и при протухшем (тихая реавторизация в фоне). Разблокировать → в сессии больше не спрашивает до следующего холодного старта.
 3. **Видео сообществ**: Сообщество → Видео → ролик: под плеером лайк/комменты/поделиться/просмотры; фуллскрин — стрип справа вместе с контролами; лайк меняет счётчик на реальном API; комментарий отправляется и появляется; «Поделиться» → чат/стена/ссылка; при ошибке API — честный текст + «Повторить».
 4. Если что-то не так — прислать логкат и скриншот.
@@ -12434,27 +12434,27 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - (заметка в архиве) «В проигрывателе аудио нужна отдельная кнопка "Добавить в мою музыку"».
 
 ### Root-cause
-- **#393 каналы не открываются** (снапшоты 29-a): в вебе VK канал сообщества — peer «-<community_channel_id>», но контент канала живёт в wall/blog-бэкенде (посты сообщества), а НЕ в messages.*. PinoK определял isChannel ПОСЛЕ запроса messages.getHistory — который для каналов-сообществ возвращает ошибку/пусто → юзер видел generic-ошибку, «диалог не открывается».
-- **#390 режимов уведомлений НЕ СУЩЕСТВОВАЛО**: in-app попапов в PinoK нет вообще — всё уходит в системные уведомления; MessageNotifier имел единственный канал «messages» (звук+вибрация для ВСЕХ), сообщения от сообществ (fromId<0/peerId<0) нигде не фильтровались, новостные гейтились только по pushFromCommunities, отдельной настройки звука/вибрации сообществ не было.
+- **#393 каналы не открываются** (снапшоты 29-a): в вебе VK канал сообщества — peer «-<community_channel_id>», но контент канала живёт в wall/blog-бэкенде (посты сообщества), а НЕ в messages.*. VK Mint определял isChannel ПОСЛЕ запроса messages.getHistory — который для каналов-сообществ возвращает ошибку/пусто → юзер видел generic-ошибку, «диалог не открывается».
+- **#390 режимов уведомлений НЕ СУЩЕСТВОВАЛО**: in-app попапов в VK Mint нет вообще — всё уходит в системные уведомления; MessageNotifier имел единственный канал «messages» (звук+вибрация для ВСЕХ), сообщения от сообществ (fromId<0/peerId<0) нигде не фильтровались, новостные гейтились только по pushFromCommunities, отдельной настройки звука/вибрации сообществ не было.
 - **#392 закрепа диалогов НЕ БЫЛО**: сортировка списка диалогов — только дата DESC (новые сообщения поднимают строку); серверный VK-закреп частично поддержан (Fix #274), локального закрепа не существовало.
 - **#394 поиска в чате не было**: лупа-иконка отсутствовала в шапке ChatDetailScreen; поиск по постам канала отсутствовал как класс (wall.search не реализован).
 - **#389**: FAB «наверх» был только на Feed/Music/Messages/ChatDetail — 14 экранов с бесконечной пагинацией без него.
 - **#388**: кнопки «Добавить в мою музыку» в плеере не было (audioAddReliable существовал, UI отсутствовал).
-- **#PIN-CORE**: LockerActivity жил в app-слое (re.pinok.locker) с зависимостью от SovaApp (app-Application) и SOVATheme (app-тема) — core-модули PIN не касались.
+- **#PIN-CORE**: LockerActivity жил в app-слое (vk.mint.locker) с зависимостью от VkMintApp (app-Application) и VkMintTheme (app-тема) — core-модули PIN не касались.
 
 ### Фиксы (волна 29)
-- **Fix #386 #PIN-CORE #LOCKER-TO-CORE-UI** (29-c): LockerActivity.kt перенесён в `core/ui/src/main/java/re/pinok/locker/` С СОХРАНЕНИЕМ пакета re.pinok.locker — манифест (`.locker.LockerActivity`) и все FQCN-вызовы не тронуты. Зависимости от app сняты: launch(context, pinHash, biometric) через Intent-extras EXTRA_PIN_HASH/EXTRA_BIOMETRIC (SovaApp-доступ удалён, 4 места вызова в MainActivity обновлены: после-auth/boot/onResume-cached/onResume-fallback); SOVATheme → самодостаточная LockerTheme (палитры 1:1 из SOVATheme, dark/light по системе — вид прежний). core/ui/build.gradle.kts + androidx.biometric, androidx.fragment-ktx, activity-compose, core-ktx (все алиасы уже были в libs.versions.toml). BootReceiver остался в app (LongPollKeepAliveService-зависимость). hashPin/vibrate/grace остались в companion — SettingsScreen-дубли оказались FQCN-вызовами и компилируются без правок.
-- **Fix #390 #NOTIFY-MODES** (29-d): SovaPrefs + ключи notify_mode (константы NOTIFY_MODE_MESSAGES_ONLY=0/ALL=1/COMMUNITIES_ONLY=2/SILENT=3, дефолт ALL — текущее поведение), notify_communities_sound/vibration (дефолт true). MessageNotifier: 5 каналов (messages, messages_silent, communities, communities_novib, communities_silent — все IMPORTANCE_HIGH; silent = без звука и вибрации), showNotification + channelId-параметр. SovaApp.startMessageNotifier: isCommunity = fromId<0 || peerId<0; режим 0 → сообщества скипаются; режим 2 → юзеры скипаются; режим 3 → сообщества скипаются, юзеры беззвучно; сообщества → канал по настройкам звука/вибрации. VkNotificationsNotifier: новостные от сообществ (parentOwnerId<0) скрываются в режимах 0/3, новостные от юзеров скрываются в режиме 2; vk_security_alerts не тронут (безопасность). FeedRightPanel: ЗАКРЕПЛЁННАЯ СВЕРХУ секция «Режим уведомлений» (иконка+текущий режим+шеврон) → AlertDialog с 4 RadioButton (формулировки 1:1 с ТЗ). NotificationsTab: секция «Режимы уведомлений» с 4 радио + условные «Звук/Вибрация от сообщест» (видны в режимах 1/2) + честные подсказки.
-- **Fix #392 #IM-LOCAL-PIN** (29-e): SovaPrefs key im_pinned_dialogs (JSON peer_id в порядке закрепления) + Snapshot.imPinnedDialogs (безопасный парс, битый JSON → emptyList) + setImPinnedDialogs + migrateLegacyPinnedDialogsIfNeeded (одноразовая миграция legacy pinned_convs_data Fix #274/#276 с guard-ами). MessagesScreen: долгий тап на ChatCard → «Закрепить/Открепить диалог» (иконка PushPin в строке); сортировка ТОЛЬКО на вкладке «Диалоги»: локально-закреплённые В ПОРЯДКЕ ЗАКРЕПЛЕНИЯ (позиция фиксируется порядком в prefs — новые сообщения НЕ двигают) → серверно-pinned majorId DESC → остальные по дате; вкладки Каналы/Непрочитанные — прежний порядок; открепление при удалении диалога; drag-reorder персистит новый порядок закрепления.
+- **Fix #386 #PIN-CORE #LOCKER-TO-CORE-UI** (29-c): LockerActivity.kt перенесён в `core/ui/src/main/java/vk/mint/locker/` С СОХРАНЕНИЕМ пакета vk.mint.locker — манифест (`.locker.LockerActivity`) и все FQCN-вызовы не тронуты. Зависимости от app сняты: launch(context, pinHash, biometric) через Intent-extras EXTRA_PIN_HASH/EXTRA_BIOMETRIC (VkMintApp-доступ удалён, 4 места вызова в MainActivity обновлены: после-auth/boot/onResume-cached/onResume-fallback); VkMintTheme → самодостаточная LockerTheme (палитры 1:1 из VkMintTheme, dark/light по системе — вид прежний). core/ui/build.gradle.kts + androidx.biometric, androidx.fragment-ktx, activity-compose, core-ktx (все алиасы уже были в libs.versions.toml). BootReceiver остался в app (LongPollKeepAliveService-зависимость). hashPin/vibrate/grace остались в companion — SettingsScreen-дубли оказались FQCN-вызовами и компилируются без правок.
+- **Fix #390 #NOTIFY-MODES** (29-d): VkMintPrefs + ключи notify_mode (константы NOTIFY_MODE_MESSAGES_ONLY=0/ALL=1/COMMUNITIES_ONLY=2/SILENT=3, дефолт ALL — текущее поведение), notify_communities_sound/vibration (дефолт true). MessageNotifier: 5 каналов (messages, messages_silent, communities, communities_novib, communities_silent — все IMPORTANCE_HIGH; silent = без звука и вибрации), showNotification + channelId-параметр. VkMintApp.startMessageNotifier: isCommunity = fromId<0 || peerId<0; режим 0 → сообщества скипаются; режим 2 → юзеры скипаются; режим 3 → сообщества скипаются, юзеры беззвучно; сообщества → канал по настройкам звука/вибрации. VkNotificationsNotifier: новостные от сообществ (parentOwnerId<0) скрываются в режимах 0/3, новостные от юзеров скрываются в режиме 2; vk_security_alerts не тронут (безопасность). FeedRightPanel: ЗАКРЕПЛЁННАЯ СВЕРХУ секция «Режим уведомлений» (иконка+текущий режим+шеврон) → AlertDialog с 4 RadioButton (формулировки 1:1 с ТЗ). NotificationsTab: секция «Режимы уведомлений» с 4 радио + условные «Звук/Вибрация от сообщест» (видны в режимах 1/2) + честные подсказки.
+- **Fix #392 #IM-LOCAL-PIN** (29-e): VkMintPrefs key im_pinned_dialogs (JSON peer_id в порядке закрепления) + Snapshot.imPinnedDialogs (безопасный парс, битый JSON → emptyList) + setImPinnedDialogs + migrateLegacyPinnedDialogsIfNeeded (одноразовая миграция legacy pinned_convs_data Fix #274/#276 с guard-ами). MessagesScreen: долгий тап на ChatCard → «Закрепить/Открепить диалог» (иконка PushPin в строке); сортировка ТОЛЬКО на вкладке «Диалоги»: локально-закреплённые В ПОРЯДКЕ ЗАКРЕПЛЕНИЯ (позиция фиксируется порядком в prefs — новые сообщения НЕ двигают) → серверно-pinned majorId DESC → остальные по дате; вкладки Каналы/Непрочитанные — прежний порядок; открепление при удалении диалога; drag-reorder персистит новый порядок закрепления.
 - **Fix #393 #CHANNEL-WALL-MODE** (29-f, субагент + доработка мейн): VKApiClient.wallSearch (wall.search, дедуп). ChatDetailScreen: канал определяется ДО запроса messages-истории (messagesGetConversationsById → isChannel → сразу wallGet-режим; fallback probe wallGet при недоступном chat state); ошибки messages для негативного пира больше не показываются. Канал рендерится лентой WallPostCard (переиспользование компонента стены): лайк (likes.add/delete type=post, optimistic+откат), комментарии/поделиться (ShareSheet), offset-пагинация, баннер «Закреплённый пост» над лентой (тап → скролл к посту), шапка «N подписчико» (groupsGetById + subscribersLabel с русской плюрализацией), PostHolder.lastGroups для пост-деталки, ChannelFooterBar (mute/leave с диалогом) вместо композера.
 - **Fix #394 #IM-SEARCH** (29-g, субагент + доработка мейн): лупа (Icons.Filled.Search) в шапке КАЖДОГО диалога/канала. Диалог → диалог поиска: локальная фильтрация загруженной истории (живой) + серверный messagesSearch(query, peerId) с дебаунсом 600мс; тап по результату → скролл к сообщению с подсветкой, а вне загруженного диапазона → preview-диалог «Показать в чате» (переиспользование Fix #206 с догрузкой истории). Канал → правая панель «Поиск по постам» (scrim+slide как FeedRightPanel, BackHandler): поле «Поиск по истории записей», wallSearch, результаты WallPostCard с рабочими лайком/комментом/шером, честные hint/loading/error+«Повторить»/«Ничего не найдено», race-guard seq.
 - **Fix #389 #SCROLL-TOP-PARITY** (29-h, субагент; упал по таймауту — финализирован мейн): единый ScrollToTopFab (app/ui/components, derivedStateOf firstVisibleItemIndex>6, AnimatedVisibility, sync с LocalBottomBarVisible — паттерн Fix #238) на 14 экранов: Notifications, Video ×5 вкладок (отдельные listState), Groups, UserProfile, Profile, FollowersSubscriptions, Bookmarks, Search, Community, BoardTopic, Blacklist, GroupMembers, Friends ×2, Documents. Feed/Music/Messages/ChatDetail не тронуты (уже имели).
-- **Fix #391 #IN-APP-UPDATER** (29-i): version.json в корне репо (манифест версий: versionCode/versionName/stamp/apkUrl/sha256/notes); UpdaterManager (~410 строк: fetchManifest через raw.githubusercontent.com/pinokio240/PinoK_1/PinoK/version.json, сравнение с BuildConfig.VERSION_CODE, OkHttp-стрим скачивания с прогрессом + tmp→rename + sha256-проверка + кэш-хит, installApk через существующий FileProvider + ACTION_VIEW package-archive + ACTION_MANAGE_UNKNOWN_APP_SOURCES без крэша); SettingsScreen: вкладка «Обновления» (текущая версия+stamp, «Проверить обновления», список версий со статусами «Установлена/Доступно обновление/Предыдущая версия», «Скачать APK» с прогрессом → «Установить APK», «Откатиться» для старых версий с честным диалогом (Android не ставит более старую версию поверх — сначала удаление, сессия теряется), «В браузере» — ручное скачивание; apkUrl пуст → disabled + «APK ещё не опубликован»); AndroidManifest + REQUEST_INSTALL_PACKAGES; docs/UPDATER.md — полный чек-лист публикации релиза. Ответ юзеру: сложность СРЕДНЯЯ, механизм реализован целиком.
+- **Fix #391 #IN-APP-UPDATER** (29-i): version.json в корне репо (манифест версий: versionCode/versionName/stamp/apkUrl/sha256/notes); UpdaterManager (~410 строк: fetchManifest через raw.githubusercontent.com/vkmint/vkmint/VK Mint/version.json, сравнение с BuildConfig.VERSION_CODE, OkHttp-стрим скачивания с прогрессом + tmp→rename + sha256-проверка + кэш-хит, installApk через существующий FileProvider + ACTION_VIEW package-archive + ACTION_MANAGE_UNKNOWN_APP_SOURCES без крэша); SettingsScreen: вкладка «Обновления» (текущая версия+stamp, «Проверить обновления», список версий со статусами «Установлена/Доступно обновление/Предыдущая версия», «Скачать APK» с прогрессом → «Установить APK», «Откатиться» для старых версий с честным диалогом (Android не ставит более старую версию поверх — сначала удаление, сессия теряется), «В браузере» — ручное скачивание; apkUrl пуст → disabled + «APK ещё не опубликован»); AndroidManifest + REQUEST_INSTALL_PACKAGES; docs/UPDATER.md — полный чек-лист публикации релиза. Ответ юзеру: сложность СРЕДНЯЯ, механизм реализован целиком.
 - **Fix #388 #AUDIO-TOGGLE-OWNING** (29-j): AudioPlayerScreen action-row — тумблер «В моей музыке» (AddCircleOutline → CheckCircle/спиннер): не мой трек → audioAddReliable (audio.add + web-fallback al_audio.php) → «Добавлено в мою музыку»; мой трек (ownerId==userId из exchangeAuthRepository) → сразу audioDelete → «Удалено из моей музыки»; при ошибке иконка НЕ переключается (честность); состояние ownOverride сбрасывается при смене трека. AudioMoreMenu: параметр-тумблер onToggleOwn/isOwned (дефолты null — существующие вызовы не сломаны), легаси-дубли скрыты.
 - Ответ на «насколько сложно обновление через гит»: средней сложности, сделано (см. Fix #391 + docs/UPDATER.md).
 
 ### Проверка пользователем (сборка волны 29 на Windows)
-1. **PIN в core**: PIN-сценарии как в волне 27 (установка/смена/биометрия/блокировка из фона/boot-локер/локер после silent re-login) — поведение НЕ должно измениться; в дереве проекта app/src/.../locker/LockerActivity.kt больше нет, появился core/ui/src/main/java/re/pinok/locker/.
+1. **PIN в core**: PIN-сценарии как в волне 27 (установка/смена/биометрия/блокировка из фона/boot-локер/локер после silent re-login) — поведение НЕ должно измениться; в дереве проекта app/src/.../locker/LockerActivity.kt больше нет, появился core/ui/src/main/java/vk/mint/locker/.
 2. **Режимы уведомлений**: лента → кнопка «меню ленты» (TopAppBar) → закреплённая сверху секция «Режим уведомлений» → 4 режима; выбрать «Уведомления Сообщений» → попросить друга кинуть сообщение И подписаться на активное сообщество → попап только от сообщения; «Уведомления Сообщест» → наоборот; «Тихий режим» → попап от сообщения беззвучно; Настройки → Уведомления → «Режимы уведомлений» → те же 4 радио + «Звук/Вибрация от сообщест» (в режимах 1/2) → выкл. звука сообществ → попап от сообщества без звука.
 3. **Локальный закреп**: Сообщения → долгий тап на диалог → «Закрепить диалог» → строка уехала наверх с иконкой пина → получить в НЕГО новое сообщение → он НЕ спустился; открепить → вернулся в дату-порядок; закрепить три диалога в разном порядке → порядок закрепа сохраняется.
 4. **Каналы**: Мессенджер → Каналы → открыть канал → лента постов (не ошибки!): лайк работает, комментарии/поделиться открываются, шапка «N подписчико», закреп-баннер, низ — «Включить уведомления»; старые «сломанные» каналы должны открыться вместо ошибки.
@@ -12467,7 +12467,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 ---
 ## Волна 29-2 (2026-09-10) — Fix #COMPILE-29 (8 ошибок :app:compileDebugKotlin)
 
-### Симптом (лист компиляции пользователя, Windows E:/ANDROID_APP/PinoK_1, волна 29)
+### Симптом (лист компиляции пользователя, Windows E:/ANDROID_APP/VK_Mint, волна 29)
 - FeedRightPanel.kt:25:60 и :289:55 — Unresolved reference 'ChevronRight'.
 - SettingsScreen.kt:4285:44 — Unresolved reference 'BuildStamp'.
 - VideoScreen.kt:508:39 — Argument type mismatch: actual 'Alignment', expected 'Alignment.Horizontal'.
@@ -12477,14 +12477,14 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ### Root-cause
 1. **ChevronRight**: субагент волны 29 взял `Icons.AutoMirrored.Filled.ChevronRight` — такого символа нет в подключённом артефакте material-icons (в AutoMirrored-наборе его нет; при этом automirrored VolumeUp/VolumeOff существуют — поэтому волна 28 собиралась). В кодовой базе рабочий прецедент — `Icons.Filled.ChevronRight` (PostPhotoGrid, PostVideoCarousel).
-2. **BuildStamp**: объект живёт в core:common (`re.pinok.BuildStamp`); UpdateTab волны 29 использовал его в SettingsScreen (пакет re.pinok.ui.screens.settings) БЕЗ импорта. SovaApp компилился без импорта только потому, что живёт в пакете re.pinok (same-package).
+2. **BuildStamp**: объект живёт в core:common (`vk.mint.BuildStamp`); UpdateTab волны 29 использовал его в SettingsScreen (пакет vk.mint.ui.screens.settings) БЕЗ импорта. VkMintApp компилился без импорта только потому, что живёт в пакете vk.mint (same-package).
 3. **VideoScreen**: FAB-патч волны 29 вставил ScrollToTopFab ТЕКСТУАЛЬНО ПОСЛЕ старой закрывающей скобки else-блока ветки «видео выбранного альбома» (наследие волны 28) — Box-обёртка закрылась этой скобкой преждевременно, FAB выпал в ColumnScope, где `Modifier.align` принимает Alignment.Horizontal, а передан BottomEnd. Суммарный баланс скобок остался 0 (вставленная субагентом скобка Box-end поглотила закрывающую else) — поэтому скобочный сканер волны 29 поломку не увидел.
 4. **ExperimentalMaterial3Api**: точный дубль импорта (строки 77 и 90) остался от мержа волны 28; K2 превращает дубль в ошибку «Conflicting import … is ambiguous» на ОБЕИХ строках.
 5. **title**: `chat.peer.title` — String? из другого модуля; isNullOrBlank() НЕ даёт smart-cast по свойству чужого класса → `val title` выводился String?; `title.take(1)` (:2946) и `Text(text = title)` (:2954) требуют String.
 
 ### Фиксы (волна 29-2 — 5 правок / 4 файла, только компиляционные, поведение не менялось)
 - **FeedRightPanel.kt**: import и использование → `Icons.Filled.ChevronRight` (WHY-комментарий с объяснением отсутствия AutoMirrored-варианта).
-- **SettingsScreen.kt**: добавлен `import re.pinok.BuildStamp` (WHY-комментарий).
+- **SettingsScreen.kt**: добавлен `import vk.mint.BuildStamp` (WHY-комментарий).
 - **VideoScreen.kt**: закрывающая скобка else-блока перенесена ЗА Box-end — FAB теперь внутри BoxScope; комментарий #SCROLL-TOP-FAB-SCOPE; depth-проверка: ветки `1 ->` и `2 ->` на одном уровне, общий баланс 0.
 - **VideoPlayerScreen.kt**: дубль импорта удалён (осталась строка 77); фикс title по NULL-ЯВНО: `val peerTitle: String?` + явная if-проверка → `val title: String` (без !!/?./?:), все 3 использования получают не-null.
 
@@ -12505,7 +12505,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 ### Root-cause
 - **mute/unread в диалогах**: ПРОВЕРКА ПОКАЗАЛА — оба работают (Fix #122 `messages.setConversationPushSettings` с синком MessageNotifier Fix #285; Fix #274 `messages.markAsUnreadConversation` + #MARK-READ-REVERT). Пробел паритета: пункта «Отметить непрочитанным» не было в меню ШАПКИ чата (в VK web есть).
 - **«поиск не глобальный»**: `video.search` вызывался БЕЗ `search_global=1` — VK ищет в узком скоупе (свои/окружение). Плюс результаты поиска не имели действия «Добавить себе».
-- **паритет футера видео-страницы**: из data-testid паттернов VK web в PinoK отсутствовали `video_page_add_to_my_playlist` («Добавить», API video.add/video.delete) и `video_page_more_button` («Ещё»: fave/скачать/жалоба/ссылка).
+- **паритет футера видео-страницы**: из data-testid паттернов VK web в VK Mint отсутствовали `video_page_add_to_my_playlist` («Добавить», API video.add/video.delete) и `video_page_more_button` («Ещё»: fave/скачать/жалоба/ссылка).
 - **«скачки» качества/скорости**: скорость сбрасывалась в 1.0 при пересборке источника (смена качества, codec-fallback, возврат из STOP); ABR сам прыгал по битрейту между ручными сменами.
 - **lock-screen**: плеер ставил playWhenReady=false при уходе Activity из фона (LifecycleStartEffect) — фонового звука и медиа-уведомления не было.
 
@@ -12515,7 +12515,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - **W30-1 #VIDEO-SEARCH-ADD**: результаты поиска видео — тумблер «Добавить себе» (videoAdd; удаление — поиск своей копии через videoGet(count=200) по title+duration → videoDelete); VKVideoCard + опциональные isAdded/onToggleAdd (остальные вызовы не тронуты).
 - **W30-2 #VIDEO-PAGE-PARITY**: VideoActionsRow и immersive-стрип + «Добавить» (optimistic, начальное состояние честно ownerId==myUserId) и «Ещё» (В закладки faveAdd/Remove type=video; Скачать; Пожаловаться с confirm; Копировать ссылку).
 - **W30-2 #PLAYER-STABILITY**: reapply playbackSpeed во все 5 точек пересоздания источника; ABR-пин applyQualityPin (setMaxVideoSize по высоте выбранного качества, «Авто» — сброс).
-- **W30-3 #VIDEO-BG-PLAYER**: VideoPlaybackBus + VideoPlaybackService (media3 MediaSessionService; custom layout «−N сек / +N сек»; seekTo с clamp; живой кэш шага; паттерн Fix #138); SovaPrefs.video_seek_step_sec (default 10); Настройки → Видео → «Фоновое воспроизведение» (5/10/15); манифест + сервис mediaPlayback. Свернутое приложение: звук продолжается, lock-screen плеер без видео.
+- **W30-3 #VIDEO-BG-PLAYER**: VideoPlaybackBus + VideoPlaybackService (media3 MediaSessionService; custom layout «−N сек / +N сек»; seekTo с clamp; живой кэш шага; паттерн Fix #138); VkMintPrefs.video_seek_step_sec (default 10); Настройки → Видео → «Фоновое воспроизведение» (5/10/15); манифест + сервис mediaPlayback. Свернутое приложение: звук продолжается, lock-screen плеер без видео.
 - Клипы: паритет уже был (ClipShareSheet/ClipInteractionsSheet: шера, закладки); «Добавить себе» для клипов VK не предусматривает — не изобретаем (по плану §2.5).
 
 ### Проверка пользователем (сборка волны 30 на Windows)
@@ -12533,7 +12533,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 ### Симптом (ТЗ пользователя + краш-лог upload/ciber.txt)
 - «Найди в проекте все файлы .MD/.TXT, найди в них ключи от ВК и замаскируй, чтобы предотвратить утечку».
 - «При включении PIN должно быть окно задать PIN даже если он уже есть; при выключении или смене — требование ввода текущего PIN; если неверный — действие не происходит; всплывающие окна что PIN включён/выключен/изменён».
-- Краш: «открыл видео и заблокировал экран» — `FATAL EXCEPTION: main … Unable to create service re.pinok.service.VideoPlaybackService: IllegalStateException: Session ID must be unique` (VideoPlaybackService.kt:101, MediaSession.Builder.build).
+- Краш: «открыл видео и заблокировал экран» — `FATAL EXCEPTION: main … Unable to create service vk.mint.service.VideoPlaybackService: IllegalStateException: Session ID must be unique` (VideoPlaybackService.kt:101, MediaSession.Builder.build).
 - «Проверь все ли АПИ реализованы и работают, нет ли повторений; нужно ли предоставить снапшоты?».
 - «Нужно логирование для паттернов и действий, у которых его нет, и тумблер в настройках для их раздела, но в logcat по умолчанию всё транслируется».
 - «Диалоги каналов так и не открываются».
@@ -12555,11 +12555,11 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ### Фиксы (план: docs/W31-SECURITY-PIN-IM-AUDIO-PLAN.md, коммиты 170acdeb + этот)
 - **31-a #SECRETS-MASK**: scripts/mask-secrets.py (идемпотентный: vk1.a./vk2.a. тела, access_token=, Bearer, client_secret, secret/token 20+; формат «AAAA...MASKED....ZZZZ» — токен-регексы больше не совпадают) + scripts/check-secrets.py (валидатор трекаемых, exit 1 при хите); все трекаемые и локальные md/txt замаскированы; контрольный прогон: 818 файлов, changed=0, check-secrets exit 0 (69 файлов).
-- **31-c #VIDEO-SESSION-ID-COLLISION**: уникальные session ID (`pinok-audio-session`/`pinok-video-session`), defensive try/catch на build() → stopSelf вместо краша процесса; ревизия VideoPlaybackBus-пути lock-screen.
-- **31-b #PIN-ALWAYS-SETUP / #PIN-DISABLE-VERIFY / #PIN-CHANGE-VERIFY / #PIN-TOASTS**: включение ВСЕГДА открывает «Задайте PIN-код» (overwrite); выключение/смена — PinVerifyDialog (PIN-пад, тот же hashPin, что сверяет LockerActivity) — неверный → inline-ошибка+вибрация, действие не происходит; тосты «PIN-код включён/выключен/изменён». #LOGOUT-DRAWER-ONLY: onLogout и вся logout-UI удалены из ProfileScreen (выход только в drawer); починен зависший аргумент onLogout в SovaNavHost (субагент забыл call-site — поймано аудитом мейн-агента).
-- **31-d #AUDIO-BG-PAGER / #AUDIO-PAGING-UNLIMITED / #AUDIO-ADD-INSTANT / #AUDIO-QUEUE-PLAYLIST**: новый app-level AudioLibraryPager (data/audio/, +427 строк): стартует при запуске (SovaApp), страницы по 50 с rate-limit 1.5с (Fix #173 сохранён), offline-пауза с авто-возобновлением, чекпоинт serverOffset/total персистится в SovaPrefs (my_music_paged_offset/my_music_total) — после смерти процесса продолжение с чекпоинта; serverOffset += PAGE_SIZE за КАЖДЫЙ запрос независимо от фильтрации (root-фикс «стопа ~1600»), total — только для UI; лог каждой страницы `#AUDIO-PAGING page: offset=… got=N fresh=M … hasMore=…`; кэш MusicTracksCache удалён (скрывать добавления нечему), add/delete трека мгновенно мутирует pager-стейт (MusicScreen + AudioPlayerScreen тумблер); AudioQueueScreen переписан на playlist-семантику: вся очередь (пройденные приглушены, текущий выделен), тап = seekToQueueIndex по живой очереди без пересборки, новые страницы «Моей музыки» аппендятся в играющую очередь (re-check источника — TOCTOU-гонка закрыта); fromMyMusic-разметка всех источников сверена (поиск/плейлисты/радио — без append).
-- **31-e #IM-CHANNEL-OPEN**: открытие чата по пушу для отрицательных peerId (MainActivity+SovaNavHost), crash-safe markAsRead, расширенный wallGet-фолбэк (can_write unknown), анти-затирание wall-режима, LP-гвард канала, 10 AppLog-крошек «#IM-CHANNEL-OPEN» на весь путь клик→навигация→чарт.
-- **31-f #LOG-SECTIONS**: AppLog.setDisabledSections + гейт в log() (ERROR не гейтится НИКОГДА; дефолт = ВСЁ в logcat, как требовал юзер); SovaPrefs.log_sections_off (CSV); Настройки → Логирование → «Паттерны диагностики (секции логов)»: тумблеры #IM/#AUDIO/#VIDEO/#NOTIFY/#PIN/API + «Включить все»; крошки #PIN ×4 и #NOTIFY ×2 добавлены.
+- **31-c #VIDEO-SESSION-ID-COLLISION**: уникальные session ID (`vkmint-audio-session`/`vkmint-video-session`), defensive try/catch на build() → stopSelf вместо краша процесса; ревизия VideoPlaybackBus-пути lock-screen.
+- **31-b #PIN-ALWAYS-SETUP / #PIN-DISABLE-VERIFY / #PIN-CHANGE-VERIFY / #PIN-TOASTS**: включение ВСЕГДА открывает «Задайте PIN-код» (overwrite); выключение/смена — PinVerifyDialog (PIN-пад, тот же hashPin, что сверяет LockerActivity) — неверный → inline-ошибка+вибрация, действие не происходит; тосты «PIN-код включён/выключен/изменён». #LOGOUT-DRAWER-ONLY: onLogout и вся logout-UI удалены из ProfileScreen (выход только в drawer); починен зависший аргумент onLogout в VkMintNavHost (субагент забыл call-site — поймано аудитом мейн-агента).
+- **31-d #AUDIO-BG-PAGER / #AUDIO-PAGING-UNLIMITED / #AUDIO-ADD-INSTANT / #AUDIO-QUEUE-PLAYLIST**: новый app-level AudioLibraryPager (data/audio/, +427 строк): стартует при запуске (VkMintApp), страницы по 50 с rate-limit 1.5с (Fix #173 сохранён), offline-пауза с авто-возобновлением, чекпоинт serverOffset/total персистится в VkMintPrefs (my_music_paged_offset/my_music_total) — после смерти процесса продолжение с чекпоинта; serverOffset += PAGE_SIZE за КАЖДЫЙ запрос независимо от фильтрации (root-фикс «стопа ~1600»), total — только для UI; лог каждой страницы `#AUDIO-PAGING page: offset=… got=N fresh=M … hasMore=…`; кэш MusicTracksCache удалён (скрывать добавления нечему), add/delete трека мгновенно мутирует pager-стейт (MusicScreen + AudioPlayerScreen тумблер); AudioQueueScreen переписан на playlist-семантику: вся очередь (пройденные приглушены, текущий выделен), тап = seekToQueueIndex по живой очереди без пересборки, новые страницы «Моей музыки» аппендятся в играющую очередь (re-check источника — TOCTOU-гонка закрыта); fromMyMusic-разметка всех источников сверена (поиск/плейлисты/радио — без append).
+- **31-e #IM-CHANNEL-OPEN**: открытие чата по пушу для отрицательных peerId (MainActivity+VkMintNavHost), crash-safe markAsRead, расширенный wallGet-фолбэк (can_write unknown), анти-затирание wall-режима, LP-гвард канала, 10 AppLog-крошек «#IM-CHANNEL-OPEN» на весь путь клик→навигация→чарт.
+- **31-f #LOG-SECTIONS**: AppLog.setDisabledSections + гейт в log() (ERROR не гейтится НИКОГДА; дефолт = ВСЁ в logcat, как требовал юзер); VkMintPrefs.log_sections_off (CSV); Настройки → Логирование → «Паттерны диагностики (секции логов)»: тумблеры #IM/#AUDIO/#VIDEO/#NOTIFY/#PIN/API + «Включить все»; крошки #PIN ×4 и #NOTIFY ×2 добавлены.
 - **31-g API-AUDIT**: docs/API-AUDIT.md — 327 fun, 289 уникальных VK-методов; дублей-мусора 0 (все повторы — осознанные обёртки), API-заглушек 0; пробелы паритета (клипы-каталог, истории, mentions, market, audio broadcast) — для приоритизации.
 - **32-b #IM-LASTSEEN-HEADER** (старт волны 32, файл общий с 31-e): статус шапки чата перенесён ПОД имя (Column в title-Row, мьют-колокольчик остался у имени); новый формат: <60с «был(а) только что», ≤15 мин «был(а) N мин назад», далее время/дата: сегодня «был(а) в 14:32», вчера «был(а) вчера в 09:05», старше «был(а) 03.01.2026 в 22:41» (formatLastSeenExtended, локальная таймзона).
 
@@ -12585,7 +12585,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 ### Root-cause
 - **«пропало меню»**: меню в коде цело, но pref «Выбор нескольких сообщений» (msgMultiSelect) перехватывал long-press во всех 3 точках в enterSelection — контекстное меню становилось недостижимо ВООБЩЕ (в т.ч. «Редактировать»).
-- **Реакции промахивались**: карта PinoK (1=👍 2=❤️ …) не совпадала с серверной VK web (1=❤️ 2=🔥 3=😂 4=👍 5=💩 6=❓ 7=😭) — double-click, задуманный как ❤️, серверно ставил 🔥; «Неординарно»/«Вопросы»/«Плачу» отсутствовали.
+- **Реакции промахивались**: карта VK Mint (1=👍 2=❤️ …) не совпадала с серверной VK web (1=❤️ 2=🔥 3=😂 4=👍 5=💩 6=❓ 7=😭) — double-click, задуманный как ❤️, серверно ставил 🔥; «Неординарно»/«Вопросы»/«Плачу» отсутствовали.
 - **Реакции сообщений не парсились**: Message.reactions всегда null (парсер отсутствовал) — toggle «снять свою реакцию» был невозможен.
 - **Редактирование по message_id**: web редактирует по conversation_message_id (cmid) — расхождение могло ломать редактирование в группах (класс Fix #207).
 - **API-пробелы**: messages.sendReaction/deleteReaction/markAsImportant (сообщение-level) отсутствовали; «Реакция» была через legacy messages.react.
@@ -12694,7 +12694,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 | # | Тег | Было | Стало |
 |---|---|---|---|
-| 1 | #VIDEO-BG-TOGGLE | Раздел «Фоновое воспроизведение» в Настройках → Видео имел только радио 5/10/15с, тумблера вкл/выкл НЕ было | SovaPrefs.videoBackgroundPlay (default ВКЛ) + тумблер «Фоновое воспроизведение видео» вверху раздела; OFF: ON_STOP ставит видео на паузу, сервис не поднимается, dispose в фоне = полный teardown, музыка возобновляется; выключение применимо немедленно (disableBackgroundNow: stopService + pause) |
+| 1 | #VIDEO-BG-TOGGLE | Раздел «Фоновое воспроизведение» в Настройках → Видео имел только радио 5/10/15с, тумблера вкл/выкл НЕ было | VkMintPrefs.videoBackgroundPlay (default ВКЛ) + тумблер «Фоновое воспроизведение видео» вверху раздела; OFF: ON_STOP ставит видео на паузу, сервис не поднимается, dispose в фоне = полный teardown, музыка возобновляется; выключение применимо немедленно (disableBackgroundNow: stopService + pause) |
 | 2 | #PROFILE-WALL-PAGING | Стена СВОЕГО профиля: только первые 20 записей, догрузки нет — «не доходит до самого начала» | server-offset пагинация (wallGetWithFilter offset, full-page-стоп, дедуп) + автодогрузка по скроллу + «Показать ещё»; курсор сбрасывается при смене фильтра/перезагрузке |
 | 3 | Подарки | Раздел подарков висел ПОСЛЕ ленты (последний item вкладки Стена) | Подарки ПЕРЕД лентой (видны сразу, как в VK web); скролл по счётчику «Подарки» ведёт точно к секции (key="profile_gifts") |
 | 4 | #COMPOSER-ATTACH-PREVIEW | Строка «Прикрепить»; вложения из VK — слепая иконка скрепки | «Прикрепить файлы»; превью-миниатюры: фото из VK (previewUrl из PhotoPickerTab), музыка (albumThumb), видео (самый широкий кадр image[]); документы — иконка |
@@ -12726,7 +12726,7 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 | # | Тег | Было | Стало |
 |---|---|---|---|
-| 1 | #BOOKMARKS-TRACKS | Трек «В закладки» = «Моя музыка» (audioAddReliable), в Закладках трека не видно | ЛОКАЛЬНЫЕ закладки треков: TrackBookmarksRepository (Gson-массив Track в SovaPrefs `track_bookmarks_data`, паттерн FoldersRepository; Mutex + StateFlow; SovaApp.trackBookmarksRepository). AudioMoreMenu: toggle-пункт «В закладки»/«Удалить из закладок» (isBookmarked); MusicScreen и AudioPlayerScreen — toggle локальной закладки с честными тостами («Моя музыка» осталась отдельным пунктом тумблера). BookmarksScreen: два раздела — «Закладки VK» / «Треки»; треки: тап = очередь playTrackList (стейл-URL резолвится audioGetById + al_audio-fallback, паттерн #AUDIO-COMMENTS волны 37), корзина = удаление, честные пустые состояния |
+| 1 | #BOOKMARKS-TRACKS | Трек «В закладки» = «Моя музыка» (audioAddReliable), в Закладках трека не видно | ЛОКАЛЬНЫЕ закладки треков: TrackBookmarksRepository (Gson-массив Track в VkMintPrefs `track_bookmarks_data`, паттерн FoldersRepository; Mutex + StateFlow; VkMintApp.trackBookmarksRepository). AudioMoreMenu: toggle-пункт «В закладки»/«Удалить из закладок» (isBookmarked); MusicScreen и AudioPlayerScreen — toggle локальной закладки с честными тостами («Моя музыка» осталась отдельным пунктом тумблера). BookmarksScreen: два раздела — «Закладки VK» / «Треки»; треки: тап = очередь playTrackList (стейл-URL резолвится audioGetById + al_audio-fallback, паттерн #AUDIO-COMMENTS волны 37), корзина = удаление, честные пустые состояния |
 | 2 | #BOOKMARKS-REMOVE-ALL | Удаление только скрытым long-press; видео без access_key; ссылки — «не поддерживается»; статьи/товары — не поддерживается | ВИДИМАЯ кнопка-корзина на каждой строке (+ long-press остался); центральный `VKApiClient.bookmarkRemove(Bookmark)`: видео с access_key, ссылки по link_id (теперь парсится из fave.get → Bookmark.linkId), статьи/товары через fave.removeArticle/removeProduct (новые ветки faveRemove + парсинг objectId/objectOwnerId/objectTitle — корректные заголовки строк), page → эвристика user/group → fave.removePage; то же во вкладке «Закладки» профиля (long-press → диалог). Попутно: JsonNull.asString на url ссылки валил ВЕСЬ fave.get в молчаливый emptyList — парсинг защищён takeIf |
 | 3 | #SECTIONS-WIRE | «Сервисы»: все 10 плиток — тосты («раздел в разработке»), включая дубли готовых экранов | Плитки Сообщества/Друзья/Закладки/Документы/Фотографии/Видеозаписи открывают свои экраны (ServicesScreen(onOpenSection) → nav.navigate); BLOCKED-плитки (Платежи/Игры/VK Apps/Стикеры) остались честными заглушками |
 | 4 | #DOCS-DOWNLOAD | Документы: тап = «в разработке», «Скачать» = TODO | Тап и кнопка «Скачать» качают через системный DownloadManager («Загрузки/VK/…», уведомление о завершении, санитизация имени файла, честные ошибки: нет ссылки/нет сервиса/сбой) |
@@ -12792,12 +12792,12 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 | # | Тег | Было | Стало |
 |---|---|---|---|
 | 1 | #AUDIO-COUNTER-HONEST | «Мои треки 3079 / 3239»: знаменатель = VK count (дубли листинга) → вечные «160 недогруженных»; мигание футера «Загрузка…» на каждой перепроверке парковки | Пока идёт обход — «3079 / **~**3239» (тильда = приблизительно, VK count не истина) или «N…» без count; после полного обхода (hasMore=false) — точное «3079»: размер уникального списка и есть истина. KDoc PagerState.total переписан. Перепроверка хвоста из парковки — ТИХАЯ (fetchingPage не поднимается, футер не мигает) |
-| 2 | #UPDATER-SOURCE | `MANIFEST_URL` — жёсткая константа: смена источника = пересборка | Настройки → Обновления → «Источник обновлений»: URL манифеста (пустое = дефолт `raw.githubusercontent.com/pinokio240/PinoK_1/PinoK/version.json`) + опциональный Bearer-токен приватного репо (маскирован, хранится локально, только по https) + «Проверить ссылку» (пробная загрузка БЕЗ смены состояния, честный вердикт) + «Сбросить» + жёлтый баннер недоверия при кастомном источнике. 6 новых ключей SovaPrefs (update_manifest_url/token/etag/last_check_ms/skipped_code/autostart_check). ETag сбрасывается при смене источника |
+| 2 | #UPDATER-SOURCE | `MANIFEST_URL` — жёсткая константа: смена источника = пересборка | Настройки → Обновления → «Источник обновлений»: URL манифеста (пустое = дефолт `raw.githubusercontent.com/vkmint/vkmint/VK Mint/version.json`) + опциональный Bearer-токен приватного репо (маскирован, хранится локально, только по https) + «Проверить ссылку» (пробная загрузка БЕЗ смены состояния, честный вердикт) + «Сбросить» + жёлтый баннер недоверия при кастомном источнике. 6 новых ключей VkMintPrefs (update_manifest_url/token/etag/last_check_ms/skipped_code/autostart_check). ETag сбрасывается при смене источника |
 | 3 | #UPDATER-AUTOCHECK | Автопроверки нет сознательно — только кнопка | M2: первое открытие вкладки «Обновления» за сессию — тихая проверка (гейт «< 15 мин назад» + ETag). M3: «Проверять при запуске» (тумблер, default ВЫКЛ) — проверка через ~12с после старта, троттлинг 6ч, бэкофф ×6ч за неудачу, офлайн-гейт; ручная кнопка всегда форсирует |
 | 4 | #UPDATER-ETAG | Каждый GET тянет манифест целиком | Условный GET: If-None-Match из prefs → 304 Not Modified = ноль тела и парсинга (UpdateCheckResult.NotModified); ETag персистится только после успешной загрузки и только когда манифест в памяти (304-без-манифеста после перезапуска процесса исключён) |
 | 5 | #UPDATER-BANNER | О релизе можно узнать только открыв настройки | Баннер «Доступна версия X (versionCode N)» над офлайн-баннером (паттерн OfflineBanner): тап → настройки сразу на вкладке «Обновлений» (одноразовый флаг UpdateDeepLink), «Пропустить» → skipped_code (возвращается во вкладке). + UpToDate.note: «штамп манифеста отличается» (пересборка) и «на источнике нет сборок новее установленной» (кастомный URL отстаёт) — честные пометки вместо молчаливого «актуальна» |
 
-**Файлы (9):** AudioLibraryPager.kt (тихая парковка + KDoc total), MusicScreen.kt (счётчик when), SovaPrefs.kt (6 ключей + сеттеры + парс + Snapshot), UpdaterManager.kt (prefs-конфиг, runCheck/manual/quiet, decideLatest, ETag/304, Bearer, skip/clear/test, UpdateDeepLink), SettingsScreen.kt (UpdateTab: M2-эффект, пометки UpToDate, «Пропустить/Вернуть», «Последняя проверка», секция «Источник обновлений» UpdateSourceCard, consume-флага начальная вкладка), UpdateBanner.kt (новый), SovaNavHost.kt (Column баннеров), MainActivity.kt (отложенный maybeAutoCheckOnStart), docs/UPDATER.md (M2/M3, известные ограничения).
+**Файлы (9):** AudioLibraryPager.kt (тихая парковка + KDoc total), MusicScreen.kt (счётчик when), VkMintPrefs.kt (6 ключей + сеттеры + парс + Snapshot), UpdaterManager.kt (prefs-конфиг, runCheck/manual/quiet, decideLatest, ETag/304, Bearer, skip/clear/test, UpdateDeepLink), SettingsScreen.kt (UpdateTab: M2-эффект, пометки UpToDate, «Пропустить/Вернуть», «Последняя проверка», секция «Источник обновлений» UpdateSourceCard, consume-флага начальная вкладка), UpdateBanner.kt (новый), VkMintNavHost.kt (Column баннеров), MainActivity.kt (отложенный maybeAutoCheckOnStart), docs/UPDATER.md (M2/M3, известные ограничения).
 
 **Проверка пользователем (git pull, пересборка):**
 1. Музыка → «Моя музыка»: пока список грузится — «N / ~3239»; когда всё дойдёт — просто «3079» и футер «Это все треки»; футер «Загрузка…» больше не мигает каждые 10с после конца.
@@ -12817,17 +12817,17 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 | # | Тег | Было | Стало |
 |---|---|---|---|
-| 1 | #UPDATER-ROLLBACK (скачивание) | «Откатиться» → downloadApk() → APK в app-specific `getExternalFilesDir/updates/` — каталог СТИРАЕТСЯ при удалении приложения, а откат НАЧИНАЕТСЯ с удаления: файл пропадал в самый нужный момент | «Откатиться» → DownloadManager → **публичные Загрузки** (`Загрузки/PinoK/PinoK_<имя>_<code>.apk`): файл переживает uninstall. Диалог отката расписывает порядок: экспорт настроек (вкладка «Данные») → скачать в Загрузки → удалить приложение → открыть APK из Загрузок. Прогресс/результат — уведомлением системы; sha256 в этом пути проверить нельзя (файл идёт мимо приложения) — честно написано в KDoc и диалоге |
-| 2 | #UPDATER-ROLLBACK (кэш манифеста) | Список «Версии из манифеста» жил только в памяти процесса — после перезапуска пусто до первой проверки | Сырой JSON манифеста персистится в SovaPrefs (`update_last_manifest_json`) после каждой успешной проверки; ensureInit поднимает его в память асинхронно. Смена источника («Сохранить»/«Сбросить») сбрасывает и кэш, и in-memory список (UpdaterManager.onSourceChanged) — манифест старого источника не авторитетен |
-| 3 | #SETTINGS-EXPORT | Перенос настроек невозможен: переустановка = всё с нуля (сессия, настройки, локальные закладки треков) | Новая вкладка **Настройки → Данные**: «Экспортировать в файл» — полный дамп ВСЕХ ключей DataStore (generic по типам string/boolean/int/long/stringSet, новые ключи подхватываются автоматически; Snapshot — подмножество, НЕ используется) → JSON `format=1` через SAF CreateDocument (имя `pinok_settings_ГГГГММДД_ЧЧММСС.json`, место выбирает юзер); «Восстановить из файла» — OpenDocument → parse (чужие версии формата отклоняются целиком, битые ключи пропускаются по одному) → подтверждение с числом ключей → атомарное применение (одна транзакция ds.edit — либо всё, либо ничего). В файле куки/токены сессии — предупреждение в UI ДО экспорта; медиа-кэш/офлайн-загрузки честно помечены НЕПЕРЕНОСИМЫМИ |
+| 1 | #UPDATER-ROLLBACK (скачивание) | «Откатиться» → downloadApk() → APK в app-specific `getExternalFilesDir/updates/` — каталог СТИРАЕТСЯ при удалении приложения, а откат НАЧИНАЕТСЯ с удаления: файл пропадал в самый нужный момент | «Откатиться» → DownloadManager → **публичные Загрузки** (`Загрузки/VK Mint/VK Mint_<имя>_<code>.apk`): файл переживает uninstall. Диалог отката расписывает порядок: экспорт настроек (вкладка «Данные») → скачать в Загрузки → удалить приложение → открыть APK из Загрузок. Прогресс/результат — уведомлением системы; sha256 в этом пути проверить нельзя (файл идёт мимо приложения) — честно написано в KDoc и диалоге |
+| 2 | #UPDATER-ROLLBACK (кэш манифеста) | Список «Версии из манифеста» жил только в памяти процесса — после перезапуска пусто до первой проверки | Сырой JSON манифеста персистится в VkMintPrefs (`update_last_manifest_json`) после каждой успешной проверки; ensureInit поднимает его в память асинхронно. Смена источника («Сохранить»/«Сбросить») сбрасывает и кэш, и in-memory список (UpdaterManager.onSourceChanged) — манифест старого источника не авторитетен |
+| 3 | #SETTINGS-EXPORT | Перенос настроек невозможен: переустановка = всё с нуля (сессия, настройки, локальные закладки треков) | Новая вкладка **Настройки → Данные**: «Экспортировать в файл» — полный дамп ВСЕХ ключей DataStore (generic по типам string/boolean/int/long/stringSet, новые ключи подхватываются автоматически; Snapshot — подмножество, НЕ используется) → JSON `format=1` через SAF CreateDocument (имя `vkmint_settings_ГГГГММДД_ЧЧММСС.json`, место выбирает юзер); «Восстановить из файла» — OpenDocument → parse (чужие версии формата отклоняются целиком, битые ключи пропускаются по одному) → подтверждение с числом ключей → атомарное применение (одна транзакция ds.edit — либо всё, либо ничего). В файле куки/токены сессии — предупреждение в UI ДО экспорта; медиа-кэш/офлайн-загрузки честно помечены НЕПЕРЕНОСИМЫМИ |
 | 4 | 43-б (fix 06671560) | Волна 43 не собиралась: `Icons.Outlined.Warning` без импорта (рядом стоял только WarningAmber) | Импорт добавлен; репо-свип «иконка-использование vs импорт» по всем Kotlin-файлам — других дыр нет; AutoMirrored-импорты проверены вручную (пакет lowercase `automirrored.filled/outlined`) |
 
-**Файлы (5):** SovaPrefs.kt (:core/data — ключ update_last_manifest_json + сеттер + Snapshot-поле; rawSnapshot()/restoreRaw() — публичный generic-API дампа/восстановления), UpdaterManager.kt (restoreManifestFromCache + persistManifestCache + onSourceChanged + downloadApkToPublicDownloads), SovaPrefsBackup.kt (НОВЫЙ: экспорт/parse/apply, формат format=1), SettingsScreen.kt (вкладка ДАННЫЕ в enum+диспетчере, DataTab с SAF-лаунчерами, rollback-диалог переписан, подсказка в секции версий, сброс кэша в UpdateSourceCard), docs/UPDATER.md (§2 полуавтоматический откат, §5 экспорт/импорт).
+**Файлы (5):** VkMintPrefs.kt (:core/data — ключ update_last_manifest_json + сеттер + Snapshot-поле; rawSnapshot()/restoreRaw() — публичный generic-API дампа/восстановления), UpdaterManager.kt (restoreManifestFromCache + persistManifestCache + onSourceChanged + downloadApkToPublicDownloads), VkMintPrefsBackup.kt (НОВЫЙ: экспорт/parse/apply, формат format=1), SettingsScreen.kt (вкладка ДАННЫЕ в enum+диспетчере, DataTab с SAF-лаунчерами, rollback-диалог переписан, подсказка в секции версий, сброс кэша в UpdateSourceCard), docs/UPDATER.md (§2 полуавтоматический откат, §5 экспорт/импорт).
 
 **Проверка пользователем (git pull, пересборка):**
 1. Настройки → Данные (новая вкладка перед «Обновлениями»): «Экспортировать в файл» → выбрать место → тост «Экспортировано ключей: ~N»; открыть файл — JSON с ключами (внутри сессия — не передавать никому).
 2. «Восстановить из файла» → выбрать тот же файл → диалог «Будет перезаписано ключей: N» → «Применить» → тост; значения применились (смена темы/акцента — видна сразу).
-3. Настройки → Обновления: «Версии из манифеста» теперь переживают перезапуск приложения (кэш). У старой версии (versionCode меньше текущего) «Откатиться» → диалог с 4-шаговым порядком → «Скачать в Загрузки» → файл в «Загрузки/PinoK/» (виден в файловике, переживает удаление приложения).
+3. Настройки → Обновления: «Версии из манифеста» теперь переживают перезапуск приложения (кэш). У старой версии (versionCode меньше текущего) «Откатиться» → диалог с 4-шаговым порядком → «Скачать в Загрузки» → файл в «Загрузки/VK Mint/» (виден в файловике, переживает удаление приложения).
 4. Смена источника в «Источник обновлений» → список версий честно обнуляется до следующей проверки.
 5. Полный сценарий отката (на свой страх): экспорт → скачать старый APK в Загрузки → удалить приложение → установить APK из Загрузок → войти в настройках в «Данные» → восстановить экспорт. Медиа-кэш и офлайн-треки не вернутся (честно помечено).
 
@@ -12838,9 +12838,9 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 
 2026-09-23 — 🎙 #CALLS-MUTE-HARDEN (репорт юзера: «кнопка отключить микрофон во время звонка не отключает») + ✅ B-1/P0-2 setNotifySettings err=3 → batch.call. (1) MUTE: UI-обвязка проверена во всех 3 местах (футер/свёрнутый виджет/панель настроек) — корректна; хардню движок: setMuted теперь ставит mute на localAudioTrack И на ВСЕ аудио-сендеры PC (раньше только трек из поля — если сендер держит другой объект трека, mute для сендера ничего не менял), стейт помнится в mutedState (@Volatile) и применяется при пересоздании трека в createLocalAudioTrack, фактическое состояние (enabled) пишется в лог — следующий лог даст точный диагноз. (2) P0-2: settingsGeneral.setNotifySettings (и get) при провале одиночного вызова ретраятся через batch.call на web.api.vk.ru — wire batchCall приведён к эталону CDP-снимка ({"requests":[{"id","method","params"}]}, v/client_id в query; раньше неэталонный {"v":..,"calls":[..]}); batchCallSingle с толерантным разбором ответа (map по id / массив / примитив). settingsGeneralSetAccountSettings/SetPrivacySettings наследуют фоллбэк через обёртку. Валидаторы: check-nested-comments ALL CLEAN (186), check-secrets OK, скобки сходятся с HEAD.
 
-2026-09-23 — 🚪 #AUTH-FIRST-OPEN-GUEST — первый запуск БЕЗ авто-логина: guest-режим сразу, вход — кнопка «Войти в аккаунт» в боковой панели. (1) Уточнение по коду: LandingScreen — внутренняя фаза AuthActivity (private enum AuthPhase.LANDING), напрямую из UI не показывается → кнопка drawer запускает AuthActivity через launchAuth(reason="drawer-login") с сохранением всего result-контракта. (2) MainActivity: boot-no-token без silent-возможности (нет remixsid / silent исчерпан / forceFull) → авто-guest вместо видимого логина; network-restored-no-token и token-invalidation — только silent, иначе guest (вечный StartupLoadingScreen сценария #341 больше недостижим). (3) НОВЫЙ GuestDrawer.kt (:ui/navigation): ModalNavigationDrawer вокруг OfflineManagerScreen в guest-ветке; фиксированный хвост (Fix #337-стиль): HorizontalDivider + «Войти в аккаунт» (Icons.AutoMirrored.Filled.Login) → drawer-login (manual-action: throttle 20с/SSO-guard 90с отключены). (4) OfflineManagerScreen: новый параметр onMenu — в guest-режиме иконка меню вместо «Назад» открывает панель; маршрут «Офлайн» в SovaNavHost не затронут. (5) «Назад» в guest больше не перезапускает AuthActivity (offline-back-to-login устарел). (6) RESULT_OK при входе из guest сбрасывает isOfflineMode. Silent re-login по remixsid (Fix #339/#107) сохранён полностью — невидимый, юзера не касается. План: docs/AUTH-FIRST-OPEN-GUEST-PLAN.md; очередь: EXECUTION_QUEUE.md Блок C.
+2026-09-23 — 🚪 #AUTH-FIRST-OPEN-GUEST — первый запуск БЕЗ авто-логина: guest-режим сразу, вход — кнопка «Войти в аккаунт» в боковой панели. (1) Уточнение по коду: LandingScreen — внутренняя фаза AuthActivity (private enum AuthPhase.LANDING), напрямую из UI не показывается → кнопка drawer запускает AuthActivity через launchAuth(reason="drawer-login") с сохранением всего result-контракта. (2) MainActivity: boot-no-token без silent-возможности (нет remixsid / silent исчерпан / forceFull) → авто-guest вместо видимого логина; network-restored-no-token и token-invalidation — только silent, иначе guest (вечный StartupLoadingScreen сценария #341 больше недостижим). (3) НОВЫЙ GuestDrawer.kt (:ui/navigation): ModalNavigationDrawer вокруг OfflineManagerScreen в guest-ветке; фиксированный хвост (Fix #337-стиль): HorizontalDivider + «Войти в аккаунт» (Icons.AutoMirrored.Filled.Login) → drawer-login (manual-action: throttle 20с/SSO-guard 90с отключены). (4) OfflineManagerScreen: новый параметр onMenu — в guest-режиме иконка меню вместо «Назад» открывает панель; маршрут «Офлайн» в VkMintNavHost не затронут. (5) «Назад» в guest больше не перезапускает AuthActivity (offline-back-to-login устарел). (6) RESULT_OK при входе из guest сбрасывает isOfflineMode. Silent re-login по remixsid (Fix #339/#107) сохранён полностью — невидимый, юзера не касается. План: docs/AUTH-FIRST-OPEN-GUEST-PLAN.md; очередь: EXECUTION_QUEUE.md Блок C.
 
-2026-09-23 — ⚙ #AUTH-FIRST-OPEN-GUEST-2: настройки доступны в guest-режиме (репорт юзера после подтверждения входа через drawer-кнопку). GuestDrawer: пункт «Настройки» (middle, Icons.Outlined.Settings) → guest-оверлей: SettingsScreen в собственном Scaffold с TopAppBar «Настройки» (+ стрелка Назад, BackHandler). SettingsScreen рендерится локально (DataStore) — интерфейс/сеть/офлайн/данные/обновления работают без токена; переходы к API-экранам (уведомления/устройства/приватность/VK ID) — default {} (не активны без токена), секции с API при попытке покажут inline-ошибку. Маршрут «Настройки» в SovaNavHost (авторизованный режим) не затронут.
+2026-09-23 — ⚙ #AUTH-FIRST-OPEN-GUEST-2: настройки доступны в guest-режиме (репорт юзера после подтверждения входа через drawer-кнопку). GuestDrawer: пункт «Настройки» (middle, Icons.Outlined.Settings) → guest-оверлей: SettingsScreen в собственном Scaffold с TopAppBar «Настройки» (+ стрелка Назад, BackHandler). SettingsScreen рендерится локально (DataStore) — интерфейс/сеть/офлайн/данные/обновления работают без токена; переходы к API-экранам (уведомления/устройства/приватность/VK ID) — default {} (не активны без токена), секции с API при попытке покажут inline-ошибку. Маршрут «Настройки» в VkMintNavHost (авторизованный режим) не затронут.
 
 2026-09-23 — ✅ #AUTH-FIRST-OPEN-GUEST-2/-3 ПОДТВЕРЖДЕНЫ юзером: guest-настройки работают, drawer открывается автоматически при входе в офлайн-режим (первый запуск без токена). Попутно фикс компиляции: MainActivity @file:OptIn(ExperimentalMaterial3Api) + импорты Icon/IconButton/Icons/padding (b083cae). GuestDrawer: автооткрытие LaunchedEffect при монтировании guest-ветки (2f87e6f).
 
@@ -12856,23 +12856,23 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
 - Для фикса 1 (автоклик) теперь есть точный селектор: инпут кода = .vkc__ConfirmPhone-module__vkInput (или vkc__ConfirmPhone-module__input / fullScreenInput); автоклик допустим только при отсутствии инпута на странице.
 - Лимитации трейса: десктоп Chrome (не Android WebView, гипотезу 4 edge-to-edge не закрывает), flow=sign_up (не 2FA существующего акка), HTML id.vk.ru в resources не включён (только vk.ru+CSS), flood control не воспроизведён (все ответы 200 OK).
 
-2026-09-24 — #SESSION-WEB-MECHANISM: перенос механизма сессии веб-версии в PinoK (апрув юзера, СЕССИЯ-ВЕБ-ПОРТ.md).
+2026-09-24 — #SESSION-WEB-MECHANISM: перенос механизма сессии веб-версии в VK Mint (апрув юзера, СЕССИЯ-ВЕБ-ПОРТ.md).
 Принцип (как в вебе): источник истины — cookie jar (CookieManager), НЕ токены и НЕ их копии; web_token — 24-часовой производный; пароли нигде не хранятся; сессия умерла → страница логина.
 - НОВОЕ: `auth/exchange/HiddenSessionRefresher.kt` — скрытый offscreen WebView (0x0, domStorage, JS) грузит m.vk.ru → живые cookies уезжают сами → VK ID SDK молча выдаёт web_token. Ядро — переиспользованный `WebTokenAuth.fullAuthFlow` (silent_token из window.init §41.14 + ensureSdkInitialized §51 + localStorage polling §49, со всеми фиксами). Кулдаун 90с (наследник #SILENT-REFRESH-COOLDOWN), общий таймаут 60с, reentrancy-guard `inProgress`.
 - ensureFreshToken переписан: reentrancy-guard ДО refreshMutex (иначе WebTokenAuth.trySsoHttpRefreshViaRemixsid → ensureFreshToken → non-reentrant Mutex — вечное зависание), затем offline-guard, затем ЕДИНСТВЕННЫЙ путь WEB-MECHANISM → persist через saveWebTokenResult. #FORCE-REFRESH семантика сохранена (err=5/1130/смена сети).
-- УДАЛЕНО (Path-машина заменена веб-механизмом): silentRefreshViaRemixsid + 2 Origin-стратегии + doSilentRefreshRequest + doSingleSilentRefreshHttp + RemixsidRefreshResult (Path 1.5); signInByTrustedHash + canTrustedHashLogin + tryTrustedHashLogin* (Path 2.5); tryConnectExchangeToken (Path 5 репозитория — версия web-SDK осталась в WebTokenAuth §49); refreshSessionCookiesFromCookieManager + CookieRefreshResult + saveRemixsid x2 + backfillRemixsidFromCookieManager + hasRemixsid; CookieRefreshWorker.kt удалён + schedule в SovaApp; storage: saveCredentials/saveLastPhone вызовы в signIn убраны.
+- УДАЛЕНО (Path-машина заменена веб-механизмом): silentRefreshViaRemixsid + 2 Origin-стратегии + doSilentRefreshRequest + doSingleSilentRefreshHttp + RemixsidRefreshResult (Path 1.5); signInByTrustedHash + canTrustedHashLogin + tryTrustedHashLogin* (Path 2.5); tryConnectExchangeToken (Path 5 репозитория — версия web-SDK осталась в WebTokenAuth §49); refreshSessionCookiesFromCookieManager + CookieRefreshResult + saveRemixsid x2 + backfillRemixsidFromCookieManager + hasRemixsid; CookieRefreshWorker.kt удалён + schedule в VkMintApp; storage: saveCredentials/saveLastPhone вызовы в signIn убраны.
 - AuthViewModel.tryAutoLogin: авто-вход = веб-семантика — есть cookies (hasSilentReloginMeans по ЖИВОМУ CookieManager) → скрытый refresh; нет → сразу форма логина. RemixsidCapturer-фоллбэк в submitOAuthToken заменён на CookieManager.flush().
 - AuthActivity.onTokenExchange: копия cookie-set в storage заменена на CookieManager.flush() (#DOZE-COOKIE-FLUSH сохранён).
 - remixsid()/hasSilentReloginMeans(): читают ЖИВОЙ CookieManager (RemixsidCapturer.snapshotCookies), storage — legacy fallback. MainActivity/BootReceiver/ChatDetailScreen (silent-mode решения) работают как раньше, но теперь по свежим cookies.
-- МИГРАЦИЯ: ExchangeTokenStorage.wipeLegacySessionArtifacts() (SovaApp.onCreate, idempotent) — стирает last_phone/last_password/trusted_hash + копии session cookies (remixsid, p, remixnsid, httoken, nttpid, uacck, uas, dmgr, mvkfp). remixstid/remixstlid СОХРАНЕНЫ (анонимная идентичность, VkCookieJar #CALLS-ANTIFRAUD).
-- SovaApp: attachAppContext(this) для HiddenSessionRefresher; ON_RESUME-хук оставлен только для foreground-тика (#DOZE-RESUME-RELOAD) + CookieManager.flush(); WorkManager-расписание удалено.
+- МИГРАЦИЯ: ExchangeTokenStorage.wipeLegacySessionArtifacts() (VkMintApp.onCreate, idempotent) — стирает last_phone/last_password/trusted_hash + копии session cookies (remixsid, p, remixnsid, httoken, nttpid, uacck, uas, dmgr, mvkfp). remixstid/remixstlid СОХРАНЕНЫ (анонимная идентичность, VkCookieJar #CALLS-ANTIFRAUD).
+- VkMintApp: attachAppContext(this) для HiddenSessionRefresher; ON_RESUME-хук оставлен только для foreground-тика (#DOZE-RESUME-RELOAD) + CookieManager.flush(); WorkManager-расписание удалено.
 - ПОЧЕМУ НАДЁЖНЕЕ: копии cookies в storage протухали (VK ротейтит remixsid) → класс багов «смена сети → просит логин» (#SESSION-COOKIES-BG-REFRESH, #NET-SWITCH-AUTH-FIX костыли) исчезает вместе с владельцем проблемы. Живой CookieManager персистит и работает с любого IP — как браузер. ПЛЮС БЕЗОПАСНОСТИ: пароль/trusted_hash больше не хранятся на устройстве.
 - Статистика: ExchangeAuthRepository 2575 → ~1310 строк (-1265); удалён CookieRefreshWorker (138); новое ~200 (HiddenSessionRefresher). Сценарии для прогонки: холодный старт (cookies живы/мертвы), истечение web_token, err=5, смена сети Wi-Fi↔LTE, logout.
 
 2026-09-24 — 🔧 #SESSION-WEB-EXPORT: экспорт настроек и account.json переносят cookie jar (аудит по запросу юзера «экспорт корректно восстановит сессию?» — ВЕРДИКТ: нет, сломано нововведением).
-- ПРОБЛЕМА: после #SESSION-WEB-MECHANISM cookies — единственный источник web-сессии (CookieManager), а оба бэкапа переносили только storage-ключи: экспорт настроек (SovaPrefsBackup.exportSessionSnapshot) — EncryptedSharedPreferences, account.json — dumpToFile. Cookie jar при переустановке/KeyStore-коррупции терялся → восстановленный access_token жил до первого refresh → HiddenSessionRefresher видел пустой jar → definitivelyDead → полный ре-логин. Главный сценарий экспорта (откат версии = удаление приложения) был сломан. setCookie() в коде не вызывался нигде — восстановить сессию было нечем.
+- ПРОБЛЕМА: после #SESSION-WEB-MECHANISM cookies — единственный источник web-сессии (CookieManager), а оба бэкапа переносили только storage-ключи: экспорт настроек (VkMintPrefsBackup.exportSessionSnapshot) — EncryptedSharedPreferences, account.json — dumpToFile. Cookie jar при переустановке/KeyStore-коррупции терялся → восстановленный access_token жил до первого refresh → HiddenSessionRefresher видел пустой jar → definitivelyDead → полный ре-логин. Главный сценарий экспорта (откат версии = удаление приложения) был сломан. setCookie() в коде не вызывался нигде — восстановить сессию было нечем.
 - НОВОЕ: `auth/exchange/CookieJarBackup.kt` — снапшот/рестор VK-куков. Снимок: getCookie по AuthDomainsConfig.vkCookieUrls() (единый список доменов с рантаймом, .ru+.com), дедуп (домен, имя). Домены выводятся по правилам VK-доменной модели (getCookie атрибутов не отдаёт): p → .login.<base>, remix*/httoken → .<base>, прочие — host-only (base = vk.ru/vk.com из URL захвата). Импорт: setCookie с ЯВНЫМ Domain/Path + один flush (#DOZE-COOKIE-FLUSH).
-- SovaPrefsBackup: экспорт — секция "cookies" [{name,value,domain}], чекбокс «Экспортировать без сессии» убирает и её; Exported.cookiesCount (+totalCount); parse — секция опциональна (файлы волн 45–52 без cookies — мягкая деградация «токены без web-сессии, ре-логин при первом refresh»); apply — CookieJarBackup.restore + AppliedResult.cookies/cookiesExpected; импорт старых файлов фильтрует мёртвые ключи секции session (last_phone/last_password/trusted_hash/storage-копии cookies) — тухлое не воскрешаем. ФОРМАТ НЕ ИНКРЕМЕНТИРОВАН (format=1): секция опциональна, совместимость в обе стороны.
+- VkMintPrefsBackup: экспорт — секция "cookies" [{name,value,domain}], чекбокс «Экспортировать без сессии» убирает и её; Exported.cookiesCount (+totalCount); parse — секция опциональна (файлы волн 45–52 без cookies — мягкая деградация «токены без web-сессии, ре-логин при первом refresh»); apply — CookieJarBackup.restore + AppliedResult.cookies/cookiesExpected; импорт старых файлов фильтрует мёртвые ключи секции session (last_phone/last_password/trusted_hash/storage-копии cookies) — тухлое не воскрешаем. ФОРМАТ НЕ ИНКРЕМЕНТИРОВАН (format=1): секция опциональна, совместимость в обе стороны.
 - ExchangeTokenStorage: dumpToFile кладёт web_cookies в account.json; restoreFromFileBackup заливает их в CookieManager (KeyStore-corruption recovery восстанавливает и web-сессию, не только токены).
 - VkCookieJar: переведён со storage-копий (стёрты wipe'ом, синк удалён — jar молча отправлял пустой/частичный cookie-set на антифрод-эндпоинты get_anonym_token/auth.anonymLogin) на ЖИВОЙ CookieManager: loadForRequest = getCookie(url); saveFromResponse зеркалит Set-Cookie обратно в CookieManager (Domain/Path/Expires/Secure из OkHttp Cookie). ИСКЛЮЧЕНИЕ remixstid/remixstlid: fallback-чтение + запись в storage сохранены (#CALLS-ANTIFRAUD F-3 — anonym_id переживает очистку webview-данных).
 - SettingsScreen: диалог импорта показывает cookies; тост — «cookies N из M» + предупреждение «COOKIES НЕ ВОССТАНОВЛЕНЫ»; тексты волны 50 про last_password актуализированы (пароль не хранится — штамп sessionPasswordIncluded теперь значит «plaintext без конверта»).
@@ -12890,10 +12890,10 @@ PC-RESTART (входящий SERVER). DIRECT-звонки — без регре�
    `runCatching { }.isSuccess`), семантика как в существующих вызовах
    setCookie без результата (CallsWebViewScreen/ExternalBrowserAuth).
 2. **FeedScreen.kt:513** — `No value passed for parameter 'callsEchoCancel'`:
-   #CALLS-AEC-TOGGLE добавил `callsEchoCancel` в `SovaPrefs.Snapshot` БЕЗ
+   #CALLS-AEC-TOGGLE добавил `callsEchoCancel` в `VkMintPrefs.Snapshot` БЕЗ
    дефолта, initial-конструкция в FeedScreen (collectAsState) не обновлена —
    тот же класс бага, что Fix #100/#110/#189. Фикс: `callsEchoCancel = true`
-   в initial-Snapshot (default как в SovaPrefs; реальное значение придёт
+   в initial-Snapshot (default как в VkMintPrefs; реальное значение придёт
    из collectAsState).
 ## #AUTH-BLACKSCREEN-READER-FIX (2026-09-24): «вход выполнен», но чёрный экран со спиннером
 
@@ -12912,7 +12912,7 @@ Path 1.5 CONTRACT failure, экран авторизации висит чёрн
 Замкнутый круг: токен В localStorage (`7879029:web_token:login:auth` — кладёт m.vk.ru SPA),
 но reader слепой; на attempt=2 приложение «для профилактики» удаляло ключи
 (clearAllWebTokenKeys реально находил и удалял `7879029:web_token:login:auth`!), reload,
-VK кладёт свежий — PinoK снова слепой/удаляет → вечный цикл → чёрный экран. Тем же
+VK кладёт свежий — VK Mint снова слепой/удаляет → вечный цикл → чёрный экран. Тем же
 ридером пользуется HiddenSessionRefresher → «refresh failed — re-login required» и
 фоновой refresh тоже не работал.
 
@@ -13068,7 +13068,7 @@ service connection»), и WEB-MECHANISM (скрытый WebView) не может
 
 **Блок «Управление»:** +3 строки (Приглашения/Отложенные и предложения/Адреса); disabled-метки «В волне 36» исправлены на честное «Пока не реализовано» (C3 кнопка действия, C6 чаты — не реализованы).
 
-**Навигация:** Screen.kt +3 маршрута (admin_invites/admin_wall_queue/admin_addresses/{groupId}); SovaNavHost — импорты, hasOwnTopBar ×3, композиции ×3; CommunityScreen — 3 колбэка.
+**Навигация:** Screen.kt +3 маршрута (admin_invites/admin_wall_queue/admin_addresses/{groupId}); VkMintNavHost — импорты, hasOwnTopBar ×3, композиции ×3; CommunityScreen — 3 колбэка.
 
 **Валидация:** Kotlin-aware чекер (вложенные /* */, строки, char-литералы): скобки/кавычки/скобки[] симметричны по всем 6 файлам (VKApiClient даёт те же дельты, что HEAD — артефакт чекера на легаси-тексте, не регресс). Сборка — за юзером (песочница без Android SDK).
 
@@ -13108,13 +13108,13 @@ MainActivity +80/-3 (9 точек), LongPollKeepAliveService +7. Баланс с
 «Кнопка действия» сообщества (web: settings/cta) — AdminCtaScreen: тумблер вкл/выкл + название + ссылка (тип link). Честные ограничения: полный список типов кнопок вебом не захвачен (чанк groups_edit_cta_button не скачан), поэтому для прочих типов (phone_number/book/order/enroll/…) доступно только вкл/выкл — поля не выдумываем. Запись — groups.edit action_button round-trip JSON (неизвестные поля сохраняются), чтение — groups.getById fields=action_button (в дефолтном fields отсутствует — явный запрос на экране). После сохранения — перечитывание фактического состояния сервера (честный тост). Коммит 54db90f. Роут admin_cta/{groupId}, строка в блоке «Управление». Остаток C3: Меню/Канал (write-форматы не захвачены — нужен HAR), C6 чаты.
 
 ## #AUTO-OFFLINE-SELFHEAL (2026-09-25)
-Репорт: после ручной очистки кэша сеть доступна, но контент не грузится, «Повторить» не помогает; сообщения при этом приходят (getLongPoll* идут с skipOffline=true — потому мессенджер жил). Корень: privacyOfflineMode (авто-офлайн #38) пишется в DataStore и переживает перезапуск, а маркер трипа autoOfflineAt — только в памяти. После смерти процесса: преф=true, маркера нет → clearAutoOffline ранний-return, watcher'ы пропускали (isAutoOfflineActive()=false, сеть не «терялась»), самолечение было только в callInternal — туда заблокированные вызовы не доходили. Вечный офлайн. Фикс (ab8320d): clearAutoOffline чистит преф и при marker==0; isOffline() самолечится на самом раннем гейте (нет маркера/кулдаун 30с истёк → снять преф, доверять реальной сети); watcher'ы SovaApp — clear без условия. Ручного тумблера префа нет → снятие безопасно. Сеть реально сломана → авто-трип снова (3 сбоя/60с) — штатный цикл.
+Репорт: после ручной очистки кэша сеть доступна, но контент не грузится, «Повторить» не помогает; сообщения при этом приходят (getLongPoll* идут с skipOffline=true — потому мессенджер жил). Корень: privacyOfflineMode (авто-офлайн #38) пишется в DataStore и переживает перезапуск, а маркер трипа autoOfflineAt — только в памяти. После смерти процесса: преф=true, маркера нет → clearAutoOffline ранний-return, watcher'ы пропускали (isAutoOfflineActive()=false, сеть не «терялась»), самолечение было только в callInternal — туда заблокированные вызовы не доходили. Вечный офлайн. Фикс (ab8320d): clearAutoOffline чистит преф и при marker==0; isOffline() самолечится на самом раннем гейте (нет маркера/кулдаун 30с истёк → снять преф, доверять реальной сети); watcher'ы VkMintApp — clear без условия. Ручного тумблера префа нет → снятие безопасно. Сеть реально сломана → авто-трип снова (3 сбоя/60с) — штатный цикл.
 
 ## #AUTO-OFFLINE-REMOVAL (2026-09-25)
-Авто-офлайн #38 удалён ПОЛНОСТЬЮ (запрос пользователя после репорта «офлайн-режим который нельзя выключить», 16d09e9; ранее ab8320d делал самолечение — теперь механизма нет вовсе). Убраны: счётчик сетевых ошибок + авто-трип (3 сбоя/60с → privacyOfflineMode), маркер autoOfflineAt/кулдаун 30с, resetNetworkErrorCounter/clearAutoOffline/isAutoOfflineActive, probe-самолечение и success-heal в callInternal, Fix #211 reset-блоки в ExchangeAuthRepository (+ мёртвый prefs-параметр), ветка авто-офлайна в AudioLibraryPager, clearAutoOffline в MusicScreen retry, мёртвые хелперы NetworkMods.isOfflineForced / PrivacyMods.shouldForceOffline. isOffline() = только реальная сеть (NetworkObserver). Одноразовая миграция в SovaApp: застрявший privacyOfflineMode=true из старых версий чистится при старте. ВАЖНО (ответ юзеру): авто-офлайн НЕ трогал сессию/токены — только шорт-сиркаутил API-вызовы; стирание сессии было отдельным багом auth-flow (9953882). Сетевые сбои теперь дают честные error-стейты с «Повторить» вместо глобального офлайна.
+Авто-офлайн #38 удалён ПОЛНОСТЬЮ (запрос пользователя после репорта «офлайн-режим который нельзя выключить», 16d09e9; ранее ab8320d делал самолечение — теперь механизма нет вовсе). Убраны: счётчик сетевых ошибок + авто-трип (3 сбоя/60с → privacyOfflineMode), маркер autoOfflineAt/кулдаун 30с, resetNetworkErrorCounter/clearAutoOffline/isAutoOfflineActive, probe-самолечение и success-heal в callInternal, Fix #211 reset-блоки в ExchangeAuthRepository (+ мёртвый prefs-параметр), ветка авто-офлайна в AudioLibraryPager, clearAutoOffline в MusicScreen retry, мёртвые хелперы NetworkMods.isOfflineForced / PrivacyMods.shouldForceOffline. isOffline() = только реальная сеть (NetworkObserver). Одноразовая миграция в VkMintApp: застрявший privacyOfflineMode=true из старых версий чистится при старте. ВАЖНО (ответ юзеру): авто-офлайн НЕ трогал сессию/токены — только шорт-сиркаутил API-вызовы; стирание сессии было отдельным багом auth-flow (9953882). Сетевые сбои теперь дают честные error-стейты с «Повторить» вместо глобального офлайна.
 
 
-## 2026-09-28 — Статистика сообщества: запуск Mini App 51912452 в PinoK
+## 2026-09-28 — Статистика сообщества: запуск Mini App 51912452 в VK Mint
 
 **Проблема:** в админ-разделе «Статистика» не отображались данные.
 
@@ -13174,7 +13174,7 @@ Fayly: CallScreen.kt, VKApiClient.kt. Bekapy .bak_20260928_165724. Sborka - Andr
 ---
 Task ID: CALLS-OUTGOING-B4-ROLLBACK
 Agent: assistant (deepseek-pp)
-Task: Otkat pravok B-4 (regress: PinoK ne zvonit i ne prinimaet zvonki).
+Task: Otkat pravok B-4 (regress: VK Mint ne zvonit i ne prinimaet zvonki).
 
 Work Log:
 - Pravki (caller_app_id 7879029, application_key CDLGIBMGDIHBABABA, odin host/key) dali regress.
@@ -13382,20 +13382,20 @@ Stage Summary:
 ---
 Task ID: RELEASE-V216-PUBLISH
 Agent: assistant (deepseek-pp)
-Task: Publikaciya PinoK V2.1.6 (versionCode 7) + podpis version.json (ed25519).
+Task: Publikaciya VK Mint V2.1.6 (versionCode 7) + podpis version.json (ed25519).
 
 Work Log:
 - app/build.gradle.kts: versionCode 6->7, versionName 2.1.5->2.1.6.
 - core/common/.../BuildStamp.kt: STAMP calls-2026.09.18-1 -> calls-2026.09.29-1.
 - version.json: dobavlena zapis V2.1.6 pervoy.
-    apkUrl=https://github.com/pinokio240/PinoK_1/releases/download/V2.1.6/PiniK_2909261354.apk
+    apkUrl=https://github.com/vkmint/vkmint/releases/download/V2.1.6/PiniK_2909261354.apk
     sha256=3a2458ba0cb924f24ad53db2ac79ec47e084c9dccc8bc712777c0fdec8a13c62
 - KRITICHNO (grabli CRLF): repo core.autocrlf=true, raw.githubusercontent otdayot LF.
     Perepisal version.json s LF-baytami i podpisal IMENNO LF-bayty.
 - Podpis: E:\ANDROID_keystore\private_key.hex (ed25519 seed 32b).
     Publichnyy klyuch sovpal s vshitym v APK: XvaSZqNn... (fp 22520fde...).
 - version.json.sig = base64 detached ed25519.
-- Push: cd15292..df77d39 (vetka PinoK).
+- Push: cd15292..df77d39 (vetka VK Mint).
 
 Stage Summary:
 - Proverka: git show HEAD:version.json -> CR=0, LF=19; verify(sig, committed blob)=True.
@@ -13416,25 +13416,25 @@ Work Log (HAR api.vk.com_29.har / api.vk.com_29_2.har):
     hash (CSRF) obyazatelen.
 - Mapping 30 realnyh veb-grupp (likes, comments, comment_commented, copies, mentions,
     friends_requests, friends_found, voting, wall_posts, related_events, ...).
-    PinoK sn_replies->comment_commented, sn_polls->voting, sn_friend_requests->friends_requests,
+    VK Mint sn_replies->comment_commented, sn_polls->voting, sn_friend_requests->friends_requests,
     sn_reposts->copies i t.d.
 - 20 fiktivnyh sn_* (net veb-gruppy) — skryty v UI.
 
 Izmeneniya:
-- NEW app/src/main/java/re/pinok/api/VKNotifyWeb.kt (~24 KB, 537 strok):
+- NEW app/src/main/java/vk/mint/api/VKNotifyWeb.kt (~24 KB, 537 strok):
     object VKNotifyWeb — fetch(client):Snapshot?, saveGroup/savePushMessage/savePushChat/
     savePushMaster/savePushGroup, buildSections(snap):List<SettingsSection>,
-    webGroupForPinoKKey(sn_*):String?, PinoKOrder, PinoKTitles.
+    webGroupForVkMintKey(sn_*):String?, VkMintOrder, VkMintTitles.
 - VKApiClient.kt: settingsGeneralGetNotifySettings -> settingsGetNotifyViaWeb (fallback pri page=notify);
     settingsGeneralSetNotifySettings -> settingsSetNotifyViaWeb -> VKNotifyWeb.saveGroup.
-- SettingsScreen.kt: helper realNotifyToggles(src)=src.filter{webGroupForPinoKKey(it.key)!=null};
+- SettingsScreen.kt: helper realNotifyToggles(src)=src.filter{webGroupForVkMintKey(it.key)!=null};
     obernuty 9 mest rendera grupp tumblerov (NOTIFY_MSG items + 8 notifyToggleSection).
     Master sn_push_send NE filtruetsya.
 
 Stage Summary:
 - Bekapy: SettingsScreen.kt.bak-20260929-164125, VKApiClient.kt.bak-20260929-164125.
 - Sborka yuzera — OK, prilozhenie startuet.
-- Push: bf6e75a (vetka PinoK).
+- Push: bf6e75a (vetka VK Mint).
 - GRABLI: python -c bez `# -*- coding: utf-8 -*-` padает na ne-ASCII;
     massovyy replace legko zadаet sosednie funkcii (snes parseNotifyCache — vosstanovil iz .bak).
 
@@ -13445,16 +13445,16 @@ Agent: assistant (deepseek-pp)
 Task: C9-tumbler + master-logirovanie (plan; odobren polzovatelem 30.09).
 
 Plan (odobreno):
-- C9-tumbler: SovaPrefs.logC9Enabled (default false), UI "Logi otladki admin (zhurnal deystviy)".
+- C9-tumbler: VkMintPrefs.logC9Enabled (default false), UI "Logi otladki admin (zhurnal deystviy)".
     Obernut 10 strok #C9 groupsEventLogPage: v VKApiClient.kt L18336-18379.
-- Master-tumbler "Logirovanie razdelov": ispolzuet suschestvuyuschiy SovaPrefs.logSectionsOff (String).
+- Master-tumbler "Logirovanie razdelov": ispolzuet suschestvuyuschiy VkMintPrefs.logSectionsOff (String).
     Pri off — glushit vse sekcii (krome ERROR).
     Mesto: SettingsScreen.kt -> "Razdely prilozheniya (filtraciya logov)" L~3674 /
     "Patterny diagnostiki (sekcii logov)" L~3743.
 
 Work Log (nachato):
 - Naydeno: AppLog.verboseToLogcat (master logcat-geyta; tumbler "Podrobnyy log v logcat" uzhe est).
-- SovaPrefs.logSectionsOff = p[Keys.LOG_SECTIONS_OFF] ?: "" (L128, L1710).
+- VkMintPrefs.logSectionsOff = p[Keys.LOG_SECTIONS_OFF] ?: "" (L128, L1710).
 
 Stage Summary:
 - Nachato. Zhdyom resheniya: delat li odnim zahodom (B+C) ili po shagam.
@@ -13486,17 +13486,17 @@ Sdelano (push):
 
 
 
-Provereno: sborka OK, prilozhenie startuet. Git: lokalnyy HEAD = origin/PinoK = bf6e75a.
+Provereno: sborka OK, prilozhenie startuet. Git: lokalnyy HEAD = origin/VK Mint = bf6e75a.
 
 
 
 Plan rabot (sleduyushchee):
 
-1. Tumbler 'Logi otladki admin (zhurnal deystviy)' dlya #C9 (SovaPrefs.logC9Enabled, default false;
+1. Tumbler 'Logi otladki admin (zhurnal deystviy)' dlya #C9 (VkMintPrefs.logC9Enabled, default false;
 
    obernut 10 AppLog strok v VKApiClient.kt L18336-18379).
 
-2. Master-tumbler 'Logirovanie razdelov' na baze SovaPrefs.logSectionsOff (String) —
+2. Master-tumbler 'Logirovanie razdelov' na baze VkMintPrefs.logSectionsOff (String) —
 
    glushit vse sekcii krome ERROR. Mesto: SettingsScreen.kt 'Razdely prilozheniya (filtraciya logov)' ~L3674.
 
@@ -13540,17 +13540,17 @@ Sdelano (push):
 
 
 
-Provereno: sborka OK, prilozhenie startuet. Git: lokalnyy HEAD = origin/PinoK = bf6e75a.
+Provereno: sborka OK, prilozhenie startuet. Git: lokalnyy HEAD = origin/VK Mint = bf6e75a.
 
 
 
 Plan rabot (sleduyushchee):
 
-1. Tumbler 'Logi otladki admin (zhurnal deystviy)' dlya #C9 (SovaPrefs.logC9Enabled, default false;
+1. Tumbler 'Logi otladki admin (zhurnal deystviy)' dlya #C9 (VkMintPrefs.logC9Enabled, default false;
 
    obernut 10 AppLog strok v VKApiClient.kt L18336-18379).
 
-2. Master-tumbler 'Logirovanie razdelov' na baze SovaPrefs.logSectionsOff (String) —
+2. Master-tumbler 'Logirovanie razdelov' na baze VkMintPrefs.logSectionsOff (String) —
 
    glushit vse sekcii krome ERROR. Mesto: SettingsScreen.kt 'Razdely prilozheniya (filtraciya logov)' ~L3674.
 
@@ -13588,11 +13588,11 @@ Sdelano (sborka OK, polzovatel):
 
   gate v log() posle category: `if (errorsOnly && level != Log.ERROR) return`. ERROR ne gate-itsya.
 
-- SovaPrefs.kt (core/data): Keys.LOG_ERRORS_ONLY ("log_errors_only"), Snapshot.logErrorsOnly=true,
+- VkMintPrefs.kt (core/data): Keys.LOG_ERRORS_ONLY ("log_errors_only"), Snapshot.logErrorsOnly=true,
 
   setLogErrorsOnly().
 
-- SovaApp.kt onCreate: AppLog.setErrorsOnly(snap.logErrorsOnly) posle setDisabledSections.
+- VkMintApp.kt onCreate: AppLog.setErrorsOnly(snap.logErrorsOnly) posle setDisabledSections.
 
 - SettingsScreen.kt LoggingTab: tумбlер "Logirovat tolko oshibki" (default ON); pri ON vse
 
@@ -13601,9 +13601,9 @@ Sdelano (sborka OK, polzovatel):
   ToggleRow(enabled=!s.logErrorsOnly) / TextButton(enabled=...).
 
 
-Provereno: sborka OK. Bekapy: SettingsScreen.kt.bak-20260929-*, AppLog.kt.bak-*, SovaPrefs.kt.bak-*,
+Provereno: sborka OK. Bekapy: SettingsScreen.kt.bak-20260929-*, AppLog.kt.bak-*, VkMintPrefs.kt.bak-*,
 
-SovaApp.kt.bak-*.
+VkMintApp.kt.bak-*.
 
 
 Plan rabot (sleduyushchee):
@@ -13624,7 +13624,7 @@ Task: Audiopodсистема — устойчивость на слабой се
 Сделано (4 сборки OK):
 - PlayerService.kt: DefaultLoadControl 30_000/120_000/2_500/5_000 (буфер мин30с/max120с/playback2.5с/rebuffer5с).
 - PlayerConnection.kt: BUFFERING watchdog 30s -> 9s (delay(9_000L)), лог '9s timeout'.
-- SovaPrefs.kt: ключ music_hq_mobile (default TRUE), поле musicHqOnMobile: Boolean = true, setter setMusicHqOnMobile.
+- VkMintPrefs.kt: ключ music_hq_mobile (default TRUE), поле musicHqOnMobile: Boolean = true, setter setMusicHqOnMobile.
 - VKApiClient.kt: helper 'private suspend fun hqAllowedNow()' + замена всех 8 мест quality=hq.
 - SettingsScreen.kt: ToggleRow «HQ на мобильной сети» (default вкл).
 
@@ -13642,12 +13642,12 @@ Agent: assistant (deepseek-pp)
 Итогово (сборки ОК):
 1. PlayerService.kt — DefaultLoadControl 30s/120s/2.5s/5s (буфер для слабой сети).
 2. PlayerConnection.kt — BUFFERING watchdog 30s -> 9s.
-3. SovaPrefs.kt — music_hq_mobile (default TRUE), поле musicHqOnMobile = true.
+3. VkMintPrefs.kt — music_hq_mobile (default TRUE), поле musicHqOnMobile = true.
 4. VKApiClient.kt — hqAllowedNow() — HQ на мобайле по тумблеру, 8 мест quality=hq.
 5. SettingsScreen.kt — тумблер «HQ на мобильной сети» (default вкл).
 6. PlayerConnection.kt — isOnWifiForPrecache(): read-ahead след. трека на Wi-Fi даже при autoCacheAudio=false; на мобильной не качаем.
 Проверено кодом: HQ-битрейт работает (8 мест); MP3 через ffmpeg-kit (SirenTranscoder/libmp3lame) работает.
-Коммиты: b678ce3 (P0/P1: loadcontrol, watchdog, HQ-mobile) + 441009f (P2: precache на Wi-Fi). Пуш: PinoK -> PinoK, проверено ls-remote = local HEAD.
+Коммиты: b678ce3 (P0/P1: loadcontrol, watchdog, HQ-mobile) + 441009f (P2: precache на Wi-Fi). Пуш: VK Mint -> VK Mint, проверено ls-remote = local HEAD.
 Бэкапы: *.bak-20260930-audfix*, *.bak-20260930-hqmobile, *.bak-20260930-hqtrue, *.bak-20260930-precache, *.bak-20260930-audio*.
 
 
@@ -13655,7 +13655,7 @@ Agent: assistant (deepseek-pp)
 
 Task ID: CHATS-HAR-2026-09-30
 Agent: assistant (deepseek-pp)
-Источник: C:\Users\Pinokio240\Desktop\Ссылки\админка\чаты.har (WebInspector, m.vk.ru/vkui/community_manage, 2026-09-26).
+Источник: C:\Users\VkMintio240\Desktop\Ссылки\админка\чаты.har (WebInspector, m.vk.ru/vkui/community_manage, 2026-09-26).
 
 ТЕМА: «РЕДАКТИРОВАНИЕ БЕСЕДЫ» (подтверждено пользователем 30.09; ранее ошибочно названо «редактирование сообщений»). Файл — про CRUD БЕСЕД (чатов сообщества): создание/редактирование/удаление. Сообщений/вложений здесь НЕТ.
 Записей messages.edit / docs.* / photos.* / удаления вложений в файле НЕТ.
@@ -13678,7 +13678,7 @@ Agent: assistant (deepseek-pp)
 
 Прочее: список бесед читается через execute (внутри — groups/chats + count/items), плюс statEvents.addVKUI/stats.trackEvents (аналитика VKUI, игнорируем).
 
-Вывод: для интеграции бесед в PinoK достаточно groups.addChat/editChat/deleteChat (+ execute для списка). Для редактирования сообщений/вложений нужен ДРУГОЙ HAR (messages.edit, docs.getMessagesUploadServer+docs.save, удаление вложений).
+Вывод: для интеграции бесед в VK Mint достаточно groups.addChat/editChat/deleteChat (+ execute для списка). Для редактирования сообщений/вложений нужен ДРУГОЙ HAR (messages.edit, docs.getMessagesUploadServer+docs.save, удаление вложений).
 
 
 ---
@@ -13686,9 +13686,9 @@ Agent: assistant (deepseek-pp)
 Task ID: CHAT-EDIT-ATTACH-HAR-2026-10-01
 Agent: assistant (MultiTool / deepseek-flash), 3 суб-агента параллельно
 Источник (3 файла, результат согласован по всем):
-- C:\Users\Pinokio240\Desktop\Ссылки\админка\беседа вк.har (59 МБ)
-- C:\Users\Pinokio240\Desktop\Ссылки\админка\бесеседа_чат.har (67 МБ)
-- C:\Users\Pinokio240\Desktop\Ссылки\админка\бесеседа_чат_процессы_вк_веб.har (70 МБ)
+- C:\Users\VkMintio240\Desktop\Ссылки\админка\беседа вк.har (59 МБ)
+- C:\Users\VkMintio240\Desktop\Ссылки\админка\бесеседа_чат.har (67 МБ)
+- C:\Users\VkMintio240\Desktop\Ссылки\админка\бесеседа_чат_процессы_вк_веб.har (70 МБ)
 ТЕМА: редактирование сообщений и прикрепление/удаление файла (docs) при редактировании.
 
 НАЙДЕННЫЕ ПАТТЕРНЫ (веб-VK, современный REST):
@@ -13710,9 +13710,9 @@ Agent: assistant (MultiTool / deepseek-flash), 3 суб-агента парал�
 - Обязательно keep_snippets=0 (иначе отваливается превью ссылки);
   keep_forward_messages=1 только при правке сообщения с реплаем.
 - После правки клиент всегда делает messages.getDiffContent (перечитывает
-  изменённое содержимое). В PinoK аналог — reloadMessages().
+  изменённое содержимое). В VK Mint аналог — reloadMessages().
 
-ЧТО УЖЕ ЕСТЬ В PinoK (пробел ровно один):
+ЧТО УЖЕ ЕСТЬ В VK Mint (пробел ровно один):
 - messagesSend c attachment        — VKApiClient.kt:5755 ✅
 - messagesEdit ТОЛЬКО текст (БЕЗ attachment) — VKApiClient.kt:6151 ⛔ ПРОБЕЛ
 - messagesDeleteByCmid             — VKApiClient.kt:5970 ✅
@@ -13729,7 +13729,7 @@ Agent: assistant (MultiTool / deepseek-flash), 3 суб-агента парал�
    файл (пересчёт списка), удалить все (""), добавить файл
    (переиспользовать AttachmentPickerSheet + docs pipeline).
 4) Формат attachment: список через запятую, файл = doc{owner}_{id}_{accessKey}.
-5) Валидация: не убирать keep_snippets=0 (в PinoK:6168 уже стоит);
+5) Валидация: не убирать keep_snippets=0 (в VK Mint:6168 уже стоит);
    keep_forward_messages=1 только для реплаев.
 
 Файлов изменено: 0 (research/analysis + план, без внедрения кода).
@@ -13741,7 +13741,7 @@ Agent: assistant (MultiTool / deepseek-flash), 3 суб-агента парал�
 Task ID: IM-EDIT-ATTACH-IMPLEMENT-2026-10-01
 Agent: assistant (MultiTool / deepseek-flash) + 2 суб-агента (general) на UI-слой
 Предмет: РЕАЛИЗАЦИЯ плана CHAT-EDIT-ATTACH-HAR-2026-10-01 (перенос механики
-редактирования вложений VK web в Pinok).
+редактирования вложений VK web в VkMint).
 Файлов изменено: 2 (VKApiClient.kt, ChatDetailScreen.kt). Бэкапы: *.bak-20261001-editatt.
 Сборку не выполнял (собирает пользователь).
 
@@ -13818,10 +13818,10 @@ Agent: subagent (general, 4 шт.), проверка — assistant
 Предмет: настройки логирования (срок/размер/автоочистка) — код + UI (вкладка «Логирование»).
 1. AppLog.kt: PERSIST_MAX_BYTES/BUFFER_CAPACITY → изменяемые @Volatile; добавлены logRetentionDays/autoCleanEnabled;
    методы applyLogConfig, cleanupByRetention, logFilesStatus (+ currentLog*).
-2. SovaPrefs.kt: ключи LOG_MAX_SIZE_BYTES/LOG_RETENTION_DAYS/LOG_AUTO_CLEAN/LOG_BUFFER_CAPACITY + Snapshot + сеттеры.
+2. VkMintPrefs.kt: ключи LOG_MAX_SIZE_BYTES/LOG_RETENTION_DAYS/LOG_AUTO_CLEAN/LOG_BUFFER_CAPACITY + Snapshot + сеттеры.
 3. SettingsScreen.kt (LoggingTab): в НАЧАЛО вкладки секция «Хранение логов» — автоочистка, макс.размер (0.5..10МБ),
    срок (off/1/3/7/14/30дн), буфер (1000/4000/10000), инфо размера, «Очистить логи сейчас».
-4. SovaApp.kt: на старте AppLog.applyLogConfig из сохранённых pref (retentionDays>0 → cleanupByRetention).
+4. VkMintApp.kt: на старте AppLog.applyLogConfig из сохранённых pref (retentionDays>0 → cleanupByRetention).
 Бэкапы *.bak-20261001-logcfg. Кодировка UTF-8 без BOM.
 
 
@@ -13857,7 +13857,7 @@ Agent: subagent (general, по волнам), проверка — assistant
 - В1: Models VideoMessage + Attachment.videoMessage; VideoMessageShapes.kt (10 форм, из HTML).
 - В2: VKApiClient videoGetVideoMessageUploadInfo + sendVideoMessage (video_file на ovu.mycdn.me,
   attachment video_message{owner}_{id}, без save) + ветка parseAttachments.
-- В3: Screen.VideoMessageCreate + SovaNavHost composable + VideoMessageCreateScreen (CameraX, таймер
+- В3: Screen.VideoMessageCreate + VkMintNavHost composable + VideoMessageCreateScreen (CameraX, таймер
   180c, 10 форм) + триггер «Кружок» в UnifiedAttachMenu/ChatDetailScreen.
 - В4: VideoMessageBubble в рендере чата (квадрат 216dp, форма-маска, ▶, Toast по клику).
 Бэкапы *.bak-20261001-videomsg*. Кодировка UTF-8 без BOM. Сборка не выполнялась.
@@ -13904,7 +13904,7 @@ A2: офлайн — пауза/продолжить, очистить очер�
    завершении текущего трека (paused в worker-цикле, job.join).
 A3: разрешения — uses-feature (camera/mic/bt required=false), BLUETOOTH_CONNECT (31+) добавлен в
    runtime-запрос; остальные уже были.
-B: VideoPlayerConfig (re.pinok.media) — единый буфер для всех видео (Wi-Fi 15/60/2.5/10,
+B: VideoPlayerConfig (vk.mint.media) — единый буфер для всех видео (Wi-Fi 15/60/2.5/10,
    моб. 30/120/2.5/10, backBuffer 30s, prioritize на мобили); применён в VideoPlayerScreen,
    ClipsFeedScreen, VideoMessageBubble (с retry ≤2), StoryViewerScreen, VideoPipActivity;
    setWakeMode(NETWORK) для фона.
@@ -13950,7 +13950,7 @@ FeedRightPanel расширен разделами (Уведомления/Ме�
 Сервисы/Закладки/Файлы → Screen.*; Игры/Маркет скрыты; бейдж у Мессенджера);
 новый колбэк onNavigate(Screen). Бэкапы *.bak-20261001-feedmenu. Кодировка UTF-8 без BOM.
 
-UISCALE-STAGE-C-2026-10-01: SovaPrefs.ui_scale (дефолт 0.85=−15%, варианты 75-130%); Theme
+UISCALE-STAGE-C-2026-10-01: VkMintPrefs.ui_scale (дефолт 0.85=−15%, варианты 75-130%); Theme
 fontScale*uiScale + LocalUiScale/UiScale.scaled; применено к нижней панели, вводу чата,
 панели фильтра ленты, карточкам уведомлений; UiScaleRow в Настройках («Текст и анимации»).
 Бэкапы *.bak-20261001-uiscale. Кодировка UTF-8 без BOM.
@@ -13989,14 +13989,14 @@ SECURITY-AUDIT-FIX-2026-10-04: закрытие P1.1/P1.3/P2.1/P2.4 из ауд�
 - P1.1 OAuthWebViewActivity.kt (~453,464,474,489,491,583,589,594,600): 8 вызовов `android.util.Log.i/.w` (минуя AppLog, писали raw access_token в logcat: `result.take(120)` содержал `vk1.a.XXX`, autoclick-result `r` содержал `loc=window.location.href#access_token=...`) → заменены на `AppLog.d/.w` + новые приватные хелперы `redactAccessToken(raw)` (ловит `access_token=`/`silent_token=` в URL fragment/query и raw JWT `vk1.a.XXX` через 2 regex, оставляя остальную часть строки) и `maskTokenValue(v)` (первые8…последние4). `rg "android.util.Log" OAuthWebViewActivity.kt` → 0 совпадений.
 - P2.1 SilentTokenExchanger.kt:129 + WebTokenAuth.kt:453,461: silent_token/uuid логировались в plaintext (первые 12 + полный UUID = полная credential). Заменено: WebTokenAuth:453 raw JSON → только факт наличия полей (silentToken=yes/no, uuid=yes/no, anonymousToken=yes/no, providerAppId); SilentTokenExchanger:129 + WebTokenAuth:461 → `maskTokenPrefix(v)` (первые8…последние4, длина). AppLog.kt:78 SENSITIVE_KEYS расширен 13 ключами: silent_token_uuid, remixsid, remixstid, remixstlid, remixnttpid, remixuas, remixuacck, remixdmgr, remixmvkfp, trusted_hash, logout_hash, sat_token, httoken. Matcher `k.lowercase() in SENSITIVE_KEYS || k.contains("token")` сохранён — contains("token") ловит access_token/silent_token/exchange_token/anonymous_token, новые explicit-entries ловят *_hash/remix*-cookies.
 - P2.4 ExchangeTokenStorage.kt:113-123: удалён мёртвый публичный метод `saveCredentials(username, password)` (писал phone+password plaintext в prefs + через dumpToFile в account.json). 0 вызывателей в коде (rg `.saveCredentials\(` по app/core/feature → 0; HISTORY.md:12863 подтверждает «saveCredentials вызовы в signIn убраны»). Оставлен комментарий-маркер `#P2.4`.
-- P1.3 ExchangeTokenStorage.dumpToFile (627-702) + restoreFromFileBackup (714+): минимизация plaintext-бэкапа account.json. УБРАНО из дампа 25 ключей: silent_token, silent_token_uuid (VKID SDK, short-lived), webview_access_token, webview_refresh_token, webview_expires_in (short-lived, покрыты web_cookies snapshot), last_phone, last_password (plaintext креды, Path 2.5 снят), utility_tokens (short-lived), lp_key/lp_server/lp_ts/lp_pts (получаются заново через messages.getLongPollServer), remixsid/remixnsid/p_cookie/logout_hash (в web_cookies snapshot), vk_httoken/vk_remixnttpid/vk_remixuacck/vk_remixuas/vk_remixdmgr/vk_remixmvkfp (в web_cookies snapshot), vk_remixstid/vk_remixstlid (в web_cookies snapshot), scope (implicit "all" после restore). ОСТАВЛЕНО (минимум): access_token + access_token_invalidated + expires_at + user_id, exchange_token (Path 5), trusted_hash (Path 2.5), secret (sig=, не plaintext-кред), device_id (антифрод per-install), sat_token (LongPoll/Queuev4 realtime без re-fetch), web_cookies snapshot (CookieJarBackup — ВСЕ антифрод-куки: remixsid/remixstid/remixstlid/httoken/p/uacck/uas/dmgr — нужны для звонков/админки/видео/аудио/сообщений после restore), __backup_at/__backup_version (1→2 — маркер минимизации). restoreFromFileBackup() совместим со старыми v1-файлами (лишние поля игнорируются) и новыми v2 (минимум). Логи обновлены: вместо `remixsid present=...` → `web_cookies restored=$cookiesRestored` (значение из CookieJarBackup.restoreJsonArray). Восстановление сессии при KeyStore corruption (SovaApp.kt:861-874) сохранено: silent paths (Path 1.5/2.5/3/5) получают рабочие creds, видео/аудио/сообщения/звонки/админка работают.
+- P1.3 ExchangeTokenStorage.dumpToFile (627-702) + restoreFromFileBackup (714+): минимизация plaintext-бэкапа account.json. УБРАНО из дампа 25 ключей: silent_token, silent_token_uuid (VKID SDK, short-lived), webview_access_token, webview_refresh_token, webview_expires_in (short-lived, покрыты web_cookies snapshot), last_phone, last_password (plaintext креды, Path 2.5 снят), utility_tokens (short-lived), lp_key/lp_server/lp_ts/lp_pts (получаются заново через messages.getLongPollServer), remixsid/remixnsid/p_cookie/logout_hash (в web_cookies snapshot), vk_httoken/vk_remixnttpid/vk_remixuacck/vk_remixuas/vk_remixdmgr/vk_remixmvkfp (в web_cookies snapshot), vk_remixstid/vk_remixstlid (в web_cookies snapshot), scope (implicit "all" после restore). ОСТАВЛЕНО (минимум): access_token + access_token_invalidated + expires_at + user_id, exchange_token (Path 5), trusted_hash (Path 2.5), secret (sig=, не plaintext-кред), device_id (антифрод per-install), sat_token (LongPoll/Queuev4 realtime без re-fetch), web_cookies snapshot (CookieJarBackup — ВСЕ антифрод-куки: remixsid/remixstid/remixstlid/httoken/p/uacck/uas/dmgr — нужны для звонков/админки/видео/аудио/сообщений после restore), __backup_at/__backup_version (1→2 — маркер минимизации). restoreFromFileBackup() совместим со старыми v1-файлами (лишние поля игнорируются) и новыми v2 (минимум). Логи обновлены: вместо `remixsid present=...` → `web_cookies restored=$cookiesRestored` (значение из CookieJarBackup.restoreJsonArray). Восстановление сессии при KeyStore corruption (VkMintApp.kt:861-874) сохранено: silent paths (Path 1.5/2.5/3/5) получают рабочие creds, видео/аудио/сообщения/звонки/админка работают.
 
 НЕ СДЕЛАНО (перенесено в backlog):
 - P1.2 network_security_config.xml — split debug/release или CertificatePinner. Оставлено user-CA для совместимости с прокси/MDM/VPN-пользователями.
 - P2.3 UpdaterManager.kt:718 — требовать sha256 обязательным. Оставлено как есть.
 - P1.1b (новое, из наблюдений агента): WebTokenAuth.kt:254 `access_token=${exchanged.accessToken.take(12)}...` и :972 `localStorage raw: ${raw.jsonStr.take(200)}` — те же утечки, что P1.1, применить redactAccessToken.
 - P0.* — функциональные баги пользователя (видео в каналах не воспроизводится / кнопки контента не работают / нет кнопки Клипы): план готов в worklog.md, не реализован.
-- P3.* (9 MED): HiddenSessionRefresher race, EqualizerHelper getter, Folders/Pinned/Archived Repository TOCTOU, Queuev4Client секрет в URL, LongPollClient tight-loop на failed=4, SovaApp.runBlocking в onCreate, AudioEffectsEngine stale scoSuspended, VideoPipController lambda-утечка, VideoPipActivity exposed receiver.
+- P3.* (9 MED): HiddenSessionRefresher race, EqualizerHelper getter, Folders/Pinned/Archived Repository TOCTOU, Queuev4Client секрет в URL, LongPollClient tight-loop на failed=4, VkMintApp.runBlocking в onCreate, AudioEffectsEngine stale scoSuspended, VideoPipController lambda-утечка, VideoPipActivity exposed receiver.
 - P4.* (3 LOW): Music/VideoDownloadService ServiceCompat.startForeground, VkCookieJar skip-invalid-cookie, VkSigner hardcoded VK_CLIENT_SECRET.
 
 Кодировка UTF-8 без BOM. Скобки сбалансированы (130/130, 724/724, 23/23). Gradle НЕ собирался (нет Android SDK в среде аудита — пользователь собирает сам). Бэкапы не делались (изменения точечные, +343/−131 строк в 6 файлах).
@@ -14017,7 +14017,7 @@ CHANNEL-FIX-P0-2026-10-04: закрытие P0 (функциональные б�
 НЕ СДЕЛАНО (перенесено в backlog):
 - P1.1b (из наблюдений): WebTokenAuth.kt:254,972 — применить redactAccessToken к access_token=...take(12) и localStorage raw: ...take(200).
 - P0.8 CommunityScreen.kt:198 tabs — динамически из GroupSections + добавить Файлы (docs). Не критично для каналов (пользователь жаловался на каналы, не сообщества).
-- P3.* (9 MED concurrency/stability): HiddenSessionRefresher race, EqualizerHelper getter, Folders/Pinned/Archived Repository TOCTOU, Queuev4Client секрет в URL + не-отменяемый poll, LongPollClient tight-loop на failed=4, SovaApp.runBlocking в onCreate (ANR-риск), AudioEffectsEngine stale scoSuspended, VideoPipController lambda-утечка, VideoPipActivity exposed receiver на API 31-32.
+- P3.* (9 MED concurrency/stability): HiddenSessionRefresher race, EqualizerHelper getter, Folders/Pinned/Archived Repository TOCTOU, Queuev4Client секрет в URL + не-отменяемый poll, LongPollClient tight-loop на failed=4, VkMintApp.runBlocking в onCreate (ANR-риск), AudioEffectsEngine stale scoSuspended, VideoPipController lambda-утечка, VideoPipActivity exposed receiver на API 31-32.
 - P4.* (3 LOW): Music/VideoDownloadService ServiceCompat.startForeground с type, VkCookieJar skip-invalid-cookie, VkSigner hardcoded VK_CLIENT_SECRET (сознательный выбор).
 
 Кодировка UTF-8 без BOM. Скобки сбалансированы. Gradle НЕ собирался (нет Android SDK в среде аудита — пользователь собирает сам). Бэкапы не делались (изменения точечные, +394/−43 в 4 файлах).
@@ -14106,7 +14106,7 @@ STABILITY-FIX-P3-2026-10-05: закрытие P1.1b (добивка security) + 
 // backoffMs() (2с × 2^errors + jitter, макс 60с), interruptibleDelay (suspend,
 // прерывается при stop()).
 
-// P3.10 SovaApp.kt:950,1002,1035 — 3 runBlocking в Application.onCreate на Main
+// P3.10 VkMintApp.kt:950,1002,1035 — 3 runBlocking в Application.onCreate на Main
 // thread. DataStore.first() + миграции синхронно → риск ANR 0.5-2с на медленных
 // устройствах. Решение: логику НЕ менял (auth-flow invariants требуют sync:
 // #1 log-categories должен загрузиться до любого AppLog.log; #2 миграции должны
@@ -14202,7 +14202,7 @@ VIDEO-CDN-COOKIES-FIX-2026-10-05: P0.10 (OkHttpDataSource с cookies) + P0.11 (V
 
 // КОРНЕВАЯ ПРИЧИНА: VideoPlayerScreen использовал DefaultHttpDataSource (нет cookies) вместо OkHttpDataSource. VK CDN для приватных/канальных видео требует cookies (remixsid/remixstid/remixstlid — антифрод). DefaultHttpDataSource не отправляет cookies автоматически. Также VkCookieJar.loadForRequest фильтровал только vk.ru/vk.com — НЕ покрывал userapi.com (куда указывают VK video CDN URLs вида https://sun9-XX.userapi.com/...). CookieManager.getCookie(cdn_url) возвращал null для userapi.com (cookies установлены на .vk.com/.vk.ru, не применяются к CDN).
 
-// P0.10 (Task 20, агент): VideoPlayerScreen.kt:802 + ClipsFeedScreen.kt:337 + VideoPipActivity.kt:324 + StoryViewerScreen.kt:272 — замена DefaultHttpDataSource.Factory() на OkHttpDataSource.Factory(SovaApp.httpClient). SovaApp.httpClient включает VkCookieJar → cookies автоматически прилагаются для VK доменов. Fallback на DefaultHttpDataSource если SovaApp null или httpClient lateinit не инициализирован (UninitializedPropertyAccessException → catch). Паттерн из PlayerService.kt:371-400 (audio-плеер — образец). VK UA + Referer https://m.vk.com/ сохранены. ClipsFeedScreen + StoryViewerScreen получили Referer (раньше отсутствовал). Импорты: androidx.media3.datasource.okhttp.OkHttpDataSource (dep в build.gradle.kts:203, использовался PlayerService).
+// P0.10 (Task 20, агент): VideoPlayerScreen.kt:802 + ClipsFeedScreen.kt:337 + VideoPipActivity.kt:324 + StoryViewerScreen.kt:272 — замена DefaultHttpDataSource.Factory() на OkHttpDataSource.Factory(VkMintApp.httpClient). VkMintApp.httpClient включает VkCookieJar → cookies автоматически прилагаются для VK доменов. Fallback на DefaultHttpDataSource если VkMintApp null или httpClient lateinit не инициализирован (UninitializedPropertyAccessException → catch). Паттерн из PlayerService.kt:371-400 (audio-плеер — образец). VK UA + Referer https://m.vk.com/ сохранены. ClipsFeedScreen + StoryViewerScreen получили Referer (раньше отсутствовал). Импорты: androidx.media3.datasource.okhttp.OkHttpDataSource (dep в build.gradle.kts:203, использовался PlayerService).
 
 // P0.11 (orchestrator inline): VkCookieJar.kt:63-139 — расширение домен-фильтра + storage-fallback для CDN доменов.
 //   isVkMain = host.endsWith("vk.ru") || host.endsWith("vk.com") — как раньше.
@@ -14256,15 +14256,15 @@ STORIES-UX-P0.13-17-2026-10-05: 5 фич stories (пауза/тап-оверле
 // P0.13 — пауза таймера при вводе комментария. Раньше: пока пользователь набирал текст, через 5 сек автопереход уводил на следующую историю → набранный текст терялся. Теперь: cancelTimer() при isComposing=true (progress сохраняется); resumeTimer() при isComposing=false — Animatable(progress) + tween(remaining=(1-progress)*storyDuration, LinearEasing). Рефакторинг: advanceToNext() вынесен из startTimer, переиспользуется в resumeTimer.
 // P0.17 — видео-пауза через ExoPlayer. Единый LaunchedEffect(isComposing, isPaused, exoPlayer, isVideoStory): isComposing||isPaused → cancelTimer() + exoPlayer?.pause(); иначе для видео → exoPlayer?.play(), для фото → resumeTimer(). Safe-call exoPlayer? — null для photo-историй.
 // P0.14 — тап по пустому фону = toggle паузы + StoryPausedOverlay. handleNoStickerTap() теперь = isPaused = !isPaused (старая логика onOpenAuthorClips/Photos/goToNext убрана — это теперь через overlay-ссылки). StoryPausedOverlay: Pause icon в круге 64dp + Column чипов (Профиль/Клипы/Фото/Видео/Пост/Продолжить). Ссылки показываются ВСЕГДА (пользователь одобрил вариант 1). Стикеры-хитбоксы НЕ тронуты — тап по clip/post/link-стикеру мгновенный, без паузы. Swipe (P0.12) не конфликтует — detectTapGestures срабатывает только при отпускании без движения.
-// P0.15 — тап по имени автора → его стена. Row шапки (аватар+имя) обёрнут в Modifier.clickable { onOpenAuthorProfile(currentGroup.ownerId) }. SovaNavHost: ownerId>0 → Screen.UserProfile.buildRoute(ownerId); ownerId<0 → Screen.Community.buildRoute(-ownerId) (проверено route формат community/{groupId}). IconButton Close — child clickable, не открывает профиль.
+// P0.15 — тап по имени автора → его стена. Row шапки (аватар+имя) обёрнут в Modifier.clickable { onOpenAuthorProfile(currentGroup.ownerId) }. VkMintNavHost: ownerId>0 → Screen.UserProfile.buildRoute(ownerId); ownerId<0 → Screen.Community.buildRoute(-ownerId) (проверено route формат community/{groupId}). IconButton Close — child clickable, не открывает профиль.
 // P0.16 — полная интеграция стикеров (VK API storeGetStickerPacks + storeGetStickerCatalog + messagesSendSticker). State: showStickerPicker, stickerPacks: List<StickerPack>, stickerLoading, selectedStickerPack. loadStickers() (mirror ChatDetailScreen:1184) — purchased + unpurchased (🔒). sendSticker() — messagesSendSticker(peerId, stickerId, fallbackImageUrl=displayUrl) + Toast «Стикер отправлен». Кнопка Icons.Filled.EmojiEmotions в OutlinedTextField leadingIcon — НЕ конфликтует с паузой (P0.14), IconButton clickable перехватывает тап у родительского detectTapGestures. StickerPickerSheet: ModalBottomSheet + pack-tabs (горизонтальный скролл) + LazyVerticalGrid 5 колонок + бейджи ▶ (animated)/🔒 (locked)/📷 (photo). Locked-стикеры → Toast «Стикер-пак не куплен».
-// SovaNavHost: добавлены onOpenAuthorProfile (UserProfile/Community по знаку ownerId) и onOpenAuthorVideos (Toast-плейсхолдер, симметрично onOpenAuthorPhotos — TODO: реальный Video screen с ownerId filter).
+// VkMintNavHost: добавлены onOpenAuthorProfile (UserProfile/Community по знаку ownerId) и onOpenAuthorVideos (Toast-плейсхолдер, симметрично onOpenAuthorPhotos — TODO: реальный Video screen с ownerId filter).
 
 // Все новые комментарии — line-comments // (НЕ /** */). Кодировка UTF-8 без BOM. Скобки сбалансированы (braces/parens/brackets delta=0 для обоих файлов). Gradle НЕ собирался (нет Android SDK — пользователь собирает сам).
 
 STORY-SWIPE-HINTS-P0.18-2026-10-05: стрелки-подсказки свайпа в StoryViewer + тумблер в настройках. 3 файла, +107.
 
-// SovaPrefs.kt — добавлен STORIES_SWIPE_HINTS key (booleanPreferencesKey, default true), snapshot field storiesSwipeHints, setter setStoriesSwipeHints. Размещён в секции Stories рядом с storiesShown.
+// VkMintPrefs.kt — добавлен STORIES_SWIPE_HINTS key (booleanPreferencesKey, default true), snapshot field storiesSwipeHints, setter setStoriesSwipeHints. Размещён в секции Stories рядом с storiesShown.
 // SettingsScreen.kt:1633-1643 — новый ToggleRow «Подсказки свайпа в историях» в stories-секции (после тумблера «История»). Subtitle: «Показывать стрелки ← → при просмотре историй. Исчезают после первого свайпа. Выключите если мешают.»
 // StoryViewerScreen.kt:
 //   - swipeHintsPrefEnabled = prefsSnap?.storiesSwipeHints ?: true (читаем настройку).
@@ -14278,7 +14278,7 @@ STORY-SWIPE-HINTS-P0.18-2026-10-05: стрелки-подсказки свайп
 // Все новые комментарии — line-comments // (НЕ /** */). Кодировка UTF-8 без BOM. Gradle НЕ собирался (нет Android SDK — пользователь собирает сам).
 
 COMPILE-FIX2-2026-10-05: 3 ошибки компиляции от STORIES-UX-P0.13-18 (commits c41d8f9 + 78c7fb8).
-// 1. FeedScreen.kt:537 — 'No value passed for parameter storiesSwipeHints'. P0.18 добавил поле в SovaPrefs.Snapshot, но FeedScreen конструирует Snapshot вручную (initial state, ~строка 537). Добавлен storiesSwipeHints = true (default, как в SovaPrefs). Это единственное место manual init кроме SovaPrefs.kt:318 (которое уже имело поле).
+// 1. FeedScreen.kt:537 — 'No value passed for parameter storiesSwipeHints'. P0.18 добавил поле в VkMintPrefs.Snapshot, но FeedScreen конструирует Snapshot вручную (initial state, ~строка 537). Добавлен storiesSwipeHints = true (default, как в VkMintPrefs). Это единственное место manual init кроме VkMintPrefs.kt:318 (которое уже имело поле).
 // 2. StoryViewerScreen.kt:198,203 — 'Unresolved reference startTimer'. advanceToNext() была объявлена ПЕРЕД startTimer() (Task 25 refactor вынес advanceToNext, но разместил выше startTimer). advanceToNext вызывает startTimer() напрямую в теле функции (не в lambda) → Kotlin local-function declaration-before-use rule нарушено. Фикс: переставил advanceToNext() ПОСЛЕ startTimer(). startTimer вызывает advanceToNext() только внутри scope.launch{} lambda (lazy call — работает). Взаимная рекурсия теперь корректна.
 // 3. StoryViewerScreen.kt:1496,1497,1499 — 'This material API is experimental'. ModalBottomSheet + rememberModalBottomSheetState помечены @ExperimentalMaterial3Api в material3. Добавлен @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class) на функцию StickerPickerSheet.
 // 2 файла, +28/−20. Кодировка UTF-8 без BOM.
@@ -14314,11 +14314,11 @@ STORY-OWNER-CONTENT-P0.18-2026-10-05: Фото/Видео автора — ре�
 // Пользователь: «доделывай до конца» — onOpenAuthorPhotos/onOpenAuthorVideos были Toast-плейсхолдеры (Task 25 TODO).
 // Screen.kt:137 — Community route изменён с 'community/{groupId}' на 'community/{groupId}?tab={tab}' (optional query param, default '0' = Записи). Добавлен ARG_TAB const. buildRoute(groupId, tab=0) overload — существующие callers без tab работают (default 0 → Записи как раньше).
 // CommunityScreen.kt:120 — добавлен initialTab: Int = 0 параметр. selectedTab = remember { mutableStateOf(initialTab) } вместо hardcoded 0.
-// SovaNavHost.kt:
+// VkMintNavHost.kt:
 //   - composable(Community.route): добавлен navArgument ARG_TAB (StringType, default '0', nullable) → read as Int, coerceIn(0,6) → initialTab.
 //   - onOpenAuthorPhotos: ownerId<0 → Screen.Community.buildRoute(-ownerId, tab=1) (Фото tab). ownerId>0 → Toast (UserProfile не имеет отдельного фото-экрана с ownerId filter — backlog).
 //   - onOpenAuthorVideos: ownerId<0 → Screen.Community.buildRoute(-ownerId, tab=2) (Видео tab). ownerId>0 → Toast (тот же backlog).
-// rawRoute (SovaNavHost:724) = destination.route (pattern с {groupId}{tab}), НЕ actual route — сравнение 'prev == Screen.Community.route' всё ещё работает (оба pattern). Без регрессии.
+// rawRoute (VkMintNavHost:724) = destination.route (pattern с {groupId}{tab}), НЕ actual route — сравнение 'prev == Screen.Community.route' всё ещё работает (оба pattern). Без регрессии.
 // Все новые комментарии — line-comments // (НЕ /** */). Кодировка UTF-8 без BOM. Gradle НЕ собирался (нет Android SDK — пользователь собирает сам).
 
 STORY-CLIP-PAUSE-FIX-2026-10-05: тап по clip-story теперь ставит паузу (fullview стикер игнорируется).
@@ -14346,7 +14346,7 @@ VIDEO-FIX-400-2026-10-06: чиним HTTP 400 / PARSING_MANIFEST_MALFORMED у в
 
 VIDEO-ADS-BLOCK-2026-10-06: блокировка рекламных видео (is_ad / is_promoted) в плеере.
 // ФИЧА. Причина: рекламные ролики VK (is_ad==1 / is_promoted==1) не должны молча воспроизводиться — пользователь просил тушить их.
-// SovaPrefs.kt:354/354 — новый флаг videoBlockAds (ключ video_block_ads, default true) + сеттер setVideoBlockAds + поле Snapshot + Keys.
+// VkMintPrefs.kt:354/354 — новый флаг videoBlockAds (ключ video_block_ads, default true) + сеттер setVideoBlockAds + поле Snapshot + Keys.
 // VideoPlayerScreen.kt:808 — adBlocked = videoBlockAds && (resolvedVideo.isAd==1 || isPromoted==1); при true ExoPlayer НЕ создаётся (не грузим медиа).
 // VideoPlayerScreen.kt:807 (UI ~1982) — вместо плеера заглушка «Реклама заблокирована» + кнопка «Закрыть» (onBack).
 // SettingsScreen.kt:2955 — тумблер «Блокировать рекламные видео» в VideoTab. FeedScreen.kt:470 — Snapshot расширен, initial-значение videoBlockAds=true.
@@ -14354,14 +14354,14 @@ VIDEO-ADS-BLOCK-2026-10-06: блокировка рекламных видео (
 
 VIDEO-MOBILE-QUALITY-2026-10-06: предел качества видео на мобильной сети (экономия трафика).
 // ФИЧА. Причина: при воспроизведении по мобильной сети (не Wi-Fi/Ethernet) не тратить трафик на максимальное качество.
-// SovaPrefs.kt:345/345 — mobileVideoQualityLimit (ключ mobile_video_quality_limit, default "480") + сеттер + Snapshot + Keys.
+// VkMintPrefs.kt:345/345 — mobileVideoQualityLimit (ключ mobile_video_quality_limit, default "480") + сеттер + Snapshot + Keys.
 // VideoPlayerScreen.kt:782-795 — isMobileNetwork (app.networkObserver.connectionType(), тот же механизм что VideoPlayerConfig) → effectiveQuality = (mobile и лимит!="auto") ? лимит : videoPreferredQuality. Применяется только к НАЧАЛЬНОМУ выбору (selectIndex); ручное переключение качества пользователем не трогает.
 // SettingsScreen.kt:2938/4265 — новая карточка MobileVideoQualityCard «Качество на мобильной сети» (переиспользует VIDEO_QUALITY_OPTIONS) в VideoTab. FeedScreen.kt:547 — Snapshot расширен, initial "480".
 // 4 файла. Кодировка UTF-8 без BOM. Gradle НЕ запускался.
 
 STORY-REPLY-2026-10-06: поле ответа автору сторис (DM), поддержка ранее начатых сторис-фич.
 // ФИЧА. Причина: ответ на сторис — это DM автору (peer = ownerId), а не публичный комментарий.
-// StoryViewerScreen.kt — поле ответа автору открывается/отправляется (см. также PinoK память: peer_id = ownerId; флаг гейта Story.canReply || Story.canComment).
+// StoryViewerScreen.kt — поле ответа автору открывается/отправляется (см. также VK Mint память: peer_id = ownerId; флаг гейта Story.canReply || Story.canComment).
 // ВХОДИТ в общий пакет правок StoryViewerScreen (см. STORY-PAUSE-EVERYWHERE). Кодировка UTF-8 без BOM.
 
 STORY-PAUSE-EVERYWHERE-2026-10-06: пауза удержанием (long-press) в ЛЮБОМ месте экрана сторис — блокировка дочерних clickable зон.
@@ -14394,17 +14394,17 @@ AUDIO-LOCAL-FAST-START-P0.20-2026-10-06: prefer local .m4a/.mp3 cache over onlin
 
 THEME-VK-ACCENTS-P0.21-2026-10-06: добавлены VK-фирменные акценты в начало списка акцентов.
 // Пользователь: «Эти акценты должны быть добавлены в приложение и быть первыми при переключении акцента цвета в настройках».
-// Color.kt SovaColors.accents: добавлены 3 VK-фирменных цвета в НАЧАЛО списка (indices 0-2):
+// Color.kt VkMintColors.accents: добавлены 3 VK-фирменных цвета в НАЧАЛО списка (indices 0-2):
 //   - VK Modern   #0077FF — VK 2022+ «цифровой» синий (основной акцент VK, primary brand color)
 //   - VK Classic  #4A76A8 — VK 2016-2022 классический «вкотый» синий (ностальгический)
 //   - VK Pink     #E033AC — VK Pro/Donut pink акцент (Donut highlights, Pro features)
-// Источник: VK Brand Guidelines (vk.design). Существующие 10 SOVA-акцентов сдвинуты (Black 0→3, Red 1→4, ..., Pink 9→12). Всего 13 акцентов (было 10). accentNames обновлены.
+// Источник: VK Brand Guidelines (vk.design). Существующие 10 VK Mint-акцентов сдвинуты (Black 0→3, Red 1→4, ..., Pink 9→12). Всего 13 акцентов (было 10). accentNames обновлены.
 // Default accent: был index 6 (Cyan), теперь index 0 (VK Modern #0077FF):
-//   - SovaPrefs.kt:90 — themeAccentIndex default 6 → 0
+//   - VkMintPrefs.kt:90 — themeAccentIndex default 6 → 0
 //   - MainActivity.kt:985 — accentIndex fallback 6 → 0
 //   - FeedScreen.kt:250 — уже 0 (без изменений)
 // Существующие пользователи с сохранённым accentIndex сохраняют свой выбор (DataStore read переопределяет default). Новые пользователи / factory reset → VK Modern.
-// AccentPicker slider (SettingsScreen:4857) авто-адаптируется: valueRange и steps используют SovaColors.accents.size/lastIndex динамически. Никаких hardcoded размеров — добавление цветов не ломает slider.
+// AccentPicker slider (SettingsScreen:4857) авто-адаптируется: valueRange и steps используют VkMintColors.accents.size/lastIndex динамически. Никаких hardcoded размеров — добавление цветов не ломает slider.
 // 3 файла, +39/−19. Кодировка UTF-8 без BOM. Все комментарии — line-comments //.
 
 VOICE-TRANSCRIPT-P0.22-2026-10-06: аудио-сообщения в цвете VK #0077FF + кнопка расшифровки ASR. 3 файла, +180/−103.
@@ -14425,8 +14425,8 @@ VOICE-TRANSCRIPT-P0.22-2026-10-06: аудио-сообщения в цвете V
 
 BOTTOM-NAV-ICON-ONLY-P0.23-2026-10-06: нижняя панель — только иконки разделов (без текста), крупнее.
 // Пользователь: «На нижней панели должны быть значки разделов без текста и крупней».
-// NavigationBar (≤5 items, SovaNavHost:1457): убран label = { Text(item.title) } из NavigationBarItem. Иконки 32dp (было ~24dp Material3 default). Явный tint: onSurface (selected) / onSurfaceVariant (not selected). BadgedBox для Messages (unread count) сохранён.
-// BottomNavScrollButton (>5 items, скроллируемая панель, SovaNavHost:336): убран Text(item.title). Иконки 32dp. Высота кнопки 80dp → 64dp (без текста меньше места). BadgedBox сохранён.
+// NavigationBar (≤5 items, VkMintNavHost:1457): убран label = { Text(item.title) } из NavigationBarItem. Иконки 32dp (было ~24dp Material3 default). Явный tint: onSurface (selected) / onSurfaceVariant (not selected). BadgedBox для Messages (unread count) сохранён.
+// BottomNavScrollButton (>5 items, скроллируемая панель, VkMintNavHost:336): убран Text(item.title). Иконки 32dp. Высота кнопки 80dp → 64dp (без текста меньше места). BadgedBox сохранён.
 // Drawer / side panel labels НЕ тронуты — пользователь сказал про «нижнюю панель».
 // 1 файл, +24/−13. Кодировка UTF-8 без BOM. Все комментарии — line-comments //.
 
@@ -14444,7 +14444,7 @@ VOICE-TIMER-ASR-P0.24-2026-10-06: фикс таймера (одно число) 
 // 1 файл, +59/−29. Кодировка UTF-8 без BOM. Все комментарии — line-comments //.
 
 COMPILE-FIX4-2026-10-06: 6 ошибок компиляции от P0.23 (bottom nav icons) + P0.24 (voice timer/ASR).
-// SovaNavHost.kt:367,371,1486,1492 — 'Unresolved reference size'. P0.23 использовал Modifier.size(32.dp) для иконок нижней панели, но забыл import androidx.compose.foundation.layout.size. Добавлен.
+// VkMintNavHost.kt:367,371,1486,1492 — 'Unresolved reference size'. P0.23 использовал Modifier.size(32.dp) для иконок нижней панели, но забыл import androidx.compose.foundation.layout.size. Добавлен.
 // ChatDetailScreen.kt:11836 — 'Unresolved reference mutableLongStateOf'. P0.24 добавил currentPositionMs: Long by mutableLongStateOf(0L), но забыл import androidx.compose.runtime.mutableLongStateOf. Добавлен.
 // ChatDetailScreen.kt:11960 — 'Assignment type mismatch: actual Int, expected Long'. MediaPlayer.currentPosition возвращает Int (мс), но currentPositionMs — Long. Добавлен .toLong() conversion.
 // 2 файла, +4/−1. Кодировка UTF-8 без BOM.
@@ -14458,7 +14458,7 @@ VOICE-ASR-EXOPLAYER-P0.25-26-2026-10-06: реальная расшифровка
 //   - Авто-fetch: LaunchedEffect(messages.id-hash) — через 5 сек если есть pending voice, вызывает fetchVoiceTranscripts(). Повторяется при смене списка сообщений (новое голосовое → авто-fetch через 5 сек).
 //   - Ручной fetch: VoiceMessageBubble onRequestTranscript callback — при тапе на ASR кнопку если transcriptContent==null (не готов), вызывает fetchVoiceTranscripts() перед toggle expansion.
 // P0.26 #VOICE-EXOPLAYER:
-//   - VoicePlaybackController: MediaPlayer → ExoPlayer + OkHttpDataSource.Factory(SovaApp.httpClient) — отправляет cookies (remixsid) через VkCookieJar + VK UA + Referer. Fallback на DefaultHttpDataSource если SovaApp null.
+//   - VoicePlaybackController: MediaPlayer → ExoPlayer + OkHttpDataSource.Factory(VkMintApp.httpClient) — отправляет cookies (remixsid) через VkCookieJar + VK UA + Referer. Fallback на DefaultHttpDataSource если VkMintApp null.
 //   - Player.Listener: onPlaybackStateChanged(STATE_READY) → set durationSec из ep.duration; onIsPlayingChanged → start/stop progress tracking; onPlayerError → releasePlayer + fallback URL (Fix #237).
 //   - startProgressTracking: читает ep.currentPosition (Long мс) напрямую, обновляет currentPositionMs + progress. Больше нет durationSec*progress desync.
 //   - Imports: DefaultDataSource, DefaultHttpDataSource, OkHttpDataSource.

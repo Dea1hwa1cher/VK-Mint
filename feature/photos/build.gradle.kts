@@ -4,8 +4,8 @@
 // чата (сетка 1/2 колонки + стикер-фото Fix #227/#228) переехал из ChatDetailScreen
 // в PhotosInlineRenderer.
 // Этап 3.7-1 (2026-09-03): PhotosScreen переехал сюда из :app (git mv, пакет
-// re.pinok.ui.screens.photos сохранён) вместе с PhotoViewer (фото-домен, пакет
-// re.pinok.ui.components сохранён — :app продолжает видеть его через classpath);
+// vk.mint.ui.screens.photos сохранён) вместе с PhotoViewer (фото-домен, пакет
+// vk.mint.ui.components сохранён — :app продолжает видеть его через classpath);
 // ErrorView — в :core:ui (универсальный, решение пользователя); DI-контракт —
 // PhotosDependencies/PhotosApi/LocalPhotosDeps (канон §3.2).
 // Правила: :feature:* НЕ зависят от :app и друг от друга — только :contracts + :core:*
@@ -19,7 +19,7 @@ plugins {
 }
 
 android {
-    namespace = "re.pinok.feature.photos"
+    namespace = "vk.mint.feature.photos"
     compileSdk = 36
 
     defaultConfig {
@@ -34,7 +34,7 @@ android {
     buildFeatures {
         compose = true
         // BuildConfig библиотечному модулю НЕ нужен: контейнер не читает
-        // re.pinok.BuildConfig (прецедент 1.2-а/1.2-в/1.3: инжект из хоста).
+        // vk.mint.BuildConfig (прецедент 1.2-а/1.2-в/1.3: инжект из хоста).
         buildConfig = false
     }
 }
@@ -44,18 +44,18 @@ dependencies {
     // capability-интерфейсы, найденные в реестре, без явной зависимости).
     api(project(":contracts"))
 
-    // AppLog (re.pinok.util).
+    // AppLog (vk.mint.util).
     implementation(project(":core:common"))
 
-    // ImageSaver (re.pinok.media) — сохранение фото в галерею (PhotoViewer).
+    // ImageSaver (vk.mint.media) — сохранение фото в галерею (PhotoViewer).
     implementation(project(":core:media"))
 
-    // #ARCH-CONTAINERS 3.7-1: Album/PhotoItem и весь пакет re.pinok.data.model
+    // #ARCH-CONTAINERS 3.7-1: Album/PhotoItem и весь пакет vk.mint.data.model
     // перенесены в :core:data (пакет сохранён); PhotosApi ссылается на них
     // в сигнатурах.
     implementation(project(":core:data"))
 
-    // ErrorView (re.pinok.ui.components) — универсальный компонент в :core:ui
+    // ErrorView (vk.mint.ui.components) — универсальный компонент в :core:ui
     // (решение пользователя, Этап 3.7-1); PhotoViewer — фото-домен, здесь.
     implementation(project(":core:ui"))
 
@@ -73,7 +73,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     // Coil 3 (coil-compose): AsyncImage для фото. ImageLoader — ГЛОБАЛЬНЫЙ,
-    // его строит хост (SovaApp.newImageLoader: OkHttp с cookie-jar + GIF/
+    // его строит хост (VkMintApp.newImageLoader: OkHttp с cookie-jar + GIF/
     // animated-WebP декодеры) — SingletonImageLoader подхватывается автоматически,
     // поэтому модулю нужны только compose-API (coil-network-okhttp/coil-gif не нужны).
     implementation(libs.coil.compose)

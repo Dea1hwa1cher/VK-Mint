@@ -44,7 +44,7 @@ tools/updater-sign/private_key*
 # #PERF-R8 (Task 74): локальные артефакты подписи (apksigner --out). Не в git.
 build_artifacts/
 
-# IDE / Kotlin (PinoK)
+# IDE / Kotlin (VK Mint)
 .kotlin/
 .idea/
 .gigatool/

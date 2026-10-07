@@ -1,0 +1,534 @@
+package vk.mint.ui.screens.calls
+
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import vk.mint.feature.calls.CallsSectionKey
+import vk.mint.feature.calls.LocalCallsDeps
+import vk.mint.feature.calls.LocalCallsSectionRepository
+import vk.mint.util.AppLog
+
+/**
+ * #CALLS-SNAP (2026-09-05): Этап А3 плана «звонки.перенос.план.md» — сайдбар
+ * раздела расширен с 3 до 8 живых пунктов (матрица §1.2): Главная · Позвонить
+ * друзьям · Активные · Запланированные · История · Пропущенные · Записи
+ * звонков · Расшифровки звонков. Каждый таб — реальный fetch через фасад/
+ * репозиторий (А2) и честный loading/error/empty (А4).
+ *
+ * «Настройка пунктов меню» (⚙ внизу сайдбара, §1.1): диалог видимости и
+ * порядка пунктов (чекбокс + вверх/вниз), persist в VkMintPrefs
+ * (calls_sidebar_cfg, CSV «TAB:1,TAB:0» в порядке отображения), восстановление
+ * при старте (LaunchedEffect + prefs.callsSidebarCfg.first()). Защиты:
+ * нельзя скрыть последний видимый пункт; табы, добавленные в enum после
+ * сохранения конфига, появляются видимыми в конце; «все скрыты» → дефолт.
+ */
+enum class CallsTab(val label: String) {
+    HOME("Главная"),
+    CALL_FRIENDS("Позвонить друзьям"),
+    ACTIVE("Активные"),
+    SCHEDULED("Запланированные"),
+    HISTORY("История"),
+    MISSED("Пропущенные"),
+    RECORDINGS("Записи звонков"),
+    TRANSCRIPTS("Расшифровки звонков"),
+}
+
+/** Пункт конфигурации сайдбара: таб + видимость (порядок = позиция в списке). */
+data class CallsSidebarItem(val tab: CallsTab, val visible: Boolean)
+
+private fun defaultSidebarConfig(): List<CallsSidebarItem> =
+    CallsTab.entries.map { CallsSidebarItem(it, true) }
+
+private fun serializeSidebarConfig(config: List<CallsSidebarItem>): String =
+    config.joinToString(",") { it.tab.name + ":" + (if (it.visible) "1" else "0") }
+
+/** Парсинг VkMintPrefs.callsSidebarCfg с мержем новых табов и защитой «все скрыты». */
+private fun parseSidebarConfig(raw: String): List<CallsSidebarItem> {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) return defaultSidebarConfig()
+    val parsed = ArrayList<CallsSidebarItem>()
+    val seen = HashSet<CallsTab>()
+    for (token in trimmed.split(",")) {
+        val parts = token.split(":")
+        if (parts.size != 2) continue
+        var tab: CallsTab? = null
+        for (candidate in CallsTab.entries) {
+            if (candidate.name == parts[0]) tab = candidate
+        }
+        if (tab == null) continue
+        if (seen.contains(tab)) continue
+        seen.add(tab)
+        parsed.add(CallsSidebarItem(tab, parts[1] == "1"))
+    }
+    // Табы, добавленные в enum после сохранения конфига, — в конец, видимыми.
+    for (tab in CallsTab.entries) {
+        if (!seen.contains(tab)) parsed.add(CallsSidebarItem(tab, true))
+    }
+    val anyVisible = parsed.any { it.visible }
+    if (!anyVisible) return defaultSidebarConfig()
+    return parsed
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CallsMainScreen(
+    onBack: () -> Unit,
+    onNavigateToCall: (Long) -> Unit,
+) {
+    val deps = LocalCallsDeps.current
+    // Этап Б4: бейдж пропущенных на табе «Пропущенные» (число из репозитория).
+    val callsRepo = LocalCallsSectionRepository.current
+    val missedBadge by callsRepo.missedCount.collectAsState()
+    LaunchedEffect(Unit) {
+        // Кэш-семантика: CONTENT не перезапрашивается; инвалидация по событиям
+        // (hangup/мутации) обновит счётчик через StateFlow.
+        callsRepo.refresh(CallsSectionKey.MISSED, force = false)
+    }
+    val scope = rememberCoroutineScope()
+    var selectedTab by remember { mutableStateOf(CallsTab.HISTORY) }
+    var sidebarExpanded by remember { mutableStateOf(true) }
+    val sidebarWidth by animateDpAsState(
+        targetValue = if (sidebarExpanded) 180.dp else 0.dp,
+        label = "sidebarWidth",
+    )
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var showJoinDialog by remember { mutableStateOf(false) }
+    var showScheduleDialog by remember { mutableStateOf(false) }
+    var showMenuSettings by remember { mutableStateOf(false) }
+    var sidebarConfig by remember { mutableStateOf(defaultSidebarConfig()) }
+
+    // Восстановление конфигурации пунктов меню при старте (VkMintPrefs, Этап А3).
+    LaunchedEffect(Unit) {
+        val raw = deps.prefs.callsSidebarCfg.first()
+        sidebarConfig = parseSidebarConfig(raw)
+        AppLog.i("CallsMain", "sidebar config restored: ${serializeSidebarConfig(sidebarConfig)}")
+    }
+
+    val visibleTabs = sidebarConfig.filter { it.visible }.map { it.tab }
+    // Выбранный таб скрыли в настройках → первый видимый.
+    var effectiveTab = selectedTab
+    if (!visibleTabs.contains(effectiveTab) && visibleTabs.isNotEmpty()) {
+        effectiveTab = visibleTabs.first()
+    }
+
+    AppLog.i("CallsMain", "selectedTab=${effectiveTab.label} sidebarExpanded=$sidebarExpanded")
+
+    // #FIX-CALLS-DUAL-TOPBAR (2026-09-15): локальный TopAppBar удалён.
+    // На маршруте CallsHistory уже показывается глобальный ScreenTopBar из VkMintNavHost
+    // (маршрут НЕ входит в hasOwnTopBar), из-за чего рисовались ДВА заголовка «← Звонки».
+    // Оставляем верхнюю (глобальную) панель, локальную убираем. Scaffold оставлен для padding.
+    Scaffold { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            CallsHeader(
+                onCreateCall = { showCreateDialog = true },
+                onSchedule = {
+                    // #CALLS-SNAP (2026-09-06, Этап Г2): «Запланировать» — настоящая
+                    // модалка планирования (REV-UI §6.3, messages.editCall, создание
+                    // call_id="0"). Прежний переход в таб Scheduled (А3) и прежний
+                    // диалог «будет доступна позже» заменены; живой список — таб
+                    // «Запланированные» с действиями (Г3, CallsScheduledSection).
+                    AppLog.i("CallsHeader", "Запланировать → модалка messages.editCall (создание)")
+                    showScheduleDialog = true
+                },
+                onJoin = { showJoinDialog = true },
+            )
+            Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                ) {
+                    ContentArea(
+                        selectedTab = effectiveTab,
+                        onNavigateToCall = onNavigateToCall,
+                        onCreateCall = { showCreateDialog = true },
+                        onJoin = { showJoinDialog = true },
+                        onOpenTab = { selectedTab = it },
+                    )
+                }
+                // Кнопка-флажок для сворачивания/разворачивания боковой панели
+                IconButton(
+                    onClick = { sidebarExpanded = !sidebarExpanded },
+                    modifier = Modifier
+                        .width(24.dp)
+                        .fillMaxHeight()
+                        .testTag("sidebar_toggle"),
+                ) {
+                    Icon(
+                        imageVector = if (sidebarExpanded) Icons.AutoMirrored.Filled.ArrowForward
+                            else Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = if (sidebarExpanded) "Свернуть" else "Развернуть",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                // Боковая панель (сворачивается/разворачивается)
+                if (sidebarExpanded) {
+                    CallsRightSidebar(
+                        tabs = visibleTabs,
+                        selectedTab = effectiveTab,
+                        missedBadgeCount = missedBadge,
+                        onTabSelected = { selectedTab = it },
+                        onOpenMenuSettings = { showMenuSettings = true },
+                        modifier = Modifier.width(180.dp).fillMaxHeight(),
+                    )
+                }
+            }
+        }
+    }
+    // Диалоги для кнопок шапки
+    if (showCreateDialog) {
+        // #CALLS-SNAP (Этап Г1): поиск адресата (messagesSearchForCallTargets) +
+        // аудио/видео через CallStarter — вместо прежнего ввода сырого peerId.
+        CallsCreateCallDialog(
+            onDismiss = { showCreateDialog = false },
+        )
+    }
+    if (showJoinDialog) {
+        // #CALLS-SNAP (Этап Г4): реальный join-флоу по ссылке
+        // (getAnonymTokenByLink → joinConversationByLink → CallScreen) —
+        // вместо прежней лог-only заглушки. Навигация в звонок — через
+        // CallJoinByLinkHolder (VkMintNavHost).
+        CallsJoinByLinkDialog(
+            onDismiss = { showJoinDialog = false },
+        )
+    }
+    if (showScheduleDialog) {
+        // #CALLS-SNAP (Этап Г2, ревизия-2 REV-DEEP-2): модалка планирования —
+        // СОЗДАНИЕ = calls.start (messages.editCall НЕ создаёт, прежний
+        // call_id="0" опровергнут реверсом). editItem=null — режим создания;
+        // правка/перенос — из CallsScheduledSection с сырым айтемом. После
+        // успеха — refresh(SCHEDULED) + пост-модалка ссылки в модалке.
+        CallsScheduleCallDialog(
+            editItem = null,
+            onDismiss = { showScheduleDialog = false },
+        )
+    }
+    // ⚙ «Настройка пунктов меню» (Этап А3): видимость/порядок + persist.
+    if (showMenuSettings) {
+        CallsMenuSettingsDialog(
+            config = sidebarConfig,
+            onApply = { newConfig ->
+                showMenuSettings = false
+                sidebarConfig = newConfig
+                val serialized = serializeSidebarConfig(newConfig)
+                scope.launch {
+                    deps.prefs.setCallsSidebarCfg(serialized)
+                    AppLog.i("CallsMain", "sidebar config saved: $serialized")
+                }
+            },
+            onDismiss = { showMenuSettings = false },
+        )
+    }
+}
+
+/**
+ * ⚙ «Настройка пунктов меню»: чекбокс — видимость пункта, стрелки — порядок.
+ * Последний видимый пункт скрыть нельзя (чекбокс игнорирует попытку).
+ */
+@Composable
+private fun CallsMenuSettingsDialog(
+    config: List<CallsSidebarItem>,
+    onApply: (List<CallsSidebarItem>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var draft by remember(config) { mutableStateOf(config) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Настройка пунктов меню") },
+        text = {
+            LazyColumn(modifier = Modifier.height(360.dp)) {
+                itemsIndexed(draft) { index, item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = item.visible,
+                            onCheckedChange = { checked ->
+                                val visibleCount = draft.count { it.visible }
+                                if (checked || visibleCount > 1) {
+                                    draft = draft.map { current ->
+                                        if (current.tab == item.tab) current.copy(visible = checked) else current
+                                    }
+                                }
+                            },
+                            modifier = Modifier.testTag("menu_cfg_check_${item.tab.name}"),
+                        )
+                        Text(
+                            item.tab.label,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        IconButton(
+                            enabled = index > 0,
+                            onClick = {
+                                val mutable = draft.toMutableList()
+                                val moved = mutable.removeAt(index)
+                                mutable.add(index - 1, moved)
+                                draft = mutable
+                            },
+                            modifier = Modifier.size(32.dp).testTag("menu_cfg_up_${item.tab.name}"),
+                        ) {
+                            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Выше")
+                        }
+                        IconButton(
+                            enabled = index < draft.size - 1,
+                            onClick = {
+                                val mutable = draft.toMutableList()
+                                val moved = mutable.removeAt(index)
+                                mutable.add(index + 1, moved)
+                                draft = mutable
+                            },
+                            modifier = Modifier.size(32.dp).testTag("menu_cfg_down_${item.tab.name}"),
+                        ) {
+                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Ниже")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onApply(draft) }, modifier = Modifier.testTag("menu_cfg_save")) {
+                Text("Сохранить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Отмена") }
+        },
+    )
+}
+
+@Composable
+private fun CallsHeader(
+    onCreateCall: () -> Unit = {},
+    onSchedule: () -> Unit = {},
+    onJoin: () -> Unit = {},
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HeaderButton(label = "Создать звонок", onClick = onCreateCall)
+        HeaderButton(label = "Запланировать", onClick = onSchedule)
+        // REV-UI §1.1: подпись веб-кнопки — именно «Присоединиться»
+        // (calls_main_page_button_join_call); прежняя «Подключиться» — S11-расхождение.
+        HeaderButton(label = "Присоединиться", onClick = onJoin)
+    }
+}
+
+@Composable
+private fun HeaderButton(label: String, onClick: () -> Unit = {}) {
+    TextButton(
+        onClick = {
+            AppLog.i("CallsHeader", "clicked: $label")
+            onClick()
+        },
+        modifier = Modifier.testTag("header_$label"),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+@Composable
+private fun ContentArea(
+    selectedTab: CallsTab,
+    onNavigateToCall: (Long) -> Unit,
+    onCreateCall: () -> Unit,
+    onJoin: () -> Unit,
+    onOpenTab: (CallsTab) -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        when (selectedTab) {
+            CallsTab.HOME -> CallsHomeSection(
+                onNavigateToCall = onNavigateToCall,
+                onCreateCall = onCreateCall,
+                onJoin = onJoin,
+                onOpenFriends = { onOpenTab(CallsTab.CALL_FRIENDS) },
+            )
+            CallsTab.CALL_FRIENDS -> CallsFriendsSection(onNavigateToCall = onNavigateToCall)
+            CallsTab.ACTIVE -> CallsActiveSection(onNavigateToCall = onNavigateToCall)
+            CallsTab.SCHEDULED -> CallsScheduledSection(onNavigateToCall = onNavigateToCall)
+            CallsTab.HISTORY -> CallsHistorySection(onNavigateToCall = onNavigateToCall)
+            CallsTab.MISSED -> CallsMissedSection(onNavigateToCall = onNavigateToCall)
+            CallsTab.RECORDINGS -> CallsRecordingsSection(onNavigateToCall = onNavigateToCall)
+            CallsTab.TRANSCRIPTS -> CallsTranscriptsSection(onNavigateToCall = onNavigateToCall)
+        }
+    }
+}
+
+/**
+ * Сайдбар: видимые пункты (конфиг А3) + разделители по прежним позициям
+ * (после 1-го/3-го/5-го) + внизу ⚙ «Настройка пунктов меню».
+ * Этап Б4: missedBadgeCount — бейдж количества пропущенных на пункте
+ * «Пропущенные» (материал-3 BadgedBox/Badge — как unread-badge Сообщений
+ * в VkMintNavHost).
+ */
+@Composable
+fun CallsRightSidebar(
+    tabs: List<CallsTab>,
+    selectedTab: CallsTab,
+    missedBadgeCount: Int,
+    onTabSelected: (CallsTab) -> Unit,
+    onOpenMenuSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(vertical = 8.dp),
+    ) {
+        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            tabs.forEachIndexed { index, tab ->
+                item(key = tab.name) {
+                    SidebarTabItem(
+                        tab = tab,
+                        isSelected = tab == selectedTab,
+                        badgeCount = if (tab == CallsTab.MISSED) missedBadgeCount else 0,
+                        onClick = { onTabSelected(tab) },
+                    )
+                }
+                if ((index == 1 || index == 3 || index == 5) && index < tabs.size - 1) {
+                    item(key = "sep_$index") {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                    }
+                }
+            }
+        }
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onOpenMenuSettings)
+                .testTag("sidebar_menu_settings")
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.Settings,
+                contentDescription = "Настройка пунктов меню",
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Настройка пунктов меню",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SidebarTabItem(
+    tab: CallsTab,
+    isSelected: Boolean,
+    badgeCount: Int,
+    onClick: () -> Unit,
+) {
+    val bgColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+    } else {
+        Color.Transparent
+    }
+
+    // Метка пункта: с бейджем (BadgedBox, стиль unread-badge VkMintNavHost)
+    // или без — одинаковая типографика в обеих ветках.
+    val label: @Composable () -> Unit = {
+        Text(
+            text = tab.label,
+            modifier = Modifier.padding(start = 8.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                else MaterialTheme.colorScheme.onSurface,
+        )
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("sidebar_tab_${tab.name}")
+            .clickable(onClick = onClick)
+            .background(bgColor, RoundedCornerShape(8.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (badgeCount > 0) {
+            BadgedBox(
+                badge = {
+                    Badge { Text(if (badgeCount > 99) "99+" else badgeCount.toString()) }
+                },
+            ) {
+                label()
+            }
+        } else {
+            label()
+        }
+    }
+}

@@ -1,0 +1,787 @@
+package vk.mint.data
+
+import android.content.Context
+import android.util.Base64
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.byteArrayPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import java.io.File
+import vk.mint.auth.exchange.CookieJarBackup
+import vk.mint.auth.exchange.ExchangeTokenStorage
+import vk.mint.data.local.VkMintPrefs
+
+/**
+ * Волна 45 #SETTINGS-EXPORT (переработан в волне 45-б: покрытие всего
+ * «контейнерного» хранилища; механизм восстановления перепроверен в волне
+ * 45-в #RESTORE-SAFETY по запросу «не хочу ничего терять»): экспорт/импорт
+ * ВСЕХ настроек «контейнерного» приложения в JSON-файл и обратно.
+ *
+ * ЗАЧЕМ (сценарии):
+ *  - откат версии (#UPDATER-ROLLBACK): Android требует удалить приложение,
+ *    чтобы поставить более старую, — ВСЁ хранилище в app-контейнере стирается
+ *    (это и значит «контейнерное приложение»: данные живут в /data/data/vk.mint.*
+ *    и умирают вместе с пакетом); экспорт через SAF в пользовательскую папку —
+ *    единственный способ вернуть настройки и сессию после переустановки;
+ *  - перенос на новое устройство / второе устройство;
+ *  - бэкап перед рискованными экспериментами с настройками.
+ *
+ * ЧТО ВХОДИТ (карта хранилищ контейнера — свип 47-a подтвердил полноту):
+ *  1. DataStore «vkmint_settings» (core/data, VkMintPrefs; ЕДИНСТВЕННЫЙ DataStore
+ *     в репо) — ВСЕ ключи generic-ом (rawSnapshot): интерфейс, музыка, звонки,
+ *     уведомления, логирование, кэш updater'а, локальные закладки треков и
+ *     папок (ключи вне Snapshot тоже попадают — снимок сырой, полный);
+ *  2. legacy SharedPreferences «equalizer» — настройки медиа-контейнера
+ *     (AudioEffectsEngine/EqualizerHelper/EqualizerFeatureFlags: EQ, bass,
+ *     virtualizer, loudness, reverb) — раньше выпадали из экспорта;
+ *  3. сессия (EncryptedSharedPreferences через ExchangeTokenStorage) —
+ *     access/exchange/webview/silent-токены, lp-креды + СНИМОК COOKIE JAR из
+ *     CookieManager (секция "cookies", #SESSION-WEB-EXPORT: после
+ *     #SESSION-WEB-MECHANISM cookies — единственный источник web-сессии,
+ *     без них восстановленный токен умирает при первом refresh). Прецедент
+ *     plaintext-файла с токенами — account.json (File backup, VTosters
+ *     pattern #3); в экспорт-файле секреты защищаются только выбором места
+ *     пользователем — UI предупреждает ДО экспорта (красная строка во вкладке
+ *     «Данные»). ВОЛНА 50 #SESSION-PASSWORD-MATRIX + #SESSION-WEB-MECHANISM:
+ *     пароль аккаунта (last_password) больше НЕ хранится на устройстве вовсе
+ *     — флаг includeSessionPassword оставлен для совместимости и no-op.
+ *
+ * ЧТО НЕ ВХОДИТ (честно, пересоздаётся само или непереносимо by design):
+ *  - SharedPreferences «security_alerts_cache» (кэш поллера алертов);
+ *  - SharedPreferences «app_meta» (штамп last_version_code для миграции);
+ *  - медиа-кэш и офлайн-загрузки (отдельные файлы — только перескачивание);
+ *  - WorkManager-джобы (перепланируются при старте).
+ *
+ * ФОРМАТ (format=1, Gson; секции sp/session добавлены в волне 45-б, парсер
+ * принимает и старый файл с одним DataStore-массивом):
+ *   {"format":1,"app":"VK Mint","appVersion":"2.0.1 (versionCode 2)",
+ *    "exportedAt":1234567890,"skippedUnsupported":0,
+ *    "sessionPasswordIncluded":true,
+ *    "keys":[{"name":..,"type":"string|boolean|int|long|stringSet","value":..}],
+ *    "sp":[{"file":"equalizer","keys":[{"name":..,"type":"...|float","value":..}]}],
+ *    "session":[{"name":..,"type":"...","value":..}],
+ *    "cookies":[{"name":..,"value":..,"domain":..}]}
+ *   Волна 50 #SESSION-PASSWORD-MATRIX: "sessionPasswordIncluded":false —
+ *   last_password в файл НЕ включался (plaintext-экспорт); у файлов волн
+ *   45–45-д поле отсутствует → парсер трактует как true (старое поведение).
+ *   #SESSION-WEB-EXPORT (2026-09-24): секция cookies опциональна — файлы
+ *   волн 45–52 без неё импортируются как раньше (токены без web-сессии,
+ *   ре-логин при первом refresh — мягкая деградация).
+ *
+ * ⚠ ВОЛНА 45-б, ПРИЧИНА ФИКСА СБОРКИ: в datastore 1.1.x у библиотеки СВОЙ
+ * infix `to` (Preferences.Key.to(value) → Preferences.Pair) — выражение
+ * `stringPreferencesKey(..) to v` резолвится именно в него, а не в generic
+ * kotlin.to, и полученный Preferences.Pair не влезает в
+ * Pair<Preferences.Key<*>, Any> (5 compile-ошибок «Argument type mismatch»
+ * у тестера). Поэтому в этом файле инфиксный `to` для datastore-ключей
+ * НЕ используется ВООБЩЕ: все пары строятся явным конструктором Pair(.., ..).
+ *
+ * ВОЛНА 45-в #RESTORE-SAFETY — итог перепроверки механизма восстановления:
+ *  - СТРАХОВОЧНАЯ КОПИЯ: перед любым импортом apply() сначала экспортирует
+ *    ТЕКУЩЕЕ состояние целиком в приватный файл (SAFETY_FILE_NAME). Неудача
+ *    копии = отказ импорта ДО единой записи: восстановление без сети
+ *    безопасности не выполняется принципиально. Копия читается вкладкой
+ *    «Данные» (readSafetyCopy) и восстанавливается одной кнопкой; при
+ *    восстановлении ИЗ копии она сама не перезаписывается (иначе хороший
+ *    снимок затирается уже испорченным текущим состоянием);
+ *  - GUARD КОНФЛИКТА ТИПОВ: Preferences.Key равен ТОЛЬКО по имени (тип —
+ *    дженерик-параметр без рантайм-роли), поэтому запись string-значения под
+ *    живой int-ключ молча порождала бы ClassCastException при каждом чтении
+ *    настройки (краш-луп без возврата во вкладку импорта). restoreRaw теперь
+ *    сверяет тип нового значения с текущим и ПРОПУСКАЕТ конфликтные ключи
+ *    с честным счётчиком (VkMintPrefs.RawRestore);
+ *  - ЧЕСТНЫЙ РЕЗУЛЬТАТ (AppliedResult): commit() у SharedPreferences
+ *    проверяется (false = файл не записан, попадает в spFailed), сессия
+ *    отделяется от «в файле не было access_token», счётчик skipped из parse
+ *    доходит до тоста; UI рекомендует перезапуск (часть кода держит значения
+ *    в памяти);
+ *  - ДЕДУП В PARSE: повтор имени в секции — последнее значение выигрывает,
+ *    заменённые записи попадают в skipped (молчаливое «последний неявно
+ *    победил» хуже честного счётчика);
+ *  - FORWARD-COMPAT ТИПОВ: добавлены float/double/bytes(base64) — полный
+ *    набор типов DataStore, чтобы будущие ключи переносились уже сейчас
+ *    (сейчас в VkMintPrefs ровно 5 типов — свип 47-a).
+ *
+ * Общие (generic) принципы: тип значения определяется Key-объектом DataStore
+ * при экспорте и полем "type" при импорте — НОВЫЕ ключи любого хранилища
+ * попадают в экспорт автоматически. Кривое значение конкретного ключа
+ * пропускает КЛЮЧ, а не весь импорт; файл из будущей версии формата
+ * отклоняется целиком (молчаливый частичный импорт опаснее честного отказа).
+ *
+ * ВОЛНА 45-д #SETTINGS-CRYPTO: файл экспорта может быть ЗАШИФРОВАННЫМ
+ * КОНВЕРТОМ формата 2 (VkMintPrefsCrypto, AES-256-GCM + PBKDF2) — тогда
+ * payload формата 1 лежит в base64-поле "data". Этот объект конвертом не
+ * занимается: export() всегда строит payload format=1, шифрование происходит
+ * в UI перед записью (диалог кода), расшифровка — до parse() (диалог кода
+ * открывается независимо от тумблера — по заголовку конверта). parse()
+ * format=2 не принимает (честный отказ «Файл зашифрован» вместо мусорных
+ * ошибок «нет массива keys»). Страховочная копия НЕ шифруется сознательно:
+ * она не покидает приватный контейнер.
+ *
+ * ВОЛНА 50 #SESSION-PASSWORD-MATRIX (P0 внешнего ревью): пароль аккаунта —
+ * НЕОТЗЫВАЕМЫЙ секрет (утёк → перманентный доступ к аккаунту), в отличие
+ * от токенов (утёк → отзыв). Поэтому last_password попадает в файл ТОЛЬКО
+ * внутри шифроконверта: plaintext-экспорт строится с
+ * includeSessionPassword=false и честно штампуется
+ * "sessionPasswordIncluded":false — «второй account.json» невозможен
+ * по построению. includeSession=false (чекбокс «Экспортировать без
+ * сессии») убирает секцию целиком. Страховочная копия (apply) ВСЕГДА
+ * полная, с паролем: не покидает приватный контейнер (UID-изоляция,
+ * прецедент account.json) и нужна как точка возврата на живой установке.
+ */
+object VkMintPrefsBackup {
+
+    /** Версия формата: при несовместимых изменениях — инкремент (парсер честно отклонит чужие версии). */
+    const val FORMAT_VERSION = 1
+
+    /** MIME экспорт-файла для SAF-контракта CreateDocument. */
+    const val MIME_JSON = "application/json"
+
+    /**
+     * Волна 45-в #RESTORE-SAFETY: имя файла страховочной копии в приватном
+     * хранилище приложения (context.filesDir). Один файл, перезаписывается
+     * перед каждым импортом — всегда хранит состояние «до последнего импорта».
+     * Файл приватный (как account.json — прецедент plaintext с токенами),
+     * наружу не читается ничем, кроме самого приложения.
+     */
+    const val SAFETY_FILE_NAME = "vkmint_prefs_safety.json"
+
+    /**
+     * Файлы legacy SharedPreferences, несущие НАСТРОЙКИ (попадают в экспорт).
+     * «security_alerts_cache» (кэш поллера) и «app_meta» (штамп версии для
+     * миграции) сознательно НЕ включены — это не настройки, они пересоздаются
+     * сами; включать их = тащить мусор в переносимый файл.
+     */
+    private val SETTINGS_SP_FILES = listOf("equalizer")
+
+    /** Результат экспорта: готовый JSON + счётчики по секциям (для честного тоста). */
+    data class Exported(
+        val json: String,
+        val keyCount: Int,
+        val spCount: Int,
+        val sessionCount: Int,
+        /** #SESSION-WEB-EXPORT: число кук в секции "cookies" (0 = не залогинены/без сессии). */
+        val cookiesCount: Int = 0,
+    ) {
+        val totalCount: Int get() = keyCount + spCount + sessionCount + cookiesCount
+    }
+
+    /** Одна запись legacy SharedPreferences: файл → ключ → типизированное значение. */
+    data class SpEntry(val file: String, val key: String, val value: Any)
+
+    /**
+     * План импорта: ok=false → error содержит честную причину отказа.
+     * Волна 45-в: + skipped (нераспознанные/дублирующиеся записи файла),
+     * exportedAt/appVersion (штампы для диалога и карточки страховки).
+     */
+    data class ImportPlan(
+        val ok: Boolean,
+        val error: String = "",
+        val entries: List<Pair<Preferences.Key<*>, Any>> = emptyList(),
+        val sp: List<SpEntry> = emptyList(),
+        val session: List<Pair<String, Any>> = emptyList(),
+        /** #SESSION-WEB-EXPORT: cookies web-сессии из секции "cookies" (старые файлы — пусто). */
+        val cookies: List<CookieJarBackup.VkCookie> = emptyList(),
+        val total: Int = 0,
+        val skipped: Int = 0,
+        val exportedAt: Long = 0,
+        val appVersion: String = "",
+        /** Волна 50 #SESSION-PASSWORD-MATRIX: false — last_password в файл не включался. */
+        val sessionPasswordIncluded: Boolean = true,
+    )
+
+    /**
+     * Волна 45-в #RESTORE-SAFETY: честный результат применения плана — то,
+     * из чего UI собирает тост без лжи.
+     *  - ok=false: импорт прерван ДО ЛЮБЫХ записей (не создалась страховка)
+     *    или DataStore-транзакция упала (она атомарна — состояние прежнее;
+     *    страховочная копия к этому моменту уже лежит в SAFETY_FILE_NAME);
+     *  - dataStoreSkipped: ключи, отклонённые guard'ом конфликта типов;
+     *  - spFailed: SP-файлы, где commit() вернул false (данные НЕ записаны);
+     *  - session/sessionExpected: фактически восстановленные сессионные
+     *    записи из числа бывших в файле (sessionExpected==0 — секции сессии
+     *    в файле не было вовсе).
+     */
+    data class AppliedResult(
+        val ok: Boolean,
+        val error: String = "",
+        val dataStore: Int = 0,
+        val dataStoreSkipped: Int = 0,
+        val sp: Int = 0,
+        val spFailed: List<String> = emptyList(),
+        val session: Int = 0,
+        val sessionExpected: Int = 0,
+        /** #SESSION-WEB-EXPORT: фактически установленных в CookieManager кук. */
+        val cookies: Int = 0,
+        val cookiesExpected: Int = 0,
+        val safetyPath: String? = null,
+    )
+
+    /**
+     * Дамп хранилищ настроек в JSON (см. формат в KDoc класса).
+     * DataStore — rawSnapshot (полный сырой снимок); equalizer — чтение
+     * SharedPreferences; сессия — расшифрованный снапшот EncryptedSharedPreferences
+     * (в процессе мы владеем ключом Keystore, расшифрование валидно).
+     *
+     * Волна 50 #SESSION-PASSWORD-MATRIX:
+     *  @param includeSession false → секция session остаётся ПУСТОЙ (схема
+     *         файла стабильна, sessionCount=0) — чекбокс «Экспортировать без
+     *         сессии»;
+     *  @param includeSessionPassword #SESSION-WEB-MECHANISM: пароль аккаунта
+     *         больше не хранится на устройстве (ключ last_password удалён из
+     *         prefs wipe'ом) — параметр оставлен для совместимости формата и
+     *         старых вызовов, является no-op. Cookies сессии (#SESSION-WEB-EXPORT)
+     *         — отзываемый секрет того же класса, что токены: идут в plaintext.
+     * Страховочная копия (apply) зовёт export() с дефолтами = полная,
+     * с cookie jar (в filesDir, UID-изоляция — прецедент account.json).
+     */
+    suspend fun export(
+        context: Context,
+        prefs: VkMintPrefs,
+        exchangeStorage: ExchangeTokenStorage,
+        appVersion: String,
+        includeSession: Boolean = true,
+        includeSessionPassword: Boolean = true,
+    ): Exported {
+        // 1) DataStore — полный сырой дамп всех ключей (Snapshot НЕ используется:
+        //    он подмножество, часть ключей живёт вне него).
+        val raw = prefs.rawSnapshot()
+        val keysArray = JsonArray()
+        var skipped = 0
+        for ((key, value) in raw) {
+            val entry = encodeEntry(key.name, value)
+            if (entry == null) {
+                // Типов Keys ровно пять (см. VkMintPrefs.Keys); ветка для
+                // устойчивости к будущим типам — не роняем экспорт целиком.
+                skipped++
+                continue
+            }
+            keysArray.add(entry)
+        }
+
+        // 2) Legacy SharedPreferences с настройками (equalizer медиа-контейнера).
+        val spArray = JsonArray()
+        var spCount = 0
+        for (fileName in SETTINGS_SP_FILES) {
+            val sp = context.getSharedPreferences(fileName, Context.MODE_PRIVATE)
+            val group = JsonObject()
+            group.addProperty("file", fileName)
+            val arr = JsonArray()
+            for ((k, v) in sp.all) {
+                val entry = if (v != null) encodeEntry(k, v) else null
+                if (entry == null) continue
+                arr.add(entry)
+                spCount++
+            }
+            group.add("keys", arr)
+            spArray.add(group)
+        }
+
+        // 3) Сессия — расшифрованный снапшот EncryptedSharedPreferences
+        //    (токены/куки входа). Пустой, если в аккаунт не входили.
+        //    Волна 50 #SESSION-PASSWORD-MATRIX: includeSession=false — секция
+        //    не заполняется вовсе. #SESSION-WEB-MECHANISM: last_password в prefs
+        //    больше не живёт — фильтр includeSessionPassword стал no-op
+        //    (оставлен для совместимости).
+        val sessionArray = JsonArray()
+        var sessionCount = 0
+        if (includeSession) {
+            for ((k, v) in exchangeStorage.exportSessionSnapshot()) {
+                if (!includeSessionPassword && k == ExchangeTokenStorage.KEY_LAST_PASSWORD) continue
+                val entry = encodeEntry(k, v)
+                if (entry == null) continue
+                sessionArray.add(entry)
+                sessionCount++
+            }
+        }
+
+        // 4) Cookie jar (#SESSION-WEB-EXPORT): cookies живут ТОЛЬКО в
+        //    CookieManager — это и есть web-сессия. Снимок по всем VK-доменам
+        //    (AuthDomainsConfig.vkCookieUrls), дедуп и правила доменов внутри
+        //    CookieJarBackup. includeSession=false убирает и cookies.
+        val cookiesArray = JsonArray()
+        var cookiesCount = 0
+        if (includeSession) {
+            for (c in CookieJarBackup.snapshot()) {
+                val o = JsonObject()
+                o.addProperty("name", c.name)
+                o.addProperty("value", c.value)
+                o.addProperty("domain", c.domain)
+                cookiesArray.add(o)
+                cookiesCount++
+            }
+        }
+
+        val root = JsonObject()
+        root.addProperty("format", FORMAT_VERSION)
+        root.addProperty("app", "VK Mint")
+        root.addProperty("appVersion", appVersion)
+        root.addProperty("exportedAt", System.currentTimeMillis())
+        root.addProperty("skippedUnsupported", skipped)
+        // Волна 50 #SESSION-PASSWORD-MATRIX: штамп честности файла — импорт
+        // по нему предупреждает «пароля в файле нет». false только у
+        // plaintext-экспортов; у файлов 45–45-д поля нет → парсер читает true.
+        root.addProperty("sessionPasswordIncluded", includeSession && includeSessionPassword)
+        root.add("keys", keysArray)
+        root.add("sp", spArray)
+        root.add("session", sessionArray)
+        root.add("cookies", cookiesArray)
+        return Exported(Gson().toJson(root), raw.size, spCount, sessionCount, cookiesCount)
+    }
+
+    /**
+     * Разбор текста экспорт-файла → типизированный план восстановления.
+     * Значения читаются через примитивное asString (Gson отдаёт строковое
+     * представление любого примитива) и конвертируются явно. Секции "sp" и
+     * "session" опциональны (совместимость с файлами волны 45).
+     *
+     * Волна 45-в #RESTORE-SAFETY: повтор имени внутри секции — last-wins
+     * (заменённая запись честно попадает в skipped); без дедупа две записи
+     * с одним именем писались бы обе, а счётчик «Применено» врал.
+     *
+     * Волна 45-г: JSON читается как JsonElement с сужением as? JsonObject —
+     * «null»-документ и корректный JSON не-объекта честно дают отказ «Файл
+     * не содержит JSON-объекта». Раньше эта ветка была МЁРТВОЙ: fromJson —
+     * Java API с platform-типом результата (JsonObject!), Kotlin вставлял
+     * неявный checkNotNull при присваивании в non-null val → NPE в обход
+     * catch + warning «Condition is always 'false'» на guard'е (266:13).
+     */
+    fun parse(text: String): ImportPlan {
+        if (text.isBlank()) return ImportPlan(false, "Файл пустой")
+        val root: JsonObject? = try {
+            // JsonElement::class — точное совпадение типа → встроенный
+            // JSON_ELEMENT-адаптер Gson (nullSafe, стабилен во всех версиях);
+            // «[1]»/«123» — валидный JSON, но не объект → as? даёт null →
+            // тот же отказ, что и для документа-литерала «null».
+            Gson().fromJson(text, JsonElement::class.java) as? JsonObject
+        } catch (t: Throwable) {
+            return ImportPlan(false, "Это не JSON-файл: " + t.javaClass.simpleName)
+        }
+        if (root == null) return ImportPlan(false, "Файл не содержит JSON-объекта")
+        val format = root.get("format")?.takeIf { it.isJsonPrimitive }?.asInt ?: 0
+        // Волна 45-д #SETTINGS-CRYPTO: format = 2 — ЗАШИФРОВАННЫЙ конверт
+        // (VkMintPrefsCrypto). В нормальном UI-флоу до parse() он не доходит
+        // (импорт сам определяет конверт и спрашивает код); guard — защита
+        // от прямых вызовов parse() с ещё не расшифрованным текстом.
+        if (format == VkMintPrefsCrypto.ENVELOPE_FORMAT) {
+            return ImportPlan(false, "Файл зашифрован — введите код расшифровки")
+        }
+        if (format != FORMAT_VERSION) {
+            return ImportPlan(false, "Неизвестная версия формата: " + format + " (ожидалась " + FORMAT_VERSION + ")")
+        }
+        val keysEl = root.get("keys")
+        if (keysEl == null || !keysEl.isJsonArray) return ImportPlan(false, "В файле нет массива keys")
+        val exportedAt = root.get("exportedAt")?.takeIf { it.isJsonPrimitive }?.asLong ?: 0L
+        val fileAppVersion = root.get("appVersion")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+        // Волна 50 #SESSION-PASSWORD-MATRIX: у файлов 45–45-д поля нет → true
+        // (старое поведение: пароль в сессии был всегда).
+        val sessionPasswordIncluded = root.get("sessionPasswordIncluded")
+            ?.takeIf { it.isJsonPrimitive }?.asBoolean ?: true
+        var skipped = 0
+
+        // Дедуп по имени (last-wins): LinkedHashMap сохраняет порядок файла.
+        val byName = LinkedHashMap<String, Pair<Preferences.Key<*>, Any>>()
+        for (element in keysEl.asJsonArray) {
+            val entry = element as? JsonObject
+            if (entry == null) {
+                skipped++
+                continue
+            }
+            val decoded = decodeEntry(entry)
+            if (decoded == null) {
+                skipped++
+                continue
+            }
+            val key = dataStoreKey(decoded.first, decoded.second)
+            if (key == null) {
+                skipped++
+                continue
+            }
+            // Только явный конструктор Pair(..) — НЕ infix `to` (см. KDoc класса:
+            // у datastore 1.1.x свой infix to → Preferences.Pair, ломает сборку).
+            if (byName.put(decoded.first, Pair(key, decoded.second)) != null) skipped++
+        }
+        val entries = ArrayList(byName.values)
+
+        val bySp = LinkedHashMap<Pair<String, String>, SpEntry>()
+        val spEl = root.get("sp")
+        if (spEl != null && spEl.isJsonArray) {
+            for (groupEl in spEl.asJsonArray) {
+                val group = groupEl as? JsonObject
+                if (group == null) {
+                    skipped++
+                    continue
+                }
+                val file = group.get("file")?.takeIf { it.isJsonPrimitive }?.asString
+                if (file == null) {
+                    skipped++
+                    continue
+                }
+                val arr = group.get("keys") as? JsonArray
+                if (arr == null) {
+                    skipped++
+                    continue
+                }
+                for (element in arr) {
+                    val entry = element as? JsonObject
+                    if (entry == null) {
+                        skipped++
+                        continue
+                    }
+                    val decoded = decodeEntry(entry)
+                    if (decoded == null) {
+                        skipped++
+                        continue
+                    }
+                    if (bySp.put(Pair(file, decoded.first), SpEntry(file, decoded.first, decoded.second)) != null) {
+                        skipped++
+                    }
+                }
+            }
+        }
+        val sp = ArrayList(bySp.values)
+
+        val bySession = LinkedHashMap<String, Pair<String, Any>>()
+        val sessionEl = root.get("session")
+        if (sessionEl != null && sessionEl.isJsonArray) {
+            for (element in sessionEl.asJsonArray) {
+                val entry = element as? JsonObject
+                if (entry == null) {
+                    skipped++
+                    continue
+                }
+                val decoded = decodeEntry(entry)
+                if (decoded == null) {
+                    skipped++
+                    continue
+                }
+                if (bySession.put(decoded.first, Pair(decoded.first, decoded.second)) != null) skipped++
+            }
+        }
+        val session = ArrayList(bySession.values)
+
+        // #SESSION-WEB-EXPORT: секция cookies (опциональна, дедуп по (домен, имя) last-wins).
+        val byCookie = LinkedHashMap<Pair<String, String>, CookieJarBackup.VkCookie>()
+        val cookiesEl = root.get("cookies")
+        if (cookiesEl != null && cookiesEl.isJsonArray) {
+            for (element in cookiesEl.asJsonArray) {
+                val entry = element as? JsonObject
+                if (entry == null) {
+                    skipped++
+                    continue
+                }
+                val cName = entry.get("name")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+                val cValue = entry.get("value")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+                val cDomain = entry.get("domain")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+                if (cName.isEmpty() || cValue.isEmpty() || cDomain.isEmpty()) {
+                    skipped++
+                    continue
+                }
+                if (byCookie.put(Pair(cDomain, cName), CookieJarBackup.VkCookie(cName, cValue, cDomain)) != null) skipped++
+            }
+        }
+        val cookies = ArrayList(byCookie.values)
+
+        val total = entries.size + sp.size + session.size + cookies.size
+        if (total == 0) {
+            return ImportPlan(false, "Не нашёл ни одного корректного ключа — файл повреждён или из другой программы")
+        }
+        return ImportPlan(
+            true, "", entries, sp, session, cookies, total, skipped, exportedAt, fileAppVersion,
+            sessionPasswordIncluded,
+        )
+    }
+
+    /**
+     * Применение плана. Волна 45-в #RESTORE-SAFETY:
+     *  - СНАЧАЛА страховочная копия: полный export() текущего состояния в
+     *    filesDir/SAFETY_FILE_NAME. Любая неудача здесь = отказ импорта,
+     *    ни одна запись не тронута (ok=false, error объясняет). Это ядро
+     *    гарантии «не потеряю ничего»: у пользователя всегда есть снимок
+     *    состояния ДО последнего импорта;
+     *  - DataStore — ОДНА транзакция (restoreRaw): либо все ключи, либо ни
+     *    один; исключение откатывает транзакцию целиком, страховка уже лежит;
+     *  - legacy SharedPreferences — один пакетный edit на файл, РЕЗУЛЬТАТ
+     *    commit() проверяется (false/исключение → файл в spFailed, честный
+     *    отчёт вместо вравшего счётчика);
+     *  - сессия — ExchangeTokenStorage.applyExportedSession (commit + лучший
+     *    effort account.json); возвращается фактическое число записей, чтобы
+     *    UI отличил «в файле не было access_token» от «запись не удалась».
+     *
+     * @param appVersion    штамп для страховочной копии (виден в её карточке)
+     * @param saveSafetyCopy false при восстановлении ИЗ самой копии: иначе
+     *                       хороший снимок затёрся бы текущим (испорченным)
+     *                       состоянием, и сети безопасности не осталось бы.
+     */
+    suspend fun apply(
+        context: Context,
+        prefs: VkMintPrefs,
+        exchangeStorage: ExchangeTokenStorage,
+        plan: ImportPlan,
+        appVersion: String = "",
+        saveSafetyCopy: Boolean = true,
+    ): AppliedResult {
+        var safetyPath: String? = null
+        if (saveSafetyCopy) {
+            safetyPath = try {
+                // Дефолты includeSession/includeSessionPassword → копия ВСЕГДА
+                // полная, с паролем: не покидает приватный контейнер
+                // (#SESSION-PASSWORD-MATRIX).
+                val snapshot = export(context, prefs, exchangeStorage, appVersion.ifEmpty { "VK Mint (авто)" })
+                val file = File(context.filesDir, SAFETY_FILE_NAME)
+                file.writeText(snapshot.json, Charsets.UTF_8)
+                file.absolutePath
+            } catch (t: Throwable) {
+                return AppliedResult(
+                    ok = false,
+                    error = "не удалось создать страховочную копию (" + t.javaClass.simpleName +
+                        ") — текущие настройки НЕ тронуты",
+                )
+            }
+        }
+
+        val dsRes = try {
+            prefs.restoreRaw(plan.entries)
+        } catch (t: Throwable) {
+            return AppliedResult(
+                ok = false,
+                error = "не удалось записать DataStore (" + t.javaClass.simpleName +
+                    ") — транзакция атомарна, настройки прежние; состояние до импорта лежит в страховочной копии",
+                safetyPath = safetyPath,
+            )
+        }
+
+        var spWritten = 0
+        val spFailed = ArrayList<String>()
+        for ((file, entriesForFile) in plan.sp.groupBy { it.file }) {
+            val sp = context.getSharedPreferences(file, Context.MODE_PRIVATE)
+            val ed = sp.edit()
+            var fileWritten = 0
+            for (e in entriesForFile) {
+                when (val v = e.value) {
+                    is String -> {
+                        ed.putString(e.key, v)
+                        fileWritten++
+                    }
+                    is Boolean -> {
+                        ed.putBoolean(e.key, v)
+                        fileWritten++
+                    }
+                    is Int -> {
+                        ed.putInt(e.key, v)
+                        fileWritten++
+                    }
+                    is Long -> {
+                        ed.putLong(e.key, v)
+                        fileWritten++
+                    }
+                    is Float -> {
+                        ed.putFloat(e.key, v)
+                        fileWritten++
+                    }
+                    is Set<*> -> {
+                        @Suppress("UNCHECKED_CAST")
+                        ed.putStringSet(e.key, v as Set<String>)
+                        fileWritten++
+                    }
+                    // Прочих типов в SharedPreferences не бывает; значение из
+                    // правленого файла молча НЕ считается записанным.
+                }
+            }
+            val committed = try {
+                ed.commit()
+            } catch (t: Throwable) {
+                false
+            }
+            if (committed) spWritten += fileWritten else spFailed.add(file)
+        }
+
+        // #SESSION-WEB-MECHANISM: старые экспорт-файлы (волны 45–50) несут в
+        // секции session мёртвые ключи (last_phone/last_password, trusted_hash,
+        // storage-копии cookies) — Path 1.5/2.5 удалены, wipeLegacySessionArtifacts
+        // стирает их при старте. Записывать обратно = воскрешать тухлые данные
+        // (и учить читателей несуществующим кукам) — фильтруем честно.
+        val deadSessionKeys = setOf(
+            ExchangeTokenStorage.KEY_LAST_PHONE, ExchangeTokenStorage.KEY_LAST_PASSWORD,
+            ExchangeTokenStorage.KEY_TRUSTED_HASH, ExchangeTokenStorage.KEY_REMIXSID,
+            ExchangeTokenStorage.KEY_P_COOKIE, ExchangeTokenStorage.KEY_REMIXNSID,
+            ExchangeTokenStorage.KEY_HTTP_TOKEN, ExchangeTokenStorage.KEY_REMIX_NTTPID,
+            ExchangeTokenStorage.KEY_REMIX_UACCK, ExchangeTokenStorage.KEY_REMIX_UAS,
+            ExchangeTokenStorage.KEY_REMIX_DMGR, ExchangeTokenStorage.KEY_REMIX_MVK_FP,
+        )
+        val liveSession = plan.session.filter { it.first !in deadSessionKeys }
+        val sessionMap = HashMap<String, Any>()
+        for (pair in liveSession) sessionMap[pair.first] = pair.second
+        val sessionWritten = try {
+            exchangeStorage.applyExportedSession(sessionMap)
+        } catch (t: Throwable) {
+            // applyExportedSession глотает сам, но не полагаемся на чужие гарантии.
+            0
+        }
+
+        // #SESSION-WEB-EXPORT: cookie jar → CookieManager. Это и есть перенос
+        // web-сессии: восстановленные токены без кук живут только до первого
+        // refresh (HiddenSessionRefresher увидит пустой jar → ре-логин).
+        val cookiesRestored = try {
+            CookieJarBackup.restore(plan.cookies)
+        } catch (t: Throwable) {
+            0
+        }
+
+        return AppliedResult(
+            ok = true,
+            dataStore = dsRes.written,
+            dataStoreSkipped = dsRes.skipped,
+            sp = spWritten,
+            spFailed = spFailed,
+            session = sessionWritten,
+            sessionExpected = liveSession.size,
+            cookies = cookiesRestored,
+            cookiesExpected = plan.cookies.size,
+            safetyPath = safetyPath,
+        )
+    }
+
+    /**
+     * Волна 45-в #RESTORE-SAFETY: чтение страховочной копии для карточки
+     * «Восстановить из копии». Проверяется ТЕМ ЖЕ parse() (та же валидация,
+     * что у импорта) — битая/устаревшая копия честно не предлагается (null).
+     * Блокирующее чтение файла: вызывать с Dispatchers.IO.
+     */
+    fun readSafetyCopy(context: Context): ImportPlan? {
+        val file = File(context.filesDir, SAFETY_FILE_NAME)
+        if (!file.exists()) return null
+        val text = try {
+            file.readText(Charsets.UTF_8)
+        } catch (t: Throwable) {
+            return null
+        }
+        val plan = parse(text)
+        if (!plan.ok) return null
+        return plan
+    }
+
+    // ─── Общая кодировка записей {name, type, value} для всех трёх секций ───
+
+    /**
+     * Упаковка значения в JSON-запись по его РЕАЛЬНОМУ типу. Возвращает null
+     * для типов вне набора (честный пропуск со счётчиком у вызывающего).
+     * Набор покрывает 100% типов SharedPreferences (string/boolean/int/long/
+     * float/stringSet) и полный набор типов ключей DataStore (плюс
+     * forward-compat double/bytes — свип 47-a: сейчас в VkMintPrefs их нет).
+     */
+    private fun encodeEntry(name: String, value: Any): JsonObject? {
+        val entry = JsonObject()
+        entry.addProperty("name", name)
+        when (value) {
+            is String -> {
+                entry.addProperty("type", "string")
+                entry.addProperty("value", value)
+            }
+            is Boolean -> {
+                entry.addProperty("type", "boolean")
+                entry.addProperty("value", value)
+            }
+            is Int -> {
+                entry.addProperty("type", "int")
+                entry.addProperty("value", value)
+            }
+            is Long -> {
+                entry.addProperty("type", "long")
+                entry.addProperty("value", value)
+            }
+            is Float -> {
+                entry.addProperty("type", "float")
+                entry.addProperty("value", value)
+            }
+            is Double -> {
+                entry.addProperty("type", "double")
+                entry.addProperty("value", value)
+            }
+            is ByteArray -> {
+                entry.addProperty("type", "bytes")
+                entry.addProperty("value", Base64.encodeToString(value, Base64.NO_WRAP))
+            }
+            is Set<*> -> {
+                entry.addProperty("type", "stringSet")
+                val arr = JsonArray()
+                for (item in value) {
+                    val s = item as? String
+                    if (s != null) arr.add(s)
+                }
+                entry.add("value", arr)
+            }
+            else -> return null
+        }
+        return entry
+    }
+
+    /** Распаковка записи: (имя, типизированное значение) или null, если ключ битый. */
+    private fun decodeEntry(entry: JsonObject): Pair<String, Any>? {
+        val name = entry.get("name")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+        if (name.isEmpty()) return null
+        val type = entry.get("type")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+        val valueEl = entry.get("value") ?: return null
+        return when (type) {
+            "string" -> valueEl.takeIf { it.isJsonPrimitive }?.asString?.let { Pair(name, it) }
+            "boolean" -> {
+                val s = valueEl.takeIf { it.isJsonPrimitive }?.asString
+                when (s) {
+                    "true" -> Pair(name, true)
+                    "false" -> Pair(name, false)
+                    else -> null
+                }
+            }
+            "int" -> valueEl.takeIf { it.isJsonPrimitive }?.asString?.toIntOrNull()?.let { Pair(name, it) }
+            "long" -> valueEl.takeIf { it.isJsonPrimitive }?.asString?.toLongOrNull()?.let { Pair(name, it) }
+            "float" -> valueEl.takeIf { it.isJsonPrimitive }?.asString?.toFloatOrNull()?.let { Pair(name, it) }
+            "double" -> valueEl.takeIf { it.isJsonPrimitive }?.asString?.toDoubleOrNull()?.let { Pair(name, it) }
+            "bytes" -> {
+                val s = valueEl.takeIf { it.isJsonPrimitive }?.asString ?: return null
+                try {
+                    Pair(name, Base64.decode(s, Base64.NO_WRAP))
+                } catch (t: Throwable) {
+                    // Кривой base64 (ручная правка) — ключ пропускается честно.
+                    null
+                }
+            }
+            "stringSet" -> {
+                if (!valueEl.isJsonArray) return null
+                val set = LinkedHashSet<String>()
+                for (item in valueEl.asJsonArray) {
+                    val s = item.takeIf { it.isJsonPrimitive }?.asString
+                    if (s != null) set.add(s)
+                }
+                Pair(name, set)
+            }
+            // Неизвестный тип (файл из более новой версии) — ключ пропускается.
+            else -> null
+        }
+    }
+
+    /**
+     * Построение DataStore Key по типу распакованного значения. Волна 45-в:
+     * покрыт ПОЛНЫЙ набор типов ключей DataStore (float/double/bytes —
+     * forward-compat; сейчас в VkMintPrefs их нет — свип 47-a).
+     */
+    private fun dataStoreKey(name: String, value: Any): Preferences.Key<*>? = when (value) {
+        is String -> stringPreferencesKey(name)
+        is Boolean -> booleanPreferencesKey(name)
+        is Int -> intPreferencesKey(name)
+        is Long -> longPreferencesKey(name)
+        is Float -> floatPreferencesKey(name)
+        is Double -> doublePreferencesKey(name)
+        is ByteArray -> byteArrayPreferencesKey(name)
+        is Set<*> -> stringSetPreferencesKey(name)
+        else -> null
+    }
+}

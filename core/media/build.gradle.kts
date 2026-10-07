@@ -2,7 +2,7 @@
 // AudioRouteLogger, PlaybackPositionStore (де-факто «медиа-кэш» позиций),
 // DocumentFileStorage (SAF/SD), ImageSaver, VideoPipController, VoiceRecorder,
 // GeniusLyricsFetcher, SirenTranscoder. Пакеты НЕ переименовывались
-// (re.pinok.media) — перенос = перемещение каталога.
+// (vk.mint.media) — перенос = перемещение каталога.
 // Правило: :core:* НЕ зависят от :app и :feature:*; compose/data-слой сюда не тащим.
 // Аудиофокус в модуле НЕТ: он живёт внутри WebRtcEngine.kt (остался в :app,
 // зона Этапа 1.3 :feature:calls) и у плеера ExoPlayer (handleAudioFocus=true
@@ -14,7 +14,7 @@ plugins {
 }
 
 android {
-    namespace = "re.pinok.media"
+    namespace = "vk.mint.media"
     compileSdk = 36
 
     defaultConfig {

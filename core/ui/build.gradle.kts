@@ -1,7 +1,7 @@
 // #ARCH-CONTAINERS Этап 3.7-1 (2026-09-03, решение пользователя): дом
 // УНИВЕРСАЛЬНЫХ compose-компонентов без доменной специфики — виден и ядру
 // (:app), и всем контейнерам (:feature:*), поэтому НЕ домен ни одного
-// контейнера. Первый жилец — ErrorView (re.pinok.ui.components, git mv, пакет
+// контейнера. Первый жилец — ErrorView (vk.mint.ui.components, git mv, пакет
 // сохранён; использовали 7 ядерных экранов + PhotosScreen; прецедент владения
 // «у контейнера» из Task 20 (PermissionManager) признан запахом: следующему
 // контейнеру (:feature:audio) он понадобился бы, а фичи друг от друга НЕ
@@ -19,7 +19,7 @@ plugins {
 }
 
 android {
-    namespace = "re.pinok.core.ui"
+    namespace = "vk.mint.core.ui"
     compileSdk = 36
 
     defaultConfig {
@@ -39,7 +39,7 @@ android {
 }
 
 dependencies {
-    // AppLog (re.pinok.util) — если компоненту нужен лог.
+    // AppLog (vk.mint.util) — если компоненту нужен лог.
     implementation(project(":core:common"))
 
     // Compose-набор (BOM) — ПОЛНЫЙ (плагин kotlin.compose требует runtime на

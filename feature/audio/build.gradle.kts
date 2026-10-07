@@ -5,7 +5,7 @@
 // (rendererKey "audio_inline"): инлайн-рендер аудио-вложений чата переехал из
 // ChatDetailScreen в AudioInlineRenderer. Экраны плеера/эквалайзера
 // (AudioPlayerScreen/EqualizerScreen/MusicScreen) и движки (PlayerConnection/
-// AudioEffectsEngine/EqualizerHelper) ОСТАЮТСЯ в :app — блокер SovaApp/
+// AudioEffectsEngine/EqualizerHelper) ОСТАЮТСЯ в :app — блокер VkMintApp/
 // data.model (EqualizerPreset/Track/PlayerState) + PlayerService — data-слой,
 // см. контейнеры.план.md, Этап 1.5-б. Правила: :feature:* НЕ зависят от :app
 // и друг от друга — только :contracts + :core:*.
@@ -18,7 +18,7 @@ plugins {
 }
 
 android {
-    namespace = "re.pinok.feature.audio"
+    namespace = "vk.mint.feature.audio"
     compileSdk = 36
 
     defaultConfig {
@@ -33,7 +33,7 @@ android {
     buildFeatures {
         compose = true
         // BuildConfig библиотечному модулю НЕ нужен: контейнер не читает
-        // re.pinok.BuildConfig (прецедент 1.2-а/1.2-в/1.3/1.5-а: инжект из хоста).
+        // vk.mint.BuildConfig (прецедент 1.2-а/1.2-в/1.3/1.5-а: инжект из хоста).
         buildConfig = false
     }
 }
@@ -43,7 +43,7 @@ dependencies {
     // capability-интерфейсы, найденные в реестре, без явной зависимости).
     api(project(":contracts"))
 
-    // AppLog (re.pinok.util).
+    // AppLog (vk.mint.util).
     implementation(project(":core:common"))
 
     // Compose-набор (BOM): рендер строки аудио-вложения — foundation/ui/material3.

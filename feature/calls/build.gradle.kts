@@ -1,6 +1,6 @@
 // Этап 1.3 модульной архитектуры (#ARCH-CONTAINERS): контейнер-пионер звонков.
-// Первый :feature-контейнер: WebRtcEngine, VideoTextureRenderer (пакет re.pinok.media),
-// CallModels (пакет re.pinok.data.model), CallsContainer (реестр capability)
+// Первый :feature-контейнер: WebRtcEngine, VideoTextureRenderer (пакет vk.mint.media),
+// CallModels (пакет vk.mint.data.model), CallsContainer (реестр capability)
 // + UI-экраны звонков (ui/screens/calls/*, 12 файлов перенесены из :app на Этапе 1.3).
 // Пакеты НЕ переименовывались — перенос = перемещение каталога; :app видит
 // перенесённые классы как раньше (зависимость implementation(":feature:calls")).
@@ -14,7 +14,7 @@ plugins {
 }
 
 android {
-    namespace = "re.pinok.feature.calls"
+    namespace = "vk.mint.feature.calls"
     compileSdk = 36
 
     defaultConfig {
@@ -37,7 +37,7 @@ dependencies {
     // capability-интерфейсы, найденные в реестре, без явной зависимости).
     api(project(":contracts"))
 
-    // AppLog/BuildStamp (re.pinok.util / re.pinok).
+    // AppLog/BuildStamp (vk.mint.util / vk.mint).
     implementation(project(":core:common"))
 
     // CallSignalingClient (WS-сигналинг звонков) — уже в core-слое с Этапа 1.2-б.
@@ -68,7 +68,7 @@ dependencies {
     // Navigation (для compose-маршрутов экранов)
     implementation(libs.androidx.navigation.compose)
 
-    // #ARCH-DATA (Task 20): CallsDependencies.prefs — тип SovaPrefs из :core:data.
+    // #ARCH-DATA (Task 20): CallsDependencies.prefs — тип VkMintPrefs из :core:data.
     implementation(project(":core:data"))
 
     // CallSignalingClient(deps.httpClient) — конструктор сигналинга принимает
@@ -79,7 +79,7 @@ dependencies {
     implementation(libs.gson)
     // SharedFlow/StateFlow в CallsQueue/фасадах (явно, не транзитивно).
     implementation(libs.kotlinx.coroutines.android)
-    // PermissionManager (перенесён в :feature:calls, пакет re.pinok.util) —
+    // PermissionManager (перенесён в :feature:calls, пакет vk.mint.util) —
     // ContextCompat/Manifest проверки разрешений звонка.
     implementation(libs.androidx.core.ktx)
 

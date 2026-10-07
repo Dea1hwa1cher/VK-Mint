@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base theme — used by activities, overridden in Compose by PinoKTheme -->
-    <style name="Theme.PinoK" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@color/sova_bg</item>
-        <item name="android:statusBarColor">@color/sova_bg</item>
-        <item name="android:navigationBarColor">@color/sova_bg</item>
+    <!-- Base theme — used by activities, overridden in Compose by VkMintTheme -->
+    <style name="Theme.VkMint" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/vkmint_bg</item>
+        <item name="android:statusBarColor">@color/vkmint_bg</item>
+        <item name="android:navigationBarColor">@color/vkmint_bg</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <!-- Splash theme (no UI, white screen while PinoKTheme is loading) -->
-    <style name="Theme.PinoK.Splash" parent="Theme.PinoK">
-        <item name="android:windowBackground">@color/sova_bg</item>
+    <!-- Splash theme (no UI, white screen while VkMintTheme is loading) -->
+    <style name="Theme.VkMint.Splash" parent="Theme.VkMint">
+        <item name="android:windowBackground">@color/vkmint_bg</item>
     </style>
 
     <!--
@@ -23,7 +23,7 @@
         делает silent refresh в невидимом WebView и завершается с RESULT_OK.
         windowAnimationStyle=null — убирает slide-in/out анимацию Activity.
     -->
-    <style name="Theme.PinoK.Silent" parent="Theme.PinoK">
+    <style name="Theme.VkMint.Silent" parent="Theme.VkMint">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowContentOverlay">@null</item>

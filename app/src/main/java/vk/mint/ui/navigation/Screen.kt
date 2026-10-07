@@ -1,0 +1,610 @@
+package vk.mint.ui.navigation
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AlternateEmail
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.DevicesOther
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.ui.graphics.vector.ImageVector
+
+/**
+ * Navigation routes for VK Mint 2.0.
+ *
+ * Dock (bottom nav) — 5 tabs, mirrors VK layout:
+ *   Feed, Messages, Music, Video, Profile
+ *
+ * Drawer — extra destinations accessible from the app drawer:
+ *   Services (SuperApp), Notifications, Settings, About
+ */
+sealed class Screen(val route: String, val title: String, val icon: ImageVector?) {
+    // Dock
+    object Feed          : Screen("feed",          "Лента",        Icons.Default.Dashboard)
+    object Messages      : Screen("messages",      "Сообщения",    Icons.Default.Email)
+    object Music         : Screen("music",         "Музыка",       Icons.Default.LibraryMusic)
+    object Video         : Screen("video",         "Видео",        Icons.Default.PlayCircle)
+    object Profile       : Screen("profile",       "Профиль",      Icons.Default.Person)
+
+    /**
+     * П-3 (#PROFILE-SNAP): полноэкранный редактор своего профиля —
+     * account.saveProfileInfo + смена аватара/обложки (upload-цепочки).
+     * Открывается кнопкой «Редактировать профиль» в ProfileScreen; иконка
+     * null — суб-экран без пункта в навбаре (как UserProfile/PostDetail).
+     * Маршрут в hasOwnTopBar (VkMintNavHost): собственный Scaffold+TopAppBar.
+     */
+    object ProfileEdit   : Screen("profile_edit",  "Редактирование профиля", null)
+
+    /**
+     * Полноэкранный видеоплеер. Принимает ownerId/id как path-параметры:
+     * например, "video_player/123/456".
+     */
+    object VideoPlayer : Screen("video_player/{ownerId}/{videoId}", "Видео", null) {
+        const val ARG_OWNER_ID = "ownerId"
+        const val ARG_VIDEO_ID = "videoId"
+        fun buildRoute(ownerId: Long, videoId: Long): String = "video_player/$ownerId/$videoId"
+    }
+
+    /**
+     * Fix #62: Полноэкранный аудиоплеер. Без параметров — читает состояние
+     * из PlayerConnection (currentTrack, queue, position). Открывается тапом
+     * по мини-плееру внизу MusicScreen.
+     */
+    object AudioPlayer : Screen("audio_player", "Плеер", null)
+
+    /**
+     * Fix #62: Экран очереди воспроизведения (список «Далее»). Без параметров —
+     * читает очередь из PlayerConnection. Кнопка «Сохранить как плейлист» (TODO).
+     */
+    object AudioQueue : Screen("audio_queue", "Очередь", null)
+
+    /**
+     * #MUSIC-PORT: экран «Плейлисты» — список плейлистов текущего пользователя
+     * (audio.getPlaylists). Заменяет прежний AlertDialog из меню «Моя музыка».
+     */
+    object MusicPlaylists : Screen("music_playlists", "Плейлисты", null)
+
+    /**
+     * #MUSIC-PORT: экран деталей плейлиста — обложка + название + описание +
+     * треки + «Играть все» + «Скачать плейлист». Принимает ownerId/playlistId/accessKey.
+     */
+    object PlaylistDetail : Screen("playlist_detail/{ownerId}/{playlistId}?accessKey={accessKey}", "Плейлист", null) {
+        const val ARG_OWNER_ID = "ownerId"
+        const val ARG_PLAYLIST_ID = "playlistId"
+        const val ARG_ACCESS_KEY = "accessKey"
+        fun buildRoute(ownerId: Long, playlistId: Long, accessKey: String?): String {
+            val ak = accessKey?.let { android.net.Uri.encode(it) } ?: ""
+            return "playlist_detail/$ownerId/$playlistId?accessKey=$ak"
+        }
+    }
+
+    /**
+     * #MUSIC-PORT: экран «Альбомы» — альбомы из каталога (catalog.getAudio).
+     */
+    object MusicAlbums : Screen("music_albums", "Альбомы", null)
+
+    /**
+     * #MUSIC-PORT: экран «Артисты и кураторы» — список артистов.
+     */
+    object MusicArtists : Screen("music_artists", "Артисты", null)
+
+    /**
+     * #MUSIC-PORT: экран артиста — треки + related artists.
+     */
+    object ArtistDetail : Screen("artist_detail/{slug}?name={name}", "Артист", null) {
+        const val ARG_SLUG = "slug"
+        const val ARG_NAME = "name"
+        // #MUSIC-PORT: slug — идентификатор артиста; name — имя для поиска треков.
+        fun buildRoute(slug: String, name: String): String =
+            "artist_detail/${android.net.Uri.encode(slug)}?name=${android.net.Uri.encode(name)}"
+    }
+
+    /**
+     * #MUSIC-CATALOG-SHOW-ALL: экран «Показать все» для блока каталога.
+     * Грузит catalog.getSection(sectionId) и показывает полный список
+     * (все треки/плейлисты блока). sectionId приходит из actions header-блока.
+     */
+    object CatalogSection : Screen("catalog_section/{sectionId}?title={title}", "Показать все", null) {
+        const val ARG_SECTION_ID = "sectionId"
+        const val ARG_TITLE = "title"
+        fun buildRoute(sectionId: String, title: String): String =
+            "catalog_section/${android.net.Uri.encode(sectionId)}?title=${android.net.Uri.encode(title)}"
+    }
+
+    /**
+     * Fix #67: Экран сообщества — стена + инфо. Принимает groupId как path-параметр.
+     * Положительный ID (как в groups[].id). В wallGet передаётся как -groupId.
+     */
+    object Community : Screen("community/{groupId}?tab={tab}", "Сообщество", null) {
+        const val ARG_GROUP_ID = "groupId"
+        const val ARG_TAB = "tab"
+        fun buildRoute(groupId: Long, tab: Int = 0): String = "community/$groupId?tab=$tab"
+    }
+
+    /**
+     * #OPVK-EXTRACT (Task 3-c): экран «Участники сообщества» — постраничный
+     * список членов группы через существующий groupsGetMembers (VKA:4106,
+     * VKA заморожен — профили приходят сразу, обогащение не требуется).
+     * Идея-референс OpenVK GroupMembersActivity (AGPL — только семантика
+     * раздела, не код). Принимает groupId как path-параметр (положительный
+     * id группы). Вход: тап по счётчику подписчиков в шапке CommunityScreen.
+     * Иконка Icons.Outlined.Groups — семантическая (суб-экран без пункта в
+     * навбаре, паттерн объектов Blacklist/FeedHidden); маршрут в hasOwnTopBar
+     * (VkMintNavHost): собственный Scaffold+TopAppBar. НЕ добавлен в
+     * bottombar/drawer/mainRoutes.
+     */
+    object GroupMembers : Screen("group_members/{groupId}", "Участники", Icons.Outlined.Groups) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "group_members/$groupId"
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // W35-b (волна 35): экраны администрирования сообщества (блок «Управление»
+    // в CommunityScreen; вход при admin_level >= 1 — сверка «Группа_админ» §5.1).
+    // Суб-экраны без пункта в навбаре — паттерн GroupMembers: маршрут в
+    // hasOwnTopBar (VkMintNavHost), собственный Scaffold+TopAppBar.
+    // ══════════════════════════════════════════════════════════════════
+
+    /** W35-b: «Настройки сообщества» — чтение groups.getById, запись единым groups.edit (сверка §2 P1.5). */
+    object AdminSettings : Screen("admin_settings/{groupId}", "Настройки сообщества", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_settings/$groupId"
+    }
+
+    /** W35-b: «Статистика» — stats.get (30 дней) + stats.getPostReach последних постов. */
+    object AdminStats : Screen("admin_stats/{groupId}", "Статистика", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_stats/$groupId"
+    }
+
+    /**
+     * W35-b: «Люди» — вкладки Руководители (getMembers filter=managers + editManager) /
+     * Заявки (getRequests + approveRequest) / Чёрный список (getBanned + unbanUser).
+     * @param tab managers | requests | banned.
+     */
+    object AdminPeople : Screen("admin_people/{groupId}?tab={tab}", "Люди", null) {
+        const val ARG_GROUP_ID = "groupId"
+        const val ARG_TAB = "tab"
+        fun buildRoute(groupId: Long, tab: String = "managers"): String =
+            "admin_people/$groupId?tab=${android.net.Uri.encode(tab)}"
+    }
+
+    /** W37 (C1): ссылки сообщества — groups.addLink/editLink/deleteLink. */
+    object AdminLinks : Screen("admin_links/{groupId}", "Ссылки", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_links/$groupId"
+    }
+
+    /** W38 (C2): приглашения — friends.get + groups.invite/getInvitedUsers/recallInvitation. */
+    object AdminInvites : Screen("admin_invites/{groupId}", "Приглашения", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_invites/$groupId"
+    }
+
+    /** W38 (C5): отложенные/предложения — wall.get filter=postponed/suggests + wall.delete. */
+    object AdminWallQueue : Screen("admin_wall_queue/{groupId}", "Отложенные и предложения", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_wall_queue/$groupId"
+    }
+
+    /** W38 (C4): адреса — groups.getAddresses/addAddress/editAddress/deleteAddress. */
+    object AdminAddresses : Screen("admin_addresses/{groupId}", "Адреса", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_addresses/$groupId"
+    }
+
+    /**
+     * W39 (C9): журнал действий сообщества — web-only al-эндпоинт
+     * (mobile API аналога нет; HAR §12.2, паттерн VkCookieJar).
+     */
+    object AdminEventLog : Screen("admin_event_log/{groupId}", "Журнал действий", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_event_log/$groupId"
+    }
+
+    /** W41 (C3): «Кнопка действия» — groups.edit action_button. */
+    object AdminCta : Screen("admin_cta/{groupId}", "Кнопка действия", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_cta/$groupId"
+    }
+
+    /** W41 (C6): «Чаты сообщества» — список бесед сообщества (web HAR 2026-09-25). */
+    object AdminChats : Screen("admin_chats/{groupId}", "Чаты", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_chats/$groupId"
+    }
+
+    /** W41 (C6): «Сообщения» сообщества — groups.get/setGroupSettings messages_* (web HAR). */
+    object AdminMessages : Screen("admin_messages/{groupId}", "Сообщения", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_messages/$groupId"
+    }
+
+    /** C7 (#ADMIN-SECTIONS): «Разделы» — groups.getSettings / groups.edit. */
+    object AdminSections : Screen("admin_sections/{groupId}", "Разделы", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_sections/$groupId"
+    }
+
+    /**
+     * C8 (#ADMIN-COMMENTS): «Комментарии» — фильтры модерации (groups.edit /
+     * legacy save_comments) и лента последних комментариев (wall.getComments
+     * по постам). Web HAR 2026-09-25 (docs/админ.сообществ.HAR-разбор.md §5 P0 #2).
+     */
+    object AdminComments : Screen("admin_comments/{groupId}", "Комментарии", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_comments/$groupId"
+    }
+
+    /** ADMIN-EVENTS: «События» сообщества — панель уведомлений (notifications.getRedesign). */
+    object AdminEvents : Screen("admin_events/{groupId}", "События", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_events/$groupId"
+    }
+
+    /**
+     * ADMIN-MENU (#ADMIN-MENU-STRIKES): «Меню» сообщества — список пунктов
+     * (owners.getMenu), добавление (owners.addMenuItem), скрытие/показ всего
+     * меню (owners.hideMenu/showMenu). Web-only owners.* (HAR
+     * docs/админ.сообществ.HAR-разбор.md §5 P0 #1).
+     */
+    object AdminMenu : Screen("admin_menu/{groupId}", "Меню", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_menu/$groupId"
+    }
+
+    /**
+     * ADMIN-MENU (#ADMIN-MENU-STRIKES): «Страйки» сообщества — вкладки
+     * active/appealed (strikeSystem.getStrikesList), честный empty-state.
+     * Web-only strikeSystem.* (HAR §5 P0 #4); апелляция — веб-ссылка.
+     */
+    object AdminStrikes : Screen("admin_strikes/{groupId}", "Страйки", null) {
+        const val ARG_GROUP_ID = "groupId"
+        fun buildRoute(groupId: Long): String = "admin_strikes/$groupId"
+    }
+
+    /**
+     * Шаг 4 (#32d): Экран темы обсуждения сообщества.
+     * Принимает groupId/topicId как path-параметры, title — через query
+     * (для TopAppBar). Загружает board.getComments с пагинацией.
+     */
+    object BoardTopic : Screen("board_topic/{groupId}/{topicId}?title={title}", "Обсуждение", null) {
+        const val ARG_GROUP_ID = "groupId"
+        const val ARG_TOPIC_ID = "topicId"
+        const val ARG_TITLE = "title"
+        fun buildRoute(groupId: Long, topicId: Long, title: String): String =
+            "board_topic/$groupId/$topicId?title=${android.net.Uri.encode(title)}"
+    }
+
+    /**
+     * Sprint 1, P0-2 (#74): Экран чужого профиля — стена + инфо + действия.
+     * Принимает userId как path-параметр (положительный, как в users[].id).
+     * Открывается тапом по автору поста (fromId > 0), другу, собеседнику в чате.
+     */
+    object UserProfile : Screen("user_profile/{userId}", "Профиль", null) {
+        const val ARG_USER_ID = "userId"
+        fun buildRoute(userId: Long): String = "user_profile/$userId"
+    }
+
+    /**
+     * П-7-AB: экран «Подписчики»/«Подписки» — остаток правой колонки веба
+     * (профиль.этап-П5.решение.md §3: «счётчики есть, списков нет»). Один экран
+     * с режимом: mode = followers|subscriptions (query-параметр, дефолт
+     * followers). userId — path-параметр, положительный id владельца списка.
+     * Открывается: чип «Подписчики» в CountersRow (свой и чужой профиль),
+     * строка «Подписки» (SubscriptionsEntryRow). Иконка null — суб-экран без
+     * пункта в навбаре (как UserProfile/PostDetail); маршрут в hasOwnTopBar
+     * (VkMintNavHost): собственный Scaffold+TopAppBar.
+     */
+    object FollowList : Screen("follow_list/{userId}?mode={mode}", "Подписчики", null) {
+        const val ARG_USER_ID = "userId"
+        const val ARG_MODE = "mode"
+        const val MODE_FOLLOWERS = "followers"
+        const val MODE_SUBSCRIPTIONS = "subscriptions"
+        fun buildRoute(userId: Long, mode: String = MODE_FOLLOWERS): String =
+            "follow_list/$userId?mode=$mode"
+    }
+
+    /**
+     * Fix #71: Экран детального просмотра поста.
+     * Принимает ownerId/postId как path-параметры. Сам объект Post передаётся
+     * через in-memory holder [vk.mint.ui.navigation.PostHolder].
+     */
+    object PostDetail : Screen("post_detail/{ownerId}/{postId}", "Пост", null) {
+        const val ARG_OWNER_ID = "ownerId"
+        const val ARG_POST_ID = "postId"
+        fun buildRoute(ownerId: Long, postId: Long): String = "post_detail/$ownerId/$postId"
+    }
+
+    /**
+     * Экран диалога — история сообщений + отправка (#43).
+     * Принимает peerId как path-параметр, title/photo — через query-параметры
+     * (URL-encoded). Например: "chat_detail/123?title=Иван&photo=https://…"
+     */
+    object ChatDetail : Screen("chat_detail/{peerId}?title={title}&photo={photo}", "Диалог", null) {
+        const val ARG_PEER_ID = "peerId"
+        const val ARG_TITLE = "title"
+        const val ARG_PHOTO = "photo"
+        // #CALLS-NAME-FIX (2026-08-29): java.net.URLEncoder делает FORM-кодирование —
+        // пробел → «+», а Navigation декодирует только %XX (Uri.decode): заголовки
+        // диалогов отображались как «Имя+Фамилия». android.net.Uri.encode даёт %20,
+        // который Navigation корректно разворачивает обратно в пробел.
+        fun buildRoute(peerId: Long, title: String, photo: String?): String {
+            val t = android.net.Uri.encode(title.ifBlank { "Диалог" })
+            val p = photo?.let { android.net.Uri.encode(it) } ?: ""
+            return "chat_detail/$peerId?title=$t&photo=$p"
+        }
+    }
+
+    /**
+     * P3.1: Экран информации о чате — members / shared media / actions
+     * (mute, clear history, block, report spam, leave).
+     * Принимает peerId как path-параметр. Метаданные (title/photo/members)
+     * грузятся через messages.getConversationsById при открытии.
+     */
+    object ChatInfo : Screen("chat_info/{peerId}", "Информация", null) {
+        const val ARG_PEER_ID = "peerId"
+        fun buildRoute(peerId: Long): String = "chat_info/$peerId"
+    }
+
+    /**
+     * P5.1: Встроенный браузер (WebView) для открытия ссылок из чата.
+     * Принимает url как query-параметр (URL-encoded). Используется когда
+     * [vk.mint.data.local.VkMintPrefs.Snapshot.openLinksInInternalBrowser] = true.
+     * Иначе ссылки открываются внешним браузером (ACTION_VIEW).
+     */
+    object InternalBrowser : Screen("internal_browser?url={url}", "Браузер", null) {
+        const val ARG_URL = "url"
+        fun buildRoute(url: String): String = "internal_browser?url=${android.net.Uri.encode(url)}"
+    }
+
+    /**
+     * P3.3: Экран управления папками диалогов — список / добавить / редактировать / удалить.
+     * Аналог m.vk.ru: «Папки с чатами» (tid="me_folder_settings_item_*").
+     * Без параметров — папки грузятся из FoldersRepository (VkMintPrefs.msgFoldersData).
+     */
+    object FoldersSettings : Screen("folders_settings", "Папки с чатами", null)
+
+    /**
+     * Полноэкранный просмотр Stories (vkitStoriesGallery).
+     * Данные передаются через in-memory holder [StoryHolder].
+     */
+    object StoryViewer : Screen("story_viewer", "Истории", null)
+
+    /**
+     * Fix #50: Экран офлайн аудиоплеера — минималистичный, без сетевых запросов.
+     *
+     * Показывает только скачанные треки из [vk.mint.media.TrackDownloadManager]:
+     * прогресс, controls (play/pause/prev/next), seek bar, очередь, shuffle/repeat.
+     * Никаких обложек/лайков/репостов — только локальные файлы.
+     */
+    object OfflineAudioPlayer : Screen("offline_audio_player", "Офлайн плеер", null)
+
+    /**
+     * Fix #111: Экран офлайн-просмотра скачанной видео-истории.
+     *
+     * Принимает ownerId + storyId как nav args, читает локальный файл через
+     * [vk.mint.media.StoryVideoDownloadManager.getLocalFile] и meta через
+     * [vk.mint.media.StoryVideoDownloadManager.getStoryMeta]. Воспроизводит
+     * через ExoPlayer с file:// URI — без сети, без CDN URL refresh.
+     *
+     * Отдельный экран от [StoryViewer] (который работает с live API stories
+     * через StoryHolder) и от [VideoPlayer] (работает с Video model, не Story).
+     */
+    object StoryOfflinePlayer : Screen("story_offline_player/{ownerId}/{storyId}", "История", null) {
+        const val ARG_OWNER_ID = "ownerId"
+        const val ARG_STORY_ID = "storyId"
+        fun buildRoute(ownerId: Long, storyId: Int): String = "story_offline_player/$ownerId/$storyId"
+    }
+
+    /**
+     * §37.12 #330: Экран офлайн-просмотра скачанного клипа.
+     *
+     * Принимает ownerId + videoId (Long) как nav args, читает локальный файл
+     * через [vk.mint.media.ClipVideoDownloadManager.getLocalFile] и meta через
+     * [vk.mint.media.ClipVideoDownloadManager.getClipMeta]. Воспроизводит через
+     * ExoPlayer с file:// URI и RESIZE_MODE_ZOOM (TikTok-стиль 9:16 vertical).
+     *
+     * Отдельный экран от [StoryOfflinePlayer]:
+     *  - clips используют Long videoId (у stories — Int storyId);
+     *  - clips хранятся в ClipVideoDownloadManager (clip_downloads/, ключ "c_*");
+     *  - clips имеют TikTok-стиль ZOOM-resize + ContentScale.Crop.
+     */
+    object ClipOfflinePlayer : Screen("clip_offline_player/{ownerId}/{videoId}", "Клип", null) {
+        const val ARG_OWNER_ID = "ownerId"
+        const val ARG_VIDEO_ID = "videoId"
+        fun buildRoute(ownerId: Long, videoId: Long): String = "clip_offline_player/$ownerId/$videoId"
+    }
+
+    // Drawer — основные разделы социальной сети
+    object Friends       : Screen("friends",       "Друзья",       Icons.Default.Group)
+    object Groups        : Screen("groups",        "Сообщества",   Icons.Outlined.Groups)
+    object Photos        : Screen("photos",        "Фото",         Icons.Outlined.Image)
+    object Search        : Screen("search",        "Поиск",        Icons.Default.Search)
+    object Bookmarks     : Screen("bookmarks",     "Закладки",     Icons.Outlined.Bookmark)
+    object Documents     : Screen("documents",     "Документы",    Icons.Outlined.Description)
+    /** §37.12 Phase 6: VK Clips — короткие вертикальные видео. */
+    object Clips         : Screen("clips",         "Клипы",        Icons.Outlined.VideoLibrary)
+    /**
+     * Клипы автора (лента клипов конкретного пользователя/сообщества).
+     * Принимает ownerId как path-параметр (положительный — пользователь,
+     * отрицательный — сообщество). Грузится через shortVideo.getOwnerVideos.
+     */
+    object ClipsOwner : Screen("clips_owner/{ownerId}", "Клипы", null) {
+        const val ARG_OWNER_ID = "ownerId"
+        fun buildRoute(ownerId: Long): String = "clips_owner/$ownerId"
+    }
+    /** §37.12 Phase 5: запись и публикация нового клипа. */
+    object ClipCreate    : Screen("clip_create",   "Новый клип",   Icons.Filled.Videocam)
+
+    /**
+     * #VM-3 волна 3: запись видео-сообщения («кружка») и отправка в чат.
+     * Полноэкранный рекордер (CameraX фронтальная камера + форма-маска из
+     * VideoMessageShapes). Принимает peerId куда отправить как path-параметр.
+     * Маршрут в hasOwnTopBar (VkMintNavHost): собственный fullscreen UI без
+     * глобального TopAppBar (паттерн экранов записи/плееров).
+     */
+    object VideoMessageCreate : Screen("video_message_create/{peerId}", "Кружок", null) {
+        const val ARG_PEER_ID = "peerId"
+        fun buildRoute(peerId: Long): String = "video_message_create/$peerId"
+    }
+
+    // Drawer — системные разделы
+    object Services      : Screen("services",      "Сервисы",      Icons.Default.Apps)
+    /**
+     * #FEED-MENU-NOTIF (2026-10-01): Экран уведомлений с категорийным сайдбаром.
+     * КАТЕГОРИИ уведомлений VK web (notifications.getRedesign) передаются как
+     * path-аргумент: notifications/{category} (all/communities/feedback/friends/
+     * services/communication/account). дефолт "all" — «Уведомления профиля».
+     * Маршрут записывается паттерном; при каждой навигации используется
+     * [buildRoute], чтобы подставить реальную категорию.
+     * Note: параметризованный маршрут НЕ сохраняется в lastRoute (см. VkMintNavHost
+     * mainRoutes) — иначе холодный старт получил бы литеральный паттерн "{category}".
+     */
+    object Notifications : Screen("notifications/{category}", "Уведомления", Icons.Default.AlternateEmail) {
+        const val ARG_CATEGORY = "category"
+        const val DEFAULT_CATEGORY = "all"
+        fun buildRoute(category: String = DEFAULT_CATEGORY): String =
+            "notifications/${android.net.Uri.encode(category)}"
+    }
+    object Settings      : Screen("settings",      "Настройки",    Icons.Default.Settings)
+    object NotificationSettings : Screen("notification_settings", "Настройки уведомлений", Icons.Default.Notifications)
+
+    /**
+     * §PROFILE-P4 (этап П-4, инвентарь §4.1 п.10 / §5 п.5): VK-приватность на
+     * BFF settingsGeneral.get/setPrivacySettings (PrivacySettingsScreen).
+     * Доступ: Настройки → Приватность → «Настройки приватности VK».
+     */
+    object SettingsPrivacy : Screen("settings_privacy", "VK-приватность", Icons.Outlined.Shield)
+
+    /**
+     * §PROFILE-P4 (этап П-4, инвентарь §1.6 / §5 п.5): самостоятельный экран
+     * «Чёрный список» (account.getBanned/unban/ban по ссылке/короткому имени).
+     * Перенесён из NotificationSettingsScreen; доступ: Настройки → Уведомления →
+     * «Чёрный список».
+     */
+    object Blacklist : Screen("blacklist", "Чёрный список", Icons.Default.Block)
+
+    /**
+     * IMP-FEED-2: экран «Скрытые источники» — менеджер мьютов ленты (web:
+     * правое меню ленты → «Редактировать», al_settings.php?act=a_edit_owners_list;
+     * лента.снапшоты.парсинг.полный.md §3.4/§4 п.7).
+     * Список — newsfeed.getBanned (extended=1: profiles[] + groups[]), возврат
+     * источника — newsfeed.unban (документированная семантика «вернуть в ленту»;
+     * newsfeed.deleteBan — легаси-пара web-бандла профиля, для точечного возврата
+     * одного источника выбирается unban).
+     * Суб-экран без пункта в навбаре (иконка — семантическая, по паттерну объекта
+     * Blacklist); маршрут в hasOwnTopBar (VkMintNavHost): собственный
+     * Scaffold+TopAppBar. Без параметров — данные свои (getBanned не требует входа).
+     */
+    object FeedHidden : Screen("feed_hidden", "Скрытые источники", Icons.Outlined.VisibilityOff)
+
+    /**
+     * IMP-VKID: экран «Аккаунт VK ID» — мультипрофили (account.getMulti,
+     * метод подтверждён парсингом account.bundle VK ID-кабинета,
+     * vkid.снапшоты.парсинг.полный.md §2.1/§3.4/§4 п.4) + ссылочные ячейки
+     * разделов кабинета id.vk.com (Безопасность, VK Pay) через
+     * Linkify.openUrlExternal. Списки сессий/сервисов, установка 2FA, смена
+     * пароля, VK Pay-платежи — wire в снапшоте не снят (§3) → честные
+     * deeplink-ячейки, не имитируются; переключение аккаунтов не реализовано
+     * (токен-exchange флоу не снят, ExchangeTokenStorage односессионный).
+     * Суб-экран без пункта в навбаре (иконка — семантическая, по паттерну
+     * объектов Blacklist/FeedHidden); маршрут в hasOwnTopBar (VkMintNavHost):
+     * собственный Scaffold+TopAppBar. Без параметров — данные свои.
+     */
+    /** #CALLS: история звонков (пропущенные/входящие/исходящие). */
+    object CallsHistory  : Screen("calls_history", "Звонки",       Icons.Filled.Call)
+    object About         : Screen("about",         "О приложении", null)
+
+    object Logs          : Screen("logs",          "Логи",         Icons.Default.BugReport)
+
+    /**
+     * Экран офлайн-менеджера — просмотр скачанных аудио и видео
+     * при отсутствии сети. Доступен из ошибки ленты или настроек.
+     */
+    object OfflineManager : Screen("offline_manager", "Офлайн", Icons.Outlined.CloudOff)
+
+    /**
+     * §49.6 Sprint VK-ID-1.2: Экран «Устройства и сессии» — список активных
+     * сессий аккаунта VK с возможностью завершить любую/all.
+     * Источник: анализ VK ID_веб.zip (VK_IMPORT_API.MD §49.6).
+     *
+     * Доступ: Настройки → Защита → «Устройства и сессии».
+     * Deep-link: из security-alert notification (SecurityAlertNotifier).
+     */
+    object Devices : Screen("devices", "Устройства", Icons.Default.DevicesOther)
+
+    /**
+     * #CALLS: экран активного звонка (входящий/исходящий/разговор).
+     * Принимает peerId как path-параметр, title/photo — query-параметры.
+     * Открывается из ChatDetailScreen (кнопка звонка) или из уведомления
+     * о входящем звонке (CallForegroundService).
+     *
+     * #CALLS-VIDEO-ROUTE (2026-09-06, Этап Г плана «звонки.перенос.план.md»):
+     * добавлен query-параметр video (BoolType) — видеозвонок. Прежде флаг
+     * обрывался: CallStarter.startCall(peerId, video) доносил его только до
+     * VkMintApp.pendingOutgoingCallVideo, который никто не читал, и CallScreen
+     * жёстко слал messagesStartCall(video=false) — «Видеозвонок» из redial
+     * звонил аудио. video=false по умолчанию: существующие вызовы buildRoute
+     * (входящий из LP-уведомления и прежние call-sites) не меняются.
+     */
+    object Call : Screen("call/{peerId}?title={title}&photo={photo}&incoming={incoming}&payload={payload}&video={video}", "Звонок", null) {
+        const val ARG_PEER_ID = "peerId"
+        const val ARG_TITLE = "title"
+        const val ARG_PHOTO = "photo"
+        const val ARG_INCOMING = "incoming"
+        const val ARG_PAYLOAD = "payload"
+        const val ARG_VIDEO = "video"
+        fun buildRoute(
+            peerId: Long,
+            title: String,
+            photo: String?,
+            incoming: Boolean,
+            payload: String? = null,
+            video: Boolean = false,
+        ): String {
+            // #CALLS-NAME-FIX (2026-08-29): URLEncoder (FORM) превращал пробел в «+»:
+            // «Входящий звонок» приходил на экран как «Входящий+звонок» (Navigation
+            // декодирует %XX, но не «+»). Uri.encode → %20 → корректный пробел.
+            val t = android.net.Uri.encode(title.ifBlank { "Звонок" })
+            val p = photo?.let { android.net.Uri.encode(it) } ?: ""
+            val pl = payload?.let { android.net.Uri.encode(it) } ?: ""
+            return "call/$peerId?title=$t&photo=$p&incoming=$incoming&payload=$pl&video=$video"
+        }
+    }
+
+    /** #CALLS-WEBVIEW (2026-08-25): звонки через WebView vk.ru/calls. */
+    object CallsWebView : Screen("calls_webview", "Звонки", null)
+
+    companion object {
+        val dock = listOf(Feed, Messages, Music, Video, Profile)
+        // Сначала социальные разделы, потом системные.
+        // #ARCH-CONTAINERS (Этап 1.4/1.5-а): CallsHistory И Photos убраны — пункты
+        // «Звонки»/«Фото» приходят из реестра (NavEntry контейнеров, ContainerRegistry
+        // find<NavEntry>()). Хост рендерит drawer из своих списков в VkMintNavHost
+        // (этот companion исторически не используется рендером и оставлен для
+        // совместимости).
+        val drawer = listOf(
+            Friends, Groups, Search, Bookmarks, Documents,
+            Services, Notifications, Settings, Logs,
+        )
+    }
+}

@@ -1,7 +1,7 @@
 // Этап 1.2-а модульной архитектуры (#ARCH-CONTAINERS): общий core-слой.
 // AppLog, BuildStamp и чистые утилиты (backoff, форматирование, User-Agent,
 // сетевой обсервер, состояние network-switch). Пакеты НЕ переименовывались
-// (re.pinok / re.pinok.util) — перенос = перемещение каталога.
+// (vk.mint / vk.mint.util) — перенос = перемещение каталога.
 // Правило: :core:* НЕ зависят от :app и :feature:*; androidx/compose сюда не тащим.
 // Единственная внешняя зависимость — kotlinx-coroutines-android
 // (ExponentialBackoff: delay/ensureActive; NetworkObserver: StateFlow).
@@ -12,7 +12,7 @@ plugins {
 }
 
 android {
-    namespace = "re.pinok.common"
+    namespace = "vk.mint.common"
     compileSdk = 36
 
     defaultConfig {

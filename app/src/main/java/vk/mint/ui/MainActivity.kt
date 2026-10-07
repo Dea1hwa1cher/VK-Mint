@@ -1,0 +1,2394 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
+package vk.mint.ui
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import vk.mint.feature.calls.LocalCallsDeps
+import vk.mint.feature.calls.LocalCallsSectionRepository
+import vk.mint.feature.photos.LocalPhotosDeps
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+// #AUTH-FIRST-OPEN-GUEST-2: стрелка «Назад» в guest-настройках.
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.setValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import vk.mint.VkMintApp
+import vk.mint.auth.AuthActivity
+import vk.mint.auth.OAuthTokenUtils
+import vk.mint.updater.UpdaterManager
+import vk.mint.locker.LockerActivity
+import vk.mint.ui.components.DraggableLogFab
+import vk.mint.ui.components.LogDialogState
+import vk.mint.ui.components.LogViewerDialog
+import vk.mint.ui.components.ShareToChatSheet
+import vk.mint.ui.navigation.GuestDrawer
+import vk.mint.ui.navigation.VkMintNavHost
+import vk.mint.ui.navigation.VideoHolder
+import vk.mint.ui.screens.offline.OfflineAudioPlayerScreen
+import vk.mint.ui.screens.offline.OfflineManagerScreen
+import vk.mint.ui.screens.offline.StoryOfflinePlayerScreen
+import vk.mint.ui.screens.settings.SettingsScreen
+import vk.mint.ui.screens.videoplayer.VideoPlatformRouter
+import vk.mint.data.model.Video
+import vk.mint.ui.theme.VkMintTheme
+import vk.mint.util.AppLog
+import vk.mint.util.RequestAllPermissionsEffect
+
+class MainActivity : ComponentActivity() {
+
+    companion object {
+        /**
+         * #SSO-RECREATE-GUARD: timestamp последнего запуска AuthActivity.
+         *
+         * Хранится в companion object (static) — переживает recreate
+         * MainActivity, который система делает при low-memory kill во
+         * время VK-app SSO (юзер в VK app подтверждает вход → система
+         * убивает AuthActivity + MainActivity → юзер возвращается →
+         * MainActivity onCreate → isOnlineFlow=true → без этой защиты
+         * network-restored-no-token запускает НОВЫЙ AuthActivity с
+         * НОВЫМ QR-токеном, ломая match с подтверждением юзера → loop).
+         *
+         * Instance-поле lastAuthActivityLaunchMs (Fix #230) НЕ переживает
+         * recreate — сбрасывается в 0L. Это поле — единственный источник
+         * правды о том, что AuthActivity был запущен недавно.
+         *
+         * Guard в launchAuth блокирует перезапуск в течение 90 сек
+         * (SSO_TIMEOUT_MS) — больше чем QR TTL VK (~60 сек) + время
+         * на возврат из VK app. После 90 сек guard истекает, давая
+         * чистый retry без loop.
+         *
+         * @Volatile: все обращения — на main thread (Activity callbacks,
+         * LaunchedEffect), но @Volatile добавлен для safety (например
+         * если LongPollKeepAliveService вызовет через handler).
+         */
+        @Volatile
+        private var lastAuthActivityLaunchedAt: Long = 0L
+
+        /** Окно SSO-защиты: 90 сек с момента запуска AuthActivity. */
+        private const val SSO_GUARD_WINDOW_MS = 90_000L
+
+        // Fix #377 #DOZE-RESUME-AUTH: окно проактивного обновления токена (5 минут
+        // до истечения — окно совпадает с keepAlive-окном Fix #216 в репозитории).
+        // Fix #379 #SINGLE-COMPANION: константы слиты в ЕДИНСТВЕННЫЙ companion
+        // object класса — волна 26 добавила второй (private companion object),
+        // Kotlin разрешает только один на класс («Only one companion object is
+        // allowed per class»), второй отбрасывался → Unresolved references на
+        // все 4 константы → :app не компилировался.
+        private const val PROACTIVE_REFRESH_WINDOW_MS = 300_000L
+
+        // Минимальный интервал между проактивными ensureFreshToken (не дёргать
+        // HTTP при каждом resume — сетевой путь и так лёгкий, но throttle нужен).
+        private const val PROACTIVE_REFRESH_THROTTLE_MS = 30_000L
+
+        // Задержка повторной silent-попытки после RESULT_CANCELED (уважает
+        // throttle launchAuth 20с — к моменту запуска throttle уже истёк).
+        private const val SILENT_RETRY_DELAY_MS = 20_000L
+
+        // Пул OkHttp чистим на resume, если прошло больше 5 минут (после Doze
+        // stale keep-alive TCP-соединения мертвы — сервер их уже закрыл).
+        private const val STALE_POOL_WINDOW_MS = 5 * 60_000L
+
+        /**
+         * Fix #380 #LOCKER-BOOT-SKIP: boot-решение о запуске LockerActivity
+         * принято ровно один раз за ЖИЗНЬ ПРОЦЕССА. Специально static
+         * (companion), а НЕ rememberSaveable:
+         *  - rotation/рекреация Activity: static ПЕРЕЖИВАЕТ → локер не
+         *    перезапускается при каждом повороте экрана;
+         *  - process death + восстановление из recents: static СБРОШЕН
+         *    (новый процесс) → локер проверяется заново → приложение
+         *    блокируется (раньше bootLocal=true из SavedStateHandle +
+         *    живой токен уводили guard в return ДО locker-чека — RC2b).
+         * Ранее (до Fix #380) guard `bootLocal && hasValidToken()` скипал
+         * локер и после успешного silent re-login: bootLocal ставился true
+         * ДО auth-ветки, authVersion++ перезапускал эффект, guard уходил в
+         * return и до проверки PIN дело никогда не доходило (RC2) — любой
+         * холодный старт с протухшим web_token (>15 мин простоя) открывал
+         * приложение без блокировки.
+         *
+         * При ручном logout/offline-back флаг НЕ сбрасывается: после
+         * интерактивного входа локер не переспрашивается (паритет со старым
+         * поведением — bootLocal=false → auth → после входа guard скипал).
+         */
+        @Volatile
+        private var lockerBootCheckDone: Boolean = false
+
+        /**
+         * #LOCKER-BG-RECREATE (волна 36): process-level флаг «видимая активити
+         * уходила в onStop и её onResume ещё не отработал». Специально static
+         * (companion), а НЕ поле экземпляра — переживает УНИЧТОЖЕНИЕ MainActivity
+         * системой в фоне: Don't keep activities / агрессивные оболочки убивают
+         * фоновую активити через ~15-30с, процесс при этом ЖИВ (statics целы).
+         * Лог 2026-09-11: onStop 20:57:18 → onCreate 20:57:39 (pid тот же),
+         * ВСЕ возвраты из фона — через onCreate.
+         *
+         * Семафор arm/consume:
+         *  - onStop() → wasStopped = true, ТОЛЬКО если !isChangingConfigurations
+         *    (стоп под пересоздание активити на поворот/тему/язык — не уход в
+         *    фон; без guard'а локер срабатывал бы на каждом повороте экрана);
+         *  - onResume() → locker-блок консьюмит (wasStopped=false) и решает:
+         *    условия локера + grace → запуск LockerActivity, иначе —
+         *    диагностический лог причины пропуска (a5abd16d).
+         *
+         * Остальные resume-потребители (Fix #377 refreshNow/evictAll,
+         * maybeProactiveTokenRefresh, checkTokenValidity, #BG-AUTH-LOOP-FIX,
+         * silent-retry #SILENT-RETRY-AFTER-DOZE) читают флаг БЕЗ сброса —
+         * теперь они тоже срабатывают на возврате через пересоздание
+         * (раньше молчали: instance-флаг нового экземпляра был false).
+         *
+         * Process death (убит весь процесс): static сброшен → флаг false, НО
+         * boot-путь сам запускает локер (lockerBootCheckDone=false в новом
+         * процессе) — покрытие полное.
+         */
+        @Volatile
+        private var wasStopped: Boolean = false
+
+        /**
+         * #CHECK-ON-FOREGROUND: ProcessLifecycleOwner-наблюдатель проверки обновлений
+         * регистрируется РОВНО один раз за ЖИЗНЬ ПРОЦЕССА. MainActivity пересоздаётся
+         * (поворот/тема/убийство activity в фоне), а ProcessLifecycleOwner — процессный
+         * синглтон: повторный addObserver только множил бы вызовы triggerUpdateCheck
+         * (троттлинг 60с развёл бы их по окну, но лишние регистрации не нужны).
+         * Static переживает recreate — как lockerBootCheckDone/wasStopped выше.
+         */
+        @Volatile
+        private var updaterForegroundObserverRegistered: Boolean = false
+    }
+
+    /**
+     * Запускает AuthActivity (OAuth WebView как primary + Phone+Password как fallback).
+     * Возвращает RESULT_OK если любой из способов авторизации успешен —
+     * токен уже сохранён в ExchangeTokenStorage к этому моменту.
+     *
+     * #34: RESULT_OFFLINE_MODE (2) — пользователь выбрал «Офлайн-режим» на
+     * LandingScreen. MainActivity переключается в guest-режим: показывает
+     * OfflineManagerScreen без авторизации. Выйти из guest-режима можно
+     * кнопкой «Войти» в TopAppBar офлайн-экрана.
+     */
+    private val authLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        AppLog.i("MainActivity", "AuthActivity result: ${result.resultCode}" +
+            (if (lastLaunchWasSilent) " [was SILENT]" else " [was FULL]"))
+        // Fix #112: AuthActivity закрылась — снимаем флаг, чтобы boot LaunchedEffect
+        // мог перезапустить её если токен всё ещё невалиден.
+        authActivityShowing = false
+        // Fix #386 #SILENT-AUTH-KEEP-UI: silent-переавторизация завершилась
+        // (успех/провал/отмена) — когда-условие композиции возвращается к
+        // обычной логике hasValidToken() (см. silentAuthInProgress).
+        silentAuthInProgress = false
+        // #SSO-GUARD-RESET: AuthActivity ВЕРНУЛСЯ (SSO-попытка завершена — успех/
+        // отмена/провал). Сбрасываем timestamp #SSO-RECREATE-GUARD, чтобы следующий
+        // launchAuth (boot-no-token / network-restored-no-token) НЕ блокировался на
+        // 90 сек и пользователь не висел на бесконечном сплэше после возврата из
+        // VK app. Гуард нужен только ПОКА пользователь подтверждает в VK app;
+        // после return'а блокировка больше не нужна.
+        lastAuthActivityLaunchedAt = 0L
+        if (result.resultCode == AuthActivity.RESULT_OFFLINE_MODE) {
+            // #34: guest-режим — показываем офлайн-менеджер без токена.
+            isOfflineMode = true
+            // #AUTH-OFFLINE-GUARD: юзер выбрал офлайн сам — автологин отменён.
+            autoOfflineGuest = false
+            // Fix #386: guest-сессия — главный UI больше «не показан»;
+            // последующие silent-сценарии не должны удерживать старый UI.
+            mainUiEverShown = false
+        }
+        // Fix #49 #SILENT-LOOP-BREAK: считаем SILENT-провалы. Если SILENT-запуск
+        // завершился БЕЗ токена (не RESULT_OK) — инкрементим. При успехе — сброс.
+        // Это заставит следующий launchAuth пойти в FULL режиме (см. 3 места
+        // ниже где выставляется EXTRA_SILENT_MODE — все проверяют silentFailCount).
+        if (result.resultCode == RESULT_OK) {
+            if (silentFailCount > 0) {
+                AppLog.i("MainActivity", "SILENT loop broken — silentFailCount $silentFailCount → 0 (Fix #49)")
+            }
+            silentFailCount = 0
+            // #AUTH-FIRST-OPEN-GUEST: успешный вход из guest-режима (кнопка
+            // «Войти в аккаунт» в guest-drawer) — сбрасываем guest-флаг.
+            if (isOfflineMode) {
+                isOfflineMode = false
+                autoOfflineGuest = false
+                AppLog.i("MainActivity", "#AUTH-FIRST-OPEN-GUEST: login OK from guest — isOfflineMode reset")
+            }
+            // Fix #176-auth-loop: успешный логин — сбрасываем флаг форсированного
+            // FULL re-login. Если в будущем снова потребуется форсировать (новый
+            // апдейт), VkMintApp.onCreate выставит его заново.
+            val appCtx = VkMintApp.get(this@MainActivity)
+            if (appCtx.forceFullReloginOnNextLaunch) {
+                appCtx.forceFullReloginOnNextLaunch = false
+                AppLog.i("MainActivity", "forceFullReloginOnNextLaunch reset after successful login (Fix #176-auth-loop)")
+            }
+            // Fix #385 #LOCKER-AFTER-AUTH: дыра в PIN-блокировке — cold start с
+            // протухшим web_token (истекает каждые ~15 мин, Fix #339) шёл в
+            // boot-эффекте по ветке auth (не по ветке локера), а после успешного
+            // silent re-login boot-эффект перезапускался и ранний return
+            // (bootLocal=true && hasValidToken()=true) ПРОПУСКАЛ запуск
+            // LockerActivity → приложение открывалось БЕЗ PIN несмотря на
+            // snap.lockerEnabled=true. Теперь: после ЛЮБОГО успешного auth
+            // результата, если сессия ещё не проходила разблокировку в этой
+            // сессии (lockerVerifiedThisSession=false), а PIN включён — запускаем
+            // локер СРАЗУ (юзер увидит PIN-пад вместо интерфейса). lastPrefsSnapshot
+            // null (теоретически — auth завершился до первого recomposition) —
+            // fallback на runBlocking-чтение, как в onResume fallback (Fix #169):
+            // раз за сессию, main-thread 30-200мс допустимы.
+            var lockerSnap = lastPrefsSnapshot
+            if (lockerSnap == null) {
+                lockerSnap = kotlinx.coroutines.runBlocking { appCtx.prefs.data.first() }
+                lastPrefsSnapshot = lockerSnap
+            }
+            if (!lockerVerifiedThisSession && lockerSnap.lockerEnabled && lockerSnap.lockerPinHash.isNotBlank()) {
+                lockerVerifiedThisSession = true
+                AppLog.i("MainActivity", "Auth success — PIN enabled, session not verified yet → launching LockerActivity (Fix #385)")
+                // Fix #PIN-CORE #LOCKER-TO-CORE-UI: LockerActivity живёт в :core:ui и
+                // не знает о VkMintPrefs — хэш/флаг передаются через Intent-extras.
+                vk.mint.locker.LockerActivity.launch(
+                    this@MainActivity,
+                    lockerSnap.lockerPinHash,
+                    lockerSnap.lockerBiometric,
+                )
+            }
+            // Fix #386 #SILENT-AUTH-KEEP-UI: если на время silent-auth главный UI
+            // оставался смонтированным (deep-sleep resume) — LP мог уйти в
+            // token-паузу (§43) с мёртвым токеном, а пул — evictAll-нут на resume.
+            // Повторяем ключевой контур onResume: evictAll + LP notifyResumed
+            // (сбрасывает tokenPauseUntilMs/backoff → LP реконнектится уже с
+            // новым токеном, сообщения оживают). Без этого контент смонтированных
+            // экранов мог застрять в error-состоянии до pull-to-refresh (сегодня
+            // эту роль играл ребилд NavHost с нуля).
+            if (lastLaunchWasSilent && mainUiEverShown) {
+                try {
+                    appCtx.httpClient.connectionPool.evictAll()
+                } catch (e: Exception) {
+                    AppLog.w("MainActivity", "#SILENT-AUTH-KEEP-UI: pool.evictAll failed: ${e.message}")
+                }
+                appCtx.longPollClient.notifyResumed()
+                AppLog.i("MainActivity", "#SILENT-AUTH-KEEP-UI: silent auth OK — pool evicted + LP woken (UI stayed mounted)")
+            }
+        } else if (lastLaunchWasSilent && result.resultCode != AuthActivity.RESULT_OFFLINE_MODE) {
+            silentFailCount++
+            AppLog.w("MainActivity", "SILENT auth failed (${result.resultCode}) — " +
+                "silentFailCount=$silentFailCount/$MAX_SILENT_FAILURES (Fix #49)" +
+                (if (silentFailCount >= MAX_SILENT_FAILURES)
+                    " → next launch will be FULL (visible)" else ""))
+            // Fix #377 #SILENT-RETRY-AFTER-DOZE: SILENT-попытка после Doze обычно
+            // проваливается из-за гонки с ещё-поднимающимся Wi-Fi (WebView-таймаут
+            // 30с на неготовой сети). Раньше после RESULT_CANCELED никто не
+            // перезапускал auth: boot-эффект не ретриггерится, Fix #341 ждёт НОВУЮ
+            // emission isOnlineFlow (StateFlow давно true — её не будет) → юзер
+            // навсегда на StartupLoadingScreen и был вынужден свернуть/развернуть
+            // приложение (второй ON_RESUME срабатывал #BG-AUTH-LOOP-FIX).
+            // Теперь: через ~20с сами повторяем SILENT-попытку — сеть к этому
+            // моменту поднялась, обмен проходит, юзер ничего не делает.
+            scheduleSilentAuthRetryAfterCancel()
+        }
+        // Триггерим recompose независимо от результата —
+        // если пользователь отменил, но токен уже был сохранён, покажем главный экран.
+        authVersion++
+    }
+
+    /**
+     * Счётчик версий авторизации. Любое изменение (login, logout, deep-link token)
+     * инкрементирует это значение и заставляет Compose перечитать tokenStorage.
+     * Без этого hasValidToken() не observable и UI не обновляется после OAuth.
+     */
+    private var authVersion by mutableIntStateOf(0)
+
+    /**
+     * #34 / #AUTH-FIRST-OPEN-GUEST: guest-режим — приложение работает БЕЗ токена
+     * (офлайн-менеджер + GuestDrawer). Включается:
+     *  1) вручную — «Офлайн-режим» на LandingScreen (RESULT_OFFLINE_MODE);
+     *  2) автоматически — первый запуск без токена и без silent-возможности,
+     *     network-restored без silent, token-invalidation без silent
+     *     (#AUTH-FIRST-OPEN-GUEST, 2026-09-23: экран входа больше НЕ
+     *     показывается автоматически — только кнопка «Войти в аккаунт»
+     *     в guest-drawer).
+     * Сбрасывается при успешном логине (result RESULT_OK).
+     */
+    private var isOfflineMode by mutableStateOf(false)
+
+    /**
+     * #AUTH-OFFLINE-GUARD (2026-09-25): guest-режим, введённый АВТОМАТИЧЕСКИ
+     * из-за отсутствия сети (не выбором юзера через «Офлайн-режим»).
+     * Отличие от ручного guest: при появлении сети приложение САМО молча
+     * пере-логинится через silent remixsid (networkRestoredAuthRetry) — юзер
+     * не должен тапать «Войти в аккаунт» только потому, что был выключен WiFi.
+     */
+    private var autoOfflineGuest by mutableStateOf(false)
+
+    /**
+     * Fix #183: Оверлеи для guest-режима (офлайн без авторизации).
+     *
+     * В guest-режиме OfflineManagerScreen показывается напрямую (без VkMintNavHost),
+     * поэтому навигация к VideoPlayerScreen / StoryOfflinePlayerScreen /
+     * OfflineAudioPlayerScreen невозможна через NavController. Эти переменные
+     * хранят state оверлеев и обрабатываются в compose-дереве guest-режима.
+     *
+     * - [guestVideoOverlay]: видео для оверлей-плеера (VideoHolder используется
+     *   для совместимости с authorized-режимом — но в guest-режиме читаем его
+     *   через VideoHolder.active.collectAsState()).
+     * - [guestStoryOverlay]: пара (ownerId, storyId) для StoryOfflinePlayerScreen.
+     * - [guestAudioPlayerOpen]: флаг открытия OfflineAudioPlayerScreen.
+     */
+    private var guestStoryOverlay by mutableStateOf<Pair<Long, Int>?>(null)
+    private var guestAudioPlayerOpen by mutableStateOf(false)
+
+    /**
+     * Fix #112: флаг «AuthActivity сейчас показывается».
+     *
+     * Предотвращает двойной запуск AuthActivity из boot LaunchedEffect.
+     * Сценарий: AuthActivity запущена для silent re-login, boot LaunchedEffect
+     * перезапускается (authVersion++ или токен стал невалиден) → без этого флага
+     * boot запустил бы ВТОРУЮ AuthActivity поверх первой.
+     *
+     * Сбрасывается в false в authLauncher result callback (когда AuthActivity закрылась).
+     */
+    private var authActivityShowing by mutableStateOf(false)
+
+    /**
+     * Fix #386 #SILENT-AUTH-KEEP-UI: «UI живёт во время silent re-auth».
+     *
+     * [silentAuthInProgress] — true пока идёт невидимая (SILENT) переавторизация;
+     * выставляется в [launchAuth] (только для silent-интента), сбрасывается в
+     * authLauncher-колбэке при ЛЮБОМ результате (успех/провал/отмена).
+     *
+     * [mainUiEverShown] — главный UI показывался в этой сессии (SideEffect в
+     * композиции VkMintNavHost); сбрасывается при FULL-запуске auth (logout /
+     * ручной вход / offline→login) и при выборе «Офлайн-режим».
+     *
+     * Проблема (баг-репорт 14.09): после долгого сна токен стёрт
+     * (checkTokenValidity → clear) → hasValidToken()=false → when-композиция
+     * падала в ветку else → StartupLoadingScreen и РАЗМОНТИРОВАЛА весь
+     * VkMintNavHost на всё время silent-auth (секунды–30с, с #SILENT-RETRY-AFTER-DOZE
+     * ретраями — до минут). Юзер видел только Toast «Подключение к VK…» —
+     * «интерфейс приложения может не отобразится сразу, хотя уведомление о
+     * подключении появляется». После успеха NavHost строился с нуля — контент
+     * появлялся ещё позже (пул evictAll-нут, LP реконнект, рефетчи).
+     *
+     * Фикс (вариант A): пока идёт silent-auth И главный UI уже показывался —
+     * НЕ размонтируем VkMintNavHost: экраны живут на досонном стейте (юзер сразу
+     * видит привычный интерфейс), err 5 экраны обрабатывают сами, авто-офлайн
+     * #38 не трипается (он только на IOException, не на err 5; успешные ответы
+     * после успеха сбрасывают счётчик — self-heal VKApiClient).
+     *
+     * [mainUiEverShown] нужен, чтобы при ХОЛОДНОМ старте с мёртвым токеном
+     * поведение не менялось: UI ещё не монтировался → StartupLoadingScreen
+     * как раньше (иначе экраны стартовали бы фетчи без токена и застревали
+     * в error-состояниях до ручного refresh).
+     */
+    private var silentAuthInProgress by mutableStateOf(false)
+    private var mainUiEverShown by mutableStateOf(false)
+
+    /**
+     * Fix #230: timestamp последнего запуска AuthActivity (для троттлинга).
+     * Если notifyTokenInvalidated срабатывает чаще раза в 20с — это признак
+     * цикла (мертвый токен → AuthActivity → clipboard auto-save → мёртвый
+     * токен → ...). Троттлинг разрывает цикл, давая юзеру шанс увидеть
+     * стабильный UI вместо мелькания авторизации.
+     *
+     * Fix #250: 60с → 20с. 60с слишком долго для случая «токен только что
+     * получен и сразу 1117» — юзер смотрит на зависшее приложение.
+     */
+    private var lastAuthActivityLaunchMs: Long = 0L
+
+    /**
+     * Fix #49 #SILENT-LOOP-BREAK: счётчик последовательных SILENT-провалов.
+     *
+     * Сценарий из логкэта 2026-08-03: мёртвый remixsid → AuthActivity запускается
+     * в SILENT режиме (transparent theme) → WebView dispodee через ~118ms →
+     * WebTokenAuth cancelled → RESULT_CANCELED → notifyTokenInvalidated tick →
+     * снова SILENT (remixsid же есть!) → бесконечный цикл без видимого UI.
+     *
+     * Решение: считаем сколько раз подряд SILENT AuthActivity завершилась БЕЗ
+     * токена. После [MAX_SILENT_FAILURES] (2) — форсируем FULL режим: НЕ
+     * ставим EXTRA_SILENT_MODE даже если remixsid есть. Юзер увидит экран
+     * входа и сможет перелогиниться вручную. Сбрасывается в 0 при успехе
+     * (RESULT_OK) или при FULL-запуске (visible режим сам по себе разрывает
+     * цикл). Не persisted — рестарт процесса = чистый старт, что нормально
+     * (Fix #3 к тому времени уже почистил мёртвый remixsid).
+     */
+    private var silentFailCount: Int = 0
+    private var lastLaunchWasSilent: Boolean = false
+
+    /**
+     * #SILENT-HEADLESS (2026-09-24): silent-переавторизация идёт БЕЗ AuthActivity.
+     * Гвард от параллельных headless-попыток (несколько триггеров одновременно).
+     */
+    @Volatile private var headlessAuthInProgress: Boolean = false
+
+    /** Fix #49: после 2 SILENT-провалов подряд — FULL режим. */
+    private val MAX_SILENT_FAILURES = 2
+
+    /**
+     * Fix #DOUBLE-FLICKER (§41.23): fingerprint последнего clipboard-токена,
+     * сохранённого через [trySaveOAuthTokenFromClipboard]. Защита от двойного
+     * сохранения одного и того же токена (network flicker → isOnlineFlow
+     * эмитит повторно → collect блок → trySaveOAuthTokenFromClipboard снова).
+     *
+     * Также защищает от сценария «logout + clearPrimaryClip failed»: если
+     * очистка буфера не сработала (permission/old Android), и network restore
+     * fires после logout — без этой защиты мы бы пересохраннили stale token.
+     * В logout handler (line ~660) мы устанавливаем fingerprint текущего буфера
+     * ДО вызова clearPrimaryClip, чтобы даже при неудачной очистке повторное
+     * сохранение было заблокировано.
+     */
+    private var lastSavedClipFingerprint: Int = 0
+
+    /**
+     * Fix #233 (P1): единая точка запуска AuthActivity. Обновляет
+     * lastAuthActivityLaunchMs ВСЕГДА — чтобы throttle (Fix #230) работал
+     * во всех 4 путях: boot, tokenInvalidation, logout, offline→login.
+     * Раньше обновление было только в пути tokenInvalidation → auth loop
+     * мог вернуться через logout/offline→login/boot.
+     *
+     * @param intent готовый Intent (с EXTRA_SILENT_MODE и др.)
+     * @param reason метка для логов
+     */
+    private fun launchAuth(intent: Intent, reason: String) {
+        val now = System.currentTimeMillis()
+        // Fix #230 throttle: не запускаем AuthActivity чаще раза в 20с.
+        // Кроме ручного logout — там пользователь явно нажал «Выйти»,
+        // throttle тут только разозлит (он хочет немедленно войти обратно).
+        //
+        // Fix #250: уменьшили 60с → 20с. 60с слишком долго для случая
+        // «токен только что получен и сразу 1117» — юзер смотрит на
+        // зависшее приложение целую минуту. 20с достаточно чтобы разорвать
+        // auth-loop (AuthActivity → 1117 → AuthActivity → ...) и при этом
+        // не мучить юзера при реальном edge-case.
+        // isManualAction: явное действие пользователя — throttle/guard отключены.
+        //   - "logout": юзер нажал «Выйти», хочет немедленно войти обратно.
+        //   - "drawer-login": #AUTH-FIRST-OPEN-GUEST — юзер нажал «Войти в аккаунт»
+        //     в guest-drawer. Без исключения throttle 20с мог заблокировать
+        //     повторный тап после быстрой отмены AuthActivity → кнопка «не работает».
+        //   - "offline-back-to-login": устаревший путь (до #AUTH-FIRST-OPEN-GUEST),
+        //     оставлен для совместимости.
+        val isManualAction = reason == "logout" || reason == "drawer-login" || reason == "offline-back-to-login"
+
+        // =================================================================
+        // #AUTH-OFFLINE-GUARD (2026-09-25): БЕЗ СЕТИ авторизацию НЕ НАЧИНАЕМ.
+        // Прецедент юзера: открытие приложения с выключенной сетью → boot
+        // запустил silent-auth → headless-провал → FULL AuthActivity, сессия
+        // стёрта. Без сети ни Path 1.5, ни WebView-механизм физически не
+        // вернут токен, а провалы портят silentFailCount и session-стейт.
+        // Ручные действия (logout / «Войти в аккаунт») не блокируем — явное
+        // намерение юзера; авто-пути (boot / tick / bg-loop / network-restored)
+        // при offline просто не делают ничего: сеть вернётся — и тогда
+        // networkRestoredAuthRetry (#341) сам запустит silent re-login.
+        // =================================================================
+        if (!isManualAction && !VkMintApp.get(this@MainActivity).networkObserver.isOnline()) {
+            AppLog.w("MainActivity", "launchAuth($reason) BLOCKED — no network (#AUTH-OFFLINE-GUARD): auth postponed until connectivity returns")
+            Toast.makeText(this, "Нет сети — вход отложен до подключения", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        // =================================================================
+        // #SILENT-HEADLESS (2026-09-24): silent-интент → AuthActivity НЕ ЗАПУСКАЕТСЯ.
+        //
+        // Лог 19:00 (HOTWAV, мёртвый renderer): Path 1.5 восстановил токен за
+        // 0.9с (19:00:23.8→24.7), но параллельный silent AuthActivity висел
+        // 37с ЧЁРНЫМ ЭКРАНОМ: система СТОПИТ MainActivity под «прозрачной»
+        // activity (onStop 19:00:24.332, surface уничтожен .367), контент
+        // alpha(0f) (#AUTH-SILENT-STEALTH), под ним пусто → чёрное. SAFETY-NET
+        // 30с + recreate WebView ничего не меняют — окно-то пустое.
+        //
+        // Гарантия «чёрного экрана не существует»: НЕ СОЗДАВАТЬ ОКНО ВОВСЕ.
+        // ensureFreshToken(force=true) делает headless ВСЁ то же, что silent
+        // AuthActivity: Path 1.5 (HTTP ~1с) → WEB-MECHANISM (offscreen WebView
+        // 0x0, не в иерархии) → persist. Провал → видимый AuthActivity (FULL)
+        // для ручного входа (чёрного там нет — не silent).
+        // =================================================================
+        if (!isManualAction && intent.getBooleanExtra(AuthActivity.EXTRA_SILENT_MODE, false)) {
+            if (headlessAuthInProgress) {
+                AppLog.d("MainActivity", "launchAuth($reason): headless auth already in progress — skip")
+                return
+            }
+            headlessAuthInProgress = true
+            // Держим существующие гварды от ПАРАЛЛЕЛЬНЫХ видимых пусков.
+            lastAuthActivityLaunchMs = now
+            lastAuthActivityLaunchedAt = now
+            AppLog.i("MainActivity", "launchAuth($reason) — SILENT → headless ensureFreshToken (AuthActivity не запускается, #SILENT-HEADLESS)")
+            showAuthNetworkToast()
+            lifecycleScope.launch {
+                val app = VkMintApp.get(this@MainActivity)
+                val token = try {
+                    app.exchangeAuthRepository.ensureFreshToken(force = true)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    // #HEADLESS-CANCEL-FIX (2026-09-25): корутина отменена жизненным
+                    // циклом (Activity пересоздаётся / сворачивается). Это НЕ провал
+                    // refresh'а: boot/tokenInvalidationTick перезапустит попытку сам.
+                    // Открывать FULL из отменённой корутины нельзя и незачем.
+                    AppLog.w("MainActivity", "SILENT-HEADLESS: cancelled (Activity lifecycle) — не открываю логин, boot повторит")
+                    headlessAuthInProgress = false
+                    return@launch
+                } catch (e: Exception) {
+                    AppLog.w("MainActivity", "SILENT-HEADLESS: ensureFreshToken exception — ${e.message}")
+                    null
+                }
+                headlessAuthInProgress = false
+                if (token != null) {
+                    if (silentFailCount > 0) {
+                        AppLog.i("MainActivity", "SILENT loop broken — silentFailCount $silentFailCount → 0 (Fix #49, headless)")
+                    }
+                    silentFailCount = 0
+                    // #AUTH-OFFLINE-GUARD: headless-успех после auto-offline-guest —
+                    // выходим из guest-режима (главный UI восстановлен).
+                    if (isOfflineMode) {
+                        isOfflineMode = false
+                        autoOfflineGuest = false
+                    }
+                    authVersion++
+                    AppLog.i("MainActivity", "SILENT-HEADLESS: токен восстановлен без окна — главный UI восстановлен (authVersion++)")
+                } else {
+                    silentFailCount++
+                    AppLog.w("MainActivity", "SILENT-HEADLESS: провал — silentFailCount=$silentFailCount/$MAX_SILENT_FAILURES; открываю видимый логин (FULL)")
+                    // Сбрасываем гварды — видимый FULL после headless-провала разрешён немедленно.
+                    lastAuthActivityLaunchMs = 0L
+                    lastAuthActivityLaunchedAt = 0L
+                    val fullIntent = Intent(this@MainActivity, AuthActivity::class.java)
+                    launchAuth(fullIntent, reason = "$reason-headless-fail")
+                }
+            }
+            return
+        }
+
+        if (!isManualAction && lastAuthActivityLaunchMs > 0L && now - lastAuthActivityLaunchMs < 20_000L) {
+            val waitMs = 20_000L - (now - lastAuthActivityLaunchMs)
+            AppLog.w("MainActivity", "launchAuth($reason) throttled — last launch ${now - lastAuthActivityLaunchMs}ms ago (need ${waitMs}ms more). Skipping (Fix #230).")
+            return
+        }
+        // #SSO-RECREATE-GUARD: если AuthActivity был запущен недавно (< 90 сек),
+        // блокируем перезапуск. Защищает от loop после low-memory kill во время
+        // VK-app SSO: система убивает AuthActivity+MainActivity → юзер возвращается
+        // → MainActivity onCreate → isOnlineFlow/boot/token-invalidation триггерят
+        // launchAuth → БЕЗ guard запустился бы НОВЫЙ AuthActivity с НОВЫМ QR,
+        // ломая match с подтверждением юзера в VK app → бесконечный loop.
+        //
+        // Instance-throttle (Fix #230, 20с) НЕ помогает — lastAuthActivityLaunchMs
+        // сбрасывается в 0L при recreate. Этот guard использует companion-object
+        // timestamp, который переживает recreate.
+        //
+        // 90 сек > QR TTL VK (~60 сек) + время возврата из VK app. После истечения
+        // guard пропускает один retry (если токен всё ещё невалиден).
+        //
+        // Manual logout исключён — юзер явно хочет перелогиниться немедленно.
+        if (!isManualAction && lastAuthActivityLaunchedAt > 0L) {
+            val sinceMs = now - lastAuthActivityLaunchedAt
+            if (sinceMs < SSO_GUARD_WINDOW_MS) {
+                AppLog.w("MainActivity", "launchAuth($reason) blocked — AuthActivity launched ${sinceMs / 1000}s ago (SSO in progress?, #SSO-RECREATE-GUARD). Skipping.")
+                return
+            }
+        }
+        lastAuthActivityLaunchMs = now
+        lastAuthActivityLaunchedAt = now
+        authActivityShowing = true
+        // Fix #49: запоминаем был ли этот запуск SILENT — result-callback
+        // инкрементит silentFailCount только если SILENT закончился неудачей.
+        lastLaunchWasSilent = intent.getBooleanExtra(AuthActivity.EXTRA_SILENT_MODE, false)
+        // Fix #386 #SILENT-AUTH-KEEP-UI: silent-запуск держит главный UI
+        // смонтированным, пока идёт невидимая переавторизация (сброс — в
+        // authLauncher-колбэке при любом результате). FULL-запуск (ручной вход /
+        // logout / offline→login) помечает сессию «UI не показан» — следующее
+        // монтирование пойдёт штатно (loading → NavHost с нуля).
+        silentAuthInProgress = lastLaunchWasSilent
+        if (!lastLaunchWasSilent) mainUiEverShown = false
+        AppLog.i("MainActivity", "launchAuth($reason) — launching AuthActivity" +
+            (if (lastLaunchWasSilent) " [SILENT]" else " [FULL]"))
+        if (lastLaunchWasSilent) {
+            // Fix #384 #AUTH-NETWORK-TOAST: запрос юзера — «скрыть чёрный фон
+            // авторизации и просто показать всплывающее сообщение о подключении
+            // к сети и указать тип сети». SILENT-запуск теперь невидим
+            // (#AUTH-SILENT-STEALTH в AuthActivity), поэтому юзеру нужен сигнал
+            // ЧТО происходит: единственная точка запуска silent-auth — эта
+            // функция — показывает Toast с типом сети (NetworkObserver.connectionType,
+            // уже использовался в настройках). FULL-запуски (ручной вход) НЕ
+            // тостятся — юзер и так видит экран авторизации.
+            showAuthNetworkToast()
+        }
+        authLauncher.launch(intent)
+    }
+
+    /**
+     * Fix #384 #AUTH-NETWORK-TOAST: сигнал юзеру ЧТО происходит при невидимой
+     * silent-переавторизации. Используется и headless-веткой (#SILENT-HEADLESS),
+     * и прежним SILENT-пуском AuthActivity.
+     */
+    private fun showAuthNetworkToast() {
+        try {
+            val netType = VkMintApp.get(this).networkObserver.connectionType()
+            val typeLabel = when (netType) {
+                "Wi-Fi" -> "Wi-Fi"
+                "Mobile" -> "мобильная сеть"
+                "Ethernet" -> "Ethernet"
+                "none" -> "сеть недоступна"
+                else -> "тип сети неизвестен"
+            }
+            val msg = if (netType == "none") "Нет сети — подключение к VK отложено"
+                else "Подключение к VK… ($typeLabel)"
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            AppLog.d("MainActivity", "AUTH-NETWORK-TOAST: networkObserver not ready: ${e.message}")
+        }
+    }
+
+    /**
+     * Fix #377 #DOZE-RESUME-PROACTIVE-REFRESH: проактивное обновление токена
+     * при возврате из фона, ДО того как первый API-вызов упрётся в err 5/1117
+     * и запустит реактивный контур (H2 из разведки 26-1-d).
+     *
+     * Условия (вызывается из onResume при wasStopped):
+     *  - до истечения web-токена < 5 минут (TTL web_token 15мин-24ч — после
+     *    сна он часто уже на исходе), ИЛИ
+     *  - токен помечен invalidated (VK уже отверг его err 5/1117).
+     *
+     * ensureFreshToken(force = true) — лёгкий HTTP-путь (Path 1.5 remixsid /
+     * Path 5 connect_exchange_token, ~200мс-2с) в app-скоупе, НЕ блокирует main.
+     * Он НЕ трипает авто-офлайн (#38 живёт только в VKApiClient.callInternal) и
+     * НЕ инкрементит tokenInvalidationTicks — при неудаче просто вернёт null.
+     *
+     * БЕЗОПАСНОСТЬ ГОНКИ с launchAuth: если токен уже невалиден, параллельно
+     * отработает штатный контур (checkTokenValidity → tick → LaunchedEffect →
+     * launchAuth и #BG-AUTH-LOOP-FIX). launchAuth имеет authActivityShowing +
+     * throttle 20с + SSO-guard 90с — второй AuthActivity не откроется. Если
+     * ensureFreshToken успел обновить токен ДО запуска этих путей — они
+     * пропустят запуск сами (проверяют hasValidToken). Если после — SILENT
+     * AuthActivity просто пройдёт поверх (прозрачная), обе записи токена валидны.
+     * Успех здесь → authVersion++ (в Main-контексте) → recompose на главный
+     * экран без всякого AuthActivity.
+     */
+    private fun maybeProactiveTokenRefresh(app: VkMintApp) {
+        // #AUTH-OFFLINE-GUARD: офлайн ensureFreshToken бессмыслен и опасен —
+        // провал без сети не должен трогать session-стейт. Ждём сеть.
+        if (!app.networkObserver.isOnline()) return
+        val now = System.currentTimeMillis()
+        val last = lastProactiveTokenRefreshMs
+        if (last > 0L && now - last < PROACTIVE_REFRESH_THROTTLE_MS) return
+        val invalidated = app.exchangeStorage.isAccessTokenInvalidated()
+        val expiresAtMs = app.exchangeAuthRepository.expiresAt()
+        val expiresSoon = expiresAtMs != 0L && (expiresAtMs - now) < PROACTIVE_REFRESH_WINDOW_MS
+        val tokenValid = app.tokenStorage.hasValidToken()
+        if (!invalidated && !expiresSoon) return
+        if (!tokenValid && !invalidated) {
+            // Токен уже невалиден БЕЗ флага invalidated (истёк по времени) —
+            // обновит его штатный реактивный контур (tick → launchAuth) или
+            // #BG-AUTH-LOOP-FIX; дублировать ensureFreshToken не требуется.
+            // (expiresSoon здесь true лишь для «уже истёкшего» токена.)
+            return
+        }
+        lastProactiveTokenRefreshMs = now
+        AppLog.i("MainActivity", "Proactive token refresh on resume: expiresAt=$expiresAtMs, " +
+            "invalidated=$invalidated → ensureFreshToken(force=true) (#DOZE-RESUME-AUTH)")
+        app.appScope.launch {
+            val refreshed = try {
+                app.exchangeAuthRepository.ensureFreshToken(force = true)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.w("MainActivity", "Proactive ensureFreshToken failed: ${e.message} (#DOZE-RESUME-AUTH)")
+                null
+            }
+            if (refreshed != null) {
+                AppLog.i("MainActivity", "Proactive token refresh OK — authVersion++ (#DOZE-RESUME-AUTH)")
+                // Snapshot-state пишем из Main-контекста (дисциплина проекта).
+                withContext(Dispatchers.Main) {
+                    authVersion++
+                }
+            }
+        }
+    }
+
+    /**
+     * Fix #377 #SILENT-RETRY-AFTER-DOZE: одноразовая отложенная (~20с) повторная
+     * silent-попытка после провала SILENT AuthActivity (RESULT_CANCELED).
+     *
+     * Цель: юзер НЕ должен сворачивать/разворачивать приложение — retry придёт
+     * сам, когда сеть поднимется, и succeed'ится.
+     *
+     * Защиты от мусорных запусков (все проверяются в момент срабатывания):
+     *  - одна попытка за раз ([silentRetryScheduled]);
+     *  - приложение опять в фоне → следующий onResume прогонит #BG-AUTH-LOOP-FIX;
+     *  - токен уже появился (успел обновиться проактивным/штатным путём) → skip;
+     *  - AuthActivity уже показывается → skip (не наслаиваем Activity);
+     *  - offline/guest-режим или сеть ещё не поднялась → skip (#341 дождётся
+     *    emission isOnlineFlow и запустит retry сам).
+     *
+     * Запуск идёт через общий [launchAuth] (throttle 20с + SSO-guard 90с +
+     * authActivityShowing — вторая AuthActivity поверх невозможна), silent-режим
+     * выбирается по тем же правилам, что и существующие пути (Fix #49/#176).
+     */
+    private fun scheduleSilentAuthRetryAfterCancel() {
+        if (silentRetryScheduled) return
+        silentRetryScheduled = true
+        val app = VkMintApp.get(this)
+        app.appScope.launch {
+            try {
+                delay(SILENT_RETRY_DELAY_MS)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                silentRetryScheduled = false
+                throw e
+            }
+            withContext(Dispatchers.Main) {
+                silentRetryScheduled = false
+                if (wasStopped) {
+                    AppLog.d("MainActivity", "SILENT retry: app backgrounded again — #BG-AUTH-LOOP-FIX handles on next resume")
+                    return@withContext
+                }
+                if (isOfflineMode) return@withContext
+                if (app.tokenStorage.hasValidToken()) return@withContext
+                if (authActivityShowing) return@withContext
+                if (!app.networkObserver.isOnline()) {
+                    AppLog.i("MainActivity", "SILENT retry: сеть ещё не поднялась — #341 дождётся emission (#SILENT-RETRY-AFTER-DOZE)")
+                    return@withContext
+                }
+                val hasRemixsid = !app.exchangeAuthRepository.remixsid().isNullOrBlank()
+                val useSilent = hasRemixsid && silentFailCount < MAX_SILENT_FAILURES
+                    && !app.forceFullReloginOnNextLaunch
+                AppLog.i("MainActivity", "SILENT retry after cancel — relaunching auth " +
+                    "[${if (useSilent) "SILENT" else "FULL"}] (#SILENT-RETRY-AFTER-DOZE)")
+                val intent = Intent(this@MainActivity, AuthActivity::class.java).apply {
+                    if (useSilent) putExtra(AuthActivity.EXTRA_SILENT_MODE, true)
+                }
+                launchAuth(intent, reason = "silent-retry-after-cancel")
+            }
+        }
+    }
+
+    /**
+     * Fix #154 full forwarding: контент полученный через системный share
+     * (ACTION_SEND). Когда не null — показываем ShareToChatSheet с выбором
+     * диалога для пересылки. Очищается после отправки или отмены.
+     *
+     * Хранится как Compose state чтобы show/dismiss триггерил recompose.
+     */
+    private var pendingShareText by mutableStateOf<String?>(null)
+    private var pendingShareUri by mutableStateOf<Uri?>(null)
+    private var pendingShareMime by mutableStateOf<String?>(null)
+
+    // Fix #208: peer_id диалога, который нужно открыть из push-уведомления.
+    // Устанавливается в handleOpenChatIntent (onCreate или onNewIntent), а
+    // VkMintNavHost читает через LaunchedEffect и навигирует на ChatDetailScreen.
+    private var pendingOpenChatPeerId by mutableStateOf<Long?>(null)
+    private var pendingOpenChatTitle by mutableStateOf<String?>(null)
+
+    /**
+     * §42 #PUSH-NOTIFICATIONS: pending deep-link от tap на VK-уведомление
+     * (лайк/комментарий/репост/ответ/подписка/упоминание/подарок/запись на стене).
+     *
+     * Устанавливается в [handleDeepLinkIntent] (onCreate или onNewIntent),
+     * VkMintNavHost читает через LaunchedEffect и навигирует на нужный Screen:
+     *   OpenPost      → Screen.PostDetail
+     *   OpenVideo     → Screen.VideoPlayer
+     *   OpenUser      → Screen.UserProfile
+     *   OpenCommunity  → Screen.Community
+     *   OpenPhoto     → Screen.InternalBrowser (vk.com/photo URL)
+     *   OpenNotifications → Screen.Messages (вкладка Уведомления)
+     *
+     * После навигации сбрасывается через [consumeDeepLink].
+     */
+    private var pendingDeepLink by mutableStateOf<vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction?>(null)
+
+    /**
+     * #29 (закрытие хвостов) / #LOCKER-BG-RECREATE (волна 36): флаг «активити
+     * уходило в onStop и resume ещё не отработал» — см. companion-поле
+     * [wasStopped]. Раньше это было поле ЭКЗЕМПЛЯРА (isBackgrounded) и умирало
+     * вместе с активити: на устройстве пользователя (Don't keep activities /
+     * агрессивная оболочка) КАЖДЫЙ возврат из фона шёл через пересоздание
+     * MainActivity (лог 2026-09-11: onCreate на всех 5 возвратах, процесс
+     * жив) → новый экземпляр стартовал с false → resume-чек «Блокировки при
+     * возврате из фона» молчал (ни запуска локера, ни диагностического лога),
+     * а boot-чек скипался по static lockerBootCheckDone + восстановленному
+     * bootLocal → PIN-пад не появлялся вовсе.
+     */
+
+    /**
+     * Fix #377 #DOZE-STALE-POOL: timestamp последнего resume из фона.
+     * Если между resume прошло > [STALE_POOL_WINDOW_MS] (типичный глубокий сон)
+     * — чистим OkHttp connection pool: keep-alive TCP-соединения за Doze мертвы
+     * (сервер закрыл), первый API-вызов на них виснет/падает → лишний err 5/1117
+     * и трип авто-офлайна (#38). evictAll дешёвый и безопасный.
+     */
+    @Volatile
+    private var lastResumeAt: Long = 0L
+
+    /**
+     * Fix #377 #DOZE-RESUME-PROACTIVE-REFRESH: throttle проактивного
+     * ensureFreshToken(force = true) — не чаще [PROACTIVE_REFRESH_THROTTLE_MS].
+     */
+    @Volatile
+    private var lastProactiveTokenRefreshMs: Long = 0L
+
+    /**
+     * Fix #377 #SILENT-RETRY-AFTER-DOZE: защита от наложения отложенных retry'ев.
+     * Один SILENT-провал = максимум одна запланированная повторная попытка.
+     */
+    @Volatile
+    private var silentRetryScheduled = false
+
+    /**
+     * Fix #385 #LOCKER-AFTER-AUTH: проходил ли пользователь разблокировку PIN
+     * в ЭТОЙ сессии (instance state — смерть процесса сбрасывает, что корректно:
+     * новый процесс = новая сессия = локер обязателен).
+     *
+     * Ставится true в местах запуска LockerActivity (boot / onResume cached /
+     * onResume fallback) и проверяется в authLauncher RESULT_OK — чтобы после
+     * silent re-login при cold start с протухшим токеном локер показался ровно
+     * один раз, а повторные auth (tokenInvalidationTick в фоне) не заваливали
+     * юзера PIN-падом посреди сессии, где он уже прошёл разблокировку.
+     * Дополняет Fix #380 #LOCKER-BOOT-SKIP (волна 26-2): тот чинил guard boot-эффекта,
+     * этот гарантирует локер при ЛЮБОМ успешном auth-результате (authLauncher).
+     */
+    private var lockerVerifiedThisSession = false
+
+    /**
+     * Fix #169: кэш последнего VkMintPrefs Snapshot, обновляемый из Compose-подписки
+     * (collectAsState в setContent). Используется в onResume() для мгновенной
+     * проверки lockerOnBackground без блокирующего runBlocking { prefs.data.first() }
+     * на main thread.
+     *
+     * Раньше onResume читал DataStore синхронно через runBlocking:
+     *   kotlinx.coroutines.runBlocking { app.prefs.data.first() }
+     * После длительного Doze (телефон заблокирован 1+ минут) in-memory cache
+     * DataStore мог быть вытеснен → чтение с диска = 30-200мс блокировки UI.
+     * Пользователь воспринимал это как «приложение подвисает при разблокировке».
+     *
+     * Теперь: в onResume мгновенно читаем [lastPrefsSnapshot] (volatile, O(1)).
+     * Snapshot обновляется из setContent каждый раз когда Compose перечитывает
+     * prefs (а это происходит на каждом изменении DataStore). Поскольку locker
+     * prefs меняются крайне редко (только через настройки), snapshot практически
+     * всегда актуален. В крайнем случае (snapshot ещё null — холодный старт) —
+     * fallback на runBlocking, но это происходит один раз за сессию.
+     */
+    @Volatile
+    private var lastPrefsSnapshot: vk.mint.data.local.VkMintPrefs.Snapshot? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        AppLog.i("MainActivity", "onCreate")
+        handleOAuthIntent(intent)
+        handleShareIntent(intent)
+        handleOpenChatIntent(intent)
+        handleDeepLinkIntent(intent)
+
+        // #CHECK-ON-FOREGROUND: проверка обновлений при каждом старте процесса +
+        // каждом возврате из свёрнутого (foreground). Тихая: ошибки/«нет обновления»
+        // ничего не показывают — баннер рисуется только при Available (UpdateBanner).
+        // Hooks: (1) здесь — холодный старт через ~12 с (не конкурировать со стартом
+        // UI), проверка отложенной, чтобы не мешать первым экранам; (2) ниже —
+        // ProcessLifecycleOwner ON_RESUME, мгновенно при foreground. Троттлинг 60с
+        // в UpdaterManager.triggerUpdateCheck() гасит дубль холодного старта.
+        val appForUpdateCheck = VkMintApp.getOrNull()
+        if (appForUpdateCheck != null) {
+            appForUpdateCheck.appScope.launch {
+                kotlinx.coroutines.delay(12_000L)
+                UpdaterManager.ensureInit(applicationContext).triggerUpdateCheck()
+            }
+        }
+
+        // #CHECK-ON-FOREGROUND: процессный наблюдатель — покрывает и холодный старт
+        // (ON_RESUME при создании процесса), и возврат из свёрнутого (onPause→onResume).
+        // Регистрируем один раз за процесс (companion-флаг). TriggerUpdateCheck сам
+        // троттлит: на холодном старте первый сработавший путь берёт проверку на себя.
+        if (!updaterForegroundObserverRegistered) {
+            updaterForegroundObserverRegistered = true
+            try {
+                androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(
+                    object : androidx.lifecycle.DefaultLifecycleObserver {
+                        override fun onResume(owner: androidx.lifecycle.LifecycleOwner) {
+                            UpdaterManager.ensureInit(applicationContext).triggerUpdateCheck()
+                        }
+                    },
+                )
+                AppLog.i("MainActivity", "#CHECK-ON-FOREGROUND: ProcessLifecycleOwner updater hook registered")
+            } catch (e: Exception) {
+                updaterForegroundObserverRegistered = false
+                AppLog.w("MainActivity", "#CHECK-ON-FOREGROUND: ProcessLifecycleOwner hook failed (non-fatal): ${e.message}")
+            }
+        }
+
+        setContent {
+            val app = VkMintApp.get(this)
+            val scope = rememberCoroutineScope()
+            val snapshot by app.prefs.data.collectAsState(initial = null)
+            val snap = snapshot
+            var bootLocal by rememberSaveable { mutableStateOf(false) }
+
+            // Fix #169: кэшируем snapshot для мгновенного доступа из onResume.
+            // SideEffect вызывается после каждого успешного recomposition —
+            // гарантирует что lastPrefsSnapshot актуален для следующего onResume.
+            androidx.compose.runtime.SideEffect {
+                if (snap != null) lastPrefsSnapshot = snap
+            }
+
+            // Читаем authVersion в composable scope — Compose подписывается на
+            // MutableIntState и рекомпозирует при каждом authVersion++.
+            val currentAuthVersion = authVersion
+
+            // Fix #50-A: подписка на инвалидацию токена. VKApiClient.callInternal
+            // инкрементирует tokenInvalidationTicks после tokenStorage.clear().
+            // Без этого MainActivity остаётся на главном экране с пустым токеном
+            // → все API вызовы возвращают null → пустая лента → БЕЛЫЙ ЭКРАН.
+            val tokenInvalidationTick by app.tokenInvalidationTicks.collectAsState()
+            // lastHandledTick хранит последний обработанный tick — чтобы не
+            // запускать AuthActivity повторно для того же события. Инициализируем
+            // текущим значением tick (обычно 0) — на первом composition нет реакции.
+            var lastHandledTick by rememberSaveable { mutableIntStateOf(0) }
+
+            VkMintTheme(
+                darkTheme = snap?.themeDark ?: true,
+                dynamicColor = snap?.themeDynamic ?: false,
+                monetHybrid = snap?.themeMonetHybrid ?: true,
+                // P0.21 #VK-ACCENTS: default 0 = VK Modern (#0077FF) — первый в списке.
+                accentIndex = snap?.themeAccentIndex ?: 0,
+                fontScale = snap?.fontScale ?: 100,
+                uiScale = snap?.uiScale ?: vk.mint.data.local.VkMintPrefs.UI_SCALE_DEFAULT,
+            ) {
+                // LaunchedEffect'ы ниже срабатывают только когда snap уже загружен.
+                // На этапе snap==null они пропускаются (return) — boot/LongPoll/auth
+                // логика не имеет смысла пока prefs неизвестны.
+
+                // Boot logic: запуск AuthActivity / LockerActivity при первом показе.
+                // Срабатывает один раз (bootLocal guard). Рестартит при смене
+                // authVersion (login/logout) и isOfflineMode.
+                //
+                // Fix #112 (сессия после долгого фона): guard теперь проверяет
+                // ТОЖЕ валидность токена. Раньше `if (bootLocal) return` скипал
+                // boot всегда после первого показа. Но bootLocal переживает смерть
+                // процесса (rememberSaveable → SavedStateHandle). Сценарий бага:
+                //   1. App в фоне долго → Android убивает процесс
+                //   2. Пользователь возвращается → процесс пересоздаётся
+                //   3. bootLocal=true (восстановлен) → boot скипается
+                //   4. Токен истёк за время фона → hasValidToken()=false
+                //   5. AuthActivity НЕ запускается → вечный loading screen
+                //   6. Помогал только force-stop (очищает SavedStateHandle)
+                //
+                // Теперь: boot скипается ТОЛЬКО если bootLocal=true AND токен валиден.
+                // Если токен невалиден (истёк/очищен) — boot выполняется заново,
+                // запускает AuthActivity для silent re-login через remixsid (Fix #107).
+                if (snap != null) {
+                    LaunchedEffect(snap.lockerEnabled, snap.lockerPinHash, bootLocal, currentAuthVersion, isOfflineMode) {
+                        // Скип только если уже загрузились AND токен жив AND
+                        // boot-решение (локер) в этом процессе уже принято.
+                        // Если токен умер — boot должен перезапуститься.
+                        // Fix #380 #LOCKER-BOOT-SKIP: раньше guard был
+                        // `bootLocal && hasValidToken()` и срабатывал сразу после
+                        // bootLocal=true, который ставился ДО auth-ветки → после
+                        // успешного silent re-login (authVersion++ перезапускал
+                        // эффект) и после process-death restore (bootLocal —
+                        // rememberSaveable) до locker-чека дело не доходило —
+                        // холодный старт с протухшим web_token открывал
+                        // приложение БЕЗ PIN. См. KDoc lockerBootCheckDone.
+                        if (lockerBootCheckDone && bootLocal && app.tokenStorage.hasValidToken()) return@LaunchedEffect
+                        // Предотвращаем двойной запуск AuthActivity (authLauncher уже активен).
+                        if (authActivityShowing) return@LaunchedEffect
+                        bootLocal = true
+
+                        // #34: guest-режим — не запускаем AuthActivity, пользователь
+                        // явно выбрал «Офлайн-режим».
+                        if (isOfflineMode) {
+                            AppLog.i("MainActivity", "Offline (guest) mode — skipping auth")
+                            return@LaunchedEffect
+                        }
+                        if (!app.tokenStorage.hasValidToken()) {
+                            // #AUTH-OFFLINE-GUARD: нет сети — авторизацию не начинаем.
+                            // Сессия НЕ стирается; ждём сеть в guest-режиме с автологином:
+                            // когда сеть вернётся, networkRestoredAuthRetry молча
+                            // восстановит вход через silent remixsid.
+                            if (!app.networkObserver.isOnline()) {
+                                lockerBootCheckDone = true
+                                isOfflineMode = true
+                                autoOfflineGuest = true
+                                AppLog.i("MainActivity", "#AUTH-OFFLINE-GUARD: boot offline + no valid token (remixsid=${!app.exchangeAuthRepository.remixsid().isNullOrBlank()}) → auto-guest, silent re-login deferred to network restore")
+                                return@LaunchedEffect
+                            }
+                            // Fix #339: web_token истекает каждые ~15 мин. При холодном
+                            // старте после простоя boot видел истёкший токен и запускал
+                            // AuthActivity в ОБЫЧНОМ режиме → юзер видел WebView flash.
+                            // Если есть сохранённый remixsid → SILENT-запуск (невидимый).
+                            val hasRemixsid = !app.exchangeAuthRepository.remixsid().isNullOrBlank()
+                            // Fix #49: после MAX_SILENT_FAILURES подряд — silent недоступен.
+                            // Fix #176-auth-loop: при форсированном FULL re-login — тоже.
+                            val useSilent = hasRemixsid && silentFailCount < MAX_SILENT_FAILURES
+                                && !app.forceFullReloginOnNextLaunch
+                            if (useSilent) {
+                                val intent = Intent(this@MainActivity, AuthActivity::class.java).apply {
+                                    putExtra(AuthActivity.EXTRA_SILENT_MODE, true)
+                                }
+                                AppLog.i("MainActivity", "No token — silent re-login via remixsid (Fix #339; #AUTH-FIRST-OPEN-GUEST — невидимый, без Landing)")
+                                launchAuth(intent, reason = "boot-no-token")
+                                return@LaunchedEffect
+                            }
+                            lockerBootCheckDone = true
+                            AppLog.i("MainActivity", "No token, launching AuthActivity")
+                            launchAuth(Intent(this@MainActivity, AuthActivity::class.java), reason = "boot-no-token")
+                            return@LaunchedEffect
+                        }
+                        // Fix #380 #LOCKER-BOOT-SKIP: токен жив — boot-решение
+                        // принято (единственный раз за процесс; повторный вход
+                        // в ветку возможен только после silent re-login или
+                        // process death — ровно те пути, где локер раньше
+                        // терялся).
+                        lockerBootCheckDone = true
+                        if (snap.lockerEnabled && snap.lockerPinHash.isNotBlank()) {
+                            AppLog.i("MainActivity", "Locker enabled, launching LockerActivity")
+                            lockerVerifiedThisSession = true
+                            // Fix #PIN-CORE #LOCKER-TO-CORE-UI: хэш/флаг биометрии —
+                            // из актуального boot-snapshot'а prefs (Intent-extras).
+                            LockerActivity.launch(
+                                this@MainActivity,
+                                snap.lockerPinHash,
+                                snap.lockerBiometric,
+                            )
+                        }
+                    }
+                }
+
+                // Sprint 1, P0-1: запуск/остановка LongPoll-цикла.
+                // currentAuthVersion меняется при login/logout/deep-link-token →
+                // этот LaunchedEffect перезапускается и синхронизирует состояние
+                // LongPollClient с актуальным токеном.
+                LaunchedEffect(currentAuthVersion) {
+                    if (app.tokenStorage.hasValidToken()) {
+                        AppLog.i("MainActivity", "Token valid — starting LongPoll")
+                        app.longPollClient.start()
+                        // #CALLS: автоподключение queuev4 для входящих звонков (LP 115).
+                        app.startCallSignaling()
+                        // Fix #340: поднимаем foreground-сервис чтобы удержать процесс
+                        // живым в фоне — иначе Android Doze/kill убьёт LongPoll и
+                        // push-уведомления перестанут приходить.
+                        vk.mint.realtime.LongPollKeepAliveService.start(this@MainActivity)
+                    } else {
+                        AppLog.i("MainActivity", "No token — stopping LongPoll")
+                        app.longPollClient.stop()
+                        app.queuev4Client.stop()
+                        vk.mint.realtime.LongPollKeepAliveService.stop(this@MainActivity)
+                    }
+                }
+
+                // Fix #50-A: реактивная инвалидация токена. Если VKApiClient
+                // очистил токен (refresh failed или error 5/1117 — Fix #96) —
+                // перезапускаем AuthActivity, иначе пользователь видит пустую
+                // ленту (белый экран) пока вручную не перезапустит приложение.
+                // lastHandledTick защищает от повторного запуска для того же tick.
+                LaunchedEffect(tokenInvalidationTick) {
+                    if (tokenInvalidationTick <= lastHandledTick) return@LaunchedEffect
+                    lastHandledTick = tokenInvalidationTick
+                    if (tokenInvalidationTick == 0) return@LaunchedEffect
+                    // #AUTH-OFFLINE-GUARD: сети нет — авторизацию не начинаем.
+                    // Тик считаем обработанным; при появлении сети
+                    // networkRestoredAuthRetry сам запустит silent re-login.
+                    if (!app.networkObserver.isOnline()) {
+                        AppLog.w("MainActivity", "Token invalidated (tick=$tokenInvalidationTick) but NO network — auth postponed (#AUTH-OFFLINE-GUARD)")
+                        return@LaunchedEffect
+                    }
+                    if (isOfflineMode) {
+                        AppLog.i("MainActivity", "Token invalidated (tick=$tokenInvalidationTick) but offline mode — skip AuthActivity relaunch")
+                        return@LaunchedEffect
+                    }
+                    if (app.tokenStorage.hasValidToken()) {
+                        AppLog.i("MainActivity", "Token invalidated (tick=$tokenInvalidationTick) but token still valid — skip relaunch")
+                        return@LaunchedEffect
+                    }
+                    // Fix #112: если AuthActivity уже показывается (например, из boot
+                    // logic после process restore) — не запускаем вторую.
+                    if (authActivityShowing) {
+                        AppLog.i("MainActivity", "Token invalidated (tick=$tokenInvalidationTick) but AuthActivity already showing — skip")
+                        return@LaunchedEffect
+                    }
+                    // Fix #137: if ChatDetailScreen set suppressNextAuthRelaunch during
+                    // a photo upload, skip the global AuthActivity launch — the chat will
+                    // handle the error inline (showing a "session expired" dialog with
+                    // "Перезайти"/"Остаться" buttons instead of hiding the chat).
+                    //
+                    // Single-shot: consumed here (reset to false) so a subsequent
+                    // unrelated token invalidation (e.g. from LongPoll) still launches
+                    // AuthActivity normally.
+                    if (app.suppressNextAuthRelaunch) {
+                        app.suppressNextAuthRelaunch = false
+                        AppLog.i("MainActivity", "Token invalidated (tick=$tokenInvalidationTick) but suppressNextAuthRelaunch=true — ChatDetailScreen will handle inline (Fix #137)")
+                        return@LaunchedEffect
+                    }
+                    // Fix #217 (P1.2): time-based suppress AuthActivity relaunch.
+                    // Если ChatDetailScreen (или другой экран) установил окно suppress
+                    // — игнорируем tick. Это покрывает все API-вызовы (LongPoll, messages,
+                    // photo upload) на время окна, пока silent refresh Path 1.5/2.5
+                    // работает в фоне. Окно авто-протухает по времени — не нужно
+                    // сбрасывать вручную.
+                    val nowMs = System.currentTimeMillis()
+                    if (app.suppressAuthRelaunchUntilMs > 0L && nowMs < app.suppressAuthRelaunchUntilMs) {
+                        val remainingMs = app.suppressAuthRelaunchUntilMs - nowMs
+                        AppLog.i("MainActivity", "Token invalidated (tick=$tokenInvalidationTick) but " +
+                            "suppressAuthRelaunchUntilMs active (${remainingMs}ms remaining) — inline handling (Fix #217)")
+                        return@LaunchedEffect
+                    }
+                    // Fix #107: silent re-login — если в storage есть сохранённый
+                    // remixsid (Fix #106 не удалил его при clearAccessToken),
+                    // запускаем AuthActivity в silent mode. Пользователь НЕ увидит
+                    // экран логина — AuthActivity сразу откроет WebView и попробует
+                    // переобменять remixsid на свежий web_token в фоне.
+                    //
+                    // Это решает исходную проблему (A): «авторизация пропадает через
+                    // ~час» — теперь вместо экрана логина происходит автоматический
+                    // re-login через WebView (занимает 2-5 секунд).
+                    //
+                    // Если remixsid тоже устарел — AuthActivity покажет LANDING
+                    // для ручного входа (fallback в AuthScreen.kt).
+                    val hasRemixsid = !app.exchangeAuthRepository.remixsid().isNullOrBlank()
+                    // Fix #230: чистим буфер обмена если там OAuth-ссылка.
+                    // AuthActivity.onWindowFocusChanged (Fix #195b) автоматически
+                    // сохраняет токен из буфера при получении фокуса. Если там лежит
+                    // тот же мёртвый токен, который мы только что инвалидировали —
+                    // новый instance AuthActivity тут же его пересохранит → цикл.
+                    try {
+                        val clipboard = getSystemService(android.content.ClipboardManager::class.java)
+                        if (clipboard != null && clipboard.hasPrimaryClip()) {
+                            val clip = clipboard.primaryClip
+                            if (clip != null && clip.itemCount > 0) {
+                                val text = clip.getItemAt(0)?.coerceToText(this@MainActivity)?.toString()
+                                if (text != null && text.contains("access_token=", ignoreCase = true)
+                                    && text.contains("user_id=", ignoreCase = true)) {
+                                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("", ""))
+                                    AppLog.i("MainActivity", "Cleared clipboard (contained OAuth token) on auto-invalidation — breaks auth loop (Fix #230)")
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        AppLog.w("MainActivity", "Clipboard clear on invalidation failed: ${e.message}")
+                    }
+                    val intent = Intent(this@MainActivity, AuthActivity::class.java)
+                    // Fix #49: после MAX_SILENT_FAILURES подряд — silent недоступен.
+                    // Fix #176-auth-loop: при форсированном FULL re-login — тоже.
+                    val useSilent = hasRemixsid && silentFailCount < MAX_SILENT_FAILURES
+                        && !app.forceFullReloginOnNextLaunch
+                    if (useSilent) {
+                        intent.putExtra(AuthActivity.EXTRA_SILENT_MODE, true)
+                        AppLog.i("MainActivity", "Token invalidated (tick=$tokenInvalidationTick) — silent re-login via remixsid (Fix #107)")
+                        // Fix #112 + Fix #233 (P1): launchAuth единая точка запуска —
+                        // обновляет lastAuthActivityLaunchMs + проверяет throttle (Fix #230).
+                        launchAuth(intent, reason = "token-invalidation")
+                    } else {
+                        AppLog.i("MainActivity", "Token invalidated (tick=$tokenInvalidationTick), launching AuthActivity")
+                        launchAuth(intent, reason = "token-invalidation")
+                    }
+                }
+
+                // #NET-RESTORE-AUTH-RETRY (Fix #341):
+                // Сценарий: пользователь запустил приложение БЕЗ интернета.
+                //   1. boot: hasValidToken()=false (токен истёк за время offline)
+                //      → launchAuth(silent mode via remixsid)
+                //   2. AuthActivity → VkAuthWebViewScreen → m.vk.ru не грузится
+                //      (нет сети) → 30с таймаут → onBack → AuthActivity finish
+                //   3. authActivityShowing=false, но hasValidToken() всё ещё false
+                //      → MainActivity показывает StartupLoadingScreen()
+                //   4. LaunchedEffect(boot...) НЕ перезапускается (ключи те же)
+                //   5. Пользователь подключает Wi-Fi → NetworkObserver._isOnline=true
+                //   6. БЕЗ этого фикса — НИКТО не перезапускает AuthActivity →
+                //      приложение висит на StartupLoadingScreen навсегда.
+                //
+                // Фикс: подписываемся на isOnlineFlow. Когда online=true И
+                // токена нет И AuthActivity не показывается И не offline-mode —
+                // перезапускаем AuthActivity (silent mode если есть remixsid).
+                // Throttle (20с) уже есть в launchAuth, дополнительно debounce
+                // 3с чтобы не дёргать на каждом мелькании сети.
+                LaunchedEffect(Unit) {
+                    var lastRetryMs = 0L
+                    // Тело retry вынесено в локальную fun — используется и в
+                    // немедленной однократной проверке ниже, и в collect (#341).
+                    fun networkRestoredAuthRetry(online: Boolean) {
+                        if (!online) return
+                        // debounce: не retry чаще раза в 3 сек
+                        val now = System.currentTimeMillis()
+                        if (now - lastRetryMs < 3_000L) return
+                        // только если токена реально нет
+                        if (app.tokenStorage.hasValidToken()) return
+                        // не мешаем офлайн-режиму, КРОМЕ auto-offline-guest:
+                        // #AUTH-OFFLINE-GUARD — guest был введён ИЗ-ЗА отсутствия
+                        // сети; сеть вернулась → молча пере-логиниваемся через
+                        // silent remixsid. Флаги не сбрасываем здесь: при успехе
+                        // их сбросит headless-ветка launchAuth / RESULT_OK,
+                        // при сбое юзер остаётся в guest (сессия цела).
+                        if (isOfflineMode) {
+                            val hasRemixsidAuto = !app.exchangeAuthRepository.remixsid().isNullOrBlank()
+                            if (autoOfflineGuest && hasRemixsidAuto && silentFailCount < MAX_SILENT_FAILURES
+                                && !app.forceFullReloginOnNextLaunch) {
+                                AppLog.i("MainActivity", "#AUTH-OFFLINE-GUARD: network restored after auto-offline-guest — silent re-login (session preserved)")
+                                lastRetryMs = now
+                                val autoGuestIntent = Intent(this@MainActivity, AuthActivity::class.java).apply {
+                                    putExtra(AuthActivity.EXTRA_SILENT_MODE, true)
+                                }
+                                launchAuth(autoGuestIntent, reason = "network-restored-auto-guest")
+                            } else {
+                                AppLog.i("MainActivity", "Network restored but offline mode — skip auth retry (#341)")
+                            }
+                            return
+                        }
+                        // не запускаем второй AuthActivity
+                        if (authActivityShowing) {
+                            AppLog.i("MainActivity", "Network restored but AuthActivity already showing — skip (#341)")
+                            return
+                        }
+                        // Fix #DOUBLE-FLICKER (§41.23): если в буфере обмена УЖЕ есть
+                        // OAuth token (юзер только что вернулся из Chrome, скопировав
+                        // URL с access_token из редиректа blank.html) — сохраняем
+                        // токен напрямую, БЕЗ запуска AuthActivity.
+                        //
+                        // Сценарий без фикса:
+                        //   1. AuthActivity #1 (boot) → юзер жмёт «Войти через Chrome»
+                        //   2. Chrome foreground, AuthActivity #1 onStop
+                        //   3. Система убивает MainActivity (memory pressure) ИЛИ
+                        //      «Don't keep activities» — authActivityShowing сбрасывается
+                        //   4. Юзер логинится в Chrome, копирует token URL, возвращается
+                        //   5. MainActivity onCreate (recreated) → isOnlineFlow=true
+                        //      → все проверки проходят → launchAuth → AuthActivity #2
+                        //   6. AuthActivity #2 моргает WebView 0.5с прежде чем
+                        //      onWindowFocusChanged найдёт токен в буфере → UX-баг
+                        //      «моргание авторизации дважды».
+                        //
+                        // С фиксом: на шаге 5 проверяем буфер — если там OAuth token,
+                        // вызываем saveOAuthTokenFromPayload напрямую. AuthActivity #2
+                        // не запускается, моргания нет. saveOAuthTokenFromPayload
+                        // триггерит authVersion++ → Compose перерисует главный экран.
+                        if (trySaveOAuthTokenFromClipboard()) {
+                            AppLog.i("MainActivity", "Clipboard has OAuth token — saved directly, skip AuthActivity launch (#DOUBLE-FLICKER)")
+                            return
+                        }
+                        lastRetryMs = now
+                        val hasRemixsid = !app.exchangeAuthRepository.remixsid().isNullOrBlank()
+                        // Fix #49: после MAX_SILENT_FAILURES подряд — silent недоступен.
+                        // Fix #176-auth-loop: при форсированном FULL re-login — тоже.
+                        val useSilent = hasRemixsid && silentFailCount < MAX_SILENT_FAILURES
+                            && !app.forceFullReloginOnNextLaunch
+                        if (useSilent) {
+                            AppLog.i("MainActivity", "Network restored + no token — retry auth via silent remixsid (#341; #AUTH-FIRST-OPEN-GUEST — невидимый)")
+                            val retryIntent = Intent(this@MainActivity, AuthActivity::class.java).apply {
+                                putExtra(AuthActivity.EXTRA_SILENT_MODE, true)
+                            }
+                            launchAuth(retryIntent, reason = "network-restored-no-token")
+                        } else {
+                            // #AUTH-FIRST-OPEN-GUEST (2026-09-23): silent невозможен —
+                            // НЕ запускаем видимый логин. Переключаемся в guest-режим
+                            // (вместо вечного StartupLoadingScreen из сценария #341);
+                            // вход — кнопка «Войти в аккаунт» в guest-drawer.
+                            isOfflineMode = true
+                            AppLog.i("MainActivity", "#AUTH-FIRST-OPEN-GUEST: network restored but silent unavailable " +
+                                "(hasRemixsid=$hasRemixsid, silentFailCount=$silentFailCount/$MAX_SILENT_FAILURES, " +
+                                "forceFull=${app.forceFullReloginOnNextLaunch}) → guest mode, login via drawer button")
+                        }
+                    }
+                    // Fix #377 #NET-RESTORE-IMMEDIATE-CHECK: StateFlow может быть
+                    // true УЖЕ ДАВНО (Doze-сон: колбэки не приходили, новых emission
+                    // не будет) — collect ниже не сработал бы вечно, и юзер сидел
+                    // бы на StartupLoadingScreen пока не свернёт/развернёт app.
+                    // Поэтому ОДНА немедленная проверка ПЕРЕД подпиской — тот же
+                    // код, что в collect (безопасно: launchAuth внутри гуардится
+                    // authActivityShowing/throttle, и boot-эффект выше к этому
+                    // моменту уже запустил AuthActivity — тогда мы просто skip).
+                    networkRestoredAuthRetry(app.networkObserver.isOnline())
+                    app.networkObserver.isOnlineFlow.collect { online ->
+                        networkRestoredAuthRetry(online)
+                    }
+                }
+
+                // Fix #96: Box-обёртка верхнего уровня — DraggableLogFab всегда
+                // поверх ЛЮБОГО контента (loading / нет токена / главный экран /
+                // offline). Раньше FAB показывался только при hasValidToken() →
+                // на белом экране при холодном старте (snap==null) или во время
+                // запуска AuthActivity пользователь не мог отправить логи.
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when {
+                        // Холодный старт: DataStore ещё не загрузил prefs.
+                        // Показываем loading вместо пустого белого экрана.
+                        snap == null -> StartupLoadingScreen()
+
+                        // Авторизованный режим — главный навигационный граф.
+                        //
+                        // Fix #386 #SILENT-AUTH-KEEP-UI: во время silent re-auth
+                        // после долгого сна токен стёрт (hasValidToken()=false), но
+                        // если главный UI уже показывался в этой сессии — НЕ
+                        // размонтируем его (баг-репорт 14.09: «интерфейс не
+                        // отображается сразу, хотя уведомление о подключении
+                        // появляется»). Экраны живут на досонном стейте; err 5
+                        // экраны обрабатывают сами; авто-офлайн #38 не трипается
+                        // (только на IOException). Cold-start с мёртвым токеном
+                        // ведёт себя как раньше: mainUiEverShown=false → loading.
+                        app.tokenStorage.hasValidToken() ||
+                            (silentAuthInProgress && mainUiEverShown) -> {
+                            // Запрос ВСЕХ необходимых runtime-разрешений.
+                            // На Android 13+ без POST_NOTIFICATIONS не работают уведомления
+                            // foreground-сервисов (загрузка музыки/видео, плеер).
+                            RequestAllPermissionsEffect()
+                            // Fix #386: фиксируем «главный UI был показан в этой
+                            // сессии» — последующий silent re-auth будет держать
+                            // этот UI смонтированным (идемпотентно на recompose).
+                            SideEffect { mainUiEverShown = true }
+                            // Task 20: CompositionLocal DI-контракта экранов звонков —
+                            // провайдер VkMintApp (реализует CallsDependencies).
+                            // Этап 3.7-1: рядом провайдер контейнера фото — ЕДИНАЯ
+                            // точка сборки (канон §3.2 Этап В).
+                            CompositionLocalProvider(
+                                LocalCallsDeps provides app,
+                                // #CALLS-SNAP (2026-09-05): репозиторий раздела «Звонки»
+                                // (Этап А2 плана «звонки.перенос.план.md») — та же
+                                // единая точка сборки (канон §3.2 Этап В).
+                                LocalCallsSectionRepository provides app.callsSectionRepository,
+                                LocalPhotosDeps provides app,
+                            ) {
+                            VkMintNavHost(
+                                initialRoute = snap.lastRoute,
+                                pendingOpenChatPeerId = pendingOpenChatPeerId,
+                                pendingOpenChatTitle = pendingOpenChatTitle,
+                                onOpenChatConsumed = { consumeOpenChat() },
+                                pendingDeepLink = pendingDeepLink,
+                                onDeepLinkConsumed = { consumeDeepLink() },
+                                onLogout = {
+                                    scope.launch {
+                                        // Fix #182: полный logout — очищаем ВСЕ хранилища
+                                        // авторизации, не только SharedPreferences.
+                                        //
+                                        // Раньше: signOut() чистил только storage (access_token,
+                                        // remixsid, exchange_token), но CookieManager (WebView
+                                        // cookies) сохранял remixsid → AuthActivity auto-relogin
+                                        // через ExternalBrowserAuth.tryFindExistingAuth() →
+                                        // пользователь нажимал «Выйти» и через секунду снова
+                                        // был залогинен.
+                                        //
+                                        // Теперь: перед signOut() останавливаем LongPoll +
+                                        // плеер, после signOut() CookieManager + storage.clear()
+                                        // полностью очищают сессию, затем запускаем AuthActivity.
+
+                                        // 1. Останавливаем LongPoll — иначе он держит сессию
+                                        //    активной HTTP-запросами и может пересоздать
+                                        //    access_token через exchange.
+                                        try {
+                                            app.longPollClient.stop()
+                                            AppLog.i("MainActivity", "Logout: LongPollClient stopped")
+                                        } catch (e: Exception) {
+                                            AppLog.w("MainActivity", "Logout: LongPollClient.stop failed: ${e.message}")
+                                        }
+                                        // Fix #340: останавливаем keep-alive foreground-сервис —
+                                        // после logout нет смысла удерживать процесс живым.
+                                        try {
+                                            vk.mint.realtime.LongPollKeepAliveService.stop(this@MainActivity)
+                                        } catch (e: Exception) {
+                                            AppLog.w("MainActivity", "Logout: LongPollKeepAliveService.stop failed: ${e.message}")
+                                        }
+
+                                        // 2. Останавливаем воспроизведение музыки — не нужно
+                                        //    держать foreground-сервис активным после logout.
+                                        //    НЕ вызываем release() — PlayerConnection.init()
+                                        //    вызывается только в VkMintApp.onCreate(), и повторный
+                                        //    init после re-login не произойдёт. Просто pause.
+                                        try {
+                                            vk.mint.media.PlayerConnection.pauseIfPlaying()
+                                            AppLog.i("MainActivity", "Logout: PlayerConnection paused")
+                                        } catch (e: Exception) {
+                                            AppLog.w("MainActivity", "Logout: PlayerConnection.pauseIfPlaying failed: ${e.message}")
+                                        }
+
+                                        // 3. Полный signOut: VK server logout (fire-and-forget)
+                                        //    + clearAllVkCookies (CookieManager) + storage.clear().
+                                        app.exchangeAuthRepository.signOut()
+
+                                        // #LOGOUT-SINGLETON-CLEAR: очистка auth-UI singleton'ов.
+                                        // signOut() чистит cookies+storage, но НЕ трогает
+                                        // in-memory state. PendingAuthResult хранит токен SSO-входа
+                                        // (silent_token / direct access_token из shouldOverrideUrlLoading).
+                                        try {
+                                            vk.mint.auth.PendingAuthResult.clear()
+                                            AppLog.i("MainActivity", "Logout: cleared PendingAuthResult singleton")
+                                        } catch (e: Exception) {
+                                            AppLog.w("MainActivity", "Logout: PendingAuthResult clear failed: ${e.message}")
+                                        }
+
+                                        // 4. WebViewDatabase.clearFormData() убран: deprecated с
+                                        //    API 18 и no-op на современных устройствах. Form data
+                                        //    в WebView больше не хранится — autocomplete обрабатывается
+                                        //    системным Android Autofill framework. CookieManager и
+                                        //    storage.clear() в signOut() полностью очищают сессию.
+
+                                        // Fix #197: очистить буфер обмена если там OAuth-ссылка.
+                                        // После external browser auth в буфере остаётся URL вида
+                                        // https://oauth.vk.com/blank.html#access_token=...&user_id=...
+                                        // Fix #195b (onWindowFocusChanged clipboard auto-detect)
+                                        // при запуске AuthActivity после logout находит этот URL и
+                                        // автоматически входит обратно → «выйти невозможно».
+                                        // Решение: перед запуском AuthActivity проверить буфер и
+                                        // очистить если содержит access_token + user_id.
+                                        try {
+                                            val cm = getSystemService(Context.CLIPBOARD_SERVICE)
+                                                as android.content.ClipboardManager
+                                            if (cm.hasPrimaryClip()) {
+                                                val clip = cm.primaryClip
+                                                val text = clip?.getItemAt(0)?.coerceToText(this@MainActivity)?.toString()
+                                                if (text != null && OAuthTokenUtils.containsOAuthToken(text)) {
+                                                    // Fix #DOUBLE-FLICKER (§41.23): запоминаем fingerprint
+                                                    // ДО clearPrimaryClip — если очистка не сработает
+                                                    // (permission/old Android), trySaveOAuthTokenFromClipboard
+                                                    // всё равно пропустит этот токен по fingerprint match.
+                                                    lastSavedClipFingerprint = text.hashCode()
+                                                    // API 28+: clearPrimaryClip — заменяет буфер на пустой ClipData.
+                                                    cm.clearPrimaryClip()
+                                                    AppLog.i("MainActivity", "Logout: cleared clipboard (contained OAuth token URL) — Fix #197 + fingerprint set (#DOUBLE-FLICKER)")
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            AppLog.w("MainActivity", "Logout: clipboard clear failed: ${e.message}")
+                                        }
+
+                                        bootLocal = false
+                                        authVersion++
+                                        // Fix #233 (P1): launchAuth с reason=logout —
+                                        // throttle ОТКЛЮЧЕН для ручного logout (пользователь
+                                        // явно хочет войти обратно, не ждём 60с).
+                                        launchAuth(
+                                            Intent(this@MainActivity, AuthActivity::class.java)
+                                                // Fix #370 #LOGOUT-WEBTOKEN-CLEAR: причина
+                                                // передаётся в AuthActivity — там WebView-шаг 1
+                                                // удалит старые *:web_token:login:auth ключи из
+                                                // localStorage m.vk.ru ДО первого обмена
+                                                // (иначе следующий логин мог «молча» подобрать
+                                                // web_token предыдущего аккаунта).
+                                                .putExtra(AuthActivity.EXTRA_AUTH_REASON, "logout"),
+                                            reason = "logout",
+                                        )
+                                    }
+                                },
+                                // #247: выход из приложения целиком (с сохранением
+                                // авторизации). finishAffinity() закрывает все Activity
+                                // в стеке — Android завершает процесс. При следующем
+                                // запуске VkMintApp.onCreate() находит сохранённый
+                                // access_token в tokenStorage → пользователь сразу
+                                // попадает в ленту без повторного логина.
+                                // НЕ вызываем onLogout / signOut — токены и cookies
+                                // остаются в хранилище.
+                                onExitApp = {
+                                    // Сначала останавливаем плеер и LongPoll —
+                                    // иначе foreground-сервис может пережить
+                                    // finishAffinity() и держать процесс активным.
+                                    try {
+                                        vk.mint.media.PlayerConnection.pauseIfPlaying()
+                                    } catch (e: Exception) {
+                                        AppLog.w("MainActivity", "pauseIfPlaying onExitApp failed: ${e.message}")
+                                    }
+                                    try {
+                                        app.longPollClient.stop()
+                                    } catch (e: Exception) {
+                                        AppLog.w("MainActivity", "longPollClient.stop onExitApp failed: ${e.message}")
+                                    }
+                                    // Fix #340: останавливаем keep-alive сервис при полном выходе.
+                                    try {
+                                        vk.mint.realtime.LongPollKeepAliveService.stop(this@MainActivity)
+                                    } catch (e: Exception) {
+                                        AppLog.w("MainActivity", "LongPollKeepAliveService.stop onExitApp failed: ${e.message}")
+                                    }
+                                    finishAffinity()
+                                },
+                            )
+                            } // CompositionLocalProvider(LocalCallsDeps, LocalPhotosDeps)
+                        }
+
+                        // #34 / #AUTH-FIRST-OPEN-GUEST: guest-режим (ручной выбор
+                        // «Офлайн-режим» на LandingScreen ИЛИ авто-вход — первый
+                        // запуск без токена/silent-возможности). Показываем
+                        // OfflineManagerScreen + GuestDrawer без токена: доступны
+                        // просмотр и воспроизведение уже скачанных аудио/видео
+                        // (PlayerConnection инициализирован в VkMintApp).
+                        // Экран входа НЕ запускается автоматически (#AUTH-FIRST-OPEN-GUEST):
+                        // иконка меню в TopAppBar открывает guest-drawer, вход —
+                        // фиксированная кнопка «Войти в аккаунт» (drawer-login).
+                        //
+                        // Fix #183: раньше колбэки onPlayVideo/onPlayStory/onOpenPlayer
+                        // не передавались (default null/{}) → тапы по видео/историям/
+                        // кнопке плеера игнорировались. Теперь передаём колбэчи, которые
+                        // открывают оверлеи ниже (overlayVideo, StoryOfflinePlayer,
+                        // OfflineAudioPlayer). Это позволяет воспроизводить кэш без
+                        // авторизации.
+                        isOfflineMode -> {
+                            // Fix #183: подписываемся на VideoHolder.active чтобы
+                            // оверлей VideoPlayerScreen показывался в guest-режиме.
+                            val overlayVideo by VideoHolder.active.collectAsState()
+                            // #AUTH-FIRST-OPEN-GUEST: drawerState хостится здесь (не
+                            // внутри GuestDrawer) — иконка меню в TopAppBar
+                            // OfflineManagerScreen (onMenu) открывает панель.
+                            val guestDrawerState = rememberDrawerState(DrawerValue.Closed)
+                            val guestScope = rememberCoroutineScope()
+                            // #AUTH-FIRST-OPEN-GUEST-2 (2026-09-23): guest-настройки —
+                            // SettingsScreen рендерится локально (DataStore, без токена):
+                            // интерфейс/сеть/офлайн/данные/обновления работают; секции
+                            // с API (звонки, VK ID, уведомления) — inline-ошибка при попытке.
+                            var guestSettingsOpen by rememberSaveable { mutableStateOf(false) }
+                            BackHandler(enabled = guestSettingsOpen) {
+                                guestSettingsOpen = false
+                            }
+                            // #AUTH-FIRST-OPEN-GUEST-3: при входе в guest (первый
+                            // запуск без токена) боковая панель открыта по умолчанию —
+                            // юзер сразу видит «Офлайн-данные», «Настройки» и
+                            // «Войти в аккаунт». Закрытие — свайпом/тапом по меню.
+                            LaunchedEffect(Unit) {
+                                if (guestDrawerState.currentValue == DrawerValue.Closed) {
+                                    guestDrawerState.open()
+                                }
+                            }
+                            GuestDrawer(
+                                drawerState = guestDrawerState,
+                                onSettings = { guestSettingsOpen = true },
+                                onLogin = {
+                                    // #AUTH-FIRST-OPEN-GUEST: ЕДИНСТВЕННЫЙ вход из
+                                    // guest-режима. AuthActivity покажет LandingScreen
+                                    // (внутренняя фаза AuthPhase.LANDING).
+                                    // reason="drawer-login" — manual-action (throttle/
+                                    // SSO-guard отключены: юзер явно нажал кнопку).
+                                    launchAuth(Intent(this@MainActivity, AuthActivity::class.java), reason = "drawer-login")
+                                },
+                            ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                Surface(modifier = Modifier.fillMaxSize()) {
+                                    if (guestSettingsOpen) {
+                                        // #AUTH-FIRST-OPEN-GUEST-2: guest-настройки —
+                                        // свой Scaffold с TopAppBar (глобальный ScreenTopBar
+                                        // VkMintNavHost здесь не монтируется). Все переходы
+                                        // к API-экранам — default {} (пункт не активен без токена).
+                                        Scaffold(
+                                            topBar = {
+                                                TopAppBar(
+                                                    title = { Text("Настройки") },
+                                                    navigationIcon = {
+                                                        IconButton(onClick = { guestSettingsOpen = false }) {
+                                                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                                                        }
+                                                    },
+                                                )
+                                            },
+                                        ) { pad ->
+                                            // SettingsScreen не принимает modifier —
+                                            // обёртка Box с content-padding Scaffold'а.
+                                            Box(modifier = Modifier.padding(pad)) {
+                                                SettingsScreen()
+                                            }
+                                        }
+                                    } else {
+                                    OfflineManagerScreen(
+                                        // #AUTH-FIRST-OPEN-GUEST: иконка меню вместо
+                                        // «Назад» — открывает guest-drawer.
+                                        onMenu = { guestScope.launch { guestDrawerState.open() } },
+                                        // onBack больше не используется в guest-ветке
+                                        // (onMenu заменяет navigationIcon) — no-op.
+                                        onBack = {
+                                            AppLog.i("MainActivity", "Guest: onBack ignored (menu mode, #AUTH-FIRST-OPEN-GUEST)")
+                                        },
+                                        // Fix #183: открываем оверлей VideoPlayerScreen.
+                                        // VideoHolder — singleton object, общий с authorized-режимом.
+                                        onPlayVideo = { ownerId, videoId, title ->
+                                            AppLog.i("MainActivity", "Guest: play video owner=$ownerId id=$videoId")
+                                            VideoHolder.open(Video(
+                                                id = videoId,
+                                                ownerId = ownerId,
+                                                title = title,
+                                                description = null,
+                                                duration = 0,
+                                                date = 0,
+                                            ))
+                                        },
+                                        // Fix #183: открываем StoryOfflinePlayerScreen как
+                                        // fullscreen overlay. Читает локальный .mp4 через
+                                        // StoryVideoDownloadManager.getLocalFile — без сети.
+                                        onPlayStory = { ownerId, storyId ->
+                                            AppLog.i("MainActivity", "Guest: play story owner=$ownerId id=$storyId")
+                                            guestStoryOverlay = ownerId to storyId
+                                        },
+                                        // Fix #183: открываем OfflineAudioPlayerScreen как
+                                        // fullscreen overlay. Читает скачанные треки из
+                                        // TrackDownloadManager и играет через PlayerConnection
+                                        // (инициализирован в VkMintApp, не требует auth token).
+                                        onOpenPlayer = {
+                                            AppLog.i("MainActivity", "Guest: open offline audio player")
+                                            guestAudioPlayerOpen = true
+                                        },
+                                    )
+                                    } // else (guestSettingsOpen, #AUTH-FIRST-OPEN-GUEST-2)
+                                }
+
+                                // Fix #183: оверлей VideoPlayerScreen — показывается
+                                // поверх OfflineManagerScreen когда VideoHolder.active != null.
+                                // VideoPlayerScreen сам проверяет VideoDownloadManager.getLocalFile
+                                // и играет локальный файл без сети (LaunchedEffect return'ит
+                                // раньше если localFile != null). Требует VkMintApp (для app.apiClient),
+                                // но apiClient не вызывается если видео скачано.
+                                overlayVideo?.let { video ->
+                                    BackHandler(enabled = true) {
+                                        VideoHolder.close()
+                                    }
+                                    VideoPlatformRouter(
+                                        video = video,
+                                        onBack = { VideoHolder.close() },
+                                    )
+                                }
+
+                                // Fix #183: оверлей StoryOfflinePlayerScreen — fullscreen.
+                                // Полностью офлайн: читает StoryVideoDownloadManager.
+                                guestStoryOverlay?.let { (ownerId, storyId) ->
+                                    BackHandler(enabled = true) {
+                                        guestStoryOverlay = null
+                                    }
+                                    StoryOfflinePlayerScreen(
+                                        ownerId = ownerId,
+                                        storyId = storyId,
+                                        onBack = { guestStoryOverlay = null },
+                                    )
+                                }
+
+                                // Fix #183: оверлей OfflineAudioPlayerScreen — fullscreen.
+                                // PlayerConnection + TrackDownloadManager работают без auth token.
+                                if (guestAudioPlayerOpen) {
+                                    BackHandler(enabled = true) {
+                                        guestAudioPlayerOpen = false
+                                    }
+                                    OfflineAudioPlayerScreen(
+                                        onBack = { guestAudioPlayerOpen = false },
+                                    )
+                                }
+                            }
+                            } // GuestDrawer content
+                        }
+
+                        // Нет токена, не offline — AuthActivity запускается в
+                        // LaunchedEffect выше. Пока она не показалась — loading,
+                        // чтобы не было белого экрана без FAB.
+                        // Fix #386: сюда попадаем и в паузах МЕЖДУ silent-ретраями
+                        // (#SILENT-RETRY-AFTER-DOZE) и при cold-start silent login —
+                        // это осознанно: держать UI без токена с err 5 хуже, чем
+                        // краткий loading (см. KDoc silentAuthInProgress).
+                        else -> StartupLoadingScreen()
+                    }
+
+                    // FAB логов — управляется настройкой showLogFab (VkMintPrefs).
+                    // #LOG-FAB-DEFAULT-OFF (14.09): по умолчанию скрыт в ЛЮБЫХ
+                    // сборках (фолбэк до загрузки snap — тоже false, не DEBUG).
+                    // Явная null-проверка snap вместо Elvis — см. стиль проекта.
+                    val showLogFab = if (snap != null) snap.showLogFab else false
+                    if (showLogFab) {
+                        DraggableLogFab(onClick = { LogDialogState.show() })
+                    }
+                }
+                LogViewerDialog()
+
+                // Fix #154 full forwarding: показываем пикер чата если есть
+                // pending share контент. После выбора диалога и отправки (или
+                // отмены) — очищаем state, sheet закрывается.
+                val shareText = pendingShareText
+                val shareUri = pendingShareUri
+                val shareMime = pendingShareMime
+                if (shareText != null || shareUri != null) {
+                    ShareToChatSheet(
+                        sharedText = shareText,
+                        sharedStreamUri = shareUri,
+                        sharedMimeType = shareMime,
+                        onDismiss = {
+                            pendingShareText = null
+                            pendingShareUri = null
+                            pendingShareMime = null
+                        },
+                        onSuccess = {
+                            pendingShareText = null
+                            pendingShareUri = null
+                            pendingShareMime = null
+                        },
+                    )
+                }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+    }
+
+    private fun handleOAuthIntent(intent: Intent?) {
+        val uri: Uri? = intent?.data ?: return
+        AppLog.i("MainActivity", "Deep link received: $uri")
+        // Fix #187: поддерживаем OAuth redirect от внешнего браузера (vkmint://oauth).
+        // VK implicit flow кладёт access_token в URL fragment (#access_token=...).
+        // Также поддерживаем error-redirects (vkmint://oauth#error=...).
+        val fragment = uri?.fragment
+        val query = uri?.query
+        // Проверяем fragment сначала (success case), потом query (error case).
+        val payload = when {
+            fragment?.contains("access_token=") == true -> fragment
+            fragment?.contains("error=") == true -> fragment
+            query?.contains("access_token=") == true -> query
+            query?.contains("error=") == true -> query
+            else -> return
+        }
+        saveOAuthTokenFromPayload(payload, source = "deep-link")
+    }
+
+    /**
+     * Fix #191: сохраняет OAuth-токен из строки с параметрами.
+     *
+     * Переиспользуется тремя путями:
+     *  1. Deep link vkmint://oauth#access_token=... (handleOAuthIntent)
+     *  2. Share intent: браузер → «Поделиться» → VK Mint (handleShareIntent)
+     *  3. Clipboard auto-detect в AuthActivity (onResume проверяет буфер)
+     *
+     * @param payload строка вида "access_token=vk1.a.XXX&user_id=123&expires_in=0"
+     *   (fragment после # или query после ?)
+     * @param source описание источника для логов
+     * @return true если токен сохранён, false если ошибка/невалидный payload
+     */
+    private fun saveOAuthTokenFromPayload(payload: String, source: String): Boolean {
+        try {
+            val params = payload.split("&").mapNotNull { pair ->
+                val parts = pair.split("=", limit = 2)
+                if (parts.size == 2) parts[0] to parts[1] else null
+            }.toMap()
+
+            // Обработка ошибки от VK (user denied, invalid client, etc.)
+            val error = params["error"]
+            val errorDesc = params["error_description"]
+            if (error != null) {
+                AppLog.w("MainActivity", "OAuth error ($source): $error — $errorDesc")
+                return false
+            }
+
+            val at = params["access_token"] ?: return false
+            val uid = params["user_id"]?.toLongOrNull() ?: return false
+            val expIn = params["expires_in"]?.toLongOrNull() ?: 0L
+            val scope = params["scope"]
+            val expiresAt = if (expIn == 0L) 0L else System.currentTimeMillis() + expIn * 1000L
+
+            val app = VkMintApp.get(this)
+            app.tokenStorage.save(
+                vk.mint.data.local.TokenStorage.Token(
+                    accessToken = at,
+                    userId = uid,
+                    expiresAt = expiresAt,
+                    scope = scope,
+                ),
+            )
+            AppLog.i("MainActivity", "OAuth token saved ($source) for user $uid")
+            authVersion++  // триггерим recompose
+
+            // В фоне получаем exchange_token для refresh-поддержки.
+            app.appScope.launch {
+                try {
+                    val state = app.exchangeAuthRepository.saveOAuthToken(at, uid)
+                    if (state is vk.mint.auth.exchange.AuthState.Success) {
+                        AppLog.i("MainActivity", "OAuth ($source): exchange_token obtained & saved for user $uid")
+                    } else if (state is vk.mint.auth.exchange.AuthState.Error) {
+                        AppLog.w("MainActivity", "OAuth ($source): getExchangeToken failed (token still works, just no refresh): ${state.message}")
+                    }
+                } catch (e: Exception) {
+                    AppLog.w("MainActivity", "OAuth ($source): exchange_token background fetch failed: ${e.message} (access_token still works)")
+                }
+            }
+            return true
+        } catch (e: Exception) {
+            AppLog.e("MainActivity", "Failed to parse token ($source)", e)
+            return false
+        }
+    }
+
+    /**
+     * Fix #DOUBLE-FLICKER (§41.23): проверяет буфер обмена на наличие OAuth
+     * token URL (format: `...#access_token=vk1.a.XXX&user_id=123&expires_in=0`
+     * или `access_token=...&user_id=...`). Если найден — сохраняет токен через
+     * [saveOAuthTokenFromPayload] и возвращает true.
+     *
+     * Используется в network-restore LaunchedEffect: если юзер только что
+     * вернулся из Chrome со скопированным token URL, сохраняем напрямую БЕЗ
+     * запуска AuthActivity (которое моргает WebView 0.5с прежде чем
+     * onWindowFocusChanged найдёт токен — UX-баг «моргание дважды»).
+     *
+     * Возвращает false если: буфер пуст, не содержит OAuth token, парсинг
+     * неудачен, или saveOAuthTokenFromPayload вернул false.
+     *
+     * НЕ вызывает clearClipboard() — это делает отдельный механизм в
+     * AuthActivity после успешного входа. Здесь только read+parse+save.
+     */
+    private fun trySaveOAuthTokenFromClipboard(): Boolean {
+        try {
+            val cm = getSystemService(android.content.ClipboardManager::class.java)
+            if (cm == null) return false
+            if (!cm.hasPrimaryClip()) return false
+            val clip = cm.primaryClip
+            if (clip == null) return false
+            if (clip.itemCount == 0) return false
+            val item = clip.getItemAt(0)
+            if (item == null) return false
+            val text = item.coerceToText(this).toString()
+            if (text.isBlank()) return false
+            if (!OAuthTokenUtils.containsOAuthToken(text)) return false
+            // Fix #DOUBLE-FLICKER: fingerprint-защита от повторного сохранения
+            // того же токена (network flicker / logout + clearPrimaryClip failed).
+            val fingerprint = text.hashCode()
+            if (fingerprint == lastSavedClipFingerprint) {
+                AppLog.d("MainActivity", "Clipboard OAuth token already saved (fingerprint match) — skip (#DOUBLE-FLICKER)")
+                return false
+            }
+            // Извлекаем payload: после '#' или '?' или вся строка если raw params.
+            val trimmed = text.trim()
+            val hashIdx = trimmed.lastIndexOf('#')
+            val payload: String = if (hashIdx >= 0 && hashIdx < trimmed.length - 1) {
+                trimmed.substring(hashIdx + 1)
+            } else {
+                val qIdx = trimmed.indexOf('?')
+                if (qIdx >= 0 && qIdx < trimmed.length - 1) {
+                    trimmed.substring(qIdx + 1)
+                } else {
+                    trimmed
+                }
+            }
+            AppLog.i("MainActivity", "Clipboard OAuth token detected — saving directly (#DOUBLE-FLICKER)")
+            val saved = saveOAuthTokenFromPayload(payload, source = "clipboard-pre-check-#DOUBLE-FLICKER")
+            if (saved) {
+                lastSavedClipFingerprint = fingerprint
+            }
+            return saved
+        } catch (e: Exception) {
+            AppLog.w("MainActivity", "trySaveOAuthTokenFromClipboard failed: ${e.message}")
+            return false
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val app = VkMintApp.get(this)
+
+        // Fix #377 #DOZE-RESUME-NET: ПЕРВОЕ дело при возврате из фона — свежий
+        // снапшот сети. После глубокого сна isOnlineFlow может держать stale-
+        // значение (колбэки ConnectivityManager не приходили) — весь дальнейший
+        // resume-контур (checkTokenValidity / #BG-AUTH-LOOP-FIX / silent retry)
+        // должен видеть реальное состояние сети, а не значение до сна.
+        if (wasStopped) {
+            app.networkObserver.refreshNow()
+            // Fix #377 #DOZE-STALE-POOL: keep-alive TCP-соединения за Doze мертвы
+            // (сервер закрыл их) — первый API-вызов на stale-соединении виснет
+            // или падает IOException'ом (мусорит счётчик авто-офлайна #38).
+            // Чистим пул, если с прошлого resume прошло > 5 минут.
+            val resumeNow = System.currentTimeMillis()
+            if (lastResumeAt > 0L && resumeNow - lastResumeAt > STALE_POOL_WINDOW_MS) {
+                try {
+                    app.httpClient.connectionPool.evictAll()
+                    AppLog.i("MainActivity", "onResume: OkHttp connectionPool.evictAll() after ${((resumeNow - lastResumeAt) / 1000)}s background (#DOZE-STALE-POOL)")
+                } catch (e: Exception) {
+                    AppLog.w("MainActivity", "onResume: connectionPool.evictAll failed: ${e.message}")
+                }
+            }
+            lastResumeAt = resumeNow
+        }
+
+        // Пробуждаем LongPoll при возврате на передний план —
+        // сбрасываем backoff, очищаем stale TCP, прерываем текущий wait
+        // и отменяем in-flight poll call (Fix #112).
+        app.longPollClient.notifyResumed()
+
+        // Fix #377 #DOZE-RESUME-PROACTIVE-REFRESH: проактивно обновляем токен
+        // лёгким HTTP-путём (Path 1.5/5), если он на исходе или уже помечен
+        // invalidated — ДО checkTokenValidity/launchAuth, чтобы по возможности
+        // обойтись вообще без AuthActivity (см. KDoc метода — анализ гонок).
+        if (wasStopped && !isOfflineMode) {
+            maybeProactiveTokenRefresh(app)
+        }
+
+        // Fix #112: проактивная проверка — истёк ли токен по времени пока
+        // приложение было в фоне. Если да — немедленно сообщаем MainActivity
+        // (notifyTokenInvalidated → boot LaunchedEffect запустит AuthActivity
+        // для silent re-login через remixsid). Без этого мы ждём пока LongPoll
+        // сделает следующий API запрос и VK вернёт error 5 — а это до 45с
+        // если LongPoll был в doRequest.
+        if (wasStopped && !isOfflineMode) {
+            app.checkTokenValidity()
+        }
+
+        // #BG-AUTH-LOOP-FIX (2026-08-05): LongPollKeepAliveService при истёкшем
+        // токене в фоне делает bringMainActivityToForeground (вместо прямого
+        // запуска AuthActivity из background — который ломался из-за singleTask
+        // + потери EXTRA_SILENT_MODE + отсутствия window focus). MainActivity
+        // поднимается, но LaunchedEffect(tokenInvalidationTick) НЕ сработает
+        // повторно для уже обработанного tick (rememberSaveable lastHandledTick
+        // сохраняет значение across process foreground/background).
+        //
+        // Поэтому здесь: если токен невалиден И AuthActivity не показывается —
+        // запускаем launchAuth() вручную. Это foreground launch, AuthActivity
+        // получит window focus, WebView factory вызовется, loadUrl загрузит
+        // m.vk.ru, tryReadWebToken прочитает localStorage → auth завершится.
+        //
+        // Throttle (20с) уже есть в launchAuth (Fix #230) — не будет zацикливаться.
+        // #AUTH-OFFLINE-GUARD: без сети auth-процесс не начинаем — сессия цела,
+        // при появлении сети отработает networkRestoredAuthRetry.
+        if (wasStopped && !isOfflineMode && !authActivityShowing && app.networkObserver.isOnline()) {
+            if (!app.tokenStorage.hasValidToken()) {
+                val hasRemixsid = !app.exchangeAuthRepository.remixsid().isNullOrBlank()
+                AppLog.i("MainActivity", "onResume (#BG-AUTH-LOOP-FIX): token invalid after background — launching AuthActivity (${if (hasRemixsid) "SILENT" else "FULL"})")
+                val intent = Intent(this, AuthActivity::class.java).apply {
+                    if (hasRemixsid) {
+                        putExtra(AuthActivity.EXTRA_SILENT_MODE, true)
+                    }
+                }
+                launchAuth(intent, reason = "bg-auth-loop-resume")
+            }
+        }
+
+        // #29 (закрытие хвостов): lockerOnBackground — если активити вернулось
+        // из фона (wasStopped=true) и включена блокировка при уходе в фон
+        // (lockerOnBackground=true) И включен PIN (lockerEnabled=true),
+        // показываем LockerActivity. Без этого — LockerActivity показывался
+        // только при холодном старте приложения.
+        //
+        // Fix #169: читаем prefs из [lastPrefsSnapshot] (volatile, O(1)) вместо
+        // блокирующего runBlocking { prefs.data.first() }. После длительного Doze
+        // DataStore in-memory cache мог быть вытеснен → чтение с диска 30-200мс
+        // на main thread = пользователь видит «подвисание» при разблокировке.
+        // Snapshot обновляется из setContent SideEffect каждый recomposition —
+        // для locker prefs (меняются только через настройки) практически всегда
+        // актуален. Если null (холодный старт, ещё не было recomposition) —
+        // fallback на runBlocking, но это раз в сессию, не на каждом resume.
+        if (wasStopped) {
+            wasStopped = false
+            val t0 = System.currentTimeMillis()
+            // Fix #380 #LOCKER-RELOCK-LOOP: LockerActivity (непрозрачная
+            // Theme.VkMint) кладёт MainActivity в onStop → wasStopped=true.
+            // После успешного ввода PIN (finish) onResume видел «возврат из
+            // фона» и при включённой «Блокировке при возврате из фона» запускал
+            // LockerActivity ЗАНОВО — бесконечный цикл «ввёл верный PIN — снова
+            // просит PIN» (пункт был фактически сломан этим циклом, как и
+            // boot-локер с включённым тумблером). Grace-окно 5с после
+            // LockerActivity.markUnlocked() пропускает РОВНО ОДИН resume-чек,
+            // затем флаг консюмится — реальный уход в фон после разблокировки
+            // блокируется как раньше.
+            val unlockGrace = LockerActivity.unlockGraceActive()
+            val cached = lastPrefsSnapshot
+            if (cached != null) {
+                if (cached.lockerEnabled && cached.lockerOnBackground && cached.lockerPinHash.isNotBlank() && !unlockGrace) {
+                    AppLog.i("MainActivity", "Locker on background (cached snapshot, ${System.currentTimeMillis() - t0}ms): launching LockerActivity")
+                    lockerVerifiedThisSession = true
+                    // Fix #PIN-CORE #LOCKER-TO-CORE-UI: хэш/флаг — из cached-снапшота prefs.
+                    vk.mint.locker.LockerActivity.launch(
+                        this,
+                        cached.lockerPinHash,
+                        cached.lockerBiometric,
+                    )
+                } else {
+                    // W36 #LOCKER-BG-MIGRATION: diagnostic-log с ТОЧНОЙ причиной
+                    // пропуска — следующий logcat от пользователя сразу покажет,
+                    // какое условие не прошло (вместо безликого «no locker needed»).
+                    // Grace — нормальный штатный пропуск (после успешного PIN).
+                    if (unlockGrace) {
+                        AppLog.i("MainActivity", "Locker on background skipped: unlock grace active (just unlocked)")
+                    } else {
+                        AppLog.i(
+                            "MainActivity",
+                            "Locker on background not needed: enabled=${cached.lockerEnabled}, " +
+                                "onBackground=${cached.lockerOnBackground}, " +
+                                "pinHashBlank=${cached.lockerPinHash.isBlank()}",
+                        )
+                    }
+                }
+            } else {
+                // #LOCKER-BG-RECREATE: пустой кэш — не только холодный старт.
+                // Так же выглядит возврат из фона через ПЕРЕСОЗДАННУЮ активити:
+                // lastPrefsSnapshot — поле экземпляра, новый экземпляр его не
+                // наследует. На устройствах с Don't keep activities /
+                // агрессивной оболочкой это ОСНОВНОЙ путь resume-чека (лог
+                // 2026-09-11: ВСЕ возвраты — через onCreate). runBlocking
+                // приемлем: один раз на экземпляр — после чтения кэш
+                // заполнится, дальнейшие resume идут по быстрому cached-пути.
+                kotlinx.coroutines.runBlocking {
+                    val snap = app.prefs.data.first()
+                    lastPrefsSnapshot = snap
+                    if (snap.lockerEnabled && snap.lockerOnBackground && snap.lockerPinHash.isNotBlank() && !unlockGrace) {
+                        AppLog.i("MainActivity", "Locker on background (fallback: no cached snapshot — recreation/cold start, ${System.currentTimeMillis() - t0}ms): launching LockerActivity")
+                        lockerVerifiedThisSession = true
+                        // Fix #PIN-CORE #LOCKER-TO-CORE-UI: хэш/флаг — из свежепрочитанного
+                        // runBlocking-снапшота prefs (Intent-extras).
+                        vk.mint.locker.LockerActivity.launch(
+                            this@MainActivity,
+                            snap.lockerPinHash,
+                            snap.lockerBiometric,
+                        )
+                    } else {
+                        // Диагностика a5abd16d и здесь: без неё возврат через
+                        // пересоздание при невыполненном условии молчал бы —
+                        // а это был ровно симптом жалобы пользователя.
+                        if (unlockGrace) {
+                            AppLog.i("MainActivity", "Locker on background skipped (fallback): unlock grace active (just unlocked)")
+                        } else {
+                            AppLog.i(
+                                "MainActivity",
+                                "Locker on background not needed (fallback): enabled=${snap.lockerEnabled}, " +
+                                    "onBackground=${snap.lockerOnBackground}, " +
+                                    "pinHashBlank=${snap.lockerPinHash.isBlank()}",
+                            )
+                        }
+                    }
+                }
+            }
+            if (unlockGrace) {
+                // Fix #380: одноразовость grace — следующий РЕАЛЬНЫЙ уход в фон
+                // и возврат снова блокируется, а не живёт вечно после разблокировки.
+                LockerActivity.consumeUnlockGrace()
+            }
+        }
+
+        // Fix #169: плеер — мгновенный wake-up. Если PlayerService был убит
+        // системой во время Doze (low memory), controller в PlayerConnection
+        // остаётся stale. notifyResumed() проверит контроллер и при необходимости
+        // запустит переподключение в фоне — UI не ждёт.
+        //
+        // #AUTH-WEBVIEW-STARVATION: НО если токена нет (auth flow) — notifyResumed
+        // запускает PlayerService recreate (~150-300мс main-thread block:
+        // ExoPlayer.Builder + MediaSession.Builder + AudioEffectsEngine.attachOnce
+        // создает 5 AudioEffect на main thread). Chromium WebView рендерер в это
+        // время не может подключиться → "cr_ChildProcessConn: Failed to establish
+        // the service connection" → m.vk.ru не грузится → 2FA страница пустая.
+        // Auth плеер не нужен — пропускаем будильник PlayerService.
+        //
+        // #AUTH-WEBVIEW-STARVATION-V2: VkMintApp.onCreate skip'ит PlayerConnection.init
+        // в auth flow (нет токена → нет init). После успешного auth токен появляется,
+        // но PlayerConnection ещё не initialized. notifyResumed проверяет initialized
+        // и skip'ает если false → музыка не работает после первого входа.
+        // Решение: если токен есть НО PlayerConnection не initialized → вызываем init
+        // (идемпотентен, безопасен). Затем notifyResumed.
+        if (app.tokenStorage.hasValidToken()) {
+            try {
+                // #AUTH-WEBVIEW-STARVATION-V2: lazy init если VkMintApp.onCreate skip'ул
+                if (!vk.mint.media.PlayerConnection.isInitialized()) {
+                    AppLog.i("MainActivity", "PlayerConnection не инициализирован (auth flow закончился) — init сейчас, #AUTH-WEBVIEW-STARVATION-V2")
+                    vk.mint.media.PlayerConnection.init(this)
+                }
+                vk.mint.media.PlayerConnection.notifyResumed()
+            } catch (e: Exception) {
+                AppLog.w("MainActivity", "PlayerConnection.notifyResumed failed: ${e.message}")
+            }
+        } else {
+            AppLog.d("MainActivity", "skip PlayerConnection.notifyResumed — no token (auth flow), #AUTH-WEBVIEW-STARVATION")
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // #LOCKER-BG-RECREATE: armим process-level флаг — onResume (в том
+        // числе ПЕРЕСОЗДАННОГО экземпляра после убийства активити системой
+        // в фоне) выполнит resume-чек локера. isChangingConfigurations=true
+        // → это стоп под пересоздание (поворот/тема/язык), а НЕ уход в фон —
+        // не armим, чтобы PIN-пад не выскакивал на каждом повороте экрана.
+        // Старый комментарий («Фиксируем что активити ушло в фон») в силе:
+        // флаг теперь static — семантика та же, живучесть другая.
+        if (!isChangingConfigurations) {
+            wasStopped = true
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        AppLog.i("MainActivity", "onNewIntent: $intent")
+        handleOAuthIntent(intent)
+        handleShareIntent(intent)
+        handleOpenChatIntent(intent)
+        handleDeepLinkIntent(intent)
+        setIntent(intent)
+    }
+
+    /**
+     * Fix #154: обработка ACTION_SEND — контент, пошаренный из других приложений.
+     *
+     * VK Mint зарегистрирован как share target (text/plain, image) в манифесте.
+     * Когда пользователь делится текстом/ссылкой/картинкой из браузера/галереи/
+     * другого приложения и выбирает VK Mint в share-меню → вызывается этот метод.
+     *
+     * Текущая реализация: логирует полученный контент + показывает toast.
+     * TODO: full forwarding — открыть экран выбора чата и отправить через
+     * messages.send / uploadAndSendPhoto. Пока просто принимаем и логируем,
+     * чтобы VK Mint появлялся в share-меню наравне с VK Mint / Telegram / VK.
+     */
+    private fun handleShareIntent(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND) return
+        val type = intent.type ?: ""
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+        val streamUri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(Intent.EXTRA_STREAM)
+        }
+        AppLog.i("MainActivity", "Share received: type=$type text=${text?.take(200)} streamUri=$streamUri")
+
+        // Fix #191: если shared text — это OAuth redirect от внешнего браузера
+        // (содержит access_token= и user_id=), обрабатываем как вход, а не как
+        // share-to-chat. Пользователь в браузере: «Поделиться» → выбрал VK Mint →
+        // мы получили URL вида https://oauth.vk.com/blank.html#access_token=...
+        if (text != null && containsOAuthToken(text)) {
+            val payload = extractOAuthPayload(text)
+            if (payload != null) {
+                AppLog.i("MainActivity", "Share: OAuth token detected — saving (Fix #191)")
+                val saved = saveOAuthTokenFromPayload(payload, source = "share")
+                if (saved) {
+                    Toast.makeText(this, "VK Mint: вход выполнен ✓", Toast.LENGTH_LONG).show()
+                    return
+                }
+            }
+        }
+
+        // Fix #154 full forwarding: сохраняем контент в state → setContent
+        // покажет ShareToChatSheet с выбором диалога и отправкой через
+        // messages.send (текст) или uploadAndSendPhoto (картинка).
+        // Если контент пустой — показываем Toast с ошибкой.
+        if (text.isNullOrBlank() && streamUri == null) {
+            Toast.makeText(this, "VK Mint: пустой контент для шаринга", Toast.LENGTH_LONG).show()
+            return
+        }
+        pendingShareText = text
+        pendingShareUri = streamUri
+        pendingShareMime = type.ifBlank { null }
+        AppLog.i("MainActivity", "Share queued for picker: text=${text?.length ?: 0} chars, uri=$streamUri, mime=$type")
+    }
+
+    /**
+     * Fix #191: проверяет, содержит ли строка OAuth-токен.
+     * Ищет "access_token=" И "user_id=" в любом месте строки
+     * (в fragment после #, в query после ?, или просто как параметры).
+     */
+    private fun containsOAuthToken(text: String): Boolean = OAuthTokenUtils.containsOAuthToken(text)
+
+    /**
+     * Fix #208: обработка ACTION_OPEN_CHAT из push-уведомления.
+     *
+     * MessageNotifier создаёт PendingIntent с action=vk.mint.action.OPEN_CHAT
+     * и extras peer_id + title. Когда пользователь тапает по уведомлению:
+     *  - Если приложение было свёрнуто → onNewIntent (Activity уже жива)
+     *  - Если приложение было убито → onCreate (новая Activity)
+     *
+     * Метод читает peer_id из extras и сохраняет в pendingOpenChatPeerId/state.
+     * VkMintNavHost через LaunchedEffect подхватывает это и навигирует на
+     * ChatDetailScreen. После навигации VkMintNavHost вызывает onOpenChatConsumed
+     * → state сбрасывается в null.
+     */
+    private fun handleOpenChatIntent(intent: Intent?) {
+        if (intent?.action != vk.mint.realtime.MessageNotifier.ACTION_OPEN_CHAT) return
+        // #IM-CHANNEL-OPEN: раньше getLongExtra(-1L) + гвард peerId <= 0 — каналы
+        // (peer_id = -group_id, пуш Fix #390 CHANNEL_COMMUNITIES) отклонялись как
+        // «invalid» молча для юзера: тап по уведомлению канала ничего не делал.
+        // Теперь валиден ЛЮБОЙ ненулевой peerId; 0/absent — мусорный intent.
+        val peerId = intent.getLongExtra(vk.mint.realtime.MessageNotifier.EXTRA_PEER_ID, 0L)
+        if (peerId == 0L) {
+            AppLog.w("MainActivity", "OPEN_CHAT intent: invalid peerId=$peerId")
+            return
+        }
+        val title = intent.getStringExtra(vk.mint.realtime.MessageNotifier.EXTRA_TITLE) ?: ""
+        AppLog.i("MainActivity",
+            "#IM-CHANNEL-OPEN OPEN_CHAT intent: peerId=$peerId title='$title' isChannelPeer=${peerId < 0}")
+        pendingOpenChatPeerId = peerId
+        pendingOpenChatTitle = title
+    }
+
+    /** Fix #208: сброс pending-chat после того, как VkMintNavHost навигировал. */
+    fun consumeOpenChat() {
+        pendingOpenChatPeerId = null
+        pendingOpenChatTitle = null
+    }
+
+    /**
+     * §42 #PUSH-NOTIFICATIONS: обработка deep-link intent от tap на VK-уведомление.
+     *
+     * VkNotificationsNotifier строит PendingIntent с action из [vk.mint.realtime.VkUrlDeepLinker]:
+     *   ACTION_OPEN_POST / ACTION_OPEN_PHOTO / ACTION_OPEN_VIDEO /
+     *   ACTION_OPEN_USER / ACTION_OPEN_COMMUNITY / ACTION_OPEN_NOTIFICATIONS.
+     *
+     * §47 #URL-INTENT-FILTER: также обрабатывает системный ACTION_VIEW с VK URL
+     * (https://vk.com/wall-123_456) — пользователь тапает ссылку в браузере/
+     * Telegram, Android предлагает VK Mint, URL парсится через
+     * VkUrlDeepLinker.deepLinkFromUrl().
+     *
+     * Метод читает action + extras (или action + data URL) и сохраняет в
+     * [pendingDeepLink]. VkMintNavHost через LaunchedEffect подхватывает и
+     * навигирует. После навигации VkMintNavHost вызывает [consumeDeepLink] →
+     * state сбрасывается.
+     *
+     * Если action не распознан — no-op (не логируем, т.к. onNewIntent получает
+     * ВСЕ intents включая MAIN/LAUNCHER, и спам логов был бы бесполезным).
+     */
+    private fun handleDeepLinkIntent(intent: Intent?) {
+        val action = intent?.action ?: return
+        val deepLink: vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction
+        when (action) {
+            // §47 #URL-INTENT-FILTER: системный ACTION_VIEW с VK URL data.
+            // Пользователь тапнул на vk.com/wall-123_456 в браузере/Telegram →
+            // Android предложил VK Mint (intent-filter в manifest) → открыли app.
+            // Парсим URL через VkUrlDeepLinker.deepLinkFromUrl().
+            android.content.Intent.ACTION_VIEW -> {
+                val url = intent.data?.toString()
+                if (url.isNullOrBlank()) {
+                    AppLog.w("MainActivity", "ACTION_VIEW: no data URL — skip")
+                    return
+                }
+                val parsed = vk.mint.realtime.VkUrlDeepLinker.deepLinkFromUrl(url)
+                if (parsed == null) {
+                    AppLog.w("MainActivity", "ACTION_VIEW: URL not recognized as VK permalink: $url")
+                    return
+                }
+                AppLog.i("MainActivity", "ACTION_VIEW: url='$url' → $parsed")
+                deepLink = parsed
+            }
+            vk.mint.realtime.VkUrlDeepLinker.ACTION_OPEN_POST -> {
+                val ownerId = intent.getLongExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_OWNER_ID, 0L)
+                val postId = intent.getLongExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_ITEM_ID, 0L)
+                if (ownerId == 0L || postId == 0L) {
+                    AppLog.w("MainActivity", "OPEN_POST intent: invalid ownerId=$ownerId postId=$postId")
+                    return
+                }
+                // §42.4 #PUSH-DEEPLINK: ID комментария для скролла (reply/comment).
+                val commentId = intent.getLongExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_COMMENT_ID, 0L)
+                AppLog.i("MainActivity", "OPEN_POST intent: ownerId=$ownerId postId=$postId commentId=$commentId")
+                deepLink = vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenPost(ownerId, postId, commentId)
+            }
+            vk.mint.realtime.VkUrlDeepLinker.ACTION_OPEN_PHOTO -> {
+                val ownerId = intent.getLongExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_OWNER_ID, 0L)
+                val photoId = intent.getLongExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_ITEM_ID, 0L)
+                if (ownerId == 0L || photoId == 0L) {
+                    AppLog.w("MainActivity", "OPEN_PHOTO intent: invalid ownerId=$ownerId photoId=$photoId")
+                    return
+                }
+                // §42.4 #PUSH-DEEPLINK: URL фото для нативного PhotoViewer.
+                val photoUrl = intent.getStringExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_PHOTO_URL)
+                val accessKey = intent.getStringExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_ACCESS_KEY)
+                AppLog.i("MainActivity", "OPEN_PHOTO intent: ownerId=$ownerId photoId=$photoId hasUrl=${!photoUrl.isNullOrBlank()}")
+                deepLink = vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenPhoto(ownerId, photoId, photoUrl, accessKey)
+            }
+            vk.mint.realtime.VkUrlDeepLinker.ACTION_OPEN_VIDEO -> {
+                val ownerId = intent.getLongExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_OWNER_ID, 0L)
+                val videoId = intent.getLongExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_ITEM_ID, 0L)
+                if (ownerId == 0L || videoId == 0L) {
+                    AppLog.w("MainActivity", "OPEN_VIDEO intent: invalid ownerId=$ownerId videoId=$videoId")
+                    return
+                }
+                AppLog.i("MainActivity", "OPEN_VIDEO intent: ownerId=$ownerId videoId=$videoId")
+                deepLink = vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenVideo(ownerId, videoId)
+            }
+            vk.mint.realtime.VkUrlDeepLinker.ACTION_OPEN_USER -> {
+                val userId = intent.getLongExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_USER_ID, 0L)
+                if (userId <= 0) {
+                    AppLog.w("MainActivity", "OPEN_USER intent: invalid userId=$userId")
+                    return
+                }
+                AppLog.i("MainActivity", "OPEN_USER intent: userId=$userId")
+                deepLink = vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenUser(userId)
+            }
+            vk.mint.realtime.VkUrlDeepLinker.ACTION_OPEN_COMMUNITY -> {
+                val groupId = intent.getLongExtra(vk.mint.realtime.VkUrlDeepLinker.EXTRA_GROUP_ID, 0L)
+                if (groupId >= 0) {
+                    AppLog.w("MainActivity", "OPEN_COMMUNITY intent: invalid groupId=$groupId (must be negative)")
+                    return
+                }
+                AppLog.i("MainActivity", "OPEN_COMMUNITY intent: groupId=$groupId")
+                deepLink = vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenCommunity(groupId)
+            }
+            vk.mint.realtime.VkUrlDeepLinker.ACTION_OPEN_NOTIFICATIONS -> {
+                AppLog.i("MainActivity", "OPEN_NOTIFICATIONS intent")
+                deepLink = vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenNotifications
+            }
+            // §49.6 Sprint VK-ID-1.6: deep-link из security-alert notification.
+            vk.mint.realtime.VkUrlDeepLinker.ACTION_OPEN_DEVICES -> {
+                AppLog.i("MainActivity", "OPEN_DEVICES intent")
+                deepLink = vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenDevices
+            }
+            else -> return  // не deep-link intent — пропускаем тихо
+        }
+        pendingDeepLink = deepLink
+    }
+
+    /** §42: сброс pending-deep-link после того, как VkMintNavHost навигировал. */
+    fun consumeDeepLink() {
+        pendingDeepLink = null
+    }
+
+    /**
+     * Fix #191: извлекает OAuth payload (параметры после # или ?) из строки.
+     *
+     * Принимает полный URL, фрагмент, или просто параметры.
+     * Возвращает строку вида "access_token=...&user_id=...&expires_in=...".
+     */
+    private fun extractOAuthPayload(text: String): String? = OAuthTokenUtils.extractOAuthPayload(text)
+
+}
+
+/**
+ * Fix #96: Loading-экран для холодного старта и для окна между запуском
+ * AuthActivity и её первым кадром.
+ *
+ * Заменяет пустой белый экран, который раньше показывался пока DataStore
+ * загружает prefs (snap == null). Без этого пользователь видел белый экран
+ * без кнопки логирования при каждом запуске приложения.
+ *
+ * Не блокирует UI-поток — только статичный лого + spinner. DataStore грузится
+ * в своём Dispatchers.IO, Compose подписывается через collectAsState.
+ */
+@Composable
+private fun StartupLoadingScreen() {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = "VK Mint",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(24.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(32.dp),
+                strokeWidth = 3.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}

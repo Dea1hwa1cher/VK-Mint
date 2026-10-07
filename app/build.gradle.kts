@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "re.pinok"
+    namespace = "vk.mint"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "re.pinok"
+        applicationId = "vk.mint"
         minSdk = 24
         targetSdk = 36
         // #RELEASE-V213-BUMP (14.09): bump 3→4 — следующая сборка тестера будет
@@ -64,7 +64,7 @@ android {
         // Primary в WebTokenAuth retry. БЕЗ client_secret (в отличие от desktop).
         buildConfigField("String", "VK_WEB_MOBILE_CLIENT_ID", "\"7879029\"")
         // User-Agent генерируется динамически в VkUserAgent.get() — формат
-        // идентичен VK.app (SOVA RE: defpackage/C7754aaaaa.java:83).
+        // идентичен VK.app (VK Mint RE: defpackage/C7754aaaaa.java:83).
         // Статический хардкод здесь убран: некорректное содержимое
         // (Android-Studio, smartphone вместо manufacturer/model/WxH)
         // приводило к error 15 на messages.* (VK отбрасывает по UA).
@@ -245,8 +245,8 @@ dependencies {
     // пока в :app (см. контейнеры.план.md, Этап 1.5).
     implementation(project(":core:media"))
 
-    // #ARCH-DATA (Task 20): data-слой (SovaPrefs/Snapshot) переехал в :core:data.
-    // Этап 3.7-1: весь пакет re.pinok.data.model (Models/PhotoSizes/VideoQuality/
+    // #ARCH-DATA (Task 20): data-слой (VkMintPrefs/Snapshot) переехал в :core:data.
+    // Этап 3.7-1: весь пакет vk.mint.data.model (Models/PhotoSizes/VideoQuality/
     // VkAccountModels) тоже в :core:data (пакет сохранён — потребители без правок).
     implementation(project(":core:data"))
 

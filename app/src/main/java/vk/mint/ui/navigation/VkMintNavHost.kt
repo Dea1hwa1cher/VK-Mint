@@ -1,0 +1,3228 @@
+package vk.mint.ui.navigation
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import vk.mint.ui.anim.LocalAnimScale
+import vk.mint.ui.anim.tweenScaled
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import vk.mint.ui.theme.UiScale
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import vk.mint.VkMintApp
+import vk.mint.contracts.CallStarter
+import vk.mint.contracts.ContainerRegistry
+import vk.mint.contracts.NavEntry
+import vk.mint.data.model.Video
+import vk.mint.ui.components.PhotoViewer
+import vk.mint.ui.screens.bookmarks.BookmarksScreen
+import vk.mint.ui.screens.community.BoardTopicScreen
+import vk.mint.ui.screens.community.CommunityScreen
+// #OPVK-EXTRACT (Task 3-c): экран «Участники сообщества».
+import vk.mint.ui.screens.community.GroupMembersScreen
+// W35-b (волна 35): экраны администрирования сообщества (блок «Управление»).
+import vk.mint.ui.screens.community.AdminPeopleScreen
+import vk.mint.ui.screens.community.AdminSettingsScreen
+import vk.mint.ui.screens.community.AdminStatsScreen
+import vk.mint.ui.screens.community.AdminAddressesScreen
+import vk.mint.ui.screens.community.AdminCtaScreen
+import vk.mint.ui.screens.community.AdminChatsScreen
+import vk.mint.ui.screens.community.AdminMessagesScreen
+import vk.mint.ui.screens.community.AdminSectionsScreen
+// C8 (#ADMIN-COMMENTS): «Комментарии» сообщества.
+import vk.mint.ui.screens.community.AdminCommentsScreen
+import vk.mint.ui.screens.community.AdminEventsScreen
+import vk.mint.ui.screens.community.AdminEventLogScreen
+import vk.mint.ui.screens.community.AdminInvitesScreen
+import vk.mint.ui.screens.community.AdminLinksScreen
+import vk.mint.ui.screens.community.AdminMenuScreen
+import vk.mint.ui.screens.community.AdminStrikesScreen
+import vk.mint.ui.screens.community.AdminWallQueueScreen
+import vk.mint.ui.screens.documents.DocumentsScreen
+// IMP-FEED-2: экран «Скрытые источники» (менеджер мьютов ленты).
+import vk.mint.ui.screens.feed.FeedHiddenSourcesScreen
+import vk.mint.ui.screens.feed.FeedScreen
+import vk.mint.ui.screens.feed.PostDetailScreen
+import vk.mint.ui.screens.feed.StoryViewerScreen
+import vk.mint.ui.screens.friends.FriendsScreen
+import vk.mint.ui.screens.groups.GroupsScreen
+import vk.mint.ui.screens.im.ChatDetailScreen
+import vk.mint.ui.screens.im.ChatInfoScreen
+import vk.mint.ui.screens.im.FoldersSettingsScreen
+import vk.mint.ui.screens.im.MessagesScreen
+import vk.mint.ui.screens.browser.InternalBrowserScreen
+import vk.mint.ui.screens.music.MusicScreen
+import vk.mint.ui.screens.music.AudioPlayerScreen
+import vk.mint.ui.screens.music.AudioQueueScreen
+import vk.mint.ui.screens.music.MusicPlaylistsScreen
+import vk.mint.ui.screens.music.PlaylistDetailScreen
+import vk.mint.ui.screens.music.MusicAlbumsScreen
+import vk.mint.ui.screens.music.MusicArtistsScreen
+import vk.mint.ui.screens.music.ArtistDetailScreen
+import vk.mint.ui.screens.music.CatalogSectionScreen
+import vk.mint.ui.screens.notifications.NotificationsScreen
+import vk.mint.ui.screens.notifications.NotificationSettingsScreen
+import vk.mint.ui.screens.offline.ClipOfflinePlayerScreen
+import vk.mint.ui.screens.offline.OfflineAudioPlayerScreen
+import vk.mint.ui.screens.offline.OfflineManagerScreen
+import vk.mint.ui.screens.offline.StoryOfflinePlayerScreen
+import vk.mint.ui.screens.photos.PhotosScreen
+import vk.mint.ui.screens.profile.EditProfileScreen
+// П-7-AB: экран «Подписчики»/«Подписки» (правая колонка веба — списки).
+import vk.mint.ui.screens.profile.FollowersSubscriptionsScreen
+import vk.mint.ui.screens.profile.ProfileScreen
+import vk.mint.ui.screens.profile.UserProfileScreen
+import vk.mint.ui.screens.search.SearchScreen
+import vk.mint.ui.screens.settings.AboutScreen
+import vk.mint.ui.screens.settings.BlacklistScreen
+import vk.mint.ui.screens.settings.LogScreen
+import vk.mint.ui.screens.settings.PrivacySettingsScreen
+import vk.mint.ui.screens.settings.SettingsScreen
+import vk.mint.ui.screens.superapp.ServicesScreen
+import vk.mint.ui.screens.video.VideoScreen
+import vk.mint.ui.screens.videoplayer.VideoPlatformRouter
+import vk.mint.ui.components.CaptchaDialog
+import vk.mint.ui.components.NetworkSwitchPopup
+import vk.mint.ui.components.GlobalMiniPlayer
+import vk.mint.ui.components.UpdateBanner
+import vk.mint.data.local.VkMintPrefs
+import vk.mint.util.AppLog
+
+// ── Fix #337: редактор панелей — JSON-парсинг порядка/скрытых пунктов ──
+// Хранится в VkMintPrefs как JSON-массив route-строк. Здесь — лёгкий парсер
+// без зависимостей (org.json.JSONArray доступен в Android SDK).
+private fun parseRoutesJson(json: String?): List<String> {
+    if (json.isNullOrBlank()) return emptyList()
+    return try {
+        val arr = org.json.JSONArray(json)
+        buildList {
+            for (i in 0 until arr.length()) add(arr.getString(i))
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
+
+/**
+ * #PANELEDIT: нормализует order-список KEY пунктов панели под canonical-набор
+ * [PanelItem]: убирает неизвестные keys, убирает дубли, добавляет недостающие
+ * (новые пункты после обновления) в конец canonical. Гарантирует, что в
+ * результате есть ВСЕ пункты из [canonical] ровно по разу.
+ */
+private fun normalizePanelKeys(order: List<String>, canonical: List<PanelItem>): List<PanelItem> {
+    val byKey = canonical.associateBy { it.key }
+    val seen = mutableSetOf<String>()
+    val result = mutableListOf<PanelItem>()
+    for (k in order) {
+        val item = byKey[k]
+        if (item != null && k !in seen) {
+            result.add(item)
+            seen.add(k)
+        }
+    }
+    for (item in canonical) {
+        if (item.key !in seen) {
+            result.add(item)
+            seen.add(item.key)
+        }
+    }
+    return result
+}
+
+// ═══ #ARCH-CONTAINERS (Этап 1.4): host-маппинги контейнерных capability ═══
+
+/**
+ * route-строка NavEntry → destination хоста. Контейнер не знает Screen-типов
+ * (:contracts без androidx/compose) — маппинг держит хост. Неизвестный route →
+ * null: пункт не рендерится (graceful), хост пишет предупреждение в лог.
+ * Новые контейнеры (1.5+) добавляют сюда одну строку — либо регистрируют
+ * NavHost-destination и расширяют маппинг вместе с ним.
+ */
+private fun hostDestinationForRoute(route: String): Screen? = when (route) {
+    Screen.CallsHistory.route -> Screen.CallsHistory // "calls_history" — destination уже в NavHost ниже
+    // #ARCH-CONTAINERS (Этап 1.5-а): «Фото» — контейнер :feature:photos;
+    // destination (Screen.Photos → PhotosScreen) остаётся в NavHost хоста.
+    Screen.Photos.route -> Screen.Photos // "photos"
+    else -> null
+}
+
+/**
+ * iconKey → реальная иконка (контракты без compose, иконку мапит хост —
+ * см. KDoc NavEntry). "calls" → та же иконка, что была у ядерного пункта
+ * «Звонки» (Icons.Filled.Call). Неизвестный ключ → нейтральная иконка
+ * (расширение) — НЕ падаем.
+ */
+private fun hostIconForKey(iconKey: String): ImageVector = when (iconKey) {
+    "calls" -> Icons.Filled.Call
+    // #ARCH-CONTAINERS (Этап 1.5-а): та же иконка, что была у ядерного пункта
+    // «Фото» (Screen.Photos: Icons.Outlined.Image).
+    "photos" -> Icons.Outlined.Image
+    else -> Icons.Outlined.Extension
+}
+
+/**
+ * #FEED-MENU-NOTIF (2026-10-01): маршрут для НАВИГАЦИИ на top-level экран.
+ * Используется в drawer/sidebar/bottom-bar вместо голого [Screen.route].
+ * Причина: Screen.Notifications — параметризованный маршрут "notifications/{category}",
+ * и `nav.navigate("notifications/{category}")` с литеральными скобками не совпал бы
+ * с графом. Для Notifications навигируем через buildRoute(DEFAULT_CATEGORY);
+ * остальные top-level экраны — как раньше по route. Сверка backstack (currentRoute)
+ * НЕ затронута: destination.route == паттерн маршрута в обоих случаях.
+ */
+private fun Screen.navRoute(): String =
+    if (this === Screen.Notifications) {
+        Screen.Notifications.buildRoute(Screen.Notifications.DEFAULT_CATEGORY)
+    } else {
+        route
+    }
+
+// ── #PANELEDIT: навигация по пункту панели (PanelItem) ─────────────────
+// Обычные пункты — навигация на Screen; спец-пункт «Реакции» (FeedFilter) —
+// запрос на открытие Ленты на разделе LIKES (см. FeedOpenRequest).
+
+/** Общие NavOptions для пунктов панелей (как у dock/drawer-кнопок). */
+private fun NavHostController.panelItemNavOptions(): androidx.navigation.NavOptions =
+    androidx.navigation.navOptions {
+        popUpTo(graph.startDestinationId) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+
+/** Навигировать на экран, соответствующий пункту панели [item]. */
+private fun NavHostController.navigatePanelItem(item: PanelItem) {
+    when (val a = item.action) {
+        is PanelAction.Route -> navigate(a.screen.navRoute(), panelItemNavOptions())
+        is PanelAction.FeedFilter -> {
+            // «Реакции» — открыть Ленту на разделе LIKES (in-memory seed).
+            FeedOpenRequest.request(a.filterName)
+            navigate(Screen.Feed.navRoute(), panelItemNavOptions())
+        }
+    }
+}
+
+/**
+ * #ARCH-CONTAINERS (Этап 1.4): мета исходящего звонка — имя/фото собеседника
+ * из места вызова (шапка диалога, карточка друга). Контракт CallStarter
+ * (startCall(peerId, video)) title/photo не передаёт — их знает только
+ * host-сайт вызова. Порядок: onClick-сайт кладёт мета ЗДЕСЬ (синхронно, до
+ * startCall → pendingOutgoingCallPeerId), LaunchedEffect(pendingOutgoingCall)
+ * ниже читает при навигации на Screen.Call и очищает. Пусто (звонок не из UI,
+ * напр. redial из истории) → CallScreen подтянет профиль сам (usersGetByIds).
+ */
+private object OutgoingCallMeta {
+    @Volatile var title: String = ""
+    @Volatile var photo: String? = null
+
+    /** Заложить мета из host-сайта кнопки звонка (перед startCall). */
+    fun stash(t: String, p: String?) {
+        title = t
+        photo = p
+    }
+
+    /** Забрать и очистить (вызывает LaunchedEffect при навигации на экран звонка). */
+    fun consume(): Pair<String, String?> {
+        val result = title to photo
+        title = ""
+        photo = null
+        return result
+    }
+}
+
+/**
+ * #BOTTOM-SCROLL: кастомная кнопка для скроллируемой нижней панели (>5
+ * кнопок). НЕ использует [NavigationBarItem] — т.к. в M3 BOM 2025.06
+ * NavigationBarItem корректно резолвится только внутри [NavigationBar]
+ * content-scope. Для скролл-Row делаем свою кнопку: Column(Icon) с
+ * selected-state (цвет) и unread-badge для Сообщений.
+ *
+ * P0.23 #BOTTOM-ICON-ONLY (2026-10): убран Text(label) — пользователь хочет
+ * значки разделов БЕЗ текста (как в VK / Instagram). Иконка увеличена до 32dp
+ * (было ~24dp default). Высота кнопки уменьшена с 80dp до 64dp — без текста
+ * меньше места нужно.
+ */
+@Composable
+private fun BottomNavScrollButton(
+    item: PanelItem,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val navIcon = item.icon
+    val unreadCount = if (item.destinationRoute == Screen.Messages.route) {
+        vk.mint.realtime.UnreadMessagesCounter.unreadCount.collectAsState().value
+    } else {
+        0
+    }
+    val iconColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+    val textColor = if (selected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = modifier
+            .height(UiScale.scaled(64.dp))
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(height = 30.dp, width = 56.dp)
+                .background(
+                    if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                    shape = CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (navIcon != null) {
+                if (item.destinationRoute == Screen.Messages.route && unreadCount > 0) {
+                    BadgedBox(
+                        badge = {
+                            Badge { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
+                        },
+                    ) {
+                        Icon(
+                            navIcon,
+                            contentDescription = item.title,
+                            tint = iconColor,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                } else {
+                    Icon(
+                        navIcon,
+                        contentDescription = item.title,
+                        tint = iconColor,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = if (item.key == "messenger") "Чаты" else item.title,
+            style = MaterialTheme.typography.labelSmall,
+            color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VkMintNavHost(
+    nav: NavHostController = rememberNavController(),
+    onLogout: () -> Unit,
+    onExitApp: () -> Unit = {},
+    initialRoute: String = Screen.Feed.route,
+    pendingOpenChatPeerId: Long? = null,
+    pendingOpenChatTitle: String? = null,
+    onOpenChatConsumed: () -> Unit = {},
+    pendingDeepLink: vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction? = null,
+    onDeepLinkConsumed: () -> Unit = {},
+) {
+    val scope = rememberCoroutineScope()
+    val app = remember { VkMintApp.get(nav.context) }
+
+    // #FEED-MENU-NOTIF (2026-10-01): sanitize lastRoute/startDestination.
+    // Маршрут Notifications стал параметризованным "notifications/{category}".
+    //  - старая сохранённая lastRoute="notifications" (формат до апгрейда) больше
+    //    НЕ матчит "notifications/{category}" как startDestination — он бы уронил
+    //    NavHost. Мапим её в buildRoute(DEFAULT_CATEGORY) = "notifications/all".
+    //  - параметризованный паттерн "notifications/{category}" тоже не должен
+    //    попадать в startDestination (литеральные скобки не матчатся) — откат на feed.
+    val sanitizedInitialRoute = when (initialRoute) {
+        "notifications" -> Screen.Notifications.buildRoute(Screen.Notifications.DEFAULT_CATEGORY)
+        Screen.Notifications.route -> Screen.Feed.route
+        else -> initialRoute
+    }
+
+    // #ARCH-CONTAINERS (Этап 1.4): хост строит панель/кнопки звонка из реестра
+    // контейнеров. Реестр не реактивен — UI перечитывает его при следующем
+    // построении composition (контракт ContainerRegistry): сняли контейнер →
+    // пункты/кнопки исчезли, ядро живо (graceful-деградация).
+    //  - containerNavEntries — пункты боковой панели (после ядерных, по order);
+    //  - callStarter — запуск звонка; null → кнопки звонка НЕ рендерятся.
+    //  - callClick — готовый колбэк для ядерных экранов (лента/друзья/чат):
+    //    кладёт title/photo в OutgoingCallMeta (контракт CallStarter их не
+    //    передаёт) и стартует звонок. Явный тип → лямбда приводится к Unit.
+    val containerNavEntries = remember {
+        ContainerRegistry.find<NavEntry>().sortedBy { it.order }
+    }
+    val callStarter = remember { ContainerRegistry.find<CallStarter>().firstOrNull() }
+    // #NULL-EXPLICIT: явная проверка вместо safe-call — callClick строится только
+    // когда в реестре есть CallStarter; иначе null (кнопки звонка не рендерятся).
+    val callClick: ((peerId: Long, title: String, photo: String?) -> Unit)? = run {
+        val starter = callStarter
+        if (starter != null) {
+            { pid: Long, title: String, photo: String? ->
+                OutgoingCallMeta.stash(title, photo)
+                starter.startCall(pid, video = false)
+            }
+        } else {
+            null
+        }
+    }
+
+    // Fix #208: навигация на ChatDetailScreen когда пользователь тапнул по
+    // push-уведомлению. MainActivity.handleOpenChatIntent устанавливает
+    // pendingOpenChatPeerId, здесь мы подхватываем и навигируем. После
+    // навигации сбрасываем state через onOpenChatConsumed (иначе при каждомом
+    // recompose мы бы пытались навигировать снова).
+    LaunchedEffect(pendingOpenChatPeerId) {
+        val peerId = pendingOpenChatPeerId
+        // #IM-CHANNEL-OPEN: каналы имеют ОТРИЦАТЕЛЬНЫЙ peerId (-group_id).
+        // Раньше гварды peerId > 0 (здесь и в MainActivity.handleOpenChatIntent)
+        // молча глотали тап по push-уведомлению канала (Fix #390 #NOTIFY-MODES
+        // шлёт их с peer_id<0 через CHANNEL_COMMUNITIES) — «канал не открывается».
+        // Теперь открываем любой ненулевой peerId; 0 = intent без extras (мусор).
+        if (peerId != null && peerId != 0L) {
+            val title = pendingOpenChatTitle ?: ""
+            AppLog.i("VkMintNavHost",
+                "#IM-CHANNEL-OPEN OPEN_CHAT: navigating peerId=$peerId title='$title' isChannelPeer=${peerId < 0}")
+            nav.navigate(Screen.ChatDetail.buildRoute(peerId, title, null)) {
+                // Не добавляем дубликаты если уже в этом чате.
+                launchSingleTop = true
+            }
+            onOpenChatConsumed()
+        }
+    }
+
+    // #CALLS: навигация на CallScreen при входящем звонке (тап по уведомлению).
+    // VkMintApp.startCallNotifier сохраняет pendingIncomingCallPayload; здесь
+    // подхватываем и открываем CallScreen(incoming=true, payload).
+    // #CALLS-INCOMING-UI (Этап Е): payload больше НЕ навигирует сам по себе —
+    // пока входящий не принят, он показывается оверлеем (IncomingCallScreen /
+    // свёрнутый баннер — см. конец этой composable). Навигация происходит
+    // только после «Принять» (app.acceptIncomingCall → incomingCallAccepted),
+    // после неё consumeIncomingCall() сбрасывает весь pending-стейт.
+    // #CALLS-NO-DOUBLE-CALLSCREEN (2026-09-23): ОДИН ключ (incomingCallAccepted).
+    // Раньше ключей было два (+payload): payload одного звонка перезаписывался
+    // коллекторами (теперь у них guard в VkMintApp) и перезапускал эффект —
+    // buildRoute с другим payload давал ДРУГОЙ route, launchSingleTop не
+    // схлопывал, и в backstack пушилась вторая копия CallScreen.
+    // + guard дубликата: если CallScreen уже открыт — не навигируем повторно.
+    LaunchedEffect(app.incomingCallAccepted) {
+        val payload = app.pendingIncomingCallPayload
+        if (!payload.isNullOrBlank() && app.incomingCallAccepted) {
+            val cur = nav.currentBackStackEntry?.destination?.route
+            if (cur != null && cur.startsWith(Screen.Call.route)) {
+                AppLog.i("VkMintNavHost", "INCOMING_CALL: CallScreen already open — skip duplicate navigate")
+                app.consumeIncomingCall()
+                return@LaunchedEffect
+            }
+            val peerId = app.pendingIncomingCallPeerId
+            val title = app.pendingIncomingCallTitle
+            val photo = app.pendingIncomingCallPhoto
+            AppLog.i("VkMintNavHost", "INCOMING_CALL: navigating to CallScreen payload.len=${payload.length}")
+            nav.navigate(Screen.Call.buildRoute(peerId, title, photo, incoming = true, payload = payload)) {
+                launchSingleTop = true
+            }
+            app.consumeIncomingCall()
+        }
+    }
+
+    // #ARCH-CONTAINERS: исходящий звонок через контейнер :feature:calls
+    // (CallStarter.startCall → pendingOutgoingCall*; тот же паттерн, что
+    // incoming выше). title/photo берём из OutgoingCallMeta — их заложил
+    // host-сайт кнопки (контракт CallStarter их не передаёт); пусто →
+    // CallScreen подтянет профиль сам (usersGetByIds).
+    // #CALLS-VIDEO-ROUTE (Этап Г): pendingOutgoingCallVideo теперь ЧИТАЕТСЯ
+    // здесь и доносится до CallScreen через query-параметр video маршрута
+    // (раньше флаг обрывался: никто не читал — «Видеозвонок» звонил аудио).
+    // Сброс — consumeOutgoingCall() (сбрасывает оба pending-поля, паттерн
+    // соседних pending-полей VkMintApp).
+    LaunchedEffect(app.pendingOutgoingCallPeerId) {
+        val peerId = app.pendingOutgoingCallPeerId
+        if (peerId > 0L) {
+            val (metaTitle, metaPhoto) = OutgoingCallMeta.consume()
+            val video = app.pendingOutgoingCallVideo
+            AppLog.i("VkMintNavHost", "OUTGOING_CALL: navigating to CallScreen peerId=$peerId video=$video (CallStarter)")
+            nav.navigate(Screen.Call.buildRoute(peerId, metaTitle, metaPhoto, incoming = false, video = video)) {
+                launchSingleTop = true
+            }
+            app.consumeOutgoingCall()
+        }
+    }
+
+    // #CALLS-JOIN-BY-LINK (Этап Г, Г4): присоединение к звонку по ссылке.
+    // Модалка «Присоединиться» (CallsJoinByLinkDialog) сама выполняет цепочку
+    // vchat.getAnonymTokenByLink (аноним) → vchat.joinConversationByLink и
+    // кладёт результат (conversation params) в CallJoinByLinkHolder —
+    // Compose-observable, поэтому LaunchedEffect перезапускается ГАРАНТИРОВАННО
+    // (в отличие от pendingOutgoingCallPeerId, который после consumeOutgoingCall
+    // всегда 0 — навигация по «0→0» не сработала бы). Пустой peerId честен:
+    // у звонка по ссылке собеседник неизвестен, CallScreen подтягивает
+    // conversation params из holder'а (screen сам consume'ит сессию).
+    LaunchedEffect(vk.mint.ui.screens.calls.CallJoinByLinkHolder.session) {
+        val joinSession = vk.mint.ui.screens.calls.CallJoinByLinkHolder.session
+        if (joinSession != null) {
+            AppLog.i("VkMintNavHost", "JOIN_BY_LINK: navigating to CallScreen (join-сессия, convId из params)")
+            nav.navigate(Screen.Call.buildRoute(0L, "Звонок по ссылке", null, incoming = true)) {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    // §42 #PUSH-NOTIFICATIONS: единый обработчик DeepLinkAction — что открыть
+    // при тапе на уведомление (лайк/комментарий/репост/ответ/подписка/
+    // упоминание/подарок/запись на стене). Используется И для системы
+    // (pendingDeepLink из push-intent, MainActivity.handleDeepLinkIntent), И для
+    // тапа по карточке внутри экрана уведомлений (NotificationsScreen.onDeepLink,
+    // #NOTIF-DEEPLINK 2026-10-02) — без дублирования логики.
+    fun handleDeepLink(
+        link: vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction,
+        navHostController: NavHostController,
+    ) {
+        try {
+            when (link) {
+                is vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenPost -> {
+                    // §42.4 #PUSH-DEEPLINK: если есть commentId — пробрасываем его
+                    // в PostDetailScreen через holder, чтобы экран проскроллил к
+                    // комментарию после загрузки (ответ на комментарий / новый
+                    // комментарий на посте). Нулевой commentId = просто открыть пост.
+                    if (link.commentId != 0L) {
+                        PostDetailTarget.commentId = link.commentId
+                    }
+                    AppLog.i("VkMintNavHost", "DEEP_LINK: navigating to PostDetail owner=${link.ownerId} post=${link.postId} commentId=${link.commentId}")
+                    navHostController.navigate(Screen.PostDetail.buildRoute(link.ownerId, link.postId)) {
+                        launchSingleTop = true
+                    }
+                }
+                is vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenVideo -> {
+                    // §42.4 #PUSH-DEEPLINK: VideoPlayer удалён из NavHost (#90,
+                    // теперь overlay). Раньше nav.navigate(Screen.VideoPlayer...)
+                    // вело на несуществующий маршрут → тап по видео-уведомлению
+                    // ничего не открывал. Теперь открываем overlay-плеер через
+                    // VideoHolder.open(Video(...)) — VideoPlatformRouter сам
+                    // подтянет CDN URL и метаданные по owner_id+video_id.
+                    AppLog.i("VkMintNavHost", "DEEP_LINK: opening VideoPlayer overlay owner=${link.ownerId} video=${link.videoId}")
+                    VideoHolder.open(Video(
+                        id = link.videoId,
+                        ownerId = link.ownerId,
+                        title = "",
+                        description = null,
+                        duration = 0,
+                        date = 0,
+                    ))
+                }
+                is vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenUser -> {
+                    AppLog.i("VkMintNavHost", "DEEP_LINK: navigating to UserProfile user=${link.userId}")
+                    navHostController.navigate(Screen.UserProfile.buildRoute(link.userId)) {
+                        launchSingleTop = true
+                    }
+                }
+                is vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenCommunity -> {
+                    AppLog.i("VkMintNavHost", "DEEP_LINK: navigating to Community group=${link.groupId}")
+                    navHostController.navigate(Screen.Community.buildRoute(link.groupId)) {
+                        launchSingleTop = true
+                    }
+                }
+                is vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenPhoto -> {
+                    // §42.4 #PUSH-DEEPLINK: открываем нативный PhotoViewer (pinch-zoom,
+                    // swipe) через PhotoHolder overlay — как в ленте/профиле/чате.
+                    // Раньше открывалось в InternalBrowser (WebView, vk.com/photo) —
+                    // медленно и не нативно. Если photoUrl пуст (редкий случай —
+                    // уведомление без превью) — fallback на InternalBrowser.
+                    val url = link.photoUrl
+                    if (!url.isNullOrBlank()) {
+                        AppLog.i("VkMintNavHost", "DEEP_LINK: opening PhotoViewer overlay owner=${link.ownerId} photo=${link.photoId}")
+                        PhotoHolder.open(listOf(url), 0)
+                    } else {
+                        val webUrl = vk.mint.realtime.VkUrlDeepLinker.webUrlFor(link)
+                        AppLog.i("VkMintNavHost", "DEEP_LINK: no photoUrl, fallback to InternalBrowser url=$webUrl")
+                        navHostController.navigate(Screen.InternalBrowser.buildRoute(webUrl)) {
+                            launchSingleTop = true
+                        }
+                    }
+                }
+                vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenNotifications -> {
+                    // Открываем вкладку Уведомления (#FEED-MENU-NOTIF: маршрут стал
+                    // параметризованным — notifications/{category}, дефолт "all").
+                    AppLog.i("VkMintNavHost", "DEEP_LINK: navigating to Notifications (category=all)")
+                    navHostController.navigate(Screen.Notifications.buildRoute(Screen.Notifications.DEFAULT_CATEGORY)) {
+                        launchSingleTop = true
+                    }
+                }
+                vk.mint.realtime.VkUrlDeepLinker.DeepLinkAction.OpenDevices -> {
+                    // §49.6 Sprint VK-ID-1.6: deep-link из security-alert notification.
+                    AppLog.i("VkMintNavHost", "DEEP_LINK: navigating to Devices")
+                    navHostController.navigate("devices") {
+                        launchSingleTop = true
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            AppLog.w("VkMintNavHost", "DEEP_LINK navigation failed: ${e.message}")
+        }
+    }
+
+    // §42 #PUSH-NOTIFICATIONS: навигация при тапе на системное VK-уведомление.
+    // MainActivity.handleDeepLinkIntent устанавливает pendingDeepLink,
+    // здесь подхватываем и навигируем на нужный Screen через handleDeepLink.
+    // После навигации сбрасываем state через onDeepLinkConsumed.
+    LaunchedEffect(pendingDeepLink) {
+        val link = pendingDeepLink ?: return@LaunchedEffect
+        handleDeepLink(link, nav)
+        onDeepLinkConsumed()
+    }
+
+    // Fix #132: Восстановление chat_detail после process death во время камеры.
+    //
+    // Симптом: пользователь в чате → тап на камеру → система убивает процесс
+    // (low memory) → пользователь делает фото и возвращается → приложение
+    // холодно стартует → NavController ненадёжно восстанавливает back stack
+    // (chat_detail на мгновение compostится, фото отправляется через
+    // rememberSaveable UriSaver, но затем currentRoute сбрасывается на Feed
+    // из-за NavHost(startDestination = snap.lastRoute = "feed")). Пользователь
+    // оказывается на ленте, фото при этом уходит.
+    //
+    // Фикс: перед запуском камеры явно сохраняем peerId/title/photo чата в
+    // rememberSaveable. При первом composition VkMintNavHost, если там что-то
+    // есть и мы не на chat_detail — навигируемся обратно. После навигации
+    // очищаем, чтобы следующий запуск приложения не возвращал в старый чат.
+    var cameraReturnPeerId by rememberSaveable { mutableLongStateOf(0L) }
+    var cameraReturnTitle by rememberSaveable { mutableStateOf("") }
+    var cameraReturnPhoto by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        if (cameraReturnPeerId != 0L) {
+            val current = nav.currentDestination?.route
+            val alreadyOnChat = current != null && current.startsWith("chat_detail")
+            AppLog.i("VkMintNavHost",
+                "camera return: peer=${cameraReturnPeerId} currentRoute=$current alreadyOnChat=$alreadyOnChat")
+            // Очищаем saved state в любом случае — либо навигируемся, либо уже там.
+            val pid = cameraReturnPeerId
+            val title = cameraReturnTitle
+            val photo = cameraReturnPhoto
+            cameraReturnPeerId = 0L
+            cameraReturnTitle = ""
+            cameraReturnPhoto = null
+            if (!alreadyOnChat) {
+                val route = Screen.ChatDetail.buildRoute(pid, title, photo)
+                try {
+                    nav.navigate(route)
+                } catch (e: Exception) {
+                    AppLog.w("VkMintNavHost", "camera return navigate failed: ${e.message}")
+                }
+            }
+        }
+    }
+
+    // #90: Overlay для VideoPlayer — видео открывается поверх текущего экрана,
+    // без nav.navigate(). Feed (и любой другой экран) остаётся живым в
+    // Composition → LazyListState не теряется → позиция скролла сохраняется.
+    val overlayVideo by VideoHolder.active.collectAsState()
+    // §42.4 #PUSH-DEEPLINK: overlay для PhotoViewer — фото из push-уведомления
+    // (like_photo / comment_photo) открывается нативно поверх текущего экрана,
+    // как в ленте/профиле/чате. PhotoViewer — Dialog с pinch-zoom и swipe.
+    val overlayPhoto by PhotoHolder.active.collectAsState()
+
+    // Fix #224: глобальный масштаб скорости анимаций (0f..1f).
+    // 0f → анимации выключены (snap/мгновенно), 1f — норма. Берётся из prefs
+    // (interfaceAnimSpeed 0..100 → /100f). Предоставляется через LocalAnimScale
+    // всем экранам внутри NavHost + используется в transition-ламбдах NavHost.
+    // #ANIM-FASTER-10 (2026-09-12): базовый множитель 0.9 — все анимации интерфейса
+    // на 10% быстрее независимо от префа (жалоба: «само приложение медленное, что-то
+    // тупит» → «ускорить анимацию на 10%»). Множитель ЗДЕСЬ, а не в AnimScale-хелперах:
+    // это единственная точка предоставления LocalAnimScale — накрывает и
+    // scaledTween/scaledSpring/tweenScaled, и прямые чтения LocalAnimScale.current
+    // (ChatDetailScreen). Преф «Скорость анимации» умножается поверх базы: 100 → 0.9,
+    // 0 (выкл) → 0 остаётся мгновенным.
+    val prefsSnap by app.prefs.data.collectAsState(initial = null)
+    val animScale = ((prefsSnap?.interfaceAnimSpeed ?: 100).coerceIn(0, 100) / 100f) *
+        vk.mint.ui.anim.ANIM_BASE_SPEED
+
+    // Основные экраны (dock + drawer) — только их сохраняем как lastRoute.
+    // Детальные экраны (VideoPlayer, PostDetail, ChatDetail и т.д.) НЕ сохраняем —
+    // они контекстные и зависят от переданных данных.
+    //
+    // Fix #114: Screen.Logs убран из mainRoutes. Logs — утилитный экран
+    // отладки, не «домашний». Если сохранять его как lastRoute, при
+    // перезапуске приложения Logs становится startDestination NavHost →
+    // nav.popBackStack() из Logs возвращает false → кнопка «закрыть»
+    // не работала. Теперь lastRoute всегда остаётся «настоящим» экраном.
+    val mainRoutes = remember {
+        listOf(
+            Screen.Feed.route, Screen.Messages.route, Screen.Music.route,
+            Screen.Video.route, Screen.Profile.route, Screen.Friends.route,
+            Screen.Groups.route, Screen.Photos.route, Screen.Search.route,
+            Screen.Bookmarks.route, Screen.Documents.route, Screen.Services.route,
+            Screen.Settings.route, Screen.Clips.route,
+        )
+    }
+    // Fix #226: множество роутов основных разделов для O(1)-проверки в
+    // transition-ламбдах NavHost. Используется чтобы отличить переключение
+    // таб-в-таб (мгновенно, без анимации) от push/pop детальных экранов (fade).
+    val tabRouteSet = remember { mainRoutes.toHashSet() }
+
+    val backStack by nav.currentBackStackEntryAsState()
+    val rawRoute = backStack?.destination?.route
+    // Fix #226: никогда не падаем в "feed" при транзиентном null backStack.
+    //
+    // Раньше `?: Screen.Feed.route` на холодном старте (NavHost ещё не успел
+    // навигировать на startDestination → currentBackStackEntry == null)
+    // давал currentRoute="feed" на 1-2 кадра. Последствия:
+    //   (1) LaunchedEffect(currentRoute) писал lastRoute="feed" в prefs → при
+    //       следующем запуске startDestination="feed" → back из любого таба
+    //       перекидывал в ленту («пытается в ленту перекинуть», «не всегда» —
+    //       только если процесс убили до самоисправления).
+    //   (2) NavigationBarItem(selected = currentRoute == screen.route) на этот
+    //       кадр подсвечивал Ленту → визуальное «дёрганье» дока.
+    //   (3) currentTitle на этот кадр = «Лента».
+    //
+    // Теперь: запоминаем последний валидный роут в remember-стейте, а до
+    // первого валидного роута используем initialRoute (реальный lastRoute из
+    // prefs). currentRoute больше никогда не становится "feed" фиктивно.
+    var lastKnownRoute by remember { mutableStateOf<String?>(null) }
+    if (rawRoute != null) lastKnownRoute = rawRoute
+    val currentRoute = lastKnownRoute ?: sanitizedInitialRoute
+
+    // Сохраняем текущий основной роут при каждой навигации.
+    // Fix #226: ключ — rawRoute (а не currentRoute), и пишем ТОЛЬКО когда
+    // rawRoute != null. Транзиентный null на холодном старте больше не портит
+    // lastRoute значением "feed".
+    LaunchedEffect(rawRoute) {
+        if (rawRoute != null && rawRoute in mainRoutes) {
+            app.prefs.setLastRoute(rawRoute)
+        }
+    }
+
+    // #NAV-GROUP-VIDEO-RESTORE (Fix #344): восстановление сообщества после смерти
+    // процесса. Сценарий: пользователь в сообществе смотрит видео (оверлей), система
+    // убивает процесс (долгий просмотр/память). Холодный старт ставит
+    // startDestination = lastRoute, но Community — detail-экран и в lastRoute
+    // не пишется → пользователь попадает в СПИСОК ГРУПП. Здесь однократно
+    // восстанавливаем контекст (id + позиция скролла стены).
+    // rememberSaveable-флаг: переживает recreation Activity (без дубля в стеке),
+    // умирает вместе с процессом (после смерти восстановление нужно снова).
+    var communityRestoreDone by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (communityRestoreDone) return@LaunchedEffect
+        communityRestoreDone = true
+        val snap = app.prefs.data.first()
+        if (snap.lastCommunityId > 0L) {
+            AppLog.i(
+                "VkMintNavHost",
+                "#NAV-GROUP-VIDEO-RESTORE: restore community ${snap.lastCommunityId}, scroll=${snap.lastCommunityScroll}",
+            )
+            CommunityRestoreHolder.pendingScroll = snap.lastCommunityScroll
+            nav.navigate(Screen.Community.buildRoute(snap.lastCommunityId))
+        }
+    }
+    // Уход с Community (back или вперёд на другой экран) — контекст восстановления
+    // больше не нужен: обычный выход из сообщества не должен «авто-возвращать»
+    // при следующем запуске. Смерть процесса этот эффект не запускает →
+    // контекст выживает → восстановление сработает.
+    var prevRawRoute by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(rawRoute) {
+        val prev = prevRawRoute
+        if (prev == Screen.Community.route && rawRoute != Screen.Community.route) {
+            app.prefs.setLastCommunityId(0L)
+            app.prefs.setLastCommunityScroll(0)
+        }
+        prevRawRoute = rawRoute
+    }
+
+    // Fix #52-B: истории обновляются при возврате на Feed из детальных экранов.
+    // Отслеживаем переход НА Feed route — если предыдущий route был детальным
+    // экраном (Community, UserProfile, PostDetail, VideoPlayer, StoryViewer),
+    // значит пользователь вернулся из контекста где мог изменить состав
+    // историй (subscribe/unsubscribe группы, просмотр истории = mark seen).
+    // StoriesHolder.markDirty() инкрементирует dirtyKey → StoriesRow
+    // перезагружает истории через LaunchedEffect(dirtyKey).
+    var prevRoute by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(currentRoute) {
+        val prev = prevRoute
+        if (currentRoute == Screen.Feed.route && prev != null && prev != Screen.Feed.route) {
+            // Возврат на Feed из другого экрана — истории могли измениться.
+            StoriesHolder.markDirty()
+            AppLog.d("VkMintNavHost", "Returned to Feed from $prev → stories marked dirty")
+        }
+        // #POST-DETAIL-SCROLL: при возврате на PostDetail из Community/другого
+        // экрана — StoriesHolder.markDirty() используется как триггер для
+        // восстановления позиции скролла в PostDetailScreen (по аналогии с Feed).
+        if (currentRoute.startsWith(Screen.PostDetail.route.substringBefore("{")) &&
+            prev != null && !prev.startsWith(Screen.PostDetail.route.substringBefore("{"))
+        ) {
+            StoriesHolder.markDirty()
+            AppLog.d("VkMintNavHost", "Returned to PostDetail from $prev → scroll restore triggered")
+        }
+        prevRoute = currentRoute
+    }
+
+    // Локальный список вместо Screen.dock/drawer — исключает любые
+    // потенциальные проблемы с инициализацией companion object через R8.
+    val dockScreens: List<Screen> = listOf(
+        Screen.Feed, Screen.Services, Screen.Messages, Screen.Clips, Screen.Profile,
+    )
+    val drawerScreens: List<Screen> = listOf(
+        Screen.Music, Screen.Video, Screen.Friends, Screen.Groups, Screen.Photos,
+        Screen.Bookmarks, Screen.Documents, Screen.Search, Screen.Notifications,
+        Screen.Settings, Screen.Logs,
+    )
+
+    // ── Fix #337 / #PANELEDIT: редактор панелей ─────────────────────────
+    // Канонический набор пунктов обеих панелей — PanelItems.all (см.
+    // PanelItems.kt). Боковая: dynamic-пункты без фикс. хвоста drawer
+    // (Офлайн/Настройки/Выйти — рендерятся отдельно и не редактируются).
+    // Нижняя: тот же список (требование пользователя).
+
+    // Парсим order/hidden нижней панели из prefsSnap (null-safe для холодного старта).
+    // #PANELEDIT: keys — это PanelItems.key (НЕ Screen.route), см. PanelItems.kt.
+    val bottomOrderKeys: List<String> = remember(prefsSnap?.bottomBarItemsOrder) {
+        parseRoutesJson(prefsSnap?.bottomBarItemsOrder)
+    }
+    val bottomHiddenKeys: Set<String> = remember(prefsSnap?.bottomBarItemsHidden) {
+        parseRoutesJson(prefsSnap?.bottomBarItemsHidden).toSet()
+    }
+    // Нормализованный список PanelItem для рендера нижней панели: порядок из prefs, скрытые убраны.
+    val visibleBottomItems: List<PanelItem> = remember(bottomOrderKeys, bottomHiddenKeys) {
+        normalizePanelKeys(bottomOrderKeys, PanelItems.all)
+            .filter { it.key !in bottomHiddenKeys }
+    }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    // Fix #370 #LOGOUT-HOLDER-CLEAR: обёртка над onLogout — ПЕРЕД сменой аккаунта
+    // сбрасываем in-memory кэши UI (holders — package-level объекты в хвосте
+    // этого файла). Без этого после повторного входа ДРУГИМ аккаунтом FeedScreen
+    // мигает чужой лентой (FeedDataHolder.allPosts читается в FeedScreen при
+    // инициализации), PostDetail показывает чужой пост (PostHolder.last),
+    // истории — чужие (StoriesHolder). Вызовы идут ДО mainActivity-логики
+    // (longPoll stop → signOut → cookies/storage clear → AuthActivity):
+    // кэш не должен пережить logout. FeedDataHolder.clear() дополнительно
+    // сбрасывает FeedScrollHolder.position — идемпотентно.
+    val onLogoutWithHoldersClear: () -> Unit = {
+        VideoHolder.clear()
+        PostHolder.clear()
+        FeedScrollHolder.clear()
+        FeedDataHolder.clear()
+        StoriesHolder.clear()
+        onLogout()
+    }
+    // #247: отдельный диалог выхода из приложения (не из аккаунта).
+    // Авторизация при этом сохраняется — при следующем запуске пользователь
+    // сразу попадёт в ленту без повторного логина.
+    var showExitAppDialog by remember { mutableStateOf(false) }
+    val allScreens: List<Screen> = dockScreens + drawerScreens + listOf(Screen.About)
+    // #ARCH-CONTAINERS (Этап 1.4/1.5-а): заголовок может прийти и из контейнерного
+    // NavEntry (routes "calls_history"/"photos" больше не в ядерном списке — см.
+    // drawerScreens). Неизвестный роут — как раньше, "VK Mint". #NULL-EXPLICIT:
+    // явные проверки вместо safe-call/elvis-цепочки (порядок приоритета прежний:
+    // ядерный Screen → контейнерный NavEntry → "VK Mint").
+    val currentTitle = run {
+        val core = allScreens.firstOrNull { it.route == currentRoute }
+        if (core != null) {
+            core.title
+        } else {
+            val entry = containerNavEntries.firstOrNull {
+                val dest = hostDestinationForRoute(it.route)
+                dest != null && dest.route == currentRoute
+            }
+            if (entry != null) entry.title else "VK Mint"
+        }
+    }
+
+    // Экраны со своим TopAppBar — скрываем глобальный заголовок и навбар.
+    // #30 (nav fix): добавлены Community, AudioPlayer, AudioQueue — у них есть
+    // собственный TopAppBar с back button, но они НЕ были в списке, из-за чего
+    // глобальный TopAppBar + bottom nav + mini-player показывались поверх.
+    val hasOwnTopBar = listOf(
+        // #90: VideoPlayer убран — теперь overlay, не маршрут NavHost.
+        Screen.UserProfile.route,
+        Screen.PostDetail.route, Screen.ChatDetail.route,
+        // #VM-3 волна 3: видео-сообщение «кружок» — полноэкранный рекордер
+        // со своим UI (камера + маска формы + кнопки), собственный TopAppBar
+        // не нужен — по паттерну экранов записи (ClipCreate не показывает бар).
+        Screen.VideoMessageCreate.route,
+        Screen.Logs.route, Screen.StoryViewer.route,
+        Screen.OfflineManager.route,
+        // Fix #111: у офлайн-плеера историй собственный TopAppBar + back button.
+        Screen.StoryOfflinePlayer.route,
+        // §37.12 #330: у офлайн-плеера клипов собственный fullscreen UI + back button.
+        Screen.ClipOfflinePlayer.route,
+        // Клипы автора: собственный Scaffold+TopAppBar («Клипы…» + back) —
+        // та же схема hasOwnTopBar (иначе двойной AppBar — класс бага
+        // Fix #272/#NOTIF-SETTINGS-DUAL-BAR).
+        Screen.ClipsOwner.route,
+        // Fix #50: у офлайн-плеера собственный TopAppBar + back button.
+        Screen.OfflineAudioPlayer.route,
+        Screen.Community.route, Screen.AudioPlayer.route, Screen.AudioQueue.route,
+        // Шаг 4 (#32d): BoardTopicScreen имеет собственный TopAppBar с back button.
+        Screen.BoardTopic.route,
+        // Fix #272: у ChatInfoScreen собственный TopAppBar («Информация» + back).
+        // Раньше маршрут НЕ был в списке → глобальный ScreenTopBar НЕ скрывался,
+        // но локальный TopAppBar рисовал свой → появлялись ДВА AppBar'а
+        // (пустой глобальный сверху + «Информация» снизу) с пустотой между ними.
+        // На скриншоте пользователя это выглядело как «стрелка назад + VK Mint»
+        // (глобальный, остался от CommunityScreen) И ниже «стрелка назад + Информация»
+        // (локальный ChatInfoScreen) — две панели с пустым зазором.
+        Screen.ChatInfo.route,
+        // Fix #272: у FoldersSettingsScreen тоже собственный TopAppBar —
+        // та же проблема двойного AppBar'а при открытии из MessagesScreen.
+        Screen.FoldersSettings.route,
+        // Fix #144: у InternalBrowserScreen собственный TopAppBar (← URL ↻ ⋮).
+        // Жалоба: «при просмотре в диалоге файла образуется две верхние панели —
+        // должна остаться только одна (с URL), верхняя с надписью VK Mint пропадать».
+        // Причина: маршрут НЕ был в hasOwnTopBar → глобальный ScreenTopBar
+        // (← VK Mint) оставался видимым поверх локального TopAppBar браузера.
+        // Та же проблема что и у ChatInfo (Fix #272) и FoldersSettings.
+        Screen.InternalBrowser.route,
+        // Fix #NOTIF-SETTINGS-DUAL-BAR (2026-08-04): у NotificationSettingsScreen
+        // собственный Scaffold+TopAppBar («← Уведомления ⋮»). Маршрут НЕ был в
+        // hasOwnTopBar → глобальный ScreenTopBar (← VK Mint) оставался видимым
+        // поверх локального → две панели (скриншот Screenshot_20260804_212704).
+        // Та же проблема что и у ChatInfo/FoldersSettings/InternalBrowser.
+        Screen.NotificationSettings.route,
+        // §PROFILE-P4: у PrivacySettingsScreen/BlacklistScreen собственные
+        // Scaffold+TopAppBar — та же схема hasOwnTopBar, что и NotificationSettings.
+        Screen.SettingsPrivacy.route,
+        Screen.Blacklist.route,
+        // IMP-FEED-2: у FeedHiddenSourcesScreen («Скрытые источники») собственный
+        // Scaffold+TopAppBar — та же схема hasOwnTopBar, что и BlacklistScreen.
+        Screen.FeedHidden.route,
+        // #MUSIC-PORT: у музыкальных экранов собственный LibraryTopBar
+        // (← Название). Маршруты не были в списке → глобальный ScreenTopBar
+        // (← VK Mint) рисовался поверх локального → две панели.
+        Screen.MusicPlaylists.route,
+        Screen.PlaylistDetail.route,
+        Screen.MusicAlbums.route,
+        Screen.MusicArtists.route,
+        Screen.ArtistDetail.route,
+        Screen.CatalogSection.route,
+        // П-3 (#PROFILE-SNAP): у EditProfileScreen собственный Scaffold+TopAppBar
+        // («← Редактирование профиля · Сохранить»). Без добавления в список
+        // глобальный ScreenTopBar рисовался бы поверх локального — та же проблема,
+        // что Fix #272 / #NOTIF-SETTINGS-DUAL-BAR.
+        Screen.ProfileEdit.route,
+        // П-7-AB: у FollowersSubscriptionsScreen («Подписчики»/«Подписки») свой
+        // Scaffold+TopAppBar — та же схема hasOwnTopBar, что и EditProfileScreen.
+        Screen.FollowList.route,
+        // #OPVK-EXTRACT (Task 3-c): у GroupMembersScreen («Участники») свой
+        // Scaffold+TopAppBar — та же схема hasOwnTopBar, что и FollowList.
+        Screen.GroupMembers.route,
+        // W35-b (волна 35): админ-экраны сообщества («Управление») — собственные
+        // Scaffold+TopAppBar, та же схема hasOwnTopBar (иначе двойной AppBar —
+        // класс бага Fix #272/#NOTIF-SETTINGS-DUAL-BAR).
+        Screen.AdminSettings.route,
+        Screen.AdminCta.route,
+        Screen.AdminStats.route,
+        Screen.AdminPeople.route,
+        Screen.AdminLinks.route,
+        Screen.AdminInvites.route,
+        Screen.AdminWallQueue.route,
+        Screen.AdminAddresses.route,
+        // ADMIN-MENU-STRIKES: у «Меню»/«Страйки» сообщества собственные
+        // Scaffold+TopAppBar — та же схема hasOwnTopBar (класс бага
+        // Fix #272/#NOTIF-SETTINGS-DUAL-BAR: двойной AppBar).
+        Screen.AdminMenu.route,
+        Screen.AdminStrikes.route,
+        // C8 (#ADMIN-COMMENTS): «Комментарии» — собственный Scaffold+TopAppBar.
+        Screen.AdminComments.route,
+    ).any { currentRoute.startsWith(it.substringBefore("{")) }
+
+    // §37.12 #327: экраны, которые хотят скрыть ТОЛЬКО глобальный TopAppBar,
+    // но ОСТАВИТЬ bottom NavigationBar. В отличие от hasOwnTopBar (который
+    // скрывает оба), hidesGlobalTopBarOnly скрывает только верхнюю панель.
+    // Clips: full-screen vertical pager — TopAppBar с заголовком «Клипы»
+    // занимает место поверх видео, но нижняя навигация нужна для перехода
+    // на другие вкладки. Overlay клипов (←, 🔊, +) поднимается наверх.
+    val hidesGlobalTopBarOnly = currentRoute == Screen.Clips.route
+    val showGlobalTopBar = !hasOwnTopBar && !hidesGlobalTopBarOnly
+
+    // Fix #256: сбрасываем ScreenTopBar при смене маршрута. Экраны конфигурируют
+    // TopBar через DisposableEffect, но если экран не имеет DisposableEffect (или
+    // если hasOwnTopBar=true и глобальный TopAppBar скрыт), старая конфигурация
+    // может остаться. Этот LaunchedEffect — safety net.
+    //
+    // #FEED-RIGHTPANEL (2026-10-02): НЕЛЬЗЯ делать безусловный clear() — он сносит
+    // actions активного экрана, использующего глобальный TopAppBar (лента Feed:
+    // кнопка ⋮ → FeedRightPanel регистрируется через ScreenTopBar.configure и не
+    // имеет hasOwnTopBar). Guard ниже срабатывает ТОЛЬКО для экранов со своим
+    // TopAppBar / скрывающих глобальный — они НЕ владеют global actions, поэтому
+    // clear() (force, без токена) безопасен и не затирает конфиг ленты.
+    LaunchedEffect(currentRoute, hasOwnTopBar) {
+        if (hasOwnTopBar || hidesGlobalTopBarOnly) {
+            // На экранах со своим TopAppBar ИЛИ скрывающих глобальный — очищаем.
+            // Это force-clear, но только для экранов БЕЗ global actions (лента тронута не будет).
+            ScreenTopBar.clear()
+        }
+    }
+
+    // Hide-on-scroll bottom NavigationBar (#299):
+    // При скролле контента вниз (delta.y < 0) прячем нижнее меню, при скролте
+    // вверх — показываем. Реализовано через NestedScrollConnection, который
+    // получает дельты от LazyColumn/scrollable внутри экранов. Порог +8px
+    // отсекает джиттер от пальца. Гистерезис: чтобы переключить состояние,
+    // нужно накопить >24px в одном направлении — иначе бар мигает на каждом
+    // маленьком движении. MiniPlayer НЕ прячется (это не «меню»).
+    // #FEED-FAB-SYNC: сохраняем сам State-объект, чтобы пробросить его в дочерние
+    // экраны через LocalBottomBarVisible (CompositionLocalProvider ниже).
+    // FeedScreen читает .value → FAB «наверх» появляется синхронно со скрытием
+    // панели, а не ждёт порога 200px (fix «слепой зоны» 24–200px).
+    val bottomBarVisibleState = remember { androidx.compose.runtime.mutableStateOf(true) }
+    var bottomBarVisible by bottomBarVisibleState
+    val scrollDeltaAccumulator = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val hideOnScrollConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+            ): androidx.compose.ui.geometry.Offset {
+                val dy = available.y
+                if (dy == 0f) return androidx.compose.ui.geometry.Offset.Zero
+                val prev = scrollDeltaAccumulator.floatValue
+                // Накапливаем, ограничивая чтобы накопитель не «залипал».
+                val next = (prev + dy).coerceIn(-160f, 160f)
+                scrollDeltaAccumulator.floatValue = next
+                if (!bottomBarVisible && next > 24f) {
+                    // скроллим вверх → показать
+                    bottomBarVisible = true
+                    scrollDeltaAccumulator.floatValue = 0f
+                } else if (bottomBarVisible && next < -24f) {
+                    // скроллим вниз → спрятать
+                    bottomBarVisible = false
+                    scrollDeltaAccumulator.floatValue = 0f
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
+    // При смене таба — сбрасываем в видимое состояние (новый экран не должен
+    // наследовать «свёрнутый» бар с предыдущего).
+    LaunchedEffect(currentRoute) {
+        bottomBarVisible = true
+        scrollDeltaAccumulator.floatValue = 0f
+    }
+
+    // Sprint 1, P0-3 (#76): CaptchaDialog поверх всего — captcha может
+    // потребоваться в любом запросе, независимо от активного экрана.
+    Box {
+        Scaffold(
+            // Hide-on-scroll (#299): connection ловит дельты скролла от
+            // LazyColumn/verticalScroll внутри экранов и переключает
+            // bottomBarVisible. Навешиваем на сам Scaffold — nested scroll
+            // всплывает от контента (NavHost → экраны → списки).
+            modifier = Modifier.nestedScroll(hideOnScrollConnection),
+            // #49: Убираем insets только сверху и по горизонтали —
+            // системные панели (status bar, nav bar) и клавиатура (IME)
+            // должны учитываться Compose-ayout'ом через imePadding/WindowInsets.
+            // Нули: WindowInsets(0, 0, 0, 0) убивает IME insets →
+            // клавиатура «съедает» контент вместо его сдвига.
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            topBar = {
+                // Скрываем глобальный TopAppBar на экранах со своим заголовком
+                // (hasOwnTopBar) ИЛИ на экранах, которые явно скрывают только topBar
+                // (hidesGlobalTopBarOnly, например Clips — full-screen pager).
+                // §37.12 #327: bottom NavigationBar при этом ОСТАЁТСЯ для hidesGlobalTopBarOnly.
+                if (showGlobalTopBar) {
+                    Column {
+                        TopAppBar(
+                            // Fix #256: экраны могут переопределить title (например,
+                            // TextField для поиска) или navigationIcon (back button).
+                            title = ScreenTopBar.titleOverride ?: { Text(currentTitle) },
+                            navigationIcon = {
+                                val override = ScreenTopBar.navigationIconOverride
+                                if (override != null) {
+                                    override()
+                                } else {
+                                    val isRootTab = currentRoute in dockScreens.map { it.route }
+                                    if (!isRootTab) {
+                                        IconButton(onClick = {
+                                            if (!nav.popBackStack()) {
+                                                // Fallback: если назад некуда — на Ленту.
+                                                nav.navigate(Screen.Feed.route) {
+                                                    popUpTo(nav.graph.startDestinationId) { saveState = true }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
+                                            }
+                                        }) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.ArrowBack,
+                                                contentDescription = "Назад",
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            // Fix #256: экраны регистрируют свои actions (search, filter,
+                            // mark-all-read) через ScreenTopBar.configure().
+                            actions = {
+                                ScreenTopBar.actions?.invoke()
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                                navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                            // #49: Явный отступ под status bar (время/сеть/батарея).
+                            modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
+                        )
+                        // Fix #256: subBar — контент под TopAppBar (filter chips, tabs).
+                        ScreenTopBar.subBar?.invoke()
+                    }
+                }
+            },
+            bottomBar = {
+                // #57: GlobalMiniPlayer + NavigationBar в Column.
+                // Мини-плеер показываем ВСЕГДА (кроме AudioPlayer/VideoPlayer) —
+                // даже на экранах с hasOwnTopBar (OfflineManager, Community, и т.д.).
+                // NavigationBar — только на основных экранах (не hasOwnTopBar).
+                // Раньше мини-плеер был overlay в Box → перекрывал NavigationBar.
+                val showMiniPlayer = currentRoute != Screen.AudioPlayer.route &&
+                    currentRoute != Screen.VideoPlayer.route &&
+                    overlayVideo == null
+                // Fix #334: navigationBarsPadding на САМОМ outer Column bottomBar-слота,
+                // а НЕ на NavigationBar внутри AnimatedVisibility. Раньше inset был на
+                // NavigationBar (стр.601) — при hide-on-scroll (#299) AnimatedVisibility
+                // схлопывал NavigationBar к 0 высоты, и inset схлопывался вместе с ним →
+                // contentPadding.bottom Scaffold'а = 0 → контент уходил под системную
+                // nav bar (footer «Загрузить ещё», FAB «наверх», последние Switch'и в
+                // настройках). Перенос inset на Column гарантирует, что слот ВСЕГДА
+                // резервирует место под nav bar, независимо от visible/hidden NavigationBar.
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.navigationBars),
+                ) {
+                    if (showMiniPlayer) {
+                        GlobalMiniPlayer(
+                            onOpenPlayer = { nav.navigate(Screen.AudioPlayer.route) },
+                        )
+                    }
+                    if (!hasOwnTopBar && visibleBottomItems.isNotEmpty()) {
+                        // Fix #337: если все кнопки нижней панели скрыты —
+                        // NavigationBar не показываем (рамка осталась бы).
+                        // Hide-on-scroll (#299): AnimatedVisibility с shrinkVertically
+                        // схлопывает NavigationBar к нижнему краю. Scaffold измеряет
+                        // высоту bottomBar слота — при collapse высота=0 → content
+                        // padding bottom автоматически становится 0, контент
+                        // разворачивается на всю высоту. MiniPlayer остаётся видимым.
+                        // Fix #334: inset перенесён на outer Column — здесь НЕ дублируем.
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = bottomBarVisible,
+                            enter = androidx.compose.animation.expandVertically(
+                                expandFrom = Alignment.Bottom,
+                                animationSpec = vk.mint.ui.anim.tweenScaled(animScale, 220),
+                            ),
+                            exit = androidx.compose.animation.shrinkVertically(
+                                shrinkTowards = Alignment.Bottom,
+                                animationSpec = vk.mint.ui.anim.tweenScaled(animScale, 200),
+                            ),
+                        ) {
+                            // #BOTTOM-SCROLL (2026-08-01): если на нижней панели
+                            // больше 5 кнопок (пользователь включил доп. пункты
+                            // через «Редактор панелей») — панель становится
+                            // горизонтально прокручиваемой. Каждая кнопка получает
+                            // фиксированную ширину 80.dp (как стандартный
+                            // NavigationBarItem при 5 элементах), Row скроллится.
+                            // При ≤5 кнопок — обычный NavigationBar (кнопки
+                            // распределяются по всей ширине через weight).
+                            if (visibleBottomItems.size <= 5) {
+                                // Fix #COMPILE: NavigationBarItem вызывается INLINE
+                                // внутри NavigationBar{ } content-scope (как в старом
+                                // коде до #BOTTOM-SCROLL). В M3 BOM 2025.06 вызов
+                                // NavigationBarItem из отдельной @Composable fun
+                                // давал 'Unresolved reference' — внутри NavigationBar{}
+                                // scope резолвится корректно.
+                                NavigationBar {
+                                    visibleBottomItems.forEach { item ->
+                                        val itemDest = item.destinationRoute
+                                        val navIcon = item.icon
+                                        val unreadCount = if (itemDest == Screen.Messages.route) {
+                                            vk.mint.realtime.UnreadMessagesCounter.unreadCount.collectAsState().value
+                                        } else {
+                                            0
+                                        }
+                                        val isSelected = currentRoute == itemDest
+                                        NavigationBarItem(
+                                            selected = isSelected,
+                                            onClick = {
+                                                nav.navigatePanelItem(item)
+                                            },
+                                            icon = {
+                                                if (navIcon != null) {
+                                                    if (itemDest == Screen.Messages.route && unreadCount > 0) {
+                                                        BadgedBox(
+                                                            badge = {
+                                                                Badge { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
+                                                            },
+                                                        ) {
+                                                            Icon(
+                                                                navIcon,
+                                                                contentDescription = item.title,
+                                                                modifier = Modifier.size(24.dp),
+                                                            )
+                                                        }
+                                                    } else {
+                                                        Icon(
+                                                            navIcon,
+                                                            contentDescription = item.title,
+                                                            modifier = Modifier.size(24.dp),
+                                                        )
+                                                    }
+                                                }
+                                            },
+                                            label = {
+                                                Text(
+                                                    text = if (item.key == "messenger") "Чаты" else item.title,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                )
+                                            },
+                                            alwaysShowLabel = true,
+                                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                                                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                                indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            ),
+                                        )
+                                    }
+                                }
+                            } else {
+                                val bottomScrollState = rememberScrollState()
+                                Surface(
+                                    color = NavigationBarDefaults.containerColor,
+                                    contentColor = androidx.compose.material3.contentColorFor(
+                                        NavigationBarDefaults.containerColor
+                                    ),
+                                    tonalElevation = NavigationBarDefaults.Elevation,
+                                    shadowElevation = 0.dp,
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(bottomScrollState)
+                                            .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+                                            .height(UiScale.scaled(80.dp))
+                                            .padding(horizontal = 4.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        visibleBottomItems.forEach { item ->
+                                            BottomNavScrollButton(
+                                                item = item,
+                                                selected = currentRoute == item.destinationRoute,
+                                                onClick = {
+                                                    nav.navigatePanelItem(item)
+                                                },
+                                                modifier = Modifier.width(80.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Fix #334: ранее тут был Spacer(windowInsetsPadding(navigationBars))
+                        // для экранов с hasOwnTopBar. Теперь inset на outer Column (стр.588),
+                        // Spacer избыточен — Column уже резервирует место под nav bar.
+                    }
+                }
+            },
+        ) { padding ->
+            // #FEED-FAB-SYNC: пробрасываем bottomBarVisibleState в дочерние экраны,
+            // чтобы FeedScreen показывал FAB «наверх» синхронно со скрытием панели.
+            CompositionLocalProvider(
+                LocalAnimScale provides animScale,
+                LocalBottomBarVisible provides bottomBarVisibleState,
+            ) {
+            NavHost(
+                navController = nav,
+                startDestination = sanitizedInitialRoute,
+                modifier = Modifier.padding(padding).imePadding(),
+                // Fix #224: масштабируемые fade-переходы между экранами.
+                // animScale=0 → tweenScaled возвращает snap() → мгновенный переход.
+                // animScale=1 → нормальный fade 220ms (enter) / 180ms (exit).
+                //
+                // Fix #226: переключение между табами дока/дровера — БЕЗ анимации.
+                // Раньше каждый тап по нижнему доку запускал fadeIn/fadeOut →
+                // видимое «дёрганье»/мигание при смене таба. Табы — равноправные
+                // разделы, а не drill-down навигация, поэтому смена таба должна
+                // быть мгновенной. Fade остаётся только для push/pop детальных
+                // экранов (ChatDetail, PostDetail, Community, UserProfile и т.д.).
+                enterTransition = {
+                    val from = initialState.destination.route
+                    val to = targetState.destination.route
+                    if (from in tabRouteSet && to in tabRouteSet) EnterTransition.None
+                    else fadeIn(tweenScaled<Float>(animScale, 220))
+                },
+                exitTransition = {
+                    val from = initialState.destination.route
+                    val to = targetState.destination.route
+                    if (from in tabRouteSet && to in tabRouteSet) ExitTransition.None
+                    else fadeOut(tweenScaled<Float>(animScale, 180))
+                },
+                popEnterTransition = {
+                    val from = initialState.destination.route
+                    val to = targetState.destination.route
+                    if (from in tabRouteSet && to in tabRouteSet) EnterTransition.None
+                    else fadeIn(tweenScaled<Float>(animScale, 220))
+                },
+                popExitTransition = {
+                    val from = initialState.destination.route
+                    val to = targetState.destination.route
+                    if (from in tabRouteSet && to in tabRouteSet) ExitTransition.None
+                    else fadeOut(tweenScaled<Float>(animScale, 180))
+                },
+            ) {
+                composable(Screen.Feed.route) {
+                    FeedScreen(
+                        onVideoClick = { video ->
+                            VideoHolder.open(video)
+                        },
+                        // Fix #67: навигация на экран сообщества из ленты.
+                        onGroupClick = { groupId ->
+                            nav.navigate(Screen.Community.buildRoute(groupId))
+                        },
+                        // Fix #71: навигация на детальный экран поста.
+                        onPostClick = { post ->
+                            PostHolder.last = post
+                            nav.navigate(Screen.PostDetail.buildRoute(post.ownerId, post.id))
+                        },
+                        // Sprint 1, P0-2 (#74): навигация на экран чужого профиля.
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                        // Stories → StoryViewerScreen.
+                        onStoryViewerClick = {
+                            nav.navigate(Screen.StoryViewer.route)
+                        },
+                        // #FEED-MENU-VKWEB (Fix #353): «Редактировать» в правом меню
+                        // ленты → «Скрытые источники» (Screen.FeedHidden) — тот же
+                        // callback-паттерн навигации, что и в SettingsScreen (:1975).
+                        onOpenHiddenSources = {
+                            nav.navigate(Screen.FeedHidden.route)
+                        },
+                        // #FEED-MENU-VKWEB-2: из правого меню ленты на другие разделы
+                        // (Уведомления/Мессенджер/Сообщества/Видео/Клипы/Музыка/
+                        // Сервисы/Закладки/Файлы). Drawer-паттерн (popUpTo+restoreState),
+                        // чтобы табы нижней панели/разделы открывались бэкстек-корректно.
+                        onFeedPanelNavigate = { screen ->
+                            nav.navigate(screen.navRoute()) {
+                                popUpTo(nav.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        // #FEED-MENU-NOTIF: категория уведомлений из правого меню ленты →
+                        // NotificationsScreen с этой категорией. Route — параметризованный
+                        // path-аргумент, поэтому навигация идёт через buildRoute(category).
+                        onFeedPanelOpenNotifications = { category ->
+                            AppLog.i("VkMintNavHost", "FEED_MENU_NOTIF: open notifications category='$category'")
+                            nav.navigate(Screen.Notifications.buildRoute(category)) {
+                                popUpTo(nav.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        // #ARCH-CONTAINERS (Этап 1.4): запуск звонка — только через
+                        // реестр (CallStarter). callClick == null → кнопка звонка
+                        // в ленте НЕ рендерится (условие композиции).
+                        onCallClick = callClick,
+                    )
+                }
+                composable(Screen.Messages.route) {
+                    MessagesScreen(
+                        onChatClick = { chat ->
+                            // #IM-CHANNEL-OPEN: хлебная крошка клика по карточке чата —
+                            // точка 1 трассировки. isChannel показывает, чем считал чат
+                            // СПИСОК (peer.id<0 && can_write.allowed==false); peerId<0 —
+                            // сам пир-канал. Если крошки НЕТ в логкате после тапа — клик
+                            // не доходит (проблема в MessagesScreen/ChatCard).
+                            val clickPeerId = chat.peer.id
+                            val rawClickTitle = chat.peer.title
+                            // NULL-ЯВНО: явная if вместо elvis (строка была
+                            // `chat.peer.title ?: "Диалог"` — переписана при правке).
+                            val clickTitle = if (rawClickTitle != null) rawClickTitle else "Диалог"
+                            val clickCanWriteKnown = chat.canWrite != null
+                            AppLog.i("VkMintNavHost",
+                                "#IM-CHANNEL-OPEN click: peerId=$clickPeerId isChannel=${chat.isChannel} " +
+                                    "canWriteKnown=$clickCanWriteKnown title='$clickTitle'")
+                            nav.navigate(
+                                Screen.ChatDetail.buildRoute(clickPeerId, clickTitle, chat.peer.photo)
+                            )
+                        },
+                        onFoldersSettings = {
+                            nav.navigate(Screen.FoldersSettings.route)
+                        },
+                    )
+                }
+                composable(Screen.Music.route) {
+                    MusicScreen(
+                        onOpenPlayer = { nav.navigate(Screen.AudioPlayer.route) },
+                        onOpenQueue = { nav.navigate(Screen.AudioQueue.route) },
+                        // #MUSIC-PORT: навигация на экраны музыкальной библиотеки.
+                        onOpenPlaylists = { nav.navigate(Screen.MusicPlaylists.route) },
+                        onOpenAlbums = { nav.navigate(Screen.MusicAlbums.route) },
+                        onOpenArtists = { nav.navigate(Screen.MusicArtists.route) },
+                        onOpenPlaylist = { ownerId, playlistId, accessKey ->
+                            nav.navigate(Screen.PlaylistDetail.buildRoute(ownerId, playlistId, accessKey))
+                        },
+                        onOpenAlbum = { ownerId, albumId, accessKey ->
+                            nav.navigate(Screen.PlaylistDetail.buildRoute(ownerId, albumId, accessKey))
+                        },
+                        onOpenArtist = { slug, name ->
+                            nav.navigate(Screen.ArtistDetail.buildRoute(slug, name))
+                        },
+                        onShowAll = { sectionId, title ->
+                            nav.navigate(Screen.CatalogSection.buildRoute(sectionId, title))
+                        },
+                    )
+                }
+                // #MUSIC-PORT: экраны музыкальной библиотеки.
+                composable(Screen.MusicPlaylists.route) {
+                    MusicPlaylistsScreen(
+                        onBack = { nav.popBackStack() },
+                        onOpenPlaylist = { ownerId, playlistId, accessKey ->
+                            nav.navigate(Screen.PlaylistDetail.buildRoute(ownerId, playlistId, accessKey))
+                        },
+                    )
+                }
+                composable(
+                    route = Screen.PlaylistDetail.route,
+                    arguments = listOf(
+                        navArgument(Screen.PlaylistDetail.ARG_OWNER_ID) { type = NavType.LongType },
+                        navArgument(Screen.PlaylistDetail.ARG_PLAYLIST_ID) { type = NavType.LongType },
+                        navArgument(Screen.PlaylistDetail.ARG_ACCESS_KEY) {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        },
+                    ),
+                ) { entry ->
+                    val ownerId = entry.arguments?.getLong(Screen.PlaylistDetail.ARG_OWNER_ID) ?: 0L
+                    val playlistId = entry.arguments?.getLong(Screen.PlaylistDetail.ARG_PLAYLIST_ID) ?: 0L
+                    val accessKey = entry.arguments?.getString(Screen.PlaylistDetail.ARG_ACCESS_KEY)
+                        ?.takeIf { it.isNotBlank() }
+                    PlaylistDetailScreen(
+                        ownerId = ownerId,
+                        playlistId = playlistId,
+                        accessKey = accessKey,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(Screen.MusicAlbums.route) {
+                    MusicAlbumsScreen(
+                        onBack = { nav.popBackStack() },
+                        onOpenAlbum = { ownerId, albumId, accessKey ->
+                            nav.navigate(Screen.PlaylistDetail.buildRoute(ownerId, albumId, accessKey))
+                        },
+                    )
+                }
+                composable(Screen.MusicArtists.route) {
+                    MusicArtistsScreen(
+                        onBack = { nav.popBackStack() },
+                        onOpenArtist = { slug, name -> nav.navigate(Screen.ArtistDetail.buildRoute(slug, name)) },
+                    )
+                }
+                composable(
+                    route = Screen.ArtistDetail.route,
+                    arguments = listOf(
+                        navArgument(Screen.ArtistDetail.ARG_SLUG) { type = NavType.StringType },
+                        navArgument(Screen.ArtistDetail.ARG_NAME) {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        },
+                    ),
+                ) { entry ->
+                    val slug = entry.arguments?.getString(Screen.ArtistDetail.ARG_SLUG) ?: ""
+                    val name = entry.arguments?.getString(Screen.ArtistDetail.ARG_NAME) ?: ""
+                    ArtistDetailScreen(
+                        slug = slug,
+                        name = name,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // #MUSIC-CATALOG-SHOW-ALL: полный список блока каталога.
+                composable(
+                    route = Screen.CatalogSection.route,
+                    arguments = listOf(
+                        navArgument(Screen.CatalogSection.ARG_SECTION_ID) { type = NavType.StringType },
+                        navArgument(Screen.CatalogSection.ARG_TITLE) {
+                            type = NavType.StringType
+                            defaultValue = "Показать все"
+                        },
+                    ),
+                ) { entry ->
+                    val sectionId = entry.arguments?.getString(Screen.CatalogSection.ARG_SECTION_ID) ?: ""
+                    val title = entry.arguments?.getString(Screen.CatalogSection.ARG_TITLE) ?: "Показать все"
+                    CatalogSectionScreen(
+                        sectionId = sectionId,
+                        title = title,
+                        onBack = { nav.popBackStack() },
+                        onOpenPlaylist = { ownerId, playlistId, accessKey ->
+                            nav.navigate(Screen.PlaylistDetail.buildRoute(ownerId, playlistId, accessKey))
+                        },
+                    )
+                }
+                composable(Screen.AudioPlayer.route) {
+                    AudioPlayerScreen(
+                        onBack = { nav.popBackStack() },
+                        onOpenQueue = { nav.navigate(Screen.AudioQueue.route) },
+                    )
+                }
+                composable(Screen.AudioQueue.route) {
+                    AudioQueueScreen(
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(Screen.Video.route) {
+                    VideoScreen(
+                        onVideoClick = { video ->
+                            VideoHolder.open(video)
+                        },
+                    )
+                }
+                composable(Screen.Profile.route) {
+                    ProfileScreen(
+                        // W31-b: параметр onLogout УДАЛЁН из ProfileScreen вместе
+                        // с logout-UI экрана — выход из аккаунта ТОЛЬКО в боковом
+                        // drawer (Fix #369, onLogoutWithHoldersClear живёт там).
+                        // Fix #70: навигация на видеоплеер из постов на стене профиля.
+                        onVideoClick = { video ->
+                            VideoHolder.open(video)
+                        },
+                        // Шаг 5 (#32e): тап по комментарию поста → PostDetailScreen.
+                        onCommentClick = { post ->
+                            PostHolder.last = post
+                            nav.navigate(Screen.PostDetail.buildRoute(post.ownerId, post.id))
+                        },
+                        // П-3 (#PROFILE-SNAP): кнопка «Редактировать профиль» →
+                        // полноэкранный редактор (account.saveProfileInfo +
+                        // аватар/обложка). Возврат popBackStack → ProfileScreen
+                        // проходит свежую загрузку (usersGetFullExtended).
+                        onEditProfileClick = { nav.navigate(Screen.ProfileEdit.route) },
+                        // П-6b (#PROFILE-GAP-6b): карточка «Возможно, вы знакомы» /
+                        // юзер-закладка → чужой профиль (паттерн FriendsScreen.onUserClick).
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                        // П-6b: пост-закладка → PostDetailScreen
+                        // (паттерн BookmarksScreen.onPostClick: PostHolder.last + navigate).
+                        onPostClick = { post ->
+                            PostHolder.last = post
+                            nav.navigate(Screen.PostDetail.buildRoute(post.ownerId, post.id))
+                        },
+                        // П-7-AB: тапы правой колонки веба (списки) — чипы «Друзья»/
+                        // «Подписчики» CountersRow и строка «Подписки». «Друзья» →
+                        // глобальный Screen.Friends (маршрут без userId — на СВОЁМ
+                        // профиле корректно); списки подписчиков/подписок — по p.id.
+                        onFriendsClick = { nav.navigate(Screen.Friends.route) },
+                        onFollowersClick = { userId ->
+                            nav.navigate(Screen.FollowList.buildRoute(userId, Screen.FollowList.MODE_FOLLOWERS))
+                        },
+                        onSubscriptionsClick = { userId ->
+                            nav.navigate(Screen.FollowList.buildRoute(userId, Screen.FollowList.MODE_SUBSCRIPTIONS))
+                        },
+                    )
+                }
+                // П-3 (#PROFILE-SNAP): редактор профиля — свой Scaffold+TopAppBar
+                // («← Редактирование профиля · Сохранить»), маршрут в hasOwnTopBar.
+                composable(Screen.ProfileEdit.route) {
+                    EditProfileScreen(onBack = { nav.popBackStack() })
+                }
+                composable(Screen.Friends.route)       {
+                    FriendsScreen(
+                        // Sprint 1, P0-2 (#74): тап на друга → экран профиля.
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                        // #CALLS: кнопка звонка на карточке друга.
+                        // #ARCH-CONTAINERS (Этап 1.4): через CallStarter; null →
+                        // кнопка не рендерится (см. FriendsScreen).
+                        onCallClick = callClick,
+                    )
+                }
+                composable(Screen.Groups.route) {
+                    GroupsScreen(
+                        onGroupClick = { groupId ->
+                            nav.navigate(Screen.Community.buildRoute(groupId))
+                        },
+                    )
+                }
+                composable(Screen.Photos.route)        { PhotosScreen() }
+                composable(Screen.Search.route)        {
+                    SearchScreen(
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                        onGroupClick = { groupId ->
+                            nav.navigate(Screen.Community.buildRoute(groupId))
+                        },
+                    )
+                }
+                composable(Screen.Bookmarks.route)     {
+                    BookmarksScreen(
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                        onGroupClick = { groupId ->
+                            nav.navigate(Screen.Community.buildRoute(groupId))
+                        },
+                        onPostClick = { ownerId, postId ->
+                            PostHolder.last = vk.mint.data.model.Post(
+                                ownerId = ownerId, fromId = ownerId, id = postId, date = 0, text = "",
+                            )
+                            nav.navigate(Screen.PostDetail.buildRoute(ownerId, postId))
+                        },
+                        onVideoClick = { ownerId, videoId ->
+                            // FIX: VideoHolder.last не устанавливался — VideoPlayerScreen не получал Video
+                            VideoHolder.open(Video(
+                                id = videoId, ownerId = ownerId, title = "", duration = 0, date = 0,
+                            ))
+                        },
+                    )
+                }
+                composable(Screen.Documents.route)     { DocumentsScreen() }
+                // #CALLS: история звонков. #ARCH-CONTAINERS (Этап 1.4): пункт
+                // drawer «Звонки» теперь из реестра — без контейнера этот экран
+                // недостижим; сам NavHost-destination остаётся у хоста.
+composable(Screen.CallsHistory.route) {
+                    vk.mint.ui.screens.calls.CallsMainScreen(
+                        onBack = { nav.popBackStack() },
+                        onNavigateToCall = { peerId ->
+                            // #ARCH-CONTAINERS (Этап 1.4): redial — тоже через
+                            // CallStarter. Стартера нет → только лог: экран в этом
+                            // состоянии недостижим (нет drawer-пункта). title/photo
+                            // здесь нет (секция отдаёт peerId) → CallScreen подтянет
+                            // имя/аватар сам (usersGetByIds, OutgoingCallMeta пуст).
+                            val starter = callStarter
+                            if (starter != null) {
+                                starter.startCall(peerId, video = false)
+                            } else {
+                                AppLog.w("VkMintNavHost", "CONTAINERS: CallStarter недоступен — redial из истории звонков пропущен (peerId=$peerId)")
+                            }
+                        },
+                    )
+                }
+                composable(Screen.Clips.route) {
+                    // §37.12 Phase 3 + 4 + 6: Clips feed (vertical pager, full-screen)
+                    // + interactions (share / comments / more-actions sheets).
+                    val vm: vk.mint.ui.screens.clips.ClipsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                        factory = vk.mint.ui.screens.clips.clipsViewModelFactory(),
+                    )
+                    // Локальный state для выбранного clip + типа sheet'а.
+                    var shareClip by remember { androidx.compose.runtime.mutableStateOf<vk.mint.data.model.Video?>(null) }
+                    var commentClip by remember { androidx.compose.runtime.mutableStateOf<vk.mint.data.model.Video?>(null) }
+                    var moreClip by remember { androidx.compose.runtime.mutableStateOf<vk.mint.data.model.Video?>(null) }
+                    val app = remember { VkMintApp.get(nav.context) }
+                    val clipScope = rememberCoroutineScope()
+
+                    vk.mint.ui.screens.clips.ClipsFeedScreen(
+                        vm = vm,
+                        onAuthorClick = { ownerId ->
+                            if (ownerId > 0) {
+                                nav.navigate(Screen.UserProfile.buildRoute(ownerId))
+                            } else if (ownerId < 0) {
+                                nav.navigate(Screen.Community.buildRoute(-ownerId))
+                            }
+                        },
+                        onBack = {
+                            if (!nav.popBackStack()) {
+                                nav.navigate(Screen.Feed.route) {
+                                    popUpTo(nav.graph.startDestinationId) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        onShareClip = { clip -> shareClip = clip },
+                        onCommentClip = { clip -> commentClip = clip },
+                        onMoreActions = { clip -> moreClip = clip },
+                        onHashtagClick = { tag ->
+                            // §37.10: тап по хештегу → поиск clips по этому тегу.
+                            vm.search(tag)
+                        },
+                        onCreateClip = { nav.navigate(Screen.ClipCreate.route) },
+                    )
+
+                    // Phase 4: sheets поверх клипов.
+                    shareClip?.let { clip ->
+                        vk.mint.ui.screens.clips.ClipShareSheet(
+                            clip = clip,
+                            onDismiss = { shareClip = null },
+                            onShareToChat = { peerId, peerName ->
+                                clipScope.launch {
+                                    try {
+                                        // §37.12 #322: для приватных клипов нужен access_key в attachment.
+                                        val attachment = buildString {
+                                            append("video").append(clip.ownerId).append("_").append(clip.id)
+                                            if (!clip.accessKey.isNullOrBlank()) append("_").append(clip.accessKey)
+                                        }
+                                        val mid = app.apiClient.messagesSend(peerId, "", attachment = attachment)
+                                        if (mid > 0) {
+                                            android.widget.Toast.makeText(
+                                                nav.context, "Отправлено в «$peerName»", android.widget.Toast.LENGTH_SHORT,
+                                            ).show()
+                                        } else {
+                                            android.widget.Toast.makeText(
+                                                nav.context, "Не удалось отправить", android.widget.Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(
+                                            nav.context, "Ошибка: ${e.message}", android.widget.Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                }
+                            },
+                            onShareToWall = {
+                                clipScope.launch {
+                                    try {
+                                        // §37.12 #322: для приватных клипов нужен access_key в attachment.
+                                        val attachment = buildString {
+                                            append("video").append(clip.ownerId).append("_").append(clip.id)
+                                            if (!clip.accessKey.isNullOrBlank()) append("_").append(clip.accessKey)
+                                        }
+                                        val postId = app.apiClient.wallPostWithAttachments(
+                                            attachments = attachment,
+                                            message = "",
+                                        )
+                                        android.widget.Toast.makeText(
+                                            nav.context,
+                                            if (postId > 0) "Опубликовано на стене" else "Не удалось опубликовать",
+                                            android.widget.Toast.LENGTH_SHORT,
+                                        ).show()
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(
+                                            nav.context, "Ошибка: ${e.message}", android.widget.Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                }
+                            },
+                            onCopyLink = {
+                                val link = "https://vk.com/clip${clip.ownerId}_${clip.id}"
+                                val cm = nav.context.getSystemService(android.content.ClipboardManager::class.java)
+                                cm?.setPrimaryClip(android.content.ClipData.newPlainText("VK Clip", link))
+                                android.widget.Toast.makeText(
+                                    nav.context, "Ссылка скопирована", android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                        )
+                    }
+
+                    commentClip?.let { clip ->
+                        vk.mint.ui.screens.clips.ClipCommentsSheet(
+                            clip = clip,
+                            onDismiss = { commentClip = null },
+                        )
+                    }
+
+                    moreClip?.let { clip ->
+                        vk.mint.ui.screens.clips.ClipMoreActionsSheet(
+                            clip = clip,
+                            onDismiss = { moreClip = null },
+                            onSubscribe = {
+                                val wasSubscribed = clip.isSubscribedToAuthor
+                                vm.toggleSubscribe(clip) { ok ->
+                                    android.widget.Toast.makeText(
+                                        nav.context,
+                                        when {
+                                            !ok && !wasSubscribed -> "Не удалось подписаться"
+                                            !ok && wasSubscribed -> "Не удалось отписаться"
+                                            wasSubscribed -> "Вы отписались"
+                                            else -> "Вы подписались"
+                                        },
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            },
+                            onUnsubscribe = {
+                                val wasSubscribed = clip.isSubscribedToAuthor
+                                vm.toggleSubscribe(clip) { ok ->
+                                    android.widget.Toast.makeText(
+                                        nav.context,
+                                        when {
+                                            !ok && wasSubscribed -> "Не удалось отписаться"
+                                            !ok && !wasSubscribed -> "Не удалось подписаться"
+                                            wasSubscribed -> "Вы отписались"
+                                            else -> "Вы подписались"
+                                        },
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            },
+                            onFavorite = {
+                                val wasFav = clip.isFavorited
+                                vm.toggleFavorite(clip) { ok ->
+                                    android.widget.Toast.makeText(
+                                        nav.context,
+                                        when {
+                                            !ok && !wasFav -> "Не удалось добавить в закладки"
+                                            !ok && wasFav -> "Не удалось убрать из закладок"
+                                            wasFav -> "Убрано из закладок"
+                                            else -> "Добавлено в закладки"
+                                        },
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            },
+                            onReport = {
+                                vm.reportClip(clip)
+                                android.widget.Toast.makeText(
+                                    nav.context, "Жалоба отправлена", android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                            onBanAuthor = {
+                                clipScope.launch {
+                                    val ok = app.apiClient.accountBan(clip.ownerId)
+                                    android.widget.Toast.makeText(
+                                        nav.context,
+                                        if (ok) "Автор заблокирован" else "Не удалось заблокировать",
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
+                                    if (ok) vm.refresh()
+                                }
+                            },
+                            onCopyLink = {
+                                val link = "https://vk.com/clip${clip.ownerId}_${clip.id}"
+                                val cm = nav.context.getSystemService(android.content.ClipboardManager::class.java)
+                                cm?.setPrimaryClip(android.content.ClipData.newPlainText("VK Clip", link))
+                                android.widget.Toast.makeText(
+                                    nav.context, "Ссылка скопирована", android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                            onToggleNotifications = {
+                                vm.toggleNotifications(clip)
+                                android.widget.Toast.makeText(
+                                    nav.context,
+                                    if (clip.isSubscribedToAuthor) "Уведомления выключены" else "Уведомления включены",
+                                    android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                            onHideAuthor = {
+                                vm.hideAuthor(clip)
+                                android.widget.Toast.makeText(
+                                    nav.context, "Автор скрыт из ленты", android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                            onEditClip = {
+                                // §37.9: упрощённый flow — Toast, т.к. полноценный editor-screen за рамками #320.
+                                android.widget.Toast.makeText(
+                                    nav.context, "Редактирование скоро будет доступно", android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                            onDeleteClip = {
+                                vm.deleteClip(clip)
+                                android.widget.Toast.makeText(
+                                    nav.context, "Клип удалён", android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                            },
+                        )
+                    }
+                }
+                composable(Screen.ClipCreate.route) {
+                    // §37.12 Phase 5: запись и публикация нового клипа.
+                    vk.mint.ui.screens.clips.ClipCreateScreen(
+                        onBack = {
+                            if (!nav.popBackStack()) {
+                                nav.navigate(Screen.Clips.route) {
+                                    popUpTo(nav.graph.startDestinationId) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        onPublished = { ownerId, videoId ->
+                            // После успешной публикации — назад к ленте clips.
+                            android.widget.Toast.makeText(
+                                nav.context,
+                                "Клип опубликован",
+                                android.widget.Toast.LENGTH_SHORT,
+                            ).show()
+                            nav.popBackStack(Screen.Clips.route, inclusive = false)
+                        },
+                    )
+                }
+                composable(
+                    route = Screen.ClipsOwner.route,
+                    arguments = listOf(
+                        navArgument(Screen.ClipsOwner.ARG_OWNER_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val ownerId = entry.arguments?.getLong(Screen.ClipsOwner.ARG_OWNER_ID) ?: 0L
+                    vk.mint.ui.screens.clips.ClipsOwnerScreen(
+                        ownerId = ownerId,
+                        onBack = { nav.popBackStack() },
+                        // Эталон — как открывают клип из ленты (ClipsFeedScreen):
+                        // через оверлей-плеер VideoHolder (VideoPlayer рендерится как overlay).
+                        onVideoClick = { video -> VideoHolder.open(video) },
+                        onAuthorClick = { authorId ->
+                            if (authorId > 0) {
+                                nav.navigate(Screen.UserProfile.buildRoute(authorId))
+                            } else if (authorId < 0) {
+                                nav.navigate(Screen.Community.buildRoute(-authorId))
+                            }
+                        },
+                    )
+                }
+                // Волна 40 #SECTIONS-WIRE: плитки «Сервисов» открывают готовые
+                // разделы (Сообщества/Друзья/Закладки/Документы/Фото/Видео) —
+                // раньше ВСЕ плитки были заглушками с тостом.
+                composable(Screen.Services.route)      {
+                    ServicesScreen(
+                        onOpenSection = { screen ->
+                            nav.navigate(screen.navRoute())
+                        },
+                        onLogout = { showLogoutDialog = true },
+                        onExitApp = { showExitAppDialog = true },
+                    )
+                }
+                // #VM-3 волна 3: видео-сообщение («кружок») — рекордер с выбором
+                // формы-маски и отправкой в чат (peerId из path-параметра).
+                composable(
+                    route = Screen.VideoMessageCreate.route,
+                    arguments = listOf(
+                        navArgument(Screen.VideoMessageCreate.ARG_PEER_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val peerId = entry.arguments?.getLong(Screen.VideoMessageCreate.ARG_PEER_ID) ?: 0L
+                    vk.mint.ui.screens.clips.VideoMessageCreateScreen(
+                        peerId = peerId,
+                        onBack = {
+                            if (!nav.popBackStack()) {
+                                nav.navigate(Screen.Messages.route) {
+                                    popUpTo(nav.graph.startDestinationId) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                    )
+                }
+                composable(
+                route = Screen.Notifications.route,
+                // #FEED-MENU-NOTIF: категория уведомлений — path-аргумент с дефолтом
+                // "all" («Уведомления профиля»). Прочитана из entry.arguments и
+                // передана как начальный serverCategory в NotificationsScreen.
+                arguments = listOf(
+                    navArgument(Screen.Notifications.ARG_CATEGORY) {
+                        type = NavType.StringType
+                        defaultValue = Screen.Notifications.DEFAULT_CATEGORY
+                    },
+                ),
+            ) { entry ->
+                NotificationsScreen(
+                    initialCategory = entry.arguments
+                        ?.getString(Screen.Notifications.ARG_CATEGORY)
+                        ?.takeIf { it.isNotBlank() }
+                        ?: Screen.Notifications.DEFAULT_CATEGORY,
+                    onPostClick = { ownerId, postId ->
+                            PostHolder.last = vk.mint.data.model.Post(
+                                ownerId = ownerId, fromId = ownerId, id = postId, date = 0, text = "",
+                            )
+                            nav.navigate(Screen.PostDetail.buildRoute(ownerId, postId))
+                        },
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                        // #NOTIF-DEEPLINK (2026-10-02): клик по уведомлению → точный
+                        // target (пост с commentId, фото, видео, юзер, сообщество).
+                        onDeepLink = { action ->
+                            handleDeepLink(action, nav)
+                        },
+                        // Audit #40: wired onActionReply — открывает чат с пользователем.
+                        // onActionGiftReply остаётся null — экран подарков не реализован.
+                        onActionReply = { targetUserId ->
+                            nav.navigate(Screen.ChatDetail.buildRoute(targetUserId, "", null))
+                        },
+                        // #NOTIF-NFDCAT: кнопка «Настройки» в шапке уведомлений →
+                        // экран настроек уведомлений (NotificationSettingsScreen).
+                        onOpenNotificationSettings = {
+                            nav.navigate(Screen.NotificationSettings.route)
+                        },
+                    ) }
+                composable(Screen.Settings.route) {
+                    SettingsScreen(
+                        onOpenNotificationSettings = {
+                            nav.navigate(Screen.NotificationSettings.route)
+                        },
+                        onOpenDevices = {
+                            nav.navigate(Screen.Devices.route)
+                        },
+                        // §PROFILE-P4: VK-приватность (BFF settingsGeneral.*) и
+                        // самостоятельный чёрный список — тот же callback-паттерн.
+                        onOpenPrivacySettings = {
+                            nav.navigate(Screen.SettingsPrivacy.route)
+                        },
+                        onOpenBlacklist = {
+                            nav.navigate(Screen.Blacklist.route)
+                        },
+                        // IMP-FEED-2: «Скрытые источники» — тот же callback-паттерн
+                        // навигации, что и onOpenBlacklist.
+                        onOpenHiddenSources = {
+                            nav.navigate(Screen.FeedHidden.route)
+                        },
+                    )
+                }
+                composable(Screen.NotificationSettings.route) {
+                    NotificationSettingsScreen(onBack = { nav.popBackStack() })
+                }
+                // §PROFILE-P4: VK-приватность (BFF settingsGeneral.get/setPrivacySettings).
+                composable(Screen.SettingsPrivacy.route) {
+                    PrivacySettingsScreen(onBack = { nav.popBackStack() })
+                }
+                // §PROFILE-P4: самостоятельный чёрный список (перенесён из
+                // NotificationSettingsScreen, инвентарь §1.6).
+                composable(Screen.Blacklist.route) {
+                    BlacklistScreen(onBack = { nav.popBackStack() })
+                }
+                // IMP-FEED-2: «Скрытые источники» — менеджер мьютов ленты
+                // (newsfeed.getBanned + newsfeed.unban). Тап по источнику —
+                // профиль/сообщество (паттерн FollowList-композибла П-7-AB).
+                composable(Screen.FeedHidden.route) {
+                    FeedHiddenSourcesScreen(
+                        onBack = { nav.popBackStack() },
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                        onGroupClick = { groupId ->
+                            nav.navigate(Screen.Community.buildRoute(groupId))
+                        },
+                    )
+                }
+                // §49.6 Sprint VK-ID-1.2: Управление сессиями/устройствами аккаунта.
+                composable(Screen.Devices.route) {
+                    vk.mint.ui.screens.devices.DevicesScreen(
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // #CALLS: экран звонка (входящий/исходящий/разговор).
+                composable(
+                    route = Screen.Call.route,
+                    arguments = listOf(
+                        navArgument(Screen.Call.ARG_PEER_ID) { type = NavType.LongType },
+                        navArgument(Screen.Call.ARG_TITLE) { type = NavType.StringType; defaultValue = "Звонок" },
+                        navArgument(Screen.Call.ARG_PHOTO) { type = NavType.StringType; defaultValue = "" },
+                        navArgument(Screen.Call.ARG_INCOMING) { type = NavType.BoolType; defaultValue = false },
+                        navArgument(Screen.Call.ARG_PAYLOAD) { type = NavType.StringType; defaultValue = "" },
+                        // #CALLS-VIDEO-ROUTE (Этап Г): видеозвонок (query-параметр маршрута).
+                        navArgument(Screen.Call.ARG_VIDEO) { type = NavType.BoolType; defaultValue = false },
+                    ),
+                ) { entry ->
+                    val peerId = entry.arguments?.getLong(Screen.Call.ARG_PEER_ID) ?: 0L
+                    val title = entry.arguments?.getString(Screen.Call.ARG_TITLE) ?: "Звонок"
+                    val photo = entry.arguments?.getString(Screen.Call.ARG_PHOTO)?.takeIf { it.isNotBlank() }
+                    val incoming = entry.arguments?.getBoolean(Screen.Call.ARG_INCOMING) ?: false
+                    val payload = entry.arguments?.getString(Screen.Call.ARG_PAYLOAD)?.takeIf { it.isNotBlank() }
+                    // #NULL-EXPLICIT: args захватом в val (без ?./?: в новом коде).
+                    val videoArgs = entry.arguments
+                    val video = if (videoArgs != null) videoArgs.getBoolean(Screen.Call.ARG_VIDEO) else false
+                    vk.mint.ui.screens.calls.CallScreen(
+                        peerId = peerId,
+                        title = title,
+                        photo = photo,
+                        incoming = incoming,
+                        deps = app,
+                        onNavigateBack = { nav.popBackStack() },
+                        incomingPayload = payload,
+                        // #CALLS-JOIN-BY-LINK (Этап Г): сессия join-по-ссылке из holder'а
+                        // (кладёт CallsJoinByLinkDialog после реального joinConversationByLink).
+                        // CallScreen consume'ит её при композиции (см. экран).
+                        joinByLink = vk.mint.ui.screens.calls.CallJoinByLinkHolder.session != null,
+                    )
+}
+                composable(Screen.CallsWebView.route) {
+                    vk.mint.ui.screens.calls.CallsWebViewScreen(
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(Screen.About.route) { AboutScreen() }
+                composable(Screen.Logs.route)          {
+                    // Fix #114: «Закрыть» вместо «назад». popBackStack() может
+                    // вернуть false, если Logs оказался startDestination
+                    // (lastRoute="logs" мог быть сохранён до фикса #114).
+                    // В этом случае явно навигируем на Feed — всегда работает.
+                    LogScreen(onClose = {
+                        if (!nav.popBackStack()) {
+                            nav.navigate(Screen.Feed.route) {
+                                popUpTo(nav.graph.startDestinationId) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    })
+                }
+                composable(Screen.StoryViewer.route) {
+                    val context = LocalContext.current
+                    StoryViewerScreen(
+                        onBack = { nav.popBackStack() },
+                        onOpenUrlInternal = { url ->
+                            nav.navigate(Screen.InternalBrowser.buildRoute(url))
+                        },
+                        // B3 (tap-zones): клик по стикерам сторис.
+                        onOpenAuthorClips = { ownerId ->
+                            nav.navigate(Screen.ClipsOwner.buildRoute(ownerId))
+                        },
+                        onOpenPost = { ownerId, postId ->
+                            if (postId > 0L && ownerId != 0L) {
+                                nav.navigate(Screen.PostDetail.buildRoute(ownerId, postId))
+                            }
+                        },
+                        onOpenAuthorPhotos = { ownerId ->
+                            // P0.18 (Task 30): Фото автора — открываем CommunityScreen
+                            // на вкладке Фото (tab=1), если ownerId<0 (сообщество).
+                            // Для ownerId>0 (пользователь) — Toast (UserProfile не имеет
+                            // отдельного фото-экрана с ownerId filter — backlog).
+                            if (ownerId < 0L) {
+                                val groupId = -ownerId
+                                nav.navigate(Screen.Community.buildRoute(groupId, tab = 1))
+                            } else if (ownerId > 0L) {
+                                android.widget.Toast
+                                    .makeText(context, "Фото автора (скоро)", android.widget.Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        },
+                        // P0.14 (Task 25): overlay-ссылка «Видео автора».
+                        // P0.18 (Task 30): для ownerId<0 — Community на вкладке Видео (tab=2).
+                        onOpenAuthorVideos = { ownerId ->
+                            if (ownerId < 0L) {
+                                val groupId = -ownerId
+                                nav.navigate(Screen.Community.buildRoute(groupId, tab = 2))
+                            } else if (ownerId > 0L) {
+                                android.widget.Toast
+                                    .makeText(context, "Видео автора (скоро)", android.widget.Toast.LENGTH_SHORT)
+                                    .show()
+                            }
+                        },
+                        // P0.15 (Task 25): тап по шапке (аватар + имя автора) → стена автора.
+                        // ownerId > 0 → UserProfile (user_profile/{userId}).
+                        // ownerId < 0 → Community (community/{groupId}); groupId = abs(ownerId).
+                        // route-параметр Screen.Community — положительный id (без знака).
+                        onOpenAuthorProfile = { ownerId ->
+                            if (ownerId > 0L) {
+                                nav.navigate(Screen.UserProfile.buildRoute(ownerId))
+                            } else if (ownerId < 0L) {
+                                val groupId = -ownerId
+                                nav.navigate(Screen.Community.buildRoute(groupId))
+                            }
+                            // ownerId == 0 — no-op (некорректный owner, не должно случаться).
+                        },
+                        // B5 (reply-author): ответ на сторис = DM автору. peerId = ownerId
+                        // (у групп owner_id уже отрицательный = peer_id сообщений; у юзера
+                        // owner_id положительный = user_id). Открываем диалог ChatDetail.
+                        onReplyToAuthor = { peerId, title, photo ->
+                            if (peerId != 0L) {
+                                nav.navigate(Screen.ChatDetail.buildRoute(peerId, title, photo)) {
+                                    // Убираем стэковый экран просмотра историй — возврат
+                                    // из диалога не должен снова открывать сторис.
+                                    popUpTo(Screen.StoryViewer.route) { inclusive = true }
+                                }
+                            }
+                        },
+                    )
+                }
+                composable(Screen.OfflineManager.route) {
+                    OfflineManagerScreen(
+                        onBack = { nav.popBackStack() },
+                        // Fix #50: кнопка «Открыть плеер» в AudioOfflineTab ведёт
+                        // на новый минималистичный офлайн-плеер (без сетевых запросов).
+                        onOpenPlayer = { nav.navigate(Screen.OfflineAudioPlayer.route) },
+                        onPlayVideo = { ownerId, videoId, title ->
+                            // #34: Воспроизведение скачанного видео из офлайн-менеджера.
+                            // Создаём минимальный Video объект — VideoPlayerScreen сам проверит
+                            // VideoDownloadManager.getLocalFile() и проиграет локальный файл.
+                            VideoHolder.open(Video(
+                                id = videoId,
+                                ownerId = ownerId,
+                                title = title,
+                                description = null,
+                                duration = 0,
+                                date = 0,
+                            ))
+                        },
+                        // Fix #111: тап по story row в OfflineManager → StoryOfflinePlayerScreen.
+                        // file:// URI, без сети, без CDN URL refresh.
+                        onPlayStory = { ownerId, storyId ->
+                            nav.navigate(Screen.StoryOfflinePlayer.buildRoute(ownerId, storyId))
+                        },
+                        // §37.12 #330: тап по clip row в OfflineManager → ClipOfflinePlayerScreen.
+                        // file:// URI, без сети, TikTok-стиль 9:16 vertical (RESIZE_MODE_ZOOM).
+                        onPlayClip = { ownerId, videoId ->
+                            nav.navigate(Screen.ClipOfflinePlayer.buildRoute(ownerId, videoId))
+                        },
+                    )
+                }
+                // Fix #50: собственный офлайн аудиоплеер — открывается из
+                // OfflineManagerScreen через onOpenPlayer. Читает скачанные треки
+                // из TrackDownloadManager и текущий стейт из PlayerConnection.
+                composable(Screen.OfflineAudioPlayer.route) {
+                    OfflineAudioPlayerScreen(
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // Fix #111: офлайн-просмотр скачанной видео-истории.
+                // Читает локальный .mp4 через StoryVideoDownloadManager.getLocalFile()
+                // и meta через getStoryMeta(). Воспроизведение через ExoPlayer с
+                // file:// URI — полностью офлайн, без сети.
+                composable(
+                    route = Screen.StoryOfflinePlayer.route,
+                    arguments = listOf(
+                        navArgument(Screen.StoryOfflinePlayer.ARG_OWNER_ID) { type = NavType.LongType },
+                        navArgument(Screen.StoryOfflinePlayer.ARG_STORY_ID) { type = NavType.IntType },
+                    ),
+                ) { entry ->
+                    val ownerId = entry.arguments?.getLong(Screen.StoryOfflinePlayer.ARG_OWNER_ID) ?: 0L
+                    val storyId = entry.arguments?.getInt(Screen.StoryOfflinePlayer.ARG_STORY_ID) ?: 0
+                    StoryOfflinePlayerScreen(
+                        ownerId = ownerId,
+                        storyId = storyId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // §37.12 #330: офлайн-просмотр скачанного клипа.
+                // Читает локальный .mp4 через ClipVideoDownloadManager.getLocalFile()
+                // и meta через getClipMeta(). Воспроизведение через ExoPlayer с
+                // file:// URI, RESIZE_MODE_ZOOM (TikTok-стиль 9:16 vertical) — полностью
+                // офлайн, без сети. Открывается из OfflineManager → «Клипы» tab.
+                composable(
+                    route = Screen.ClipOfflinePlayer.route,
+                    arguments = listOf(
+                        navArgument(Screen.ClipOfflinePlayer.ARG_OWNER_ID) { type = NavType.LongType },
+                        navArgument(Screen.ClipOfflinePlayer.ARG_VIDEO_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val ownerId = entry.arguments?.getLong(Screen.ClipOfflinePlayer.ARG_OWNER_ID) ?: 0L
+                    val videoId = entry.arguments?.getLong(Screen.ClipOfflinePlayer.ARG_VIDEO_ID) ?: 0L
+                    ClipOfflinePlayerScreen(
+                        ownerId = ownerId,
+                        videoId = videoId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // #90: VideoPlayer удалён из NavHost — теперь рендерится как overlay.
+                // См. overlayVideo ниже после Scaffold.
+                // Fix #67: экран сообщества.
+                composable(
+                    route = Screen.Community.route,
+                    arguments = listOf(
+                        navArgument(Screen.Community.ARG_GROUP_ID) { type = NavType.LongType },
+                        navArgument(Screen.Community.ARG_TAB) {
+                            type = NavType.StringType
+                            defaultValue = "0"
+                            nullable = true
+                        },
+                    ),
+                ) { entry ->
+                    val groupId = entry.arguments?.getLong(Screen.Community.ARG_GROUP_ID) ?: 0L
+                    val initialTab = entry.arguments?.getString(Screen.Community.ARG_TAB)?.toIntOrNull()
+                        ?.coerceIn(0, 6) ?: 0
+                    CommunityScreen(
+                        groupId = groupId,
+                        initialTab = initialTab,
+                        onBack = { nav.popBackStack() },
+                        onVideoClick = { video ->
+                            VideoHolder.open(video)
+                        },
+                        onPostClick = { post ->
+                            PostHolder.last = post
+                            nav.navigate(Screen.PostDetail.buildRoute(post.ownerId, post.id))
+                        },
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                        // Шаг 4 (#32d): тап по теме обсуждения → BoardTopicScreen.
+                        onTopicClick = { gId, topicId, topicTitle ->
+                            nav.navigate(Screen.BoardTopic.buildRoute(gId, topicId, topicTitle))
+                        },
+                        // #OPVK-EXTRACT (Task 3-c): тап по счётчику подписчиков в
+                        // шапке → список участников сообщества (groups.getMembers).
+                        onMembersClick = { targetGroupId ->
+                            nav.navigate(Screen.GroupMembers.buildRoute(targetGroupId))
+                        },
+                        // W35-b (волна 35): блок «Управление» → админ-экраны.
+                        onAdminSettingsClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminSettings.buildRoute(adminGroupId))
+                        },
+                        onAdminStatsClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminStats.buildRoute(adminGroupId))
+                        },
+                        onAdminPeopleClick = { adminGroupId, tab ->
+                            nav.navigate(Screen.AdminPeople.buildRoute(adminGroupId, tab))
+                        },
+                        onAdminLinksClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminLinks.buildRoute(adminGroupId))
+                        },
+                        onAdminInvitesClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminInvites.buildRoute(adminGroupId))
+                        },
+                        onAdminQueueClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminWallQueue.buildRoute(adminGroupId))
+                        },
+                        onAdminAddressesClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminAddresses.buildRoute(adminGroupId))
+                        },
+                        // W39 (C9): журнал действий сообщества (web-only).
+                        onAdminEventLogClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminEventLog.buildRoute(adminGroupId))
+                        },
+                        onCtaClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminCta.buildRoute(adminGroupId))
+                        },
+                        // W41 (C6): чаты сообщества + раздел «Сообщения».
+                        onChatsClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminChats.buildRoute(adminGroupId))
+                        },
+                        onMessagesClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminMessages.buildRoute(adminGroupId))
+                        },
+                        // C7 (#ADMIN-SECTIONS): разделы сообщества.
+                        onSectionsClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminSections.buildRoute(adminGroupId))
+                        },
+                        // C8 (#ADMIN-COMMENTS): комментарии сообщества.
+                        onAdminCommentsClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminComments.buildRoute(adminGroupId))
+                        },
+                        // ADMIN-EVENTS: «События» сообщества.
+                        onAdminEventsClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminEvents.buildRoute(adminGroupId))
+                        },
+                        // ADMIN-MENU-STRIKES: «Меню» и «Страйки» сообщества.
+                        onAdminMenuClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminMenu.buildRoute(adminGroupId))
+                        },
+                        onAdminStrikesClick = { adminGroupId ->
+                            nav.navigate(Screen.AdminStrikes.buildRoute(adminGroupId))
+                        },
+                    )
+                }
+                // #OPVK-EXTRACT (Task 3-c): экран «Участники сообщества» — вход
+                // из шапки CommunityScreen (тап по счётчику подписчиков).
+                composable(
+                    route = Screen.GroupMembers.route,
+                    arguments = listOf(
+                        navArgument(Screen.GroupMembers.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val membersGroupId = entry.arguments?.getLong(Screen.GroupMembers.ARG_GROUP_ID) ?: 0L
+                    GroupMembersScreen(
+                        groupId = membersGroupId,
+                        onBack = { nav.popBackStack() },
+                        // Тап по участнику → чужой профиль (паттерн FollowList-композибла).
+                        onMemberClick = { memberId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(memberId))
+                        },
+                    )
+                }
+                // W35-b (волна 35): «Настройки сообщества» — вход из блока «Управление».
+                composable(
+                    route = Screen.AdminSettings.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminSettings.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val adminGroupId = entry.arguments?.getLong(Screen.AdminSettings.ARG_GROUP_ID) ?: 0L
+                    AdminSettingsScreen(
+                        groupId = adminGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // W35-b (волна 35): «Статистика» сообщества — вход из блока «Управление».
+                composable(
+                    route = Screen.AdminStats.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminStats.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val statsGroupId = entry.arguments?.getLong(Screen.AdminStats.ARG_GROUP_ID) ?: 0L
+                    AdminStatsScreen(
+                        groupId = statsGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // W35-b (волна 35): «Люди» (Руководители/Заявки/ЧС) — вход из блока «Управление».
+                // W38 (C2): «Приглашения» — вход из блока «Управление».
+                // W38 (C5): «Отложенные и предложения» — вход из блока «Управление».
+                // W38 (C4): «Адреса» — вход из блока «Управление».
+                // W39 (C9): «Журнал действий» — web-only al-эндпоинт (HAR §12.2).
+                // W41 (C3): «Кнопка действия» сообщества.
+                // W41 (C6): «Чаты сообщества».
+                // W41 (C6): «Сообщения» сообщества.
+                composable(
+                    route = Screen.AdminMessages.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminMessages.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val msgGroupId = entry.arguments?.getLong(Screen.AdminMessages.ARG_GROUP_ID) ?: 0L
+                    AdminMessagesScreen(
+                        groupId = msgGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // #ADMIN-ROUTES-FIX: регистрация ранее отсутствовавших админ-роутов.
+                composable(
+                    route = Screen.AdminPeople.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminPeople.ARG_GROUP_ID) { type = NavType.LongType },
+                        navArgument(Screen.AdminPeople.ARG_TAB) { type = NavType.StringType; defaultValue = "managers" },
+                    ),
+                ) { entry ->
+                    val peopleGroupId = entry.arguments?.getLong(Screen.AdminPeople.ARG_GROUP_ID) ?: 0L
+                    val peopleTab = entry.arguments?.getString(Screen.AdminPeople.ARG_TAB) ?: "managers"
+                    AdminPeopleScreen(
+                        groupId = peopleGroupId,
+                        initialTab = peopleTab,
+                        onBack = { nav.popBackStack() },
+                        onUserClick = { uid -> nav.navigate(Screen.UserProfile.buildRoute(uid)) },
+                    )
+                }
+                composable(
+                    route = Screen.AdminLinks.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminLinks.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val adminLinksScreenGroupId = entry.arguments?.getLong(Screen.AdminLinks.ARG_GROUP_ID) ?: 0L
+                    AdminLinksScreen(
+                        groupId = adminLinksScreenGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(
+                    route = Screen.AdminInvites.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminInvites.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val adminInvitesScreenGroupId = entry.arguments?.getLong(Screen.AdminInvites.ARG_GROUP_ID) ?: 0L
+                    AdminInvitesScreen(
+                        groupId = adminInvitesScreenGroupId,
+                        onBack = { nav.popBackStack() },
+                        onUserClick = { uid -> nav.navigate(Screen.UserProfile.buildRoute(uid)) },
+                    )
+                }
+                composable(
+                    route = Screen.AdminWallQueue.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminWallQueue.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val adminWallQueueScreenGroupId = entry.arguments?.getLong(Screen.AdminWallQueue.ARG_GROUP_ID) ?: 0L
+                    AdminWallQueueScreen(
+                        groupId = adminWallQueueScreenGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(
+                    route = Screen.AdminAddresses.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminAddresses.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val adminAddressesScreenGroupId = entry.arguments?.getLong(Screen.AdminAddresses.ARG_GROUP_ID) ?: 0L
+                    AdminAddressesScreen(
+                        groupId = adminAddressesScreenGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(
+                    route = Screen.AdminEventLog.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminEventLog.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val adminEventLogScreenGroupId = entry.arguments?.getLong(Screen.AdminEventLog.ARG_GROUP_ID) ?: 0L
+                    AdminEventLogScreen(
+                        groupId = adminEventLogScreenGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(
+                    route = Screen.AdminCta.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminCta.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val adminCtaScreenGroupId = entry.arguments?.getLong(Screen.AdminCta.ARG_GROUP_ID) ?: 0L
+                    AdminCtaScreen(
+                        groupId = adminCtaScreenGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(
+                    route = Screen.AdminMenu.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminMenu.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val adminMenuScreenGroupId = entry.arguments?.getLong(Screen.AdminMenu.ARG_GROUP_ID) ?: 0L
+                    AdminMenuScreen(
+                        groupId = adminMenuScreenGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(
+                    route = Screen.AdminSections.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminSections.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val adminSectionsScreenGroupId = entry.arguments?.getLong(Screen.AdminSections.ARG_GROUP_ID) ?: 0L
+                    AdminSectionsScreen(
+                        groupId = adminSectionsScreenGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                composable(
+                    route = Screen.AdminChats.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminChats.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val chatsGroupId = entry.arguments?.getLong(Screen.AdminChats.ARG_GROUP_ID) ?: 0L
+                    AdminChatsScreen(
+                        groupId = chatsGroupId,
+                        onBack = { nav.popBackStack() },
+                        onOpenChat = { peerId, title, photo ->
+                            nav.navigate(Screen.ChatDetail.buildRoute(peerId, title, photo))
+                        },
+                    )
+                }
+                // C7 (#ADMIN-SECTIONS): «Разделы» сообщества.
+                // C8 (#ADMIN-COMMENTS): «Комментарии» сообщества — фильтры + лента.
+                composable(
+                    route = Screen.AdminComments.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminComments.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val commentsGroupId = entry.arguments?.getLong(Screen.AdminComments.ARG_GROUP_ID) ?: 0L
+                    AdminCommentsScreen(
+                        groupId = commentsGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // ADMIN-EVENTS: «События» сообщества — панель уведомлений.
+                composable(
+                    route = Screen.AdminEvents.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminEvents.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val eventsGroupId = entry.arguments?.getLong(Screen.AdminEvents.ARG_GROUP_ID) ?: 0L
+                    AdminEventsScreen(
+                        groupId = eventsGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // ADMIN-MENU-STRIKES: «Меню» сообщества (owners.getMenu/…).
+                // ADMIN-MENU-STRIKES: «Страйки» сообщества (strikeSystem.getStrikesList).
+                composable(
+                    route = Screen.AdminStrikes.route,
+                    arguments = listOf(
+                        navArgument(Screen.AdminStrikes.ARG_GROUP_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val strikesGroupId = entry.arguments?.getLong(Screen.AdminStrikes.ARG_GROUP_ID) ?: 0L
+                    AdminStrikesScreen(
+                        groupId = strikesGroupId,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // Шаг 4 (#32d): экран темы обсуждения сообщества.
+                composable(
+                    route = Screen.BoardTopic.route,
+                    arguments = listOf(
+                        navArgument(Screen.BoardTopic.ARG_GROUP_ID) { type = NavType.LongType },
+                        navArgument(Screen.BoardTopic.ARG_TOPIC_ID) { type = NavType.LongType },
+                        navArgument(Screen.BoardTopic.ARG_TITLE) {
+                            type = NavType.StringType
+                            defaultValue = "Обсуждение"
+                        },
+                    ),
+                ) { entry ->
+                    val gId = entry.arguments?.getLong(Screen.BoardTopic.ARG_GROUP_ID) ?: 0L
+                    val tId = entry.arguments?.getLong(Screen.BoardTopic.ARG_TOPIC_ID) ?: 0L
+                    val tTitle = entry.arguments?.getString(Screen.BoardTopic.ARG_TITLE) ?: "Обсуждение"
+                    BoardTopicScreen(
+                        groupId = gId,
+                        topicId = tId,
+                        title = tTitle,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // Sprint 1, P0-2 (#74): экран чужого профиля.
+                composable(
+                    route = Screen.UserProfile.route,
+                    arguments = listOf(
+                        navArgument(Screen.UserProfile.ARG_USER_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val userId = entry.arguments?.getLong(Screen.UserProfile.ARG_USER_ID) ?: 0L
+                    UserProfileScreen(
+                        userId = userId,
+                        onBack = { nav.popBackStack() },
+                        onVideoClick = { video ->
+                            VideoHolder.open(video)
+                        },
+                        onMessageClick = { peerId, title, photo ->
+                            nav.navigate(Screen.ChatDetail.buildRoute(peerId, title, photo))
+                        },
+                        onPostClick = { post ->
+                            PostHolder.last = post
+                            nav.navigate(Screen.PostDetail.buildRoute(post.ownerId, post.id))
+                        },
+                        // Шаг 5 (#32e): тап по комментарию поста → PostDetailScreen.
+                        onCommentClick = { post ->
+                            PostHolder.last = post
+                            nav.navigate(Screen.PostDetail.buildRoute(post.ownerId, post.id))
+                        },
+                        // Этап П-2 (PROFILE-P2-3b): «Позвонить» в чужом профиле —
+                        // через CallStarter (тот же callClick-паттерн, что
+                        // FriendsScreen/FeedScreen; null → кнопка не рендерится).
+                        onCallClick = callClick,
+                        // П-7-AB: тапы правой колонки веба с userId собеседника:
+                        // «Подписчики» → список подписчиков p.id; строка «Подписки» →
+                        // подписки p.id. «Друзья» не проводим: глобальный
+                        // Screen.Friends показывает СВОИх друзей (отклонение — KDoc
+                        // UserProfileScreen/CountersRow).
+                        onFollowersClick = { targetId ->
+                            nav.navigate(Screen.FollowList.buildRoute(targetId, Screen.FollowList.MODE_FOLLOWERS))
+                        },
+                        onSubscriptionsClick = { targetId ->
+                            nav.navigate(Screen.FollowList.buildRoute(targetId, Screen.FollowList.MODE_SUBSCRIPTIONS))
+                        },
+                    )
+                }
+                // П-7-AB: экран «Подписчики»/«Подписки» (остаток правой колонки
+                // веба — профиль.этап-П5.решение.md §3). mode — query-параметр.
+                composable(
+                    route = Screen.FollowList.route,
+                    arguments = listOf(
+                        navArgument(Screen.FollowList.ARG_USER_ID) { type = NavType.LongType },
+                        navArgument(Screen.FollowList.ARG_MODE) {
+                            type = NavType.StringType
+                            defaultValue = Screen.FollowList.MODE_FOLLOWERS
+                        },
+                    ),
+                ) { entry ->
+                    val listUserId = entry.arguments?.getLong(Screen.FollowList.ARG_USER_ID) ?: 0L
+                    val listMode = entry.arguments?.getString(Screen.FollowList.ARG_MODE)
+                        ?: Screen.FollowList.MODE_FOLLOWERS
+                    FollowersSubscriptionsScreen(
+                        userId = listUserId,
+                        mode = listMode,
+                        onBack = { nav.popBackStack() },
+                        // Тап по подписчику → чужой профиль (паттерн FriendsScreen).
+                        onUserClick = { targetId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(targetId))
+                        },
+                        // Тап по подписке-сообществу → CommunityScreen (маршрут
+                        // сообщества существует; Screen.Group в репо нет).
+                        onGroupClick = { groupId ->
+                            nav.navigate(Screen.Community.buildRoute(groupId))
+                        },
+                    )
+                }
+                // Fix #71: экран детального просмотра поста.
+                composable(
+                    route = Screen.PostDetail.route,
+                    arguments = listOf(
+                        navArgument(Screen.PostDetail.ARG_OWNER_ID) { type = NavType.LongType },
+                        navArgument(Screen.PostDetail.ARG_POST_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val ownerId = entry.arguments?.getLong(Screen.PostDetail.ARG_OWNER_ID) ?: -1L
+                    val postId = entry.arguments?.getLong(Screen.PostDetail.ARG_POST_ID) ?: -1L
+                    PostDetailScreen(
+                        ownerId = ownerId,
+                        postId = postId,
+                        onBack = { nav.popBackStack() },
+                        onVideoClick = { video ->
+                            VideoHolder.open(video)
+                        },
+                        onGroupClick = { groupId ->
+                            nav.navigate(Screen.Community.buildRoute(groupId))
+                        },
+                    )
+                }
+                composable(
+                    route = Screen.ChatDetail.route,
+                    arguments = listOf(
+                        navArgument(Screen.ChatDetail.ARG_PEER_ID) { type = NavType.LongType },
+                        navArgument(Screen.ChatDetail.ARG_TITLE) {
+                            type = NavType.StringType
+                            defaultValue = "Диалог"
+                        },
+                        navArgument(Screen.ChatDetail.ARG_PHOTO) {
+                            type = NavType.StringType
+                            defaultValue = ""
+                            nullable = true
+                        },
+                    ),
+                ) { entry ->
+                    val peerId = entry.arguments?.getLong(Screen.ChatDetail.ARG_PEER_ID) ?: 0L
+                    val title = entry.arguments?.getString(Screen.ChatDetail.ARG_TITLE) ?: "Диалог"
+                    val photoRaw = entry.arguments?.getString(Screen.ChatDetail.ARG_PHOTO)
+                    val photo = photoRaw?.takeIf { it.isNotBlank() }
+                    ChatDetailScreen(
+                        peerId = peerId,
+                        peerTitle = try { java.net.URLDecoder.decode(title, "UTF-8") } catch (_: Exception) { title },
+                        peerPhoto = photo?.let { try { java.net.URLDecoder.decode(it, "UTF-8") } catch (_: Exception) { it } },
+                        onBack = { nav.popBackStack() },
+                        // Sprint 1, P0-2 (#74): тап по header чата → экран профиля.
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                        // P2.4: тап по wall-вложению в сообщении → PostDetailScreen.
+                        onPostClick = { post ->
+                            PostHolder.last = post
+                            nav.navigate(Screen.PostDetail.buildRoute(post.ownerId, post.id))
+                        },
+                        // P2.1: тап по video-вложению в сообщении → VideoPlayer overlay.
+                        onVideoClick = { video ->
+                            VideoHolder.open(video)
+                        },
+                        // P2.2: тап по audio-вложению → запустить в PlayerConnection.
+                        onAudioClick = { track ->
+                            vk.mint.media.PlayerConnection.playTrackList(listOf(track), 0)
+                        },
+                        // P2.3: голосование в опросе → polls.addVote + reload history.
+                        onPollVote = { poll, answerIds ->
+                            scope.launch {
+                                try {
+                                    val ok = app.apiClient.pollsAddVote(poll.id, poll.ownerId, answerIds)
+                                    if (ok) AppLog.i("VkMintNavHost", "Poll vote ok: poll=${poll.id}")
+                                    else AppLog.w("VkMintNavHost", "Poll vote failed: poll=${poll.id}")
+                                } catch (e: Exception) {
+                                    AppLog.w("VkMintNavHost", "Poll vote error: ${e.message}")
+                                }
+                            }
+                        },
+                        // P3.1: тап по «Информация о чате» → открыть ChatInfoScreen.
+                        onInfoClick = { pid ->
+                            nav.navigate(Screen.ChatInfo.buildRoute(pid))
+                        },
+                        // P5.1: открыть URL во внутреннем браузере (WebView).
+                        // Внешний браузер обрабатывается внутри ChatDetailScreen.
+                        onOpenUrlInternal = { url ->
+                            nav.navigate(Screen.InternalBrowser.buildRoute(url))
+                        },
+                        // Fix #132: перед запуском камеры сохраняем параметры чата
+                        // в rememberSaveable, чтобы при process death вернуться в чат.
+                        onCameraLaunch = { pid, t, p ->
+                            cameraReturnPeerId = pid
+                            cameraReturnTitle = t
+                            cameraReturnPhoto = p
+                        },
+                        // Fix #132: камера отработала — очищаем saved state.
+                        onCameraReturnConsumed = {
+                            cameraReturnPeerId = 0L
+                            cameraReturnTitle = ""
+                            cameraReturnPhoto = null
+                        },
+                        // #CALLS: кнопка «Позвонить» в шапке диалога → CallScreen.
+                        // #ARCH-CONTAINERS (Этап 1.4): через CallStarter; null →
+                        // кнопка не рендерится (см. ChatDetailScreen). title/photo
+                        // чата — в OutgoingCallMeta (контракт их не передаёт).
+                        onCallClick = callClick,
+                        // #VM-3 волна 3: «Кружок» из меню «Прикрепить» → рекордер
+                        // видео-сообщения для этого пира. Открываем поверх диалога.
+                        onVideoMessage = { pid ->
+                            nav.navigate(Screen.VideoMessageCreate.buildRoute(pid))
+                        },
+                    )
+                }
+                // P3.1: ChatInfoScreen — информация о чате (members / shared media / actions).
+                composable(
+                    route = Screen.ChatInfo.route,
+                    arguments = listOf(
+                        navArgument(Screen.ChatInfo.ARG_PEER_ID) { type = NavType.LongType },
+                    ),
+                ) { entry ->
+                    val peerId = entry.arguments?.getLong(Screen.ChatInfo.ARG_PEER_ID) ?: 0L
+                    ChatInfoScreen(
+                        peerId = peerId,
+                        onBack = { nav.popBackStack() },
+                        onUserClick = { userId ->
+                            nav.navigate(Screen.UserProfile.buildRoute(userId))
+                        },
+                    )
+                }
+                // P3.3: FoldersSettingsScreen — управление папками диалогов.
+                composable(
+                    route = Screen.FoldersSettings.route,
+                ) {
+                    FoldersSettingsScreen(
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+                // P5.1: InternalBrowser — встроенный браузер (WebView) для ссылок из чата.
+                composable(
+                    route = Screen.InternalBrowser.route,
+                    arguments = listOf(
+                        navArgument(Screen.InternalBrowser.ARG_URL) { type = NavType.StringType },
+                    ),
+                ) { entry ->
+                    val rawUrl = entry.arguments?.getString(Screen.InternalBrowser.ARG_URL).orEmpty()
+                    InternalBrowserScreen(
+                        url = rawUrl,
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+            }
+            }
+        }
+
+    // #57: GlobalMiniPlayer перенесён обратно в bottomBar Scaffold (в Column
+    // с NavigationBar). Overlay в Box убран — он перекрывал NavigationBar.
+    // Sprint 1, P0-3 (#76): captcha dialog — overlay поверх всего app.
+    CaptchaDialog()
+    // #NET-SWITCH-POPUP (2026-08-03): popup при переключении сети.
+    // Overlay поверх всего app (рядом с CaptchaDialog). Подписывается на
+    // VkMintApp.networkSwitchState + VkMintPrefs.netSwitchPopupEnabled.
+    NetworkSwitchPopup()
+    // Волна 43 #UPDATER-BANNER: баннер «доступна новая версия»
+    androidx.compose.foundation.layout.Box(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(bottom = 80.dp)  // поверх NavigationBar; если mini player виден — баннер чуть выше
+            .padding(horizontal = 12.dp),
+    ) {
+        UpdateBanner()
+    }
+    if (showLogoutDialog) {
+        // Fix #369: диалог-предупреждение перед ПОЛНЫМ logout. Confirm —
+        // onLogoutWithHoldersClear (сброс in-memory кэшей + mainActivity-логика:
+        // longPoll stop → signOut → clearAllVkCookies + storage.clear() →
+        // PendingAuthResult.clear → authVersion++ → AuthActivity).
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Выйти из аккаунта?") },
+            text = {
+                Text(
+                    "Сессия будет остановлена, куки авторизации будут очищены. " +
+                        "Потребуется повторный вход."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    onLogoutWithHoldersClear()
+                }) { Text("Выйти") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Отмена") }
+            },
+        )
+    }
+    // #247: диалог выхода из приложения (сохраняя авторизацию).
+    // onExitApp в MainActivity вызывает finishAffinity() — Android
+    // закрывает все Activity в стеке. Процесс завершается, при следующем
+    // запуске VkMintApp.onCreate() находит сохранённый access_token в
+    // tokenStorage → пользователь сразу попадает в ленту.
+    if (showExitAppDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitAppDialog = false },
+            title = { Text("Выйти из приложения?") },
+            text = {
+                Text(
+                    "Приложение будет закрыто. Авторизация сохранится — " +
+                        "при следующем запуске вы сразу попадёте в ленту.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitAppDialog = false
+                    onExitApp()
+                }) { Text("Выйти") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitAppDialog = false }) { Text("Отмена") }
+            },
+        )
+    }
+    // #90: VideoPlayer overlay — видео рендерится поверх всего UI.
+    // Feed (и любой экран) остаётся живым в Composition → скролл не сбрасывается.
+    overlayVideo?.let { video ->
+        BackHandler(enabled = true) {
+            VideoHolder.close()
+        }
+        VideoPlatformRouter(
+            video = video,
+            onBack = { VideoHolder.close() },
+        )
+    }
+    // §42.4 #PUSH-DEEPLINK: PhotoViewer overlay — фото из push-уведомления
+    // (like_photo/comment_photo) открывается нативно. PhotoViewer — Dialog,
+    // рендерится поверх всего приложения с pinch-zoom + swipe между фото.
+    overlayPhoto?.let { (photos, initial) ->
+        BackHandler(enabled = true) {
+            PhotoHolder.close()
+        }
+        PhotoViewer(
+            photos = photos,
+            initial = initial,
+            onDismiss = { PhotoHolder.close() },
+        )
+    }
+    // ═══ #CALLS-INCOMING-UI (Этап Е, план §4-Е, реверс §8.1–8.2): входящий звонок ═══
+    // Оверлей поверх всего app (последний ребёнок Box — верхний z-порядок, выше
+    // overlayVideo/overlayPhoto: входящий звонок приоритетнее медиа). Пока
+    // pendingIncomingCallPayload не пуст:
+    //  - полноэкранный IncomingCallScreen (§8.1) — до «Принять»/«Отклонить»/«Свернуть»;
+    //  - свёрнутый баннер (§8.2, calls_collapse) — поверх контента, системные бары
+    //    НЕ перекрываются (statusBarsPadding внутри баннера); в звонковом разделе
+    //    (route "call"/"calls_*"/"settings_calls") баннер скрыт — входящий остаётся
+    //    pending и вернётся при выходе из раздела (реверс-правило задания Этапа Е).
+    // «Принять» (оба UI) → app.acceptIncomingCall() → существующая навигация
+    // LaunchedEffect выше (CallScreen incoming=true, payload — как до Этапа Е).
+    // «Отклонить» → WS hangup REJECTED/BUSY (HTTP-фолбэк) внутри экрана, успех →
+    // app.consumeIncomingCall().
+    // #CALLS-INCOMING-UI: оверлей входящего (accept/decline/collapse).
+    val incomingPayloadE = app.pendingIncomingCallPayload
+    if (!incomingPayloadE.isNullOrBlank()) {
+        val incomingPeerIdE = app.pendingIncomingCallPeerId
+        val incomingTitleE = app.pendingIncomingCallTitle
+        val incomingPhotoE = app.pendingIncomingCallPhoto
+        val incomingInCallsSectionE = currentRoute == Screen.Call.route ||
+            currentRoute.startsWith("calls_") || currentRoute == "settings_calls"
+        if (!incomingInCallsSectionE) {
+            vk.mint.ui.screens.calls.IncomingCallScreen(
+                peerId = incomingPeerIdE,
+                title = incomingTitleE,
+                photo = incomingPhotoE,
+                payload = incomingPayloadE,
+                deps = app,
+                onAccept = { app.acceptIncomingCall() },
+                onDone = { app.consumeIncomingCall() },
+                onCollapse = { app.collapseIncomingCall() },
+            )
+        }
+    }
+    } // Box
+}
+
+/**
+ * Держатель видео для overlay-плеера (#90).
+ * Видео открывается поверх текущего экрана без nav.navigate() —
+ * текущий экран остаётся живым в Composition, скролл не теряется.
+ */
+object VideoHolder {
+    @Volatile
+    var last: Video? = null
+
+    private val _active = MutableStateFlow<Video?>(null)
+    val active = _active.asStateFlow()
+
+    fun open(video: Video) {
+        last = video
+        _active.value = video
+    }
+
+    fun close() {
+        _active.value = null
+    }
+
+    /**
+     * Fix #370 #LOGOUT-HOLDER-CLEAR: полный сброс при logout — и overlay-состояние
+     * (active), и запомненный ролик (last). Иначе после повторного входа другим
+     * аккаунтом VideoHolder «подхватывает» видео предыдущей сессии.
+     */
+    fun clear() {
+        last = null
+        _active.value = null
+    }
+}
+
+/**
+ * #NAV-GROUP-VIDEO-RESTORE (Fix #344): индекс стены сообщества (в координатах
+ * LazyColumn: хедер + табы + посты), на который прокрутиться после однократного
+ * восстановления контекста. Ставится в VkMintNavHost перед navigate, потребляется
+ * (сброс в -1) в CommunityScreen после загрузки постов. Шаблон — как
+ * VideoHolder/PostHolder: процессная синглтоны, переживают recreation Activity.
+ */
+object CommunityRestoreHolder {
+    @Volatile
+    var pendingScroll: Int = -1
+}
+
+/**
+ * Fix #71: In-memory держатель последнего выбранного поста.
+ * Используется, чтобы пробросить объект [vk.mint.data.model.Post]
+ * на [PostDetailScreen] без сложной сериализации через arguments.
+ */
+object PostHolder {
+    @Volatile
+    var last: vk.mint.data.model.Post? = null
+    // Fix #99: группы для отображения имени сообщества в PostDetailScreen.
+    @Volatile
+    var lastGroups: Map<Long, vk.mint.api.VKApiClient.GroupInfo>? = null
+
+    /**
+     * Fix #370 #LOGOUT-HOLDER-CLEAR: сброс последнего поста и мапы групп при
+     * logout — PostDetailScreen после повторного входа другим аккаунтом не
+     * должен показывать пост предыдущей сессии.
+     */
+    fun clear() {
+        last = null
+        lastGroups = null
+    }
+}
+
+/**
+ * §42.4 #PUSH-DEEPLINK: in-memory держатель для полноэкранного PhotoViewer.
+ *
+ * По образцу [VideoHolder]: push-уведомление (like_photo/comment_photo) не
+ * может передать список URL через NavHost-arguments (фото не имеет собственного
+ * маршрута — PhotosScreen parameterless). Поэтому VkMintNavHost при тапе на
+ * photo-уведомление вызывает [PhotoHolder.open] с URL превью, а overlay-блок
+ * рендерит [PhotoViewer] (Dialog с pinch-zoom + swipe) поверх всего UI.
+ *
+ * Текущий экран (Feed/Notifications/...) остаётся живым в Composition.
+ */
+object PhotoHolder {
+    private val _active = MutableStateFlow<Pair<List<String>, Int>?>(null)
+    val active = _active.asStateFlow()
+
+    fun open(photos: List<String>, initial: Int = 0) {
+        if (photos.isEmpty()) return
+        _active.value = photos to initial
+    }
+
+    fun close() {
+        _active.value = null
+    }
+}
+
+/**
+ * §42.4 #PUSH-DEEPLINK: target commentId для скролла в PostDetailScreen.
+ *
+ * Когда push-уведомление — «ответ на комментарий» / «новый комментарий»,
+ * [VkUrlDeepLinker] строит OpenPost(ownerId, postId, commentId). VkMintNavHost
+ * перед nav.navigate(PostDetail) кладёт commentId сюда, а PostDetailScreen
+ * в LaunchedEffect читает и сбрасывает (null) после скролла.
+ *
+ * Holder-паттерн (а не route-параметр) выбран чтобы не менять маршрут
+ * Screen.PostDetail = "post_detail/{ownerId}/{postId}", который используется
+ * в десятках мест навигации. Дополнительно переживает process death при
+ * холодном старте из push (PendingIntent → onCreate).
+ */
+object PostDetailTarget {
+    @Volatile
+    var commentId: Long? = null
+}
+
+/** Fix #99: сохранение позиции скролла ленты при навигации. */
+data class ScrollPosition(val index: Int, val offset: Int)
+
+object FeedScrollHolder {
+    @Volatile var position = ScrollPosition(0, 0)
+
+    /**
+     * Fix #370 #LOGOUT-HOLDER-CLEAR: сброс сохранённой позиции скролла ленты —
+     * индексы ленты предыдущего аккаунта не имеют смысла после смены аккаунта.
+     * (Вызывается также из FeedDataHolder.clear() — идемпотентно.)
+     */
+    fun clear() {
+        position = ScrollPosition(0, 0)
+    }
+}
+
+/**
+ * #POST-DETAIL-SCROLL: сохранение позиции скролла PostDetailScreen (комментарии)
+ * при навигации к видео/сообществу и возврате. По образцу [FeedScrollHolder].
+ *
+ * PostDetailScreen использует LazyColumn для поста + комментариев.
+ * При тапе на видео в комментарии → VideoHolder.open (overlay, composition
+ * сохраняется) → позиция должна сохраниться. Но при тапе на сообщество →
+ * nav.navigate(Community) → PostDetail LEAVES composition → позиция теряется.
+ *
+ * Этот holder + rememberSaveable(saver = LazyListState.Saver) решают проблему.
+ */
+object PostDetailScrollHolder {
+    @Volatile var position = ScrollPosition(0, 0)
+}
+
+/**
+ * Fix #100: In-memory кэш данных ленты — переживает навигацию к VideoPlayer
+ * и обратно. Без этого `LaunchedEffect(Unit)` в FeedScreen перезапускается
+ * при возврате (Compose Navigation отменяет корутину composition при уходе
+ * с экрана), сбрасывает `loading=true` и `allPosts=emptyList()` → LazyColumn
+ * не отрисовывается → позиция скролла теряется, лента прыгает в начало.
+ *
+ * По образцу [VideoHolder] / [PostHolder] — простой singleton-холдер.
+ * Pull-to-refresh и создание поста очищают кэш через [clear].
+ */
+object FeedDataHolder {
+    @Volatile var allPosts: List<vk.mint.data.model.Post>? = null
+    @Volatile var profiles: Map<Long, vk.mint.data.model.UserProfile>? = null
+    @Volatile var groups: Map<Long, vk.mint.api.VKApiClient.GroupInfo>? = null
+    @Volatile var nextFrom: String? = null
+    @Volatile var endReached: Boolean = false
+    @Volatile var lastUpdated: Long = 0L
+
+    /** Сохранить снимок состояния ленты (после каждой загрузки/пагинации). */
+    fun snapshot(
+        allPosts: List<vk.mint.data.model.Post>,
+        profiles: Map<Long, vk.mint.data.model.UserProfile>,
+        groups: Map<Long, vk.mint.api.VKApiClient.GroupInfo>,
+        nextFrom: String?,
+        endReached: Boolean,
+    ) {
+        this.allPosts = allPosts
+        this.profiles = profiles
+        this.groups = groups
+        this.nextFrom = nextFrom
+        this.endReached = endReached
+        this.lastUpdated = System.currentTimeMillis()
+    }
+
+    /** Сбросить кэш (pull-to-refresh, создание поста, logout). */
+    fun clear() {
+        allPosts = null
+        profiles = null
+        groups = null
+        nextFrom = null
+        endReached = false
+        lastUpdated = 0L
+        // Позицию скролла тоже сбрасываем — после reload индексы могут не совпадать.
+        FeedScrollHolder.position = ScrollPosition(0, 0)
+    }
+}
+
+/**
+ * Fix #52-B: In-memory кэш историй + dirtyKey триггер обновления.
+ *
+ * Проблема: StoriesRow.kt использовал `LaunchedEffect(Unit)` — грузил истории
+ * ОДИН раз при первом composition. Когда пользователь уходил в CommunityScreen
+ * (подписался/отписался от группы) и возвращался в ленту — StoriesRow НЕ
+ * перекомпозировался (Feed в backstack, SavedStateHandle сохраняет state),
+ * истории НЕ обновлялись. VK stories.get возвращает истории от подписанных
+ * сообществ → после subscribe/unsubscribe состав историй меняется, но UI
+ * показывал устаревший список.
+ *
+ * Решение (по образцу FeedDataHolder):
+ * - `storyGroups`: кэш списка StoryGroup — переживает навигацию.
+ * - `dirtyKey`: инкрементируется при любом событии которое должно триггерить
+ *   обновление историй: (1) возврат на Feed route из другого экрана,
+ *   (2) subscribe/unsubscribe в CommunityScreen, (3) создание/удаление истории.
+ *   StoriesRow собирает dirtyKey в LaunchedEffect и перезагружает при изменении.
+ * - `markDirty()`: публичный метод для явного триггера (вызывается из
+ *   CommunityScreen после groupsJoin/groupsLeave).
+ * - `clear()`: сброс кэша (logout, pull-to-refresh ленты).
+ */
+object StoriesHolder {
+    @Volatile var storyGroups: List<vk.mint.data.model.StoryGroup>? = null
+    @Volatile var lastUpdated: Long = 0L
+
+    /**
+     * Fix #88: заменено @Volatile var dirtyKey на MutableStateFlow.
+     *
+     * @Volatile гарантирует видимость между потоками, но НЕ триггерит
+     * recomposition в Compose. Чтение `val restoreKey = StoriesHolder.dirtyKey`
+     * в FeedScreen было «снимком значения на момент composition» — когда
+     * VkMintNavHost вызывал markDirty() при возврате с VideoPlayer, dirtyKey
+     * менялся с 1 на 2, но Compose об этом не знал → LaunchedEffect(restoreKey)
+     * не перезапускался → позиция скролла ленты не восстанавливалась.
+     *
+     * Теперь это StateFlow — collectAsState() в FeedScreen и StoriesRow
+     * подписывается на изменения и триггерит recomposition.
+     */
+    private val _dirtyKey = MutableStateFlow(0)
+    val dirtyKey: kotlinx.coroutines.flow.StateFlow<Int> = _dirtyKey.asStateFlow()
+
+    /** Сохранить снимок историй (после каждой загрузки). */
+    fun snapshot(groups: List<vk.mint.data.model.StoryGroup>) {
+        storyGroups = groups
+        lastUpdated = System.currentTimeMillis()
+    }
+
+    /**
+     * Отметить истории как устаревшие — следующий composition StoriesRow
+     * перезагрузит их. Вызывать при: subscribe/unsubscribe группы,
+     * создании/удалении истории, возврате на Feed из детального экрана.
+     */
+    fun markDirty() {
+        _dirtyKey.value++
+    }
+
+    /** Сбросить кэш (logout, pull-to-refresh ленты). */
+    fun clear() {
+        storyGroups = null
+        lastUpdated = 0L
+        _dirtyKey.value++  // триггерим перезагрузку
+    }
+}

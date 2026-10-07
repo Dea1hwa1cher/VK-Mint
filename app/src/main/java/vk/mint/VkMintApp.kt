@@ -1,0 +1,2625 @@
+package vk.mint
+
+import android.app.Application
+import android.content.Context
+import android.content.Intent
+import android.app.PendingIntent
+import android.content.SharedPreferences
+import android.webkit.CookieManager
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.request.crossfade
+import okhttp3.CertificatePinner
+import okhttp3.OkHttpClient
+import vk.mint.api.VKApiClient
+import vk.mint.contracts.ContainerRegistry
+import vk.mint.auth.exchange.AccountFileBackup
+import vk.mint.auth.exchange.ExchangeAuthApi
+import vk.mint.auth.exchange.ExchangeAuthRepository
+import vk.mint.auth.exchange.KeepAliveResult
+import vk.mint.auth.exchange.RemixsidCapturer
+import vk.mint.auth.exchange.ExchangeTokenStorage
+import vk.mint.auth.exchange.ExternalBrowserAuth
+import vk.mint.data.local.VkMintPrefs
+import vk.mint.feature.calls.CallsDependencies
+import vk.mint.feature.photos.PhotosApi
+import vk.mint.feature.photos.PhotosDependencies
+import vk.mint.data.local.TokenStorage
+import vk.mint.media.PlayerConnection
+import vk.mint.media.TrackDownloadManager
+import vk.mint.media.VideoDownloadManager
+import vk.mint.media.StoryVideoDownloadManager
+import vk.mint.media.ClipVideoDownloadManager
+import vk.mint.captcha.UiCaptchaHandler
+import vk.mint.mods.network.NetworkInterceptors
+import vk.mint.realtime.LongPollClient
+import vk.mint.realtime.Queuev4Client
+import vk.mint.util.AppLog
+import vk.mint.util.NetworkObserver
+import vk.mint.util.NetworkSwitchState
+import vk.mint.util.VkUserAgent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlin.system.measureTimeMillis
+import java.util.concurrent.TimeUnit
+
+/**
+ * VK Mint 2.0 — Application entry point.
+ *
+ * Inspired by VK's `com.vkontakte.android.VKApplication` (single global state holder),
+ * but with VK Mint mod features layered at the Compose level instead of JNI hooks.
+ *
+ * Responsibilities:
+ *  - initialize [EncryptedSharedPreferences] for token storage
+ *  - bootstrap [VkMintPrefs] (DataStore) for settings
+ *  - create [OkHttpClient] + [VKApiClient] singletons
+ *  - configure Coil with the same OkHttp client (single connection pool)
+ *  - install as [SingletonImageLoader.Factory] for Coil 3
+ */
+// Task 20: VkMintApp — провайдер CallsDependencies (DI-контракт экранов звонков
+// :feature:calls); CompositionLocal ставится в MainActivity.setContent.
+class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies, PhotosDependencies {
+
+    override lateinit var prefs: VkMintPrefs
+        private set
+
+    /**
+     * Fix #336: cached snapshot of [prefs] for synchronous O(1) reads from UI
+     * (e.g. VideoPlayerScreen needs videoPreferredQuality BEFORE ExoPlayer is
+     * created — async produceState caused the player to start at the wrong
+     * quality). Updated by [prefs.data].collect below; seeded synchronously from
+     * initialSnap in onCreate. Null only during the brief cold-start window
+     * before runBlocking { prefs.data.first() } completes (practically never).
+     */
+    @Volatile
+    var prefsSnapshot: VkMintPrefs.Snapshot? = null
+        private set
+
+    lateinit var tokenStorage: TokenStorage
+        private set
+
+    /** Canonical auth storage — access_token + exchange_token + device_id + LP creds. */
+    lateinit var exchangeStorage: ExchangeTokenStorage
+        private set
+
+    /** Exchange-token auth flow orchestrator (phone+password+2FA, refresh, LongPoll). */
+    override lateinit var exchangeAuthRepository: ExchangeAuthRepository
+        private set
+
+    /**
+     * #SESSION-COOKIES-BG-REFRESH: helper для проверки инициализации lateinit
+     * [exchangeAuthRepository]. Используется CookieRefreshWorker (WorkManager
+     * может стартовать до завершения onCreate).
+     */
+    fun isExchangeAuthRepositoryInitialized(): Boolean =
+        ::exchangeAuthRepository.isInitialized
+
+    override lateinit var httpClient: OkHttpClient
+        private set
+
+    override lateinit var apiClient: VKApiClient
+
+    /**
+     * #ARCH-CONTAINERS Этап 3.7-1 (2026-09-03): PhotosDependencies.photosApi.
+     * Рантайм-объект ТОТ ЖЕ VKApiClient (инвариант И4 канона §3.5 — фасад
+     * «очки», не обёртка): поле сужено до конкретного класса, поэтому
+     * делегирование без каста.
+     */
+    override val photosApi: PhotosApi
+        get() = apiClient
+    /** #CALLS: сигналинг звонков через queuev4.vk.ru. */
+    override lateinit var queuev4Client: Queuev4Client
+        private set
+    /**
+     * #CALLS: вторая queuev4-подписка на events_queue<uid> — сюда приходят полные
+     * conversation params входящего звонка (payload LP 115). В messages LongPoll
+     * payload = "-1" (без данных). Из localStorage: queue_connection_events_queue<uid>.
+     */
+    lateinit var eventsQueuev4Client: Queuev4Client
+        private set
+
+    /**
+     * #CALLS: pending входящий звонок — payload LP 115 + caller.
+     * Устанавливается в startCallNotifier при входящем звонке; MainActivity
+     * читает и открывает CallScreen(incoming=true, payload). После навигации
+     * сбрасывается (consumeIncomingCall).
+     * #COMPOSE-OBSERVABLE: mutableStateOf/mutableLongStateOf чтоб LaunchedEffect
+     * в VkMintNavHost срабатывал сразу, а не при случайной рекомпозиции.
+     */
+    var pendingIncomingCallPayload: String? by mutableStateOf(null)
+        private set
+    var pendingIncomingCallPeerId: Long by mutableLongStateOf(0L)
+        private set
+    var pendingIncomingCallTitle: String by mutableStateOf("")
+        private set
+    var pendingIncomingCallPhoto: String? by mutableStateOf(null)
+        private set
+
+    // ═══ #CALLS-INCOMING-UI (Этап Е): UI-состояния входящего звонка ═══
+    // pendingIncomingCallPayload сам по себе больше НЕ означает «сразу навигировать
+    // на CallScreen»: оверлей входящего (IncomingCallScreen / свёрнутый баннер,
+    // VkMintNavHost) рендерится, пока payload не пуст, а навигация происходит
+    // только по «Принять» (incomingCallAccepted). Паттерн тот же, что у соседних
+    // pending-полей: mutableStateOf → LaunchedEffect срабатывает гарантированно.
+    /** false = полноэкранный IncomingCallScreen (реверс §8.1), true = свёрнутый
+     *  баннер (реверс §8.2, calls_collapse). Сбрасывается в consumeIncomingCall. */
+    var incomingCallCollapsed: Boolean by mutableStateOf(false)
+        private set
+    /** One-shot «Принять»: ставится экраном входящего, потребляется навигацией
+     *  на CallScreen в VkMintNavHost (вместе с consumeIncomingCall). */
+    var incomingCallAccepted: Boolean by mutableStateOf(false)
+        private set
+
+    /** «Свернуть» с полноэкранного входящего в баннер (реверс §8.1 collapse). */
+    fun collapseIncomingCall() {
+        incomingCallCollapsed = true
+    }
+
+    /** Тап по баннеру / разворот в полный экран (реверс §8.2 restore). */
+    fun expandIncomingCall() {
+        incomingCallCollapsed = false
+    }
+
+    /** «Принять» на экране входящего/баннера: навигация на CallScreen —
+     *  существующий путь VkMintNavHost (incoming=true, payload — как сейчас). */
+    fun acceptIncomingCall() {
+        // #CALLS-DOUBLE-UI-FIX (2026-09-22)
+        incomingCallCollapsed = false
+        incomingCallAccepted = true
+    }
+
+    fun consumeIncomingCall() {
+        pendingIncomingCallPayload = null
+        pendingIncomingCallPeerId = 0L
+        pendingIncomingCallTitle = ""
+        pendingIncomingCallPhoto = null
+        incomingCallCollapsed = false
+        incomingCallAccepted = false
+    }
+
+    // ═══ #ARCH-CONTAINERS (Этап 1.3, потреблено на Этапе 1.4): pending ИСХОДЯЩЕГО звонка ═══
+    // Хук для CallsStarterImpl (контейнер :feature:calls): хост не может нави-
+    // гировать из VkMintApp напрямую (NavController живёт в VkMintNavHost), поэтому
+    // ставим pending-событие — VkMintNavHost подхватывает и открывает экран звонка
+    // (тот же паттерн, что pendingIncomingCallPayload выше). С Этапа 1.4 кнопки
+    // звонка (лента/друзья/чат/история) идут через find<CallStarter>() → этот
+    // механизм; title/photo хост доносит через OutgoingCallMeta в VkMintNavHost.
+    // #COMPOSE-OBSERVABLE: mutableLongStateOf для корректного LaunchedEffect.
+    var pendingOutgoingCallPeerId: Long by mutableLongStateOf(0L)
+        private set
+    var pendingOutgoingCallVideo: Boolean by mutableStateOf(false)
+        private set
+
+    /** Запросить исходящий звонок через контейнер (CallStarter.startCall).
+     * #NULL-EXPLICIT/Тип-контракт: CallStarter.startCall возвращает Boolean
+     * (true — принят в работу; false — краш хука, ловится в CallsStarterImpl).
+     * Pending-механизм отказать не может — валидность peerId и наличие
+     * навигатора решаются в VkMintNavHost при заборе события
+     * (consumeOutgoingCall), поэтому всегда true. */
+    fun requestOutgoingCall(peerId: Long, video: Boolean): Boolean {
+        pendingOutgoingCallVideo = video
+        pendingOutgoingCallPeerId = peerId
+        return true
+    }
+
+    // Task 20: реализация CallsDependencies (фасад экранов звонков :feature:calls).
+    // callsSessionKey/Uid — снапшот из кэша prefsSnapshot (сами члены экранами
+    // не читаются — census Task 20; честный синхронный кэш VkMintApp).
+    override val callsSessionKey: String
+        get() = prefsSnapshot?.callsSessionKey ?: ""
+    override val callsSessionUid: Long
+        get() = prefsSnapshot?.callsSessionUid ?: 0L
+    // #NULL-ЯВНО: prefsSnapshot обновляется из setContent SideEffect (Fix #154),
+    // к моменту звонка заполнен; до этого — честные нули (0/""), не крэш.
+    override fun getOkUid(): Long = apiClient.lastAnonymUid()
+    override fun getVkUid(): Long = exchangeAuthRepository.userId()
+    override fun getAnonymUid(): Long = apiClient.lastAnonymUid()
+
+    /**
+     * #CALLS-SNAP (2026-09-05): репозиторий раздела «Звонки» (Этап А2 плана
+     * «звонки.перенос.план.md») — capability :feature:calls по канону §3.2:
+     * интерфейс CallsSectionRepository в контейнере, эта реализация — в хосте,
+     * публикация CompositionLocal (LocalCallsSectionRepository) — в
+     * MainActivity.setContent рядом с LocalCallsDeps. Лениво: к первому доступу
+     * из UI (композиция после onCreate) apiClient/exchangeAuthRepository
+     * уже инициализированы. scope = appScope (keepAliveScope) — фечи переживают
+     * смену экрана; весь сетевой I/O внутри реализации — Dispatchers.Default.
+     */
+    val callsSectionRepository: vk.mint.calls.CallsSectionRepositoryImpl by lazy {
+        vk.mint.calls.CallsSectionRepositoryImpl(deps = this, scope = appScope)
+    }
+
+    /** Забрать pending-событие исходящего звонка (после навигации). */
+    fun consumeOutgoingCall() {
+        pendingOutgoingCallPeerId = 0L
+        pendingOutgoingCallVideo = false
+    }
+
+    /**
+     * P3.3: FoldersRepository — клиентское хранилище папок диалогов.
+     * JSON в VkMintPrefs.msgFoldersData (source of truth для UI).
+     */
+    lateinit var foldersRepository: vk.mint.data.local.FoldersRepository
+        private set
+
+    /**
+     * Fix #276: PinnedConversationsRepository — локальное хранилище
+     * закреплённых диалогов (JSON массив peer_id в VkMintPrefs.pinnedConvsData).
+     * Source of truth для UI списка диалогов (т.к. VK API
+     * messages.markAsImportantConversation недоступен нашему web-token).
+     */
+    lateinit var pinnedConvsRepository: vk.mint.data.local.PinnedConversationsRepository
+        private set
+
+    /**
+     * Fix #356 #MSG-ARCHIVE: локальное хранилище архивных диалогов (JSON массив
+     * peer_id в VkMintPrefs.archivedConvsData). Source of truth для UI списка
+     * диалогов (messages.archiveConversation/unarchiveConversation для web-token
+     * вероятен err=8/15 — паттерн pinnedConvsRepository, Fix #274/#276).
+     */
+    lateinit var archivedConvsRepository: vk.mint.data.local.ArchivedConversationsRepository
+        private set
+
+    /**
+     * Волна 40 #BOOKMARKS-TRACKS: локальные закладки треков (JSON-массив Track
+     * в VkMintPrefs.trackBookmarksData). У fave.* нет аудио-раздела (#FAVE-AUDIO),
+     * поэтому «Закладки → Треки» — клиентское хранилище (source of truth для UI).
+     */
+    lateinit var trackBookmarksRepository: vk.mint.data.local.TrackBookmarksRepository
+        private set
+
+    /**
+     * Sprint 1, P0-1: Real-time LongPoll-цикл для сообщений.
+     *
+     * Запускается из [vk.mint.ui.MainActivity] при `tokenStorage.hasValidToken()`,
+     * останавливается при logout. UI подписывается на [LongPollClient.events].
+     */
+    override lateinit var longPollClient: LongPollClient
+        private set
+
+    /**
+     * §42 #PUSH-NOTIFICATIONS: периодический опрос notifications.getRedesign
+     * + показ system notifications для лайков/комментариев/репостов/ответов/
+     * подписок/упоминаний/подарков/записей на стене.
+     *
+     * Запускается из onCreate. Подписан на LongPoll code 114
+     * (NotificationsCountChanged) → triggerImmediatePoll().
+     *
+     * Не делает запросов если pushEnabled=false или нет валидного токена
+     * (poller сам проверяет в pollOnce).
+     */
+    @Volatile
+    var notificationsPoller: vk.mint.realtime.NotificationsPoller? = null
+        private set
+
+    /**
+     * §49.5.1 #SAFETY-NET-ALERTS (2026-08-04): poller для подозрительных
+     * входов (accountPersonal.getSecurityAlerts). Запускается из onCreate
+     * если pushSafetyNetAlerts=true && token валиден.
+     */
+    @Volatile
+    var securityAlertsPoller: vk.mint.realtime.SecurityAlertsPoller? = null
+        private set
+
+    /**
+     * Sprint 1, P0-3 (#76): обработчик VK Captcha (error 14).
+     *
+     * UI подписывается на [UiCaptchaHandler.challenge] (StateFlow) и показывает
+     * диалог когда challenge != null. VKApiClient.callInternal при error 14
+     * вызывает [UiCaptchaHandler.solve] — запрос блокируется пока пользователь
+     * не введёт код или отменит.
+     */
+    lateinit var captchaHandler: UiCaptchaHandler
+        private set
+
+    /** Реактивный мониторинг сети — NetworkCallback + StateFlow. */
+    lateinit var networkObserver: NetworkObserver
+        private set
+
+    /**
+     * Fix #50-A: Реактивное уведомление об инвалидации токена.
+     *
+     * Когда [vk.mint.api.VKApiClient.callInternal] вызывает `tokenStorage.clear()`
+     * (refresh failed или повторный error 5), счётчик инкрементируется через
+     * [notifyTokenInvalidated]. MainActivity собирает этот Flow и перезапускает
+     * AuthActivity — иначе приложение остаётся в MainActivity с пустым токеном,
+     * все API вызовы возвращают null → пустая лента → БЕЛЫЙ ЭКРАН.
+     *
+     * StateFlow выбран вместо MutableIntState, т.к. обновление приходит из
+     * фонового потока VKApiClient'а, а Compose подписывается через collectAsState.
+     */
+    val tokenInvalidationTicks: MutableStateFlow<Int> = MutableStateFlow(0)
+
+    /**
+     * Fix #377 #DOZE-RESUME-RELOAD: счётчик возвратов приложения в foreground.
+     *
+     * Инкрементируется НЕМЕДЛЕННО (без debounce) в ProcessLifecycleOwner
+     * ON_RESUME-хуке — см. [setupCookieBackgroundRefresh]. Экраны собирают этот
+     * Flow и перезагружают «застрявшее» ошибочное состояние после глубокого сна:
+     * LaunchedEffect(Unit) у экрана НЕ перезапускается на resume (композиция
+     * пережила сон), а cache-guard'ы пропускают первичную загрузку — без тика
+     * экран навсегда показывает ошибку, даже когда сеть уже восстановилась.
+     *
+     * StateFlow (не SharedFlow) — новые подписчики сразу получают текущее
+     * значение; первый тик после композиции экрана отфильтровывается
+     * проверкой tick > 0 у потребителя (перезагрузка нужна только на СМЕНЕ
+     * состояния foreground, а не на первом кадре).
+     *
+     * Сейчас потребители: FeedScreen (Fix #377 — лента). Другие экраны сознательно
+     * не расширяются (scope — лента; музыка уже имеет свой авто-reload Fix #367).
+     */
+    val foregroundTicks: MutableStateFlow<Int> = MutableStateFlow(0)
+
+    /**
+     * Fix #176-auth-loop: throttle для notifyTokenInvalidated.
+     *
+     * Сценарий из лога 2026-08-04 12:36:43–12:37:10: после первого error 5
+     * VKApiClient.clearAccessToken() → notifyTokenInvalidated (tick 1) →
+     * AuthActivity SILENT запущена. Дальше LongPollKeepAlive / keepAlive /
+     * другие API-вызовы тоже получают error 5 (токен же очищен) → каждый
+     * инкрементит tick (2, 3, 4, 5, 6…) каждые ~4 сек. MainActivity фильтрует
+     * дубликаты (authActivityShowing guard), но:
+     *   - лог засерается tick-штормом
+     *   - LongPoll pause 4000ms каждый tick
+     *   - silent refresh в фоне крутится без backoff
+     *
+     * Фикс: не инкрементировать tick если предыдущий был < [NOTIFY_THROTTLE_MS]
+     * назад. Первый tick проходит мгновенно (реакция на реальную инвалидацию),
+     * последующие подавляются на 15 сек — за это время silent refresh Path 1.5/
+     * 2.5/3 либо успеет, либо AuthActivity SILENT завершится и следующий tick
+     * запустит FULL режим. Throttle покрывает и ситуацию «токен реально мёртв,
+     * refresh не помогает» — вместо 15 ticks/мин получаем 4 ticks/мин, что
+     * достаточно для реакции и не засоряет лог.
+     */
+    @Volatile
+    private var lastNotifyTokenInvalidatedMs: Long = 0L
+
+    /** Минимальный интервал между notifyTokenInvalidated tick'ами (мс). См. [notifyTokenInvalidated]. */
+    private val NOTIFY_THROTTLE_MS = 15_000L
+
+    /** Увеличивает счётчик инвалидаций токена — триггерит recompose в MainActivity. */
+    fun notifyTokenInvalidated() {
+        val now = System.currentTimeMillis()
+        val sinceLast = now - lastNotifyTokenInvalidatedMs
+        if (lastNotifyTokenInvalidatedMs > 0L && sinceLast < NOTIFY_THROTTLE_MS) {
+            // Fix #176-auth-loop: throttle — подавляем tick-шторм. Логируем на D
+            // чтобы не засорять W-уровень, но оставить след для диагностики.
+            AppLog.d("VkMintApp", "notifyTokenInvalidated throttled — last tick ${sinceLast}ms ago " +
+                "(need ${NOTIFY_THROTTLE_MS - sinceLast}ms more) — tick NOT incremented (Fix #176-auth-loop)")
+            return
+        }
+        lastNotifyTokenInvalidatedMs = now
+        val prev = tokenInvalidationTicks.value
+        tokenInvalidationTicks.value = prev + 1
+        AppLog.w("VkMintApp", "notifyTokenInvalidated: tick ${prev + 1} — MainActivity should relaunch AuthActivity")
+    }
+
+    // ─── #NET-SWITCH-POPUP (2026-08-03) ───────────────────────────────────
+    /**
+     * Реактивное состояние переключения сети для popup-overlay.
+     *
+     * Производители: [NetworkObserver] (физическая смена route / offline) и
+     * [vk.mint.api.VKApiClient] (err=5/1117 → silent refresh → success/fail).
+     * Потребитель: [vk.mint.ui.components.NetworkSwitchPopup] — собирает через
+     * collectAsState, показывает AlertDialog когда state != Idle.
+     *
+     * Видимость popup дополнительно gated на [VkMintPrefs.Snapshot.netSwitchPopupEnabled]
+     * (тумблер в Настройки → Интерфейс → «Сеть»). Когда выключен — popup скрыт,
+     * но логика переключения/refresh продолжает работать в фоне.
+     */
+    val networkSwitchState: MutableStateFlow<NetworkSwitchState> = MutableStateFlow(NetworkSwitchState.Idle)
+
+    /**
+     * Обновить состояние переключения сети (thread-safe, MutableStateFlow).
+     * Логирует переход на INFO (видно в logcat всегда — важные события).
+     * Дедуп: если новое состояние равно текущему — no-op (без лога).
+     */
+    fun setNetworkSwitchState(state: NetworkSwitchState) {
+        val prev = networkSwitchState.value
+        if (prev == state) return
+        networkSwitchState.value = state
+        AppLog.i("VkMintApp", "networkSwitchState: $prev → $state")
+    }
+
+    /**
+     * #NET-SWITCH-POPUP: запустить silent refresh токена вручную (кнопка «Повторить»
+     * в NetworkSwitchPopup). Вызывает exchangeAuthRepository.ensureFreshToken(force=true)
+     * в appScope. Результат обновляет networkSwitchState (Idle при успехе, Failed при неудаче).
+     */
+    fun retryNetworkSwitchRefresh() {
+        // exchangeAuthRepository — lateinit, поэтому проверяем isInitialized.
+        // Простой `repo == null` давал warning "Condition is always 'false'",
+        // потому что компилятор знает что lateinit-ссылка либо инициализирована,
+        // либо кидает UninitializedPropertyAccessException — null там быть не может.
+        if (!::exchangeAuthRepository.isInitialized) {
+            AppLog.w("VkMintApp", "retryNetworkSwitchRefresh: exchangeAuthRepository not initialized")
+            setNetworkSwitchState(NetworkSwitchState.Failed("auth repo not ready", canRetry = false))
+            return
+        }
+        val repo = exchangeAuthRepository
+        setNetworkSwitchState(NetworkSwitchState.Refreshing(attempt = 1))
+        appScope.launch {
+            try {
+                val token = repo.ensureFreshToken(force = true)
+                if (token != null) {
+                    AppLog.i("VkMintApp", "retryNetworkSwitchRefresh: OK — token refreshed")
+                    setNetworkSwitchState(NetworkSwitchState.Idle)
+                } else {
+                    val canRetry = try { repo.hasSilentReloginMeans() } catch (_: Exception) { false }
+                    AppLog.w("VkMintApp", "retryNetworkSwitchRefresh: no token (canRetry=$canRetry)")
+                    setNetworkSwitchState(NetworkSwitchState.Failed("silent refresh вернул null", canRetry = canRetry))
+                }
+            } catch (e: Exception) {
+                AppLog.e("VkMintApp", "retryNetworkSwitchRefresh failed", e)
+                setNetworkSwitchState(NetworkSwitchState.Failed(e.message ?: "exception", canRetry = true))
+            }
+        }
+    }
+
+    /**
+     * #DOZE-COOKIE-FLUSH (бывший #SESSION-COOKIES-BG-REFRESH, упрощён
+     * #SESSION-WEB-MECHANISM 2026-09-24): ON_RESUME хук для foreground-тика
+     * ([foregroundTicks]) и периодического CookieManager.flush() на диск.
+     *
+     * Удалено: sync копий cookies CookieManager → storage (копий больше нет —
+     * источник истины CookieManager) и CookieRefreshWorker (WorkManager 6ч).
+     */
+    private fun setupCookieBackgroundRefresh() {
+        try {
+            // Hook #2: ProcessLifecycleOwner — ON_RESUME flush.
+            // lifecycleScope привязан к process (не к конкретной activity) —
+            // корутину отменяет только полный kill процесса.
+            val app = this
+            androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(
+                object : androidx.lifecycle.DefaultLifecycleObserver {
+                    private var lastForegroundSyncMs = 0L
+
+                    override fun onResume(owner: androidx.lifecycle.LifecycleOwner) {
+                        // Fix #377 #DOZE-RESUME-RELOAD: инкремент foreground-тика
+                        // НЕМЕДЛЕННО, до debounce-cookie-sync — экраны (сейчас
+                        // FeedScreen) ждут этот сигнал чтобы перезагрузить
+                        // «застрявшее» ошибочное состояние после глубокого сна.
+                        val prevForegroundTick = foregroundTicks.value
+                        foregroundTicks.value = prevForegroundTick + 1
+                        val now = System.currentTimeMillis()
+                        // #SESSION-WEB-MECHANISM (2026-09-24): sync копий cookies
+                        // CookieManager → storage удалён (копий больше нет, источник
+                        // истины — сам CookieManager). Остался #DOZE-COOKIE-FLUSH.
+                        if (now - lastForegroundSyncMs < 30_000L) return@onResume
+                        lastForegroundSyncMs = now
+                        // Fix #377 #DOZE-COOKIE-FLUSH: сбрасываем CookieManager на диск.
+                        // Doze может убить WebView-процесс — незаflush'енные ротации
+                        // cookies (remixsid/p) при этом теряются. flush() — дёшево.
+                        app.appScope.launch(Dispatchers.Main) {
+                            try {
+                                CookieManager.getInstance().flush()
+                                AppLog.d("VkMintApp", "cookieSync: CookieManager.flush() OK (foreground)")
+                            } catch (e: Exception) {
+                                AppLog.w("VkMintApp", "cookieSync: CookieManager.flush() failed: ${e.message}")
+                            }
+                        }
+                    }
+                }
+            )
+            AppLog.i("VkMintApp", "setupCookieBackgroundRefresh: ON_RESUME flush hook registered " +
+                "(#SESSION-WEB-MECHANISM: cookie-sync/WorkManager удалены — копий cookies нет)")
+        } catch (e: Exception) {
+            AppLog.w("VkMintApp", "setupCookieBackgroundRefresh failed (non-fatal): ${e.message}")
+        }
+    }
+
+    /**
+     * Fix #267 (Plan §36.12 P1-CHAT-5): Feature flags от VK (account.getTogglesExternal).
+     *
+     * In-memory кэш фича-флагов вида "vkm_convo_owner_right_transfer" → enabled.
+     * Загружается при логине через [loadFeatureFlags]. UI использует для ACL-gating
+     * (например, «Передать права создателя» показывается только если
+     * featureFlags["vkm_convo_owner_right_transfer"] == true).
+     *
+     * StateFlow<Map> — immutable, при update создаётся новая map → Compose
+     * собирает через collectAsState и автоматически рекомпосит.
+     *
+     * Null-значения трактовуются как false (флаг выключен/не загружен).
+     * Пустая map (default) = флаги не загружены — UI показывает пункты
+     * по умолчанию (canChangeOwner из ACL решает).
+     */
+    val featureFlags: MutableStateFlow<Map<String, Boolean>> = MutableStateFlow(emptyMap())
+
+    /**
+     * Fix #176-auth-loop: форсировать FULL re-login при следующем запуске AuthActivity.
+     *
+     * Сценарий: пользователь обновил приложение поверх старого → access_token в
+     * бэкапе протух, exchange_token отсутствует (старая версия не сохранила),
+     * remixsid есть но VK сменил контракт web_token endpoint → SILENT AuthActivity
+     * бесконечно loop'ится (transparent WebView, пользователь не видит экран входа).
+     *
+     * Флаг выставляется в [onCreate] при детекте смены versionCode + протухшего
+     * токена/отсутствующего exchange_token. Читается в MainActivity.LaunchedEffect
+     * (boot + tokenInvalidationTick) — если true, silentFailCount приравнивается
+     * к MAX_SILENT_FAILURES → useSilent=false → AuthActivity в FULL режиме →
+     * юзер видит нормальный экран входа.
+     *
+     * Сбрасывается в false после успешного логина (saveAuthResult).
+     */
+    @Volatile
+    var forceFullReloginOnNextLaunch: Boolean = false
+
+    /**
+     * Загружает feature flags через account.getTogglesExternal и кэширует в
+     * [featureFlags]. Вызывается из onCreate после успешного логина.
+     * Errors логируются но НЕ пробрасываются — UI работает с empty map.
+     */
+    suspend fun loadFeatureFlags() {
+        try {
+            val flags = apiClient.accountGetTogglesExternal()
+            if (flags.isNotEmpty()) {
+                featureFlags.value = flags
+                AppLog.i("VkMintApp", "Loaded ${flags.size} feature flags")
+            }
+        } catch (e: Exception) {
+            AppLog.w("VkMintApp", "loadFeatureFlags failed: ${e.message}")
+        }
+    }
+
+    /**
+     * Fix #137: When true, the next tokenInvalidation tick will NOT trigger
+     * AuthActivity relaunch in MainActivity. Used by ChatDetailScreen to
+     * handle photo-upload auth failures inline (showing a banner instead of
+     * hiding the chat behind AuthActivity).
+     *
+     * Set to true BEFORE calling uploadAndSendPhoto, reset to false in finally.
+     * If token was invalidated during upload, ChatDetailScreen detects the
+     * tick change and shows an inline "session expired" dialog.
+     *
+     * Single-shot: MainActivity consumes it (sets to false) when it fires.
+     * Race-condition-prone (see worklog Fix #137) but acceptable for the
+     * photo-upload use case — concurrent uploads are unlikely in UI.
+     */
+    @Volatile
+    var suppressNextAuthRelaunch: Boolean = false
+
+    /**
+     * Fix #217 (P1.2): Time-based suppress AuthActivity relaunch.
+     *
+     * Fix #137 (single-shot suppressNextAuthRelaunch) работает только для
+     * photo upload и только для ОДНОГО tick. Если error 5/1117 приходит
+     * от LongPoll или другого API-вызова — AuthActivity запускается сразу,
+     * перекрывая чат.
+     *
+     * Time-based подход: suppressAuthRelaunchUntilMs = System.currentTimeMillis()
+     * + windowMs. Любой tokenInvalidation tick в этом окне НЕ запускает
+     * AuthActivity — вместо этого ChatDetailScreen (или другой экран)
+     * показывает inline toast "Сессия истекла, обновляем...".
+     *
+     * Это покрывает все API-вызовы на 30-60 секунд (хватит чтобы пользователь
+     * закончил действие, а silent refresh Path 1.5/2.5 восстановил токен).
+     *
+     * 0 = suppress отключён (по умолчанию). MainActivity проверяет:
+     *   if (now < suppressAuthRelaunchUntilMs) { skip AuthActivity; show inline }
+     *
+     * Сценарий: пользователь отправляет фото → error 5 → silent refresh
+     * запустился (Path 1.5) → параллельно LongPoll тоже получил error 5 →
+     * без suppress, LongPoll tick запустил бы AuthActivity поверх чата.
+     * С suppress: LongPoll tick игнорируется, silent refresh завершается,
+     * пользователь видит чат без overlay.
+     */
+    @Volatile
+    var suppressAuthRelaunchUntilMs: Long = 0L
+
+    /**
+     * Fix #217 (P1.2): Установить окно suppress AuthActivity relaunch.
+     *
+     * @param windowMs длительность окна в миллисекундах (по умолчанию 30 сек).
+     * Любой tokenInvalidation tick в этом окне НЕ запускает AuthActivity.
+     *
+     * Используется ChatDetailScreen перед потенциально долгой операцией
+     * (отправка фото, голосового) чтобы silent refresh Path 1.5/2.5 успел
+     * завершиться в фоне без перекрытия чата AuthActivity overlay.
+     *
+     * Безопасно: окно авто-протухает по времени. Если silent refresh
+     * не успел за 30 сек — следующий tick запустит AuthActivity нормально.
+     */
+    fun suppressAuthRelaunchFor(windowMs: Long = 30_000L) {
+        suppressAuthRelaunchUntilMs = System.currentTimeMillis() + windowMs
+        AppLog.i("VkMintApp", "suppressAuthRelaunchFor(${windowMs}ms) — " +
+            "AuthActivity relaunch suppressed until ${suppressAuthRelaunchUntilMs}")
+    }
+
+    /**
+     * Fix #217 (P1.2): Сбросить окно suppress (например после успешного
+     * silent refresh — больше не нужно подавлять).
+     */
+    fun clearSuppressAuthRelaunch() {
+        if (suppressAuthRelaunchUntilMs != 0L) {
+            suppressAuthRelaunchUntilMs = 0L
+            AppLog.d("VkMintApp", "clearSuppressAuthRelaunch — suppress window cleared")
+        }
+    }
+
+    /**
+     * Fix #112: проактивная проверка валидности токена при возврате из фона.
+     *
+     * `hasValidAccessToken()` проверяет только локальное `expires_at` — если токен
+     * истёк по времени (не сервер-сайд), VK ещё не знает об этом (не было API
+     * вызова). Без этой проверки мы ждём, пока LongPoll сделает следующий запрос
+     * к `messagesGetLongPollServer()` → VK вернёт error 5/1117 → callInternal
+     * вызовет `notifyTokenInvalidated()`. Но LongPoll может быть в 45-секундном
+     * `doRequest` (Doze заблокировал сеть) → задержка до 45с.
+     *
+     * Вызов из `MainActivity.onResume()` немедленно проверяет истёк ли токен по
+     * времени и если да — инкрементирует tick → boot LaunchedEffect (с Fix #112
+     * guard) запускает AuthActivity для silent re-login через remixsid.
+     *
+     * Безопасен для `expires_at == 0` (offline scope, без истечения) — в этом
+     * случае hasValidToken()=true и notifyTokenInvalidated НЕ вызывается.
+     */
+    fun checkTokenValidity() {
+        if (!tokenStorage.hasValidToken()) {
+            AppLog.w("VkMintApp", "checkTokenValidity: token locally expired — notifying MainActivity")
+            notifyTokenInvalidated()
+        }
+    }
+
+    // S7-4: Session keep-alive scope — runs while the app process is alive.
+    private val keepAliveScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    /**
+     * Процесс-живущий coroutine scope (SupervisorJob + IO dispatcher).
+     *
+     * Используется для запуска долгих upload-операций (голосовые сообщения,
+     * фото, файлы), которые НЕ должны отменяться, когда пользователь уходит
+     * с экрана чата — иначе `rememberCoroutineScope()` отменяет загрузку
+     * (`LeftCompositionCancellationException`) и вложение теряется на полпути.
+     *
+     * UI-обновления (reloadMessages, scroll) всё равно делаются через
+     * композиционный [androidx.compose.runtime.rememberCoroutineScope].
+     */
+    val appScope: CoroutineScope get() = keepAliveScope
+
+    /**
+     * Fix #340: счётчик активных (started) Activity. > 0 значит хотя бы одна
+     * Activity на переднем плане. Используется [LongPollKeepAliveService] для
+     * решения: делать headless silent re-login (нет UI) или отдать обработку
+     * MainActivity (UI виден).
+     */
+    @Volatile
+    private var startedActivities: Int = 0
+
+    /** true если хотя бы одна Activity в started state (видна пользователю). */
+    fun isAnyActivityForeground(): Boolean = startedActivities > 0
+
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+        // #ARCH-CONTAINERS (Этап 1.2-а): AppLog переехал в :core:common и больше не
+        // читает BuildConfig хоста — передаём идентификацию сборки ДО первого
+        // лог-вызова (раньше verboseToLogcat дефолтился от BuildConfig.DEBUG,
+        // а экспорт/persistent.log писали APPLICATION_ID/VERSION_NAME из :app).
+        AppLog.setAppBuildInfo(
+            appId = BuildConfig.APPLICATION_ID,
+            versionName = BuildConfig.VERSION_NAME,
+            debuggable = BuildConfig.DEBUG,
+        )
+        // #ARCH-CONTAINERS (Этап 1.2-в): AudioRouteLogger переехал в :core:media и
+        // больше не читает VkMintApp.get() — инжектим app-context до первого
+        // лог-вызова (PlayerService/AudioDeviceCallback стартуют позже onCreate;
+        // SirenTranscoder из того же модуля читает AppLog.debugBuild — уже инжекчён выше).
+        vk.mint.media.AudioRouteLogger.setAppContext(this)
+        // #CALLS-BUILD-STAMP: метка кода звонковой цепочки — по ней в логе мгновенно
+        // видно, какая СБОРКА исполняется (кейс 12:32: два процесса vk.mint.debug
+        // с разным кодом — новый и старый APK; versionName не различал их).
+        AppLog.i("VkMintApp", "onCreate: VK Mint starting (version=${BuildConfig.VERSION_NAME}, stamp=${BuildStamp.STAMP})")
+
+        // 0. Инициализация файлового лога (персистентный, с rotation)
+        AppLog.init(this)
+
+        // #ARCH-CONTAINERS (Этап 1.3): регистрация контейнера-пионера звонков
+        // (:feature:calls). Хук запуска звонка хост даёт через конструктор
+        // (ноль :app-типов в контракте CallStarter): ставим pending-событие,
+        // VkMintNavHost открывает экран звонка. Реестр ДО init-цикла ниже.
+        runCatching {
+            ContainerRegistry.register(
+                vk.mint.feature.calls.CallsContainer(
+                    startCallHook = { peerId, video -> requestOutgoingCall(peerId, video) },
+                )
+            )
+        }.onFailure { AppLog.e("VkMintApp", "calls container register failed: ${it.message}") }
+
+        // #ARCH-CONTAINERS (Этап 1.5-а): контейнер фото (:feature:photos) —
+        // NavEntry «Фото» (route "photos" — бывший ядерный пункт drawer) +
+        // AttachmentRenderer "photos_inline": инлайн-рендер фото-вложений чата
+        // уехал из ChatDetailScreen в PhotosInlineRenderer (feature-модуль);
+        // без контейнера чат показывает заглушку «скачать файл» (осознанная
+        // деградация по плану).
+        runCatching {
+            ContainerRegistry.register(vk.mint.feature.photos.PhotosContainer())
+        }.onFailure { AppLog.e("VkMintApp", "photos container register failed: ${it.message}") }
+
+        // #ARCH-CONTAINERS (Этап 1.5-б): контейнер аудио (:feature:audio) —
+        // NavEntry «Эквалайзер» (route "equalizer" — бывший ядерный пункт drawer)
+        // + SettingsSection «Эквалайзер» (route "settings_audio" — бывшая ядерная
+        // вкладка настроек, контент EqualizerTab рендерит хост) + AttachmentRenderer
+        // "audio_inline": инлайн-рендер аудио-вложений чата уехал из
+        // ChatDetailScreen в AudioInlineRenderer (feature-модуль); без контейнера
+        // чат показывает заглушку аудио-вложения (тап → плеер хоста — воспро-
+        // изведение не зависит от рендерера). Плеер/эквалайзер-движки пока в :app
+        // (блокер data-слой — см. контейнеры.план.md, Этап 1.5-б).
+        // Ожидаемый лог: контейнеров=3, capability=10
+        // (звонки 4: NavEntry+SettingsSection+PermissionNeeds+CallStarter;
+        //  фото 2: NavEntry+AttachmentRenderer;
+        //  аудио 4: NavEntry+SettingsSection+AttachmentRenderer+PermissionNeeds).
+        runCatching {
+            ContainerRegistry.register(vk.mint.feature.audio.AudioContainer())
+        }.onFailure { AppLog.e("VkMintApp", "audio container register failed: ${it.message}") }
+
+        // #ARCH-CONTAINERS (Этап 1.1): инициализация контейнеров-разделов.
+        // Реестр наполняется статическими регистраторами выше (Этап 1.3:
+        // контейнер-пионер звонков). Изоляция: падение init
+        // одного контейнера не валит хост и остальные контейнеры.
+        ContainerRegistry.containers().forEach { c ->
+            runCatching { c.init(this) }
+                .onFailure { AppLog.e("VkMintApp", "container '${c.id}' init failed: ${it.message}") }
+        }
+        AppLog.i(
+            "VkMintApp",
+            "ContainerRegistry: контейнеров=${ContainerRegistry.containers().size}, capability=${ContainerRegistry.capabilities().size}"
+        )
+
+        // §42.12 P0 #2: проверка доступности Siren-декодера в ffmpeg-kit.
+        // Логируем один раз при старте — если декодер недоступен, siren-треки
+        // будут кэшироваться как .ts (codec=siren, Wi-Fi бейдж, онлайн-only).
+        // Проверка идёт на Dispatchers.IO, не блокирует UI.
+        appScope.launch {
+            val available = try {
+                vk.mint.media.SirenTranscoder.checkSirenDecoderAvailable()
+            } catch (e: Throwable) {
+                AppLog.e("VkMintApp", "SirenTranscoder.checkSirenDecoderAvailable failed: ${e.message}")
+                false
+            }
+            AppLog.i("VkMintApp", "Siren decoder available=$available " +
+                "(if false, siren tracks cache as .ts with Wi-Fi badge)")
+        }
+
+        // Fix #340: трекинг foreground-состояния через ActivityLifecycleCallbacks.
+        //_startedActivities инкрементится в onActivityStarted, декрементится в
+        // onActivityStopped. isAnyActivityForeground() использует сервис для
+        // решения: headless silent re-login (нет UI) или отдать обработку MainActivity.
+        registerActivityLifecycleCallbacks(object : android.app.Application.ActivityLifecycleCallbacks {
+            override fun onActivityStarted(activity: android.app.Activity) {
+                startedActivities++
+                AppLog.d("VkMintApp", "Activity started (${activity.javaClass.simpleName}), foreground count=$startedActivities")
+            }
+            override fun onActivityStopped(activity: android.app.Activity) {
+                startedActivities = (startedActivities - 1).coerceAtLeast(0)
+                AppLog.d("VkMintApp", "Activity stopped (${activity.javaClass.simpleName}), foreground count=$startedActivities")
+            }
+            override fun onActivityCreated(activity: android.app.Activity, savedInstanceState: android.os.Bundle?) {}
+            override fun onActivityResumed(activity: android.app.Activity) {}
+            override fun onActivityPaused(activity: android.app.Activity) {}
+            override fun onActivitySaveInstanceState(activity: android.app.Activity, outState: android.os.Bundle) {}
+            override fun onActivityDestroyed(activity: android.app.Activity) {}
+        })
+
+        // 1. Encrypted shared prefs for token + master key
+        @Suppress("DEPRECATION")
+        val masterKey = MasterKey.Builder(this)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        @Suppress("DEPRECATION")
+        val securePrefs: SharedPreferences = EncryptedSharedPreferences.create(
+            this,
+            SECURE_PREFS_FILE,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
+
+        // Order matters: ExchangeTokenStorage wraps securePrefs directly,
+        // then TokenStorage wraps ExchangeTokenStorage as a legacy facade.
+        //
+        // VTosters pattern #3: файловый бэкап account.json как fallback
+        // при повреждении EncryptedSharedPreferences (KeyStore corruption,
+        // Tink key rotation failure, factory reset). ExchangeTokenStorage
+        // дампит все поля в JSON после каждого write, а при старте, если
+        // prefs пусты, пытается восстановиться из файла.
+        val accountFileBackup = AccountFileBackup(this)
+        exchangeStorage = ExchangeTokenStorage(securePrefs, accountFileBackup)
+
+        // Восстановление из файлового бэкапа: если prefs пусты/повреждены,
+        // но account.json существует — заливаем токены обратно ДО того, как
+        // любой другой код попытается их читать. Это спасает от полной
+        // потери сессии при Keystore corruption на Samsung/Xiaomi.
+        //
+        // Fix #177+#178 #FORCE-FULL-ON-FAILED-RESTORE (2026-08-04, лог 17:33:09):
+        // Раньше restoreFromFileBackup FAILED молча логировался, но forceFull flag
+        // НЕ выставлялся (он триггерился только при смене versionCode). В debug-
+        // сборках versionCode=1 всегда → "App version unchanged" → миграция НЕ
+        // запускалась → forceFull=false → AuthActivity SILENT loop 60 сек, потом
+        // fallback to LANDING. Юзер ждал минуту чтобы увидеть экран входа.
+        //
+        // Теперь: если securePrefs пусты И restoreFromFileBackup не восстановил
+        // access_token (restored=false) — выставляем forceFullReloginOnNextLaunch
+        // НЕЗАВИСИМО от versionCode. Условие versionChanged осталось для случая
+        // когда prefs не пусты (миграция поверх живой сессии), а здесь — для
+        // случая когда prefs пусты (чистый старт / Keystore corruption).
+        var backupRestoreFailed = false
+        if (exchangeStorage.accessToken() == null && accountFileBackup.exists()) {
+            AppLog.w("VkMintApp", "securePrefs пусты, но найден account.json — " +
+                "попытка восстановления сессии из файлового бэкапа")
+            val restored = exchangeStorage.restoreFromFileBackup()
+            AppLog.i("VkMintApp", "restoreFromFileBackup: ${if (restored) "OK" else "FAILED"}")
+            // restored=false значит access_token не восстановлен (либо отсутствует
+            // в бэкапе, либо протух). Все re-login credentials уже залиты (Fix A),
+            // но silentRefresh всё равно скорее всего упадёт (VK web_token contract
+            // change), поэтому форсируем FULL mode чтобы юзер сразу увидел экран
+            // входа вместо 60-сек SILENT loop с последующим fallback.
+            if (!restored) {
+                backupRestoreFailed = true
+            }
+        }
+
+        // Fix #176-auth-loop: миграция при апдейте приложения (установка поверх старого).
+        // Сценарий из лога 2026-08-04: пользователь установил новый APK поверх старого
+        // → access_token в бэкапе протух (expires_at = now-12s на момент старта),
+        // exchange_token отсутствует (старая версия не сохраняла или сохранила под
+        // другим ключом), remixsid присутствует но VK сменил контракт web_token
+        // endpoint → все silent paths фейлятся → AuthActivity SILENT loop по tick.
+        //
+        // Фикс: при детекте смены versionCode — если access_token протух ИЛИ отсутствует
+        // exchange_token — помечаем needFullRelogin. Это не чистит remixsid (он может
+        // быть ещё валиден для WebView silent re-auth), но гарантирует что MainActivity
+        // запустит AuthActivity в FULL режиме (а не SILENT), и юзер увидит экран входа
+        // вместо бесконечного прозрачного WebView loop'а.
+        //
+        // Флаг читается в MainActivity.LaunchedEffect(tokenInvalidationTick) и в boot
+        // LaunchedEffect — если true, silentFailCount устанавливается в MAX_SILENT_FAILURES
+        // чтобы useSilent=false → FULL режим.
+        runCatching {
+            val pm = packageManager
+            val pkgInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(packageName, 0)
+            }
+            val currentVersion = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                pkgInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pkgInfo.versionCode.toLong()
+            }
+            val metaPrefs = getSharedPreferences("app_meta", Context.MODE_PRIVATE)
+            val storedVersion = metaPrefs.getLong("last_version_code", 0L)
+            if (storedVersion != 0L && storedVersion != currentVersion) {
+                AppLog.i("VkMintApp", "App upgraded: $storedVersion → $currentVersion — checking token state for auth-loop prevention (Fix #176-auth-loop)")
+                val tokenExpired = !exchangeStorage.hasValidAccessToken()
+                val noExchangeToken = exchangeStorage.exchangeToken().isNullOrBlank()
+                if (tokenExpired || noExchangeToken) {
+                    AppLog.w("VkMintApp", "App upgraded AND (token expired=$tokenExpired OR no exchange_token=$noExchangeToken) — forcing FULL re-login on next AuthActivity launch (Fix #176-auth-loop)")
+                    forceFullReloginOnNextLaunch = true
+                }
+            } else if (storedVersion == 0L) {
+                AppLog.i("VkMintApp", "First install (version=$currentVersion) — no migration needed")
+            } else {
+                AppLog.d("VkMintApp", "App version unchanged ($currentVersion) — no migration needed")
+            }
+            // Fix #177+#178 #FORCE-FULL-ON-FAILED-RESTORE: независимая от versionCode
+            // проверка. Срабатывает когда securePrefs пусты + restoreFromFileBackup
+            // не восстановил access_token (account.json без токена или с протухшим).
+            // В debug-сборках versionCode=1 → ветка versionChanged никогда не идёт,
+            // без этого блока юзер ждёт 60 сек SILENT loop перед экраном входа.
+            if (backupRestoreFailed) {
+                AppLog.w("VkMintApp", "backupRestoreFailed=true — forcing FULL re-login on next AuthActivity launch (Fix #177+#178, versionCode-independent)")
+                forceFullReloginOnNextLaunch = true
+            }
+            metaPrefs.edit().putLong("last_version_code", currentVersion).apply()
+        }.onFailure { e ->
+            AppLog.w("VkMintApp", "Version migration check failed: ${e.message} — non-fatal, continuing")
+        }
+
+        tokenStorage = TokenStorage(exchangeStorage)
+        // #LOG-FAB-DEFAULT-OFF (14.09, запрос юзера): значок логирования («Жук»)
+        // по умолчанию СКРЫТ в любых сборках. Раньше debugDefault=BuildConfig.DEBUG
+        // делал его видимым в debug — тестерам мешал. Включается в Настройках.
+        prefs = VkMintPrefs(this, debugDefault = false)
+
+        // #LOG-CATEGORIES (2026-08-04): загрузка отключенных категорий логов
+        // из DataStore в AppLog. Делаем ОДИН синхронный read в runBlocking на
+        // старте — до того, как любой другой код начнёт логировать. После этого
+        // все логи фильтруются по категориям автоматически (AppLog.log проверяет
+        // enabledCategories перед записью в buffer/file/logcat).
+        //
+        // UI (SettingsScreen LoggingTab) обновляет множество через
+        // prefs.setLogCategoriesDisabled() + AppLog.setCategoryEnabled() —
+        // изменения применяются мгновенно (без перезапуска приложения).
+        // P3.10: ANR-риск — runBlocking на Main thread (DataStore.first() + применение
+        // настроек логирования). На медленных устройствах ~0.5-2с. НЕ выношу в
+        // coroutine: блок-комментарий выше явно требует загрузки ДО любого другого
+        // логирования (AppLog.log проверяет enabledCategories перед записью).
+        // Безопасный минимум — measureTimeMillis + AppLog.d для мониторинга регрессий.
+        val logCfgMs = measureTimeMillis {
+            runBlocking {
+                runCatching {
+                    val snap = prefs.data.first()
+                    AppLog.applyDisabledCategories(snap.logCategoriesDisabled)
+                    // #LOG-SECTIONS (волна 31-f): CSV выключенных секций → гейты
+                    // AppLog (префикс тега/сообщения). Пустой CSV = все секции
+                    // логируются (дефолт). Изменение из SettingsScreen применяется
+                    // немедленно (AppLog.setDisabledSections сразу после записи префа).
+                    AppLog.setDisabledSections(parseLogSectionsOff(snap.logSectionsOff))
+                    // #LOG-ERRORS-ONLY (2026-09-30): quiet mode - only ERROR logged.
+                    AppLog.setErrorsOnly(snap.logErrorsOnly)
+                    // #LOG-CONFIG (2026-10-01): применение сохранённых настроек хранения
+                    // логов при старте приложения. Читаем snapshot prefs (уже получен
+                    // выше как `snap` в этом же runBlocking) и применяем ротацию/буфер/
+                    // retention/автоочистку через AppLog.applyLogConfig. При
+                    // retentionDays>0 это сразу запускает cleanupByRetention() —
+                    // синхронно, как все остальные первичные настройки в этом блоке.
+                    AppLog.applyLogConfig(
+                        maxBytes = snap.logMaxSizeBytes,
+                        bufferCapacity = snap.logBufferCapacity,
+                        retentionDays = snap.logRetentionDays,
+                        autoClean = snap.logAutoClean,
+                    )
+                }.onFailure { e ->
+                    android.util.Log.w("VK Mint/VkMintApp",
+                        "loadLogCategories failed: ${e.message} — default (critical only: AUTH+SYSTEM+NETWORK) used")
+                }
+            }
+        }
+        AppLog.d("VkMintApp", "P3.10: log-config runBlocking took ${logCfgMs}ms (Main thread, ANR risk if >2000ms)")
+
+        // 1b. Прогрев CookieManager для обнаружения сессии VK из внешнего браузера.
+        //     CookieManager лениво загружает cookies из хранилища — без прогрева
+        //     первый getCookie() в ExternalBrowserAuth.tryFindExistingAuth()
+        //     может вернуть null даже если Chrome авторизован в VK.
+        ExternalBrowserAuth.warmUpCookieManager()
+
+        // 2. HTTP client — VK Android User-Agent (dynamic, VK Mint RE format).
+        //    VK API отбрасывает не-официальные клиенты по UA (error 15 на messages.*).
+        //    Хардкод заменён на VkUserAgent.get() — формат идентичен VK.app.
+        //
+        //    #44: Interceptor уважает UA, уже заданный запросом — WebTokenAuth
+        //    стучится на login.vk.com (WEB-flow endpoint) с Chrome UA, и этот UA
+        //    НЕ должен перетираться VKAndroidApp/... иначе VK отдаёт 401 invalid_request
+        //    (layer: LayerAnonymTokenHandler). Аналогично X-VK-Android-Client ставится
+        //    только для api.vk.com — web-эндпоинты его не ждут.
+        //
+        //    #29 (закрытие хвостов): SSL pinning, AdBlock, away.php bypass —
+        //    читаем prefs ОДИН раз синхронно через runBlocking для initial config,
+        //    interceptors будут перечитывать prefs на каждый запрос.
+        val ua = VkUserAgent.get(this)
+        AppLog.i("VkMintApp", "User-Agent: $ua")
+        // #BOTTOM-DEFAULT-4: миграция дефолта нижней панели (5→4 кнопки).
+        // Применяется только если пользователь не настраивал панель сам.
+        // P3.10: ANR-риск — runBlocking на Main thread (последовательные миграции
+        // DataStore). На медленных устройствах ~0.5-1.5с. НЕ выношу в coroutine:
+        // миграции должны примениться ДО первого рендера UI, иначе пользователь
+        // увидит старые дефолты панелей/пушей/локера на первом кадре. Безопасный
+        // минимум — measureTimeMillis + AppLog.d для мониторинга регрессий.
+        val migrationsMs = measureTimeMillis {
+            runBlocking {
+                val migrated = prefs.migratePanelDefaultsV2()
+                if (migrated) AppLog.i("VkMintApp", "Panel defaults v2 migration: applied (4-button bottom bar)")
+                // #PANELEDIT (2026-10-02): миграция под НОВЫЙ набор пунктов панелей
+                // (PanelItems.key вместо Screen.route) — сбрасывает обе панели на
+                // канонический список пользователя (дубли «мессенджер»/«сообщения»,
+                // спец-пункт «реакции»).
+                val panelV3 = prefs.migratePanelDefaultsV3()
+                if (panelV3) AppLog.i("VkMintApp", "Panel defaults v3 migration: applied (PanelItems canonical set)")
+                // #VK-CANONICAL-BOTTOM-NAV (2026-10-07): миграция под каноническую структуру VK
+                // (Главная, Сервисы, Мессенджер, Клипы, Профиль) в нижней панели.
+                val panelV4 = prefs.migratePanelDefaultsV4()
+                if (panelV4) AppLog.i("VkMintApp", "Panel defaults v4 migration: applied (VK canonical bottom bar)")
+                // §42.6 #PUSH-NO-GROUP-DEFAULT: сброс pushGroupingMode "category"→"none".
+                // Старый default сворачивал пуш-группы — пользователь не видел отдельные
+                // посты без pinch-out. Новый default = каждое уведомление отдельно.
+                val pushMigrated = prefs.migratePushGroupingDefault()
+                if (pushMigrated) AppLog.i("VkMintApp", "Push grouping migration: reset 'category'→'none' (individual notifications)")
+                // #READ-RECEIPTS-DEFAULT (волна 34): одноразовый откат «Статус прочтения
+                // (✓/✓✓)» к default ON — на устройствах, где тумблер отключали в тестах,
+                // в DataStore persistился false (единственный писатель — сам тумблер).
+                val readReceiptsMigrated = prefs.migrateReadReceiptsDefaultOn()
+                if (readReceiptsMigrated) AppLog.i("VkMintApp", "Read receipts migration: msg_read_receipts false→true (default ON per user request)")
+                // #LOCKER-BG-MIGRATION (волна 36): одноразовое включение «Блокировки
+                // при возврате из фона» на устройствах с PIN, заданным ДО #LOCKER-UX
+                // (auto-enable) — там персистился lockerOnBackground=false и PIN
+                // срабатывал только на холодном старте, фича выглядела мёртвой.
+                val lockerBgMigrated = prefs.migrateLockerOnBackgroundOn()
+                if (lockerBgMigrated) AppLog.i("VkMintApp", "Locker bg migration: locker_on_background false→true (PIN was set before #LOCKER-UX auto-enable)")
+                // #LOCKER-UX-3 (волна 36): одноразовый сброс зависимых пунктов
+                // локера — биометрия off всегда (тумблер удалён из UI по запросу
+                // пользователя), onBackground off при незаданном PIN (каскадная
+                // семантика «выключение PIN гасит зависимые пункты»; чистит
+                // сломанное состояние onBackground=true + пустой хэш).
+                val lockerDepMigrated = prefs.migrateLockerDependentsOff()
+                if (lockerDepMigrated) AppLog.i("VkMintApp", "Locker dependents migration: biometric→false, onBackground→false without PIN (#LOCKER-UX-3)")
+            }
+        }
+        AppLog.d("VkMintApp", "P3.10: migrations runBlocking took ${migrationsMs}ms (Main thread, ANR risk if >2000ms)")
+        // P3.10: ANR-риск — третий runBlocking (prefsSnapshot seed). КРИТИЧЕН для
+        // auth-flow: prefsSnapshot и AuthDomainsConfig.update(initialSnap) читаются
+        // ниже в onCreate и в auth flow (AuthActivity/ExternalBrowserLauncher).
+        // НЕ выношу в coroutine — синхронный snapshot обязателен. Мониторинг через
+        // measureTimeMillis + AppLog.d; при регрессии >2с — кандидат на рефакторинг
+        // (seed дефолтом + async-обновление, но требует полного теста auth-flow).
+        // lateinit: measureTimeMillis лямбда присваивает значение синхронно →
+        // после блока initialSnap гарантированно инициализирован (non-null).
+        lateinit var initialSnap: VkMintPrefs.Snapshot
+        val snapSeedMs = measureTimeMillis {
+            initialSnap = runBlocking { prefs.data.first() }
+        }
+        prefsSnapshot = initialSnap   // Fix #336: seed synchronous cache
+        AppLog.d("VkMintApp", "P3.10: prefsSnapshot seed runBlocking took ${snapSeedMs}ms (Main thread, ANR risk if >2000ms)")
+        // Fix #189: инициализируем AuthDomainsConfig из prefs ДО того, как
+        // любой auth flow (AuthActivity, ExternalBrowserLauncher, WebTokenAuth)
+        // попытается прочитать домены. initialSnap уже загружен синхронно выше.
+        vk.mint.auth.exchange.AuthDomainsConfig.update(initialSnap)
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(45, TimeUnit.SECONDS)   // LongPoll wait=25 + запас на latency/Doze
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .pingInterval(15, TimeUnit.SECONDS)   // TLS keep-alive ping каждые 15с — предотвращает NAT timeout
+            .retryOnConnectionFailure(true)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            // #CALLS-ANTIFRAUD (2026-08-23): OkHttp CookieJar — подставляет полный
+            // браузерный cookie-set VK (remixsid/remixnsid/remixstid/remixstlid/httoken…)
+            // в исходящие запросы. Без него get_anonym_token / auth.anonymLogin /
+            // login.vk.ru web_token отклоняются по антифроду (401 AUTH_LOGIN).
+            // exchangeStorage создан выше (строка ~662) — доступен здесь.
+            .cookieJar(vk.mint.mods.network.VkCookieJar(exchangeStorage))
+            // #CALLS: OkHttp/Java InetAddress не резолвит calls.okcdn.ru (IPv6-проблема),
+            // хотя системный WebView резолвит. Для okcdn-хостов используем IPv4
+            // (из ping: 155.212.204.12 — file-level константа AUTO_IP ниже).
+            // Для остальных хостов — стандартный Dns.SYSTEM.
+            //
+            // #CALLS-DNS-PIN (Task 26-2-b): ручной IPv4 из Настройки → Звонки
+            // (prefs.callsDnsPinIp) перекрывает встроенный AUTO_IP. lookup()
+            // вызывается OkHttp на КАЖДОЕ новое соединение, поэтому читаем
+            // @Volatile prefsSnapshot прямо здесь — смена IP применяется БЕЗ
+            // перезапуска (уже установленный WS-сигналинг не рвём — новый
+            // адрес возьмётся при ближайшем reconnect). Пустой/невалидный
+            // ручной IP → авто (AUTO_IP). Прокси-режим не конфликтует: при
+            // CONNECT hostname резолвит прокси-сторона (см. комментарий про
+            // proxy ниже), этот Dns просто не вызывается.
+            .dns(object : okhttp3.Dns {
+                private val pinnedHosts = setOf(
+                    "calls.okcdn.ru",
+                    "calls-test.okcdn.ru",
+                    "api.mycdn.me",
+                )
+                override fun lookup(hostname: String): List<java.net.InetAddress> {
+                    if (hostname.lowercase() in pinnedHosts) {
+                        var ip = AUTO_IP
+                        val snap = prefsSnapshot
+                        if (snap != null) {
+                            val manual = snap.callsDnsPinIp.trim()
+                            if (manual.isNotEmpty() && isValidIpv4(manual)) {
+                                ip = manual
+                            }
+                        }
+                        return listOf(java.net.InetAddress.getByName(ip))
+                    }
+                    return okhttp3.Dns.SYSTEM.lookup(hostname)
+                }
+            })
+
+
+        // SSL Pinning — применяется на старте. Для смены требуется restart приложения
+        // (OkHttp CertificatePinner immutable после build).
+        if (initialSnap.netSslPinning) {
+            val pinnerBuilder = CertificatePinner.Builder()
+            listOf(
+                "api.vk.com", "oauth.vk.com", "id.vk.com",
+                "login.vk.com", "m.vk.com", "vk.com", "vk.ru",
+                // Task #Web-API: mobile-web API gateway (m.vk.ru SPA uses this).
+                // See VKEndpoints.WEB_API_HOSTNAME. Activated by netUseWebApiGateway.
+                vk.mint.api.VKEndpoints.WEB_API_HOSTNAME,
+                "psv4.vkuseraudio.net", "psv4.userapi.com",
+            ).forEach { host ->
+                NetworkInterceptors.SslPins.forHost(host).forEach { pin ->
+                    pinnerBuilder.add(host, pin)
+                }
+            }
+            builder.certificatePinner(pinnerBuilder.build())
+            AppLog.i("VkMintApp", "SSL Pinning ENABLED — ${10} hosts pinned")
+        } else {
+            AppLog.i("VkMintApp", "SSL Pinning disabled (netSslPinning=false)")
+        }
+
+        // #SETTINGS-FIX (P1-1, аудит настроек ❌1): применяем HTTP-прокси из настроек
+        // (netProxyEnabled/netProxyHost/netProxyPort — VkMintPrefs, UI: SettingsScreen NetworkTab).
+        // Раньше секция «Прокси» только сохраняла значения — потребителей не было вовсе.
+        // Архитектура: OkHttpClient собирается ОДИН раз при старте процесса (immutable
+        // после build), поэтому прокси применяется ТОЛЬКО при старте — как SSL pinning.
+        // Runtime-переключение в NetworkTab даёт честный тост «применится после перезапуска».
+        // Не конфликтует с интерцепторами: proxy() действует на уровне RouteSelector
+        // (выбор соединения), а AwayBypass/AdBlock/StaleConnection/NetworkRetry/VkCookieJar
+        // работают с запросом/ответом и прокси не видят. DNS-пиннинг calls.okcdn.ru
+        // при прокси обходится естественно: hostname резолвится на стороне прокси (CONNECT).
+        // HTTP-тип (Proxy.Type.HTTP) — SOCKS-режим UI не имеет (нет селектора типа),
+        // рисовать SOCKS без переключателя = ложная надежда (no-stub).
+        if (initialSnap.netProxyEnabled && initialSnap.netProxyHost.isNotBlank()) {
+            runCatching {
+                builder.proxy(
+                    java.net.Proxy(
+                        java.net.Proxy.Type.HTTP,
+                        java.net.InetSocketAddress(initialSnap.netProxyHost, initialSnap.netProxyPort),
+                    ),
+                )
+                AppLog.i("VkMintApp", "Proxy ENABLED (HTTP) — ${initialSnap.netProxyHost}:${initialSnap.netProxyPort}")
+            }.onFailure { e ->
+                // Невалидный порт/хост не должен валить приложение — трафик идёт напрямую.
+                AppLog.w("VkMintApp", "Proxy setup failed — traffic goes direct: ${e.message}")
+            }
+        } else {
+            AppLog.i("VkMintApp", "Proxy disabled (netProxyEnabled=false или пустой хост)")
+        }
+
+        httpClient = builder
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val builder2 = original.newBuilder()
+                    .header("Accept-Language", "ru")
+                // VK Android UA — только если запрос явно не задал свой
+                // (WebTokenAuth задаёт Chrome UA для login.vk.com web-flow).
+                if (original.header("User-Agent") == null) {
+                    // #ADMIN-STATS-W47: web.api.vk.ru (static.vk.ru mini apps) ЖДЁТ браузерный UA.
+                    val uaForHost = if (original.url.host == vk.mint.api.VKEndpoints.WEB_API_HOSTNAME)
+                        vk.mint.api.VKEndpoints.WEB_BROWSER_UA else ua
+                    builder2.header("User-Agent", uaForHost)
+                }
+                // #ADMIN-STATS-W47 (FIX-4): mini-app gateway требует Origin/Referer = static.vk.ru
+                // (из stats.har). Ставим ВСЕГДА, независимо от UA.
+                if (original.url.host == vk.mint.api.VKEndpoints.WEB_API_HOSTNAME) {
+                    if (original.header("Origin") == null) builder2.header("Origin", vk.mint.api.VKEndpoints.WEB_ORIGIN)
+                    if (original.header("Referer") == null) builder2.header("Referer", vk.mint.api.VKEndpoints.WEB_REFERER)
+                }
+                // #44: X-VK-Android-Client — для VK Android API/auth endpoints
+                // (api.vk.com, oauth.vk.com, id.vk.com). На web-flow endpoints
+                // (login.vk.com, m.vk.com) этот header выдаёт non-browser клиент
+                // и ломает get_anonym_token (401 invalid_request, LayerAnonymTokenHandler).
+                //
+                // Task #Web-API: web.api.vk.ru — это мобильный WEB-шлюз m.vk.ru.
+                // X-VK-Android-Client там тоже не нужен (VK может классифицировать
+                // запрос как non-browser и отказать). Header опускается автоматически.
+                val host = original.url.host
+                val isWebFlowHost = host == "login.vk.com" ||
+                    host == "m.vk.com" ||
+                    host == "new.vk.com" ||
+                    host == vk.mint.api.VKEndpoints.WEB_API_HOSTNAME
+                if (!isWebFlowHost &&
+                    original.header("X-VK-Android-Client") == null
+                ) {
+                    builder2.header("X-VK-Android-Client", "new")
+                }
+                chain.proceed(builder2.build())
+            }
+            // #29: 3 сетевые настройки теперь реально работают (раньше были UI-only).
+            .addInterceptor(NetworkInterceptors.AwayBypassInterceptor(prefs))
+            .addInterceptor(NetworkInterceptors.AdBlockInterceptor(prefs))
+            // Fix #176: StaleConnectionInterceptor — добавляет Connection: close
+            // в течение 10 сек после switch'а сети. Должен быть ДО NetworkRetry
+            // чтобы retry'и тоже шли с Connection: close (не переиспользовали
+            // stale connections из pool'а).
+            .addInterceptor(NetworkInterceptors.StaleConnectionInterceptor())
+            // Fix #45: retry на IOException при переключении WiFi↔Mobile.
+            // Должен быть ПОСЛЕДНИМ application interceptor — работает с финальным
+            // request после away-bypass/ad-block преобразований.
+            .addInterceptor(NetworkInterceptors.NetworkRetryInterceptor())
+            .build()
+
+        // 3. Exchange-token auth repository — phone+password+2FA flow, refresh, LongPoll.
+        //    Initialized BEFORE VKApiClient so the API client can refresh tokens on error 5.
+        exchangeAuthRepository = ExchangeAuthRepository(
+            api = ExchangeAuthApi(httpClient = httpClient),
+            storage = exchangeStorage,
+            httpClient = httpClient,  // Web token refresh через remixsid (ensureFreshToken)
+        )
+
+        // 3b. VK API client (offline-aware) — wires to the auth repository for auto-refresh.
+        //    NetworkObserver initialized first so VKApiClient can reuse it (C13).
+        networkObserver = NetworkObserver(this)
+        networkObserver.register()
+
+        // #AUTO-OFFLINE-REMOVAL (W41): авто-офлайн (#38) убран, преф privacyOfflineMode
+        // больше никем не пишется. Застрявший true из старых версий переживал
+        // перезапуск и блокировал контент (репорт: «офлайн-режим который нельзя
+        // выключить» после очистки кэша). Одноразовая тихая миграция при старте.
+        keepAliveScope.launch {
+            runCatching {
+                if (prefs.data.first().privacyOfflineMode) {
+                    prefs.setPrivacyOfflineMode(false)
+                    AppLog.i("VkMintApp", "#AUTO-OFFLINE-REMOVAL: stale privacyOfflineMode cleared")
+                }
+            }
+        }
+
+        // #NETWORK-RESILIENCE (2026-08-04): подключаем NetworkObserver к auth-repo
+        // для offline-first входа (AuthState.OfflineWithCache) и offline-guard в
+        // ensureFreshToken — не тратим retry-попытки когда сеть точно недоступна.
+        exchangeAuthRepository.attachNetworkObserver(networkObserver)
+        // #SESSION-WEB-MECHANISM (2026-09-24): app context для скрытого WebView
+        // refresh (HiddenSessionRefresher) + разовая миграция: стираем legacy
+        // пароль/копии cookies (Path 1.5/2.5 удалены — см. СЕССИЯ-ВЕБ-ПОРТ.md).
+        exchangeAuthRepository.attachAppContext(this)
+        exchangeStorage.wipeLegacySessionArtifacts()
+
+        // #SESSION-COOKIES-BG-REFRESH (Hook #2 + Hook #3): фоновый sync session
+        // cookies (remixsid + p + remixnsid) из CookieManager → storage.
+        //
+        // Проблема: backfillRemixsidFromCookieManager вызывается ТОЛЬКО в момент
+        // логина. После логина VK ротейтит cookies (security events, web-навигация),
+        // #SESSION-WEB-MECHANISM (2026-09-24): cookie-sync хуки (storage-копий больше
+        // нет) и CookieRefreshWorker удалены. Остался ON_RESUME flush (#DOZE-COOKIE-FLUSH).
+        setupCookieBackgroundRefresh()
+
+        apiClient = VKApiClient(
+            context = this,
+            httpClient = httpClient,
+            tokenStorage = tokenStorage,
+            prefs = prefs,
+            exchangeAuthRepository = exchangeAuthRepository,
+            networkObserver = networkObserver,
+        )
+        // P3.3: FoldersRepository — клиентские папки диалогов (JSON в VkMintPrefs).
+        foldersRepository = vk.mint.data.local.FoldersRepository(prefs)
+        // Fix #276: PinnedConversationsRepository — локальные закреплённые диалоги.
+        pinnedConvsRepository = vk.mint.data.local.PinnedConversationsRepository(prefs)
+        // Fix #356 #MSG-ARCHIVE: ArchivedConversationsRepository — локальный архив диалогов.
+        archivedConvsRepository = vk.mint.data.local.ArchivedConversationsRepository(prefs)
+        // Волна 40 #BOOKMARKS-TRACKS: локальные закладки треков (JSON в VkMintPrefs).
+        trackBookmarksRepository = vk.mint.data.local.TrackBookmarksRepository(prefs)
+
+        // #CALLS: Queuev4Client — сигналинг звонков через queuev4.vk.ru.
+        queuev4Client = Queuev4Client(httpClient = httpClient, apiClient = apiClient)
+        // #CALLS: вторая подписка на events_queue<uid> — полные conversation params.
+        eventsQueuev4Client = Queuev4Client(httpClient = httpClient, apiClient = apiClient)
+
+        // 4. Media3 — downloaders + PlayerService.
+        //    #39 C7: AudioStreamCache (zombie) удалён — стриминг-кэш не использовался
+        //    (Fix #76 убрал CacheDataSource из-за короткоживущих AES-128 ключей HLS).
+        //    Реальный офлайн-кэш = полные .ts/.mp4 файлы через TrackDownloadManager +
+        //    VideoDownloadManager (auto-download при первом прослушивании/просмотре).
+        TrackDownloadManager.init(this)
+        VideoDownloadManager.init(this)
+        // Fix #100: офлайн-кэш для ВИДЕО-историй (stories). Отдельный менеджер —
+        // см. STORY_VIDEO_CACHE_PLAN.md. Init после VideoDownloadManager, т.к.
+        // использует тот же VkUserAgent/OkHttp pattern.
+        StoryVideoDownloadManager.init(this)
+        // §37.12 #329: офлайн-кэш для VK Clips (коротких вертикальных видео).
+        // Смоделирован по StoryVideoDownloadManager, но использует Video model
+        // (Long videoId), TTL 7 дней, URL-refresh через videoGetClipById.
+        // Init после StoryVideoDownloadManager — тот же pattern.
+        ClipVideoDownloadManager.init(this)
+        // #39 C2: persistent playback position (audio + video) — до PlayerConnection,
+        // т.к. PlayerConnection.init использует его для restore/seek при playTrackList.
+        vk.mint.media.PlaybackPositionStore.init(this)
+        // #AUTH-WEBVIEW-STARVATION-V2: НЕ запускаем PlayerConnection в auth flow.
+        // PlayerConnection.init() → connectController() → IPC bind к PlayerService →
+        // PlayerService.onCreate() блокирует main thread на ~150-300мс (ExoPlayer +
+        // MediaSession + AudioEffects). В это время Chromium в VkAuthWebViewScreenV2
+        // пытается поднять рендерер → IPC handshake cr_ChildProcessConn таймаутится →
+        // onPageStarted NEVER fires → m.vk.ru не грузится (белый экран).
+        //
+        // Fix #AUTH-WEBVIEW-STARVATION (MainActivity.kt:1272) skip'ит только
+        // notifyResumed, но НЕ init. init вызывается ЗДЕСЬ ВСЕГДА — даже в auth flow.
+        // Этот guard закрывает дыру: если токена нет (auth flow), PlayerService НЕ
+        // запускается, main thread свободен для Chromium.
+        //
+        // После успешного auth (token сохранён) — MainActivity.onResume вызовет
+        // PlayerConnection.init(this) через notifyResumed→init path (init идемпотентен,
+        // повторный вызов безопасен). См. PlayerConnection.init: `if (initialized) return`.
+        if (tokenStorage.hasValidToken()) {
+            PlayerConnection.init(this)
+        } else {
+            AppLog.i("VkMintApp", "skip PlayerConnection.init — no token (auth flow), #AUTH-WEBVIEW-STARVATION-V2")
+        }
+        // Волна 31 #AUDIO-BG-PAGER: app-level фоновая пагинация «Моя музыка».
+        // Старт при старте приложения если есть валидная сессия (цикл живёт
+        // в appScope — переживает уход с экрана музыки); в auth flow старт
+        // отложен — MusicScreen при входе вызовет ensureStarted лениво
+        // (идемпотентно). Прогресс персистится в VkMintPrefs
+        // (my_music_paged_offset) — после смерти процесса продолжается.
+        if (tokenStorage.hasValidToken()) {
+            try {
+                vk.mint.data.audio.AudioLibraryPager.get().ensureStarted()
+            } catch (e: Exception) {
+                AppLog.w("VkMintApp", "#AUDIO-BG-PAGER: ensureStarted failed: ${e.message}")
+            }
+        }
+
+        // 4b. Async: применим пользовательский путь загрузки музыки из prefs.
+        //     DataStore загружается асинхронно — не можем ждать в onCreate().
+        //     #39 C7: cacheSizeMb/cacheCustomPath больше не реконфигурируют кэш
+        //     (AudioStreamCache удалён). Prefs остаются для обратной совместимости,
+        //     но не используются. Путь загрузки музыки (musicDownloadPath) пока тоже
+        //     не применяется — TrackDownloadManager пишет в filesDir/downloads/music.
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                val snap = prefs.data.first()
+                AppLog.i("VkMintApp", "Prefs loaded: musicPath=${snap.musicDownloadPath}, adBlock=${snap.netAdBlock}")
+                // Fix #100: применяем лимит кэша stories из prefs (default 200 МБ).
+                // evictExpired уже отработал в init, здесь — LRU по размеру.
+                StoryVideoDownloadManager.enforceCacheLimit(snap.storyCacheLimitMb)
+                // §37.12 #329: применяем лимит кэша clips из prefs. Пока отдельного
+                // prefs-ключа clipCacheLimitMb нет — переиспользуем storyCacheLimitMb
+                // (RESEARCH-1 рекомендует отдельный pref=300 МБ в будущей итерации).
+                ClipVideoDownloadManager.enforceCacheLimit(snap.storyCacheLimitMb)
+                // Fix #110: применяем autoCacheAudio к PlayerConnection (initial).
+                PlayerConnection.autoCacheAudio = snap.autoCacheAudio
+
+                // #SETTINGS-FIX (P1-2, аудит настроек ⚠️2/⚠️3): пути скачивания переживают
+                // рестарт. TrackDownloadManager.init/VideoDownloadManager.init (выше,
+                // синхронно) хардкодят filesDir; reconfigurePath вызывался ТОЛЬКО из
+                // SettingsScreen при смене пути — после перезапуска загрузки шли во
+                // внутреннюю папку, а UI показывал сохранённый кастомный путь.
+                // Применяем сохранённые пути при старте (корутина на Dispatchers.IO —
+                // reconfigurePath переносит файлы, на main нельзя).
+                // Музыка: дефолт VkMintPrefs «/Music/VK Mint/» НЕ применяем — иначе дефолтным
+                // пользователям внутренний filesDir-режим неожиданно сменится на external
+                // (поведенческое изменение вне фикс-семантики). Видео: дефолт — пустая строка.
+                if (snap.musicDownloadPath.isNotBlank() &&
+                    snap.musicDownloadPath != "/Music/VK Mint/" // дефолт VkMintPrefs MUSIC_DOWNLOAD_PATH
+                ) {
+                    runCatching { TrackDownloadManager.reconfigurePath(snap.musicDownloadPath) }
+                        .onFailure { e -> AppLog.w("VkMintApp", "music path reconfigure failed: ${e.message}") }
+                    AppLog.i("VkMintApp", "Saved music download path applied: ${snap.musicDownloadPath}")
+                }
+                if (snap.videoDownloadPath.isNotBlank()) {
+                    runCatching { VideoDownloadManager.reconfigurePath(snap.videoDownloadPath) }
+                        .onFailure { e -> AppLog.w("VkMintApp", "video path reconfigure failed: ${e.message}") }
+                    AppLog.i("VkMintApp", "Saved video download path applied: ${snap.videoDownloadPath}")
+                }
+            } catch (e: Exception) {
+                AppLog.w("VkMintApp", "Failed to load prefs", e)
+            }
+        }
+
+        // Fix #110: runtime-подписка на autoCacheAudio — обновляется немедленно
+        // при переключении в настройках, без перезапуска приложения.
+        // Fix #189: та же подписка обновляет AuthDomainsConfig.snapshot —
+        // когда пользователь меняет домены в шестерёнке на LandingScreen,
+        // snapshot обновляется за ~10-50мс, и следующий auth flow использует
+        // новые домены.
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            // #NOTIFY (волна 31-f): локальный курсор для крошки смены режима
+            // уведомлений. Первое значение — стартовый режим (без лога «смена»).
+            var lastNotifyMode: Int? = null
+            prefs.data.collect { snap ->
+                PlayerConnection.autoCacheAudio = snap.autoCacheAudio
+                vk.mint.auth.exchange.AuthDomainsConfig.update(snap)
+                prefsSnapshot = snap   // Fix #336: keep synchronous cache fresh
+                // #NOTIFY (волна 31-f): крошка смены режима уведомлений
+                // (Настройки → Уведомления / закреплённая панель ленты).
+                val prevMode = lastNotifyMode
+                if (prevMode != null && prevMode != snap.notifyMode) {
+                    AppLog.i("VkMintApp", "#NOTIFY mode changed: " +
+                        "${notifyModeName(prevMode)} → ${notifyModeName(snap.notifyMode)}")
+                }
+                lastNotifyMode = snap.notifyMode
+            }
+        }
+
+        // 4c. LongPoll — real-time messages.
+        //     LongPoll слушает isOnlineFlow и прерывает poll при потере,
+        //     немедленно переподключается при восстановлении.
+        //     Также очищает connectionPool при onLost (stale TCP на мёртвом интерфейсе).
+        //     §43 #NET-SWITCH-DELAY: передаём tokenInvalidationTicks + isTokenValid —
+        //     LongPollClient делает паузу при инвалидации токена (error 5/1117 после
+        //     switch Wi-Fi↔Mobile), проверяет isTokenValid каждые 2с для раннего
+        //     выхода когда AuthActivity завершит silent re-login.
+        longPollClient = LongPollClient(
+            httpClient = httpClient,
+            apiClient = apiClient,
+            networkObserver = networkObserver,
+            prefs = prefs,
+            tokenInvalidationTicks = tokenInvalidationTicks,
+            isTokenValid = { tokenStorage.hasValidToken() },
+        )
+
+        // #32: MessageNotifier — системные уведомления о новых сообщениях.
+        //    Подписывается на longPollClient.events в отдельной корутине,
+        //    показывает Notification при LongPollEvent.NewMessage.
+        vk.mint.realtime.MessageNotifier.init(this)
+        startMessageNotifier()
+
+        // §42 #PUSH-NOTIFICATIONS: VkNotificationsNotifier + NotificationsPoller.
+        //    Poller подписывается на LongPoll code 114 (NotificationsCountChanged)
+        //    и периодически опрашивает notifications.getRedesign.
+        //    Показывает system notifications для лайков/комментариев/репостов/
+        //    ответов/подписок/упоминаний/подарков/записей на стене.
+        //    Deep-link → MainActivity → VkMintNavHost навигация на место события.
+        vk.mint.realtime.VkNotificationsNotifier.init(this)
+        notificationsPoller = vk.mint.realtime.NotificationsPoller(this, apiClient, prefs)
+        startNotificationsPoller()
+
+        // #CALLS: глобальный слушатель queuev4 — LP 115 (входящий звонок).
+        //    Подписывается на queuev4Client.events; при LP 115/INCOMING_CALL
+        //    логирует payload (conversation params) и показывает уведомление.
+        //    Полный ответ на входящий (WebSocket signaling + vchat API) — TODO.
+        createCallNotificationChannel()
+        startCallNotifier()
+
+        // §49.5.1 #SAFETY-NET-ALERTS (2026-08-04): SecurityAlertsPoller.
+        //    Poller каждые 10 мин (safetyNetPollIntervalMin) опрашивает
+        //    accountPersonal.getSecurityAlerts и показывает heads-up
+        //    notification при подозрительном входе (новое устройство/город).
+        //    Channel: vk_security_alerts (IMPORTANCE_HIGH, bypassDnd).
+        //    Deep-link → MainActivity → (TODO: DevicesScreen, Sprint VK-ID-1).
+        securityAlertsPoller = vk.mint.realtime.SecurityAlertsPoller(this, apiClient, prefs)
+        startSecurityAlertsPoller()
+
+        // #32: UnreadMessagesCounter — счётчик непрочитанных для badge на иконке.
+        vk.mint.realtime.UnreadMessagesCounter.init(this)
+
+        // §37.12 Phase 7: ClipsCounter — счётчик новых clips от подписок.
+        // badge на пункте «Клипы» в боковой панели. Polling каждые 5 минут.
+        vk.mint.realtime.ClipsCounter.start(this)
+
+        // Fix #45: Единый network watcher — обрабатывает переключение WiFi↔Mobile
+        // для ВСЕХ компонентов, а не только LongPoll (как было раньше).
+        registerGlobalNetworkWatcher()
+
+        // 6. Sprint 1, P0-3 (#76): Captcha handler. UI-диалог подписывается на
+        //    captchaHandler.challenge, VKApiClient.callInternal вызывает solve()
+        //    при error 14 — запрос блокируется до ввода пользователя.
+        captchaHandler = UiCaptchaHandler()
+        apiClient.captchaHandler = captchaHandler
+
+        AppLog.i("VkMintApp", "VkMintApp initialized: okHttp=$httpClient, api=${apiClient.javaClass.simpleName}")
+
+        // S7-4: Start proactive session keep-alive
+        startKeepAlive()
+    }
+
+    /**
+     * #NOTIFY (волна 31-f): человекочитаемое имя режима уведомлений
+     * для крошек старта нотифаера/смены режима (константы — Fix #390
+     * #NOTIFY-MODES, VkMintPrefs companion).
+     */
+    private fun notifyModeName(mode: Int): String = when (mode) {
+        VkMintPrefs.NOTIFY_MODE_MESSAGES_ONLY -> "MESSAGES_ONLY"
+        VkMintPrefs.NOTIFY_MODE_ALL -> "ALL"
+        VkMintPrefs.NOTIFY_MODE_COMMUNITIES_ONLY -> "COMMUNITIES_ONLY"
+        VkMintPrefs.NOTIFY_MODE_SILENT -> "SILENT"
+        else -> "UNKNOWN($mode)"
+    }
+
+    /**
+     * #32: Запускает корутину которая подписывается на LongPoll events и
+     * показывает системное уведомление при входящем сообщении.
+     *
+     * P0.2: резолвит имя чата через [VKApiClient.messagesGetConversationsById]
+     * (с кешированием в [MessageNotifier] activeNotifications) и инкрементирует
+     * unreadCount для каждого нового сообщения в уже уведомлённом диалоге.
+     */
+    private fun startMessageNotifier() {
+        keepAliveScope.launch {
+            // #NOTIFY (волна 31-f): крошка старта нотифаера с АКТИВНЫМ режимом
+            // (Fix #390 #NOTIFY-MODES: режим читается из снапшота, до первой
+            // итерации collect — одна строка на процесс, не на каждое событие).
+            // Чтение guarded (runCatching → getOrNull + явная null-проверка):
+            // отказ DataStore не должен убивать нотифаер-корутину.
+            val startSnap = runCatching { prefs.data.first() }.getOrNull()
+            if (startSnap != null) {
+                AppLog.i("VkMintApp", "#NOTIFY notifier started: mode=${notifyModeName(startSnap.notifyMode)}")
+            } else {
+                AppLog.w("VkMintApp", "#NOTIFY notifier started: mode read failed (prefs first() threw)")
+            }
+            longPollClient.events.collect { event ->
+                if (event is vk.mint.realtime.LongPollEvent.NewMessage) {
+                    try {
+                        // Пропускаем исходящие сообщения (флаг 2 = outbox в VK LongPoll)
+                        if (event.flags and 2 != 0) return@collect
+
+                        // Fix #390 #NOTIFY-MODES: режим уведомлений (Настройки →
+                        // Уведомления → «Режимы уведомлений», либо закреплённая
+                        // кнопка в правой панели ленты). Читаем АКТУАЛЬНЫЙ snapshot
+                        // на каждое событие (DataStore кэширует в памяти — чтение
+                        // дешёвое; смена режима применяется без перезапуска).
+                        val snap = prefs.data.first()
+                        val mode = snap.notifyMode
+
+                        // P3 #NOTIFY-PUSH-GATE (волна 56-f): согласуем глобальный
+                        // pushEnabled с пайплайном сообщений. PushEnabled — client-side
+                        // master toggle (Настройки → Уведомления → «Включить push»).
+                        // Poller уже паузится при pushEnabled=false (#NOTIFY-POLLER);
+                        // здесь НЕ выпускаем notification сообщения, но остальную
+                        // логику (входящее в открытый чат, счётчики) не трогаем.
+                        if (!snap.pushEnabled) {
+                            AppLog.d("VkMintApp", "#NOTIFY pushEnabled=false: skip message notification peer=${event.peerId}")
+                            return@collect
+                        }
+
+                        // Fix #390 #NOTIFY-MODES: сообщество = fromId<0 (сообщение
+                        // отправлено от имени группы) или peerId<0 (канал/диалог
+                        // сообщества). 1-1 диалоги и юзер-чаты — peerId>=2e9 положительный.
+                        val fromIdVal = event.fromId
+                        val isCommunity = (fromIdVal != null && fromIdVal < 0) || event.peerId < 0
+
+                        // Fix #390 #NOTIFY-MODES: скрытие (НЕ показывать вовсе) —
+                        // режимы 0 (MESSAGES_ONLY) и 2 (COMMUNITIES_ONLY) глушат
+                        // «чужой» класс отправителей; 3 (SILENT) глушит сообщества.
+                        // Режим 1 (ALL) — прежнее поведение, ничего не скипается.
+                        val suppressLog = "Fix #390 #NOTIFY-MODES: suppressed (mode=$mode isCommunity=$isCommunity) peer=${event.peerId}"
+                        if (mode == VkMintPrefs.NOTIFY_MODE_MESSAGES_ONLY && isCommunity) {
+                            AppLog.d("VkMintApp", suppressLog)
+                            return@collect
+                        }
+                        if (mode == VkMintPrefs.NOTIFY_MODE_COMMUNITIES_ONLY && !isCommunity) {
+                            AppLog.d("VkMintApp", suppressLog)
+                            return@collect
+                        }
+                        if (mode == VkMintPrefs.NOTIFY_MODE_SILENT && isCommunity) {
+                            AppLog.d("VkMintApp", suppressLog)
+                            return@collect
+                        }
+
+                        // Fix #390 #NOTIFY-MODES: выбор канала по режиму + типу
+                        // отправителя + настройкам звука/вибрации сообществ.
+                        // Канал определяет heads-up/звук/вибрацию на уровне системы
+                        // (см. MessageNotifier.init); prefs внутрь нотифаера не тянем.
+                        val pushChannelId = when {
+                            // Тихий режим: сообщения всплывают, но беззвучно.
+                            mode == VkMintPrefs.NOTIFY_MODE_SILENT &&
+                                !isCommunity -> vk.mint.realtime.MessageNotifier.CHANNEL_MESSAGES_SILENT
+                            // Сообщества (режимы 1 и 2): звук/вибрация по настройкам
+                            // notifyCommunitiesSound/Vibration (звук+вибрация / без
+                            // вибрации / полностью тихо).
+                            isCommunity && !snap.notifyCommunitiesSound ->
+                                vk.mint.realtime.MessageNotifier.CHANNEL_COMMUNITIES_SILENT
+                            isCommunity && !snap.notifyCommunitiesVibration ->
+                                vk.mint.realtime.MessageNotifier.CHANNEL_COMMUNITIES_NOVIB
+                            isCommunity -> vk.mint.realtime.MessageNotifier.CHANNEL_COMMUNITIES
+                            // Сообщения (режимы 0 и 1): прежний канал со звуком.
+                            else -> vk.mint.realtime.MessageNotifier.CHANNEL_MESSAGES
+                        }
+
+                        // Fix #135 (2026-XX): РАНЬШЕ было:
+                        //   val text = if (event.text.isBlank()) "Вложение" else event.text
+                        // Это означало: для сообщения со стикером/фото/голосовым
+                        // (где LongPoll отдаёт пустой text) пуш показывал «Вложение» —
+                        // без указания КАКОЕ именно. Пользователь жаловался: «в пушах
+                        // содержимое не отображается».
+                        //
+                        // Теперь LongPollClient.handleNewMessage парсит extra JSON
+                        // (Fix #134) и отдаёт attachType + fwdCount + replyMessagePreview
+                        // + action/actionText. По ним строим осмысленное описание.
+                        val text = describeMessageForPush(event)
+
+                        // P0.2: резолвим имя чата. Сначала пробуем кеш activeNotifications,
+                        // потом — async lookup через messagesGetConversationsById.
+                        // Если lookup упал — fallback на «Новое сообщение».
+                        val cached = vk.mint.realtime.MessageNotifier
+                            .getActiveNotification(event.peerId)
+                        val title: String
+                        val unread: Int
+                        // Fix #285: mute-стейт диалога. Если уже есть cached-запись —
+                        // берём cached.muted (обновляется через MessageNotifier.setMuted
+                        // при toggle в MessagesScreen). Иначе — lookup через
+                        // messagesGetConversationsById → chat.pushSettings.isMuted().
+                        val muted: Boolean
+                        if (cached != null) {
+                            title = cached.title
+                            unread = cached.unreadCount + 1
+                            muted = cached.muted
+                        } else {
+                            // Async lookup — может занять 200-500мс, но это OK для notification.
+                            val chats = try {
+                                apiClient.messagesGetConversationsById(listOf(event.peerId))
+                            } catch (e: Exception) {
+                                AppLog.w("VkMintApp", "messagesGetConversationsById failed for notification: ${e.message}")
+                                emptyList()
+                            }
+                            val chat = chats.firstOrNull()
+                            title = chat?.peer?.title?.takeIf { it.isNotBlank() }
+                                ?: "Новое сообщение"
+                            // Используем server-side unread_count если доступен, иначе 1.
+                            unread = chat?.unreadCount?.takeIf { it > 0 } ?: 1
+                            muted = chat?.pushSettings?.isMuted() == true
+                            // #IM-CHANNEL-FIX (56-b-5): дефолт-тишина КАНАЛОВ (peerId<0,
+                            // can_write запрещён — Chat.isChannel). Раньше pushSettings
+                            // канала из getConversationsById = null → «не muted» → пуш на
+                            // КАЖДЫЙ пост. Семантика VK web (снапшот 55, футер «Включить
+                            // уведомления»): канал молчит, пока юзер ЯВНО не включил пуш.
+                            // Источники разрешения: (1) распарсенный флаг
+                            // channelNotificationsEnabled (сейчас getConversationsById не
+                            // отдаёт user_data → null, проверка задел на будущее);
+                            // (2) кэш VkMintPrefs channelNotifEnabledIds — пишут
+                            // MessagesScreen после первичного merge (сервер отдал
+                            // is_enabled=true) и тумблер футера канала.
+                            // Диалоги сообществ (peerId<0, can_write разрешён) НЕ трогаем:
+                            // у них работает обычный push_settings-механизм выше.
+                            val channelChat = chat
+                            if (channelChat != null && channelChat.isChannel &&
+                                channelChat.channelNotificationsEnabled != true &&
+                                !snap.channelNotifEnabledIds.contains(channelChat.peer.id)
+                            ) {
+                                AppLog.d("VkMintApp",
+                                    "#IM-CHANNEL-FIX: канал ${channelChat.peer.id} молчит " +
+                                        "(уведомления не включены) — пуш подавлен")
+                                return@collect
+                            }
+                        }
+
+                        // Fix #137: для чатов (peerId >= 2_000_000_000) пытаемся
+                        // добавить имя отправителя в title, если оно доступно из
+                        // event.fromId. Это делает пуш более информативным:
+                        // «Иван Иванов: Стикер» вместо «Название чата: Стикер».
+                        // Для 1-1 диалогов (peerId < 2e9) имя отправителя = title,
+                        // ничего не меняем.
+                        val displayTitle = if (event.peerId >= 2_000_000_000L && event.fromId != null && event.fromId > 0) {
+                            val senderName = try {
+                                apiClient.usersGetByIds(listOf(event.fromId))[event.fromId]
+                                    ?.let { "${it.firstName} ${it.lastName}".trim() }
+                            } catch (e: Exception) { null }
+                            if (!senderName.isNullOrBlank() && title != senderName) {
+                                "$senderName → $title"
+                            } else {
+                                title
+                            }
+                        } else {
+                            title
+                        }
+
+                        vk.mint.realtime.MessageNotifier.showNotification(
+                            context = this@VkMintApp,
+                            peerId = event.peerId,
+                            title = displayTitle,
+                            text = text,
+                            unreadCount = unread,
+                            muted = muted,
+                            // Fix #390 #NOTIFY-MODES: канал выбран по режиму
+                            // уведомлений + типу отправителя (см. выше).
+                            channelId = pushChannelId,
+                        )
+                    } catch (e: Exception) {
+                        AppLog.w("VkMintApp", "MessageNotifier event handling failed: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * #CALLS: слушатель queuev4 — входящие звонки (LP 115).
+     *
+     * Подписывается на [Queuev4Client.events]. При LP 115 (INCOMING_CALL)
+     * payload = строка conversation-params звонка (см. CallModels.QueueCredential).
+     * Сейчас только логируем + показываем системное уведомление — полный
+     * ответ на входящий (декомпрессия conversation params → WebSocket
+     * signaling → WebRTC) реализуется отдельной задачей.
+     */
+    private fun startCallNotifier() {
+        // #CALLS: входящие звонки приходят через messages LongPoll code 115
+        // (подтверждено: LongPollClient «unknown event type=115 ev=[115,-1,-1]»).
+        // Это основной канал. queuev4-канал оставлен как fallback.
+        keepAliveScope.launch {
+            longPollClient.events.collect { event ->
+                if (event is vk.mint.realtime.LongPollEvent.IncomingCall) {
+                    try {
+                        AppLog.i("VkMintApp", "INCOMING_CALL (LP 115): payload.len=${event.payload?.length ?: 0}")
+                        // #CALLS-NO-DOUBLE-CALLSCREEN: guard перезаписи — один звонок приходит
+                        // ИЗ ТРЁХ коллекторов (LP 115 / queuev4 / events_queue); повторная
+                        // запись того же payload перезапускала LaunchedEffect в VkMintNavHost
+                        // и пушила вторую копию CallScreen в backstack.
+                        if (pendingIncomingCallPayload.isNullOrBlank() || pendingIncomingCallPayload != event.payload) {
+                            // Сохраняем pending — MainActivity откроет CallScreen по тапу на уведомление.
+                            pendingIncomingCallPayload = event.payload
+                            refreshIncomingCaller()
+                            showIncomingCallNotification()
+                        }
+                    } catch (e: Exception) {
+                        AppLog.w("VkMintApp", "startCallNotifier: ${e.message}")
+                    }
+                }
+            }
+        }
+        keepAliveScope.launch {
+            queuev4Client.events.collect { ev ->
+                try {
+                    if (ev.queueId == vk.mint.realtime.Queuev4Client.QUEUE_CALLS) {
+                        val payload = ev.payload["payload"] as? String
+                        AppLog.i("VkMintApp", "INCOMING_CALL (queuev4): payload.len=${payload?.length ?: 0}")
+                        // #CALLS-NO-DOUBLE-CALLSCREEN: guard перезаписи (см. LP 115 выше).
+                        if (payload != null && (pendingIncomingCallPayload.isNullOrBlank() || pendingIncomingCallPayload != payload)) {
+                            pendingIncomingCallPayload = payload
+                            refreshIncomingCaller()
+                            showIncomingCallNotification()
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLog.w("VkMintApp", "startCallNotifier: ${e.message}")
+                }
+            }
+        }
+        // #CALLS: events_queue<uid> — полный payload входящего звонка (conversation params).
+        keepAliveScope.launch {
+            eventsQueuev4Client.events.collect { ev ->
+                try {
+                    val payload = ev.payload["payload"] as? String
+                    if (ev.queueId == vk.mint.realtime.Queuev4Client.QUEUE_CALLS || !payload.isNullOrBlank()) {
+                        AppLog.i("VkMintApp", "INCOMING_CALL (events_queue): queue=${ev.queueId} payload.len=${payload?.length ?: 0}")
+                        // #CALLS-NO-DOUBLE-CALLSCREEN: guard перезаписи (см. LP 115 выше).
+                        if (payload != null && (pendingIncomingCallPayload.isNullOrBlank() || pendingIncomingCallPayload != payload)) {
+                            pendingIncomingCallPayload = payload
+                            refreshIncomingCaller()
+                            showIncomingCallNotification()
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLog.w("VkMintApp", "eventsQueuev4 notifier: ${e.message}")
+                }
+            }
+        }
+    }
+
+    /**
+     * #CALLS: подтягиваем информацию о звонящем (caller_id → имя + фото).
+     * Вызывается из startCallNotifier при входящем звонке (LP 115).
+     * messagesGetCurrentCalls().first() → caller_id → usersGetByIds → title/photo.
+     * При ошибке оставляем заглушку «Входящий звонок».
+     */
+    private fun refreshIncomingCaller() {
+        keepAliveScope.launch {
+            try {
+                val callerId = withContext(Dispatchers.IO) {
+                    apiClient.messagesGetCurrentCalls().firstOrNull()?.get("caller_id")?.takeIf { !it.isJsonNull }?.asLong ?: 0L
+                }
+                // #CALLS-NAME-FIX (2026-08-29): раньше отказ был невидим (молча return)
+                // — в логе 22:29 имя/аватар остались заглушкой без единой подсказки почему.
+                AppLog.i("VkMintApp", "refreshIncomingCaller: callerId=$callerId")
+                if (callerId <= 0L) {
+                    pendingIncomingCallPeerId = callerId
+                    return@launch
+                }
+                pendingIncomingCallPeerId = callerId
+                val profile = withContext(Dispatchers.IO) {
+                    apiClient.usersGetByIds(listOf(callerId))[callerId]
+                }
+                AppLog.i("VkMintApp", "refreshIncomingCaller: profile=${if (profile != null) "OK" else "нет"}")
+                if (profile != null) {
+                    val name = (profile.firstName + " " + profile.lastName).trim()
+                    pendingIncomingCallTitle = name.take(40).ifBlank { "Входящий звонок" }
+                    pendingIncomingCallPhoto = profile.photo100
+                    // #CALLS-FIX (2026-08-27): имя подтянулось — обновляем уведомление,
+                    // чтобы в шторке было «Иван Иванов», а не «Кто-то звонит вам в VK».
+                    showIncomingCallNotification()
+                }
+            } catch (e: Exception) {
+                AppLog.w("VkMintApp", "refreshIncomingCaller: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * #CALLS: автоподключение queuev4 (входящие звонки).
+     *
+     * Вызывается при старте приложения (когда есть валидный токен) —
+     * параллельно с LongPoll. Получает queue-credential через
+     * [VKApiClient.queueSubscribe] (queue.subscribe с SAT/web-токеном) и
+     * запускает long-poll на queuev4.vk.ru — ловим LP 115 (входящий звонок).
+     *
+     * Если credential уже задан вручную (VkMintPrefs callsQueueKey/Ts) — используем его.
+     */
+    fun startCallSignaling() {
+        if (queuev4Client.isRunning()) return
+        // #CALLS-DEBUG: включаем CALLS-логи (иначе Queuev4Client INFO/DEBUG скрыты).
+        runCatching { vk.mint.util.AppLog.setCategoryEnabled(vk.mint.util.AppLog.LogCategory.CALLS, true) }
+        keepAliveScope.launch {
+            try {
+                // 0) #CALLS-AUTO: получаем session_key (vchat) автоматически,
+                //    если его ещё нет. Как браузер: get_anonym_token → auth.anonymLogin.
+                ensureCallsSessionKey(force = false)
+                // 1) Сначала — автоматический queue.subscribe (свежий credential).
+                val callsUid = exchangeAuthRepository.userId()
+                val cred = apiClient.queueSubscribe(
+                    userId = 0L,
+                    queueIdSuffix = vk.mint.api.VKEndpoints.multiaccountQueueId(callsUid),
+                )
+                if (cred != null) {
+                    AppLog.i("VkMintApp", "queue.subscribe OK (key=${cred.key.take(8)}… ts=${cred.ts})")
+                    queuev4Client.setCredential(cred)
+                    queuev4Client.start()
+                }
+                // 1b) events_queue<uid> / nccts<uid> — сюда приходят полные conversation
+                //     params звонка (payload с tkn для WebSocket-сигналинга).
+                //     Имя очереди из im_m_comms_key localStorage: "nccts<uid>".
+                //     events_queue<uid> — из queue_connection_events_queue<uid>.
+                try {
+                    val uid = exchangeAuthRepository.userId()
+                    var eventsCred = apiClient.queueSubscribe(
+                        userId = 0L,
+                        queueIdSuffix = vk.mint.api.VKEndpoints.countersQueueId(uid),
+                    )
+                    if (eventsCred == null) {
+                        eventsCred = apiClient.queueSubscribe(
+                            userId = 0L,
+                            queueIdSuffix = vk.mint.api.VKEndpoints.multiaccountQueueId(uid),
+                        )
+                    }
+                    if (eventsCred != null) {
+                        AppLog.i("VkMintApp", "events_queue.subscribe OK (key=${eventsCred.key.take(8)}… ts=${eventsCred.ts})")
+                        eventsQueuev4Client.setCredential(eventsCred)
+                        eventsQueuev4Client.start()
+                    } else {
+                        AppLog.w("VkMintApp", "events_queue subscribe вернул null")
+                    }
+                } catch (e: Exception) {
+                    AppLog.w("VkMintApp", "events_queue subscribe error: ${e.message}")
+                }
+                // 2) Fallback: ручной credential из VkMintPrefs.
+                val snap = prefs.data.first()
+                if (snap.callsQueueKey.isNotBlank() && snap.callsQueueTs > 0L) {
+                    val uid = exchangeAuthRepository.userId()
+                    queuev4Client.setCredential(
+                        vk.mint.data.model.QueueCredential(
+                            key = snap.callsQueueKey,
+                            ts = snap.callsQueueTs,
+                            url = "https://queuev4.vk.ru/im1180",
+                            userId = uid,
+                        )
+                    )
+                    queuev4Client.start()
+                    AppLog.i("VkMintApp", "queuev4 started with manual credential")
+                } else {
+                    AppLog.w("VkMintApp", "queue.subscribe failed и нет manual credential — входящие звонки недоступны")
+                }
+            } catch (e: Exception) {
+                AppLog.e("VkMintApp", "startCallSignaling failed", e)
+            }
+        }
+    }
+
+    /**
+     * #CALLS-AUTO (2026-08-23): автоматическое получение session_key (vchat)
+     * и okcdn uid — как браузер. Цепочка:
+     *   get_anonym_token (oauth.vk.ru, с CookieJar антифрод-кук)
+     *     → auth.anonymLogin (calls.okcdn.ru) → { session_key, session_secret_key, uid }
+     *
+     * Результат сохраняется в VkMintPrefs (callsSessionKey / callsSessionUid) —
+     * используется CallScreen/vchat без ручного ввода.
+     *
+     * @return session_key (не пустой) или null.
+     */
+    override suspend fun ensureCallsSessionKey(force: Boolean): String? {
+        return try {
+            // 1) Уже есть в prefs — используем (если не force).
+            val snap = prefs.data.first()
+            if (!force && snap.callsSessionKey.isNotBlank()) {
+                AppLog.d("VkMintApp", "ensureCallsSessionKey: уже есть (len=${snap.callsSessionKey.length})")
+                return snap.callsSessionKey
+            }
+            // 2) Получаем через get_anonym_token → auth.anonymLogin.
+            //    Для vchat нужен session_key ПРАВИЛЬНОГО формата (-w-fl..., 156), который
+            //    даёт auth.anonymLogin С auth_token = $Ksd-токен (version=3). Без auth_token
+            //    сервер даёт ключ -w-vF... (134), который vchat не принимает.
+            //
+            //    #CALLS-TOKEN-REFRESH (2026-08-31, лог 21:26 исходящий): $-токен из prefs
+            //    ПРОТУХ (auth.anonymLogin → 401 «AUTH_LOGIN : Token is outdated»), при этом
+            //    раньше свежий токен запрашивался ТОЛЬКО если кэш ПУСТ — при непустом, но
+            //    протухшем кэше цепочка умирала: session_key не возвращался, у исходящего
+            //    пропускался startConversation (см. #CALLS-OUT-SK2-FALLBACK в CallScreen),
+            //    собеседник не получал вызов. Теперь провал на кэш-токене → принудительно
+            //    обновляем токен через messages.getCallToken (VK-сессия жива — входящие
+            //    работают) и повторяем auth.anonymLogin со свежим токеном.
+
+            // Локальный помощник: anonymLogin по всем application_key.
+            suspend fun anonymLoginWith(tok: String): String? {
+                val deviceId = exchangeAuthRepository.deviceId()
+                for (apiKey in listOf("CGMMEJLGDIHBABABA", "7793118", "android_web", "0")) {
+                    val sk = withContext(Dispatchers.IO) {
+                        apiClient.vchatAnonymLogin(tok, apiKey, deviceId)
+                    }
+                    if (!sk.isNullOrBlank()) return sk
+                }
+                return null
+            }
+            // Локальный помощник: свежий $Ksd через messages.getCallToken.
+            // #CALLS-FIX (2026-08-24): НЕ getAnonymToken (даёт anonym.eyJ…, который сервер
+            // НЕ принимает: AUTH_LOGIN), а именно messages.getCallToken — как браузер.
+            // Нужны VK access_token + cookieHeader (remixsid/httoken).
+            suspend fun freshCallToken(): String? {
+                val token = tokenStorage.load()
+                val accessToken = token?.accessToken
+                val cookieHeader = try {
+                    vk.mint.auth.exchange.RemixsidCapturer.buildVkCookieHeader()
+                } catch (_: Exception) { null }
+                if (accessToken.isNullOrBlank() || cookieHeader.isNullOrBlank()) return null
+                val ct: String? = withContext(Dispatchers.IO) {
+                    apiClient.getCallToken(accessToken, cookieHeader)
+                }
+                if (!ct.isNullOrBlank()) {
+                    prefs.setCallsCallToken(ct)
+                    AppLog.i("VkMintApp", "ensureCallsSessionKey: получен \$Ksd через getCallToken (len=${ct.length})")
+                }
+                return ct
+            }
+
+            var callToken = snap.callsCallToken.takeIf { it.isNotBlank() && it.startsWith("$") }
+            var sessionKey: String? = null
+            if (!callToken.isNullOrBlank()) {
+                AppLog.i("VkMintApp", "ensureCallsSessionKey: callToken=${callToken.take(12)}… (кэш)")
+                sessionKey = anonymLoginWith(callToken)
+                if (sessionKey.isNullOrBlank()) {
+                    AppLog.w("VkMintApp", "ensureCallsSessionKey: кэш-токен отклонён (401 Token is outdated?) — обновляю через messages.getCallToken (#CALLS-TOKEN-REFRESH)")
+                }
+            }
+            if (sessionKey.isNullOrBlank()) {
+                val fresh = freshCallToken()
+                if (!fresh.isNullOrBlank()) {
+                    callToken = fresh
+                    sessionKey = anonymLoginWith(fresh)
+                }
+            }
+            if (sessionKey.isNullOrBlank() && callToken.isNullOrBlank()) {
+                // Fallback: getAnonymToken (может не сработать, но попробуем)
+                val anon = withContext(Dispatchers.IO) { apiClient.getAnonymToken() }
+                if (!anon.isNullOrBlank()) {
+                    AppLog.w("VkMintApp", "ensureCallsSessionKey: fallback getAnonymToken (может не сработать: ${anon.take(12)}…)")
+                    sessionKey = anonymLoginWith(anon)
+                }
+            }
+            if (sessionKey.isNullOrBlank()) {
+                AppLog.w("VkMintApp", "ensureCallsSessionKey: auth.anonymLogin не вернул session_key")
+                return null
+            }
+            // 3) Сохраняем в prefs. okcdn uid (584520805550) — из auth.anonymLogin
+            //    (lastAnonymUid), НЕ VK user_id. Он нужен для userId в WS URL сигналинга.
+            prefs.setCallsSessionKey(sessionKey)
+            val okUid = apiClient.lastAnonymUid()
+            val uid = if (okUid > 0L) okUid else exchangeAuthRepository.userId()
+            if (uid > 0L) prefs.setCallsSessionUid(uid)
+            AppLog.i("VkMintApp", "ensureCallsSessionKey: OK (len=${sessionKey.length}, uid=$uid)")
+            sessionKey
+        } catch (e: Exception) {
+            AppLog.w("VkMintApp", "ensureCallsSessionKey error: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * #CALLS-AUTO (2026-08-24): ПОЛНАЯ автоматическая цепочка получения
+     * conversation params для звонка — как в браузере, без ручного ввода:
+     *
+     *   1) session_key из prefs (если есть)
+     *   2) vchat.getConversationParams(call_id, session_key)
+     *   3) если vchat вернул 102 PARAM_SESSION_EXPIRED (session_key протух) —
+     *      автоматически получаем СВЕЖИЙ через get_anonym_token → auth.anonymLogin,
+     *      сохраняем в prefs и повторяем vchat.
+     *
+     * Возвращает пару (sessionKey, vchatResponse). vchatResponse может быть null —
+     * вызывающий сам решает (FAILED). sessionKey может быть null если не удалось
+     * получить вообще (нет сети/аномалогин не прошёл).
+     *
+     * @param conversationId call_id из messages.getCurrentCalls
+     * @return (sessionKey, vchatResponse)
+     */
+    override suspend fun getCallConversationParams(
+        conversationId: String,
+    ): Pair<String?, com.google.gson.JsonObject?> {
+        return withContext(Dispatchers.IO) {
+            var sessionKey: String? = null
+            var vchatResp: com.google.gson.JsonObject? = null
+            try {
+                // 1) session_key из prefs.
+                val snap = prefs.data.first()
+                val rawSk = snap.callsSessionKey
+                if (!rawSk.isNullOrBlank()) {
+                    sessionKey = rawSk
+                    AppLog.i("VkMintApp", "getCallParams: session_key из prefs (${rawSk.take(12)}…)")
+                }
+
+                // 2) vchat.getConversationParams (до 2 попыток: если 102 — обновляем ключ).
+                for (attempt in 1..2) {
+                    vchatResp = apiClient.vchatGetConversationParams(conversationId, sessionKey)
+                    if (vchatResp != null) {
+                        AppLog.i("VkMintApp", "getCallParams: vchat OK (attempt $attempt)")
+                        break
+                    }
+                    // #CALLS-IN-FIX (2026-08-29): сбой должен быть ВИДЕН в логе —
+                    // раньше attempt с null проходил молча, и по логу было не понять,
+                    // где именно завис входящий звонок.
+                    AppLog.w("VkMintApp", "getCallParams: vchat null (attempt $attempt, convId=$conversationId)")
+                    // 3) Не получилось — проверяем, была ли ошибка именно 102 (session expired)
+                    //    и обновляем session_key. Даже если причина другая — пробуем свежий ключ.
+                    if (sessionKey.isNullOrBlank() || attempt == 1) {
+                        val fresh = ensureCallsSessionKey(force = true)
+                        if (!fresh.isNullOrBlank() && fresh != sessionKey) {
+                            sessionKey = fresh
+                            AppLog.i("VkMintApp", "getCallParams: получен свежий session_key (${fresh.take(12)}…)")
+                            continue
+                        }
+                    }
+                    break
+                }
+            } catch (e: Exception) {
+                AppLog.e("VkMintApp", "getCallParams error: ${e.message}")
+            }
+            sessionKey to vchatResp
+        }
+    }
+
+    /**
+     * #CALLS: системное уведомление «Входящий звонок».
+     * Пока входящие звонки не могут быть приняты (нет WebSocket-сигналинга),
+     * показываем информационное уведомление, чтобы пользователь знал о звонке.
+     * Звук/вибрация задаются каналом vk_calls (создаётся в onCreate — иначе
+     * Android 8+ создаст канал с дефолтными настройками без звука).
+     */
+    private fun createCallNotificationChannel() {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val nm = getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+                        as android.app.NotificationManager
+                val ch = android.app.NotificationChannel(
+                    "vk_calls", "Звонки",
+                    android.app.NotificationManager.IMPORTANCE_HIGH,
+                )
+                ch.description = "Входящие звонки VK"
+                // Звук: системный рингтон звонка. Вибрация: стандартный паттерн.
+                ch.setSound(
+                    android.media.RingtoneManager.getDefaultUri(
+                        android.media.RingtoneManager.TYPE_RINGTONE
+                    ),
+                    android.app.Notification.AUDIO_ATTRIBUTES_DEFAULT,
+                )
+                ch.enableVibration(true)
+                ch.vibrationPattern = longArrayOf(0, 500, 400, 500, 400, 500)
+                ch.enableLights(true)
+                nm.createNotificationChannel(ch)
+            }
+        } catch (e: Exception) {
+            AppLog.w("VkMintApp", "createCallNotificationChannel failed: ${e.message}")
+        }
+    }
+
+    private fun showIncomingCallNotification() {
+        try {
+            val nm = getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+                    as android.app.NotificationManager
+            // Гарантируем канал со звуком/вибрацией (создаётся при первом звонке,
+            // если onCreate ещё не вызывал — см. createCallNotificationChannel).
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val cur = nm.getNotificationChannel("vk_calls")
+                if (cur == null) createCallNotificationChannel()
+            }
+            val intent = Intent(this, vk.mint.ui.MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pi = PendingIntent.getActivity(
+                this, 0xB17, intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            val builder = @Suppress("DEPRECATION")
+            android.app.Notification.Builder(this, "vk_calls")
+                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+                .setContentTitle("Входящий звонок")
+                // #CALLS-FIX (2026-08-27): показываем имя звонящего (если уже подтянулось),
+                // а не безличное «Кто-то звонит вам в VK».
+                .setContentText(
+                    if (pendingIncomingCallTitle.isNotBlank()) pendingIncomingCallTitle
+                    else "Кто-то звонит вам в VK"
+                )
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setPriority(android.app.Notification.PRIORITY_HIGH)
+                .setCategory(android.app.Notification.CATEGORY_CALL)
+                .setOngoing(true)
+            // FullScreenIntent: экран поверх блокировки/другого приложения.
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                builder.setFullScreenIntent(pi, true)
+            } else {
+                builder.setFullScreenIntent(pi, true)
+            }
+            nm.notify(0xB17, builder.build())
+        } catch (e: Exception) {
+            AppLog.w("VkMintApp", "showIncomingCallNotification failed: ${e.message}")
+        }
+    }
+
+    /**
+     * Fix #135: строит осмысленное описание сообщения для системного пуша.
+     *
+     * Раньше возвращала «Вложение» для всех сообщений с пустым text —
+     * теперь строит описание по типу вложения (Стикер/Фото/Голосовое
+     * сообщение/Видео/...) и добавляет признаки reply/forward если есть.
+     *
+     * Логика приоритета:
+     *  1. action (сервисное сообщение) → actionText или красивое описание action
+     *  2. text непустой → text (приоритет тексту, даже если есть вложение)
+     *  3. attachType → «Стикер»/«Фото»/«Голосовое сообщение»/...
+     *  4. fwdCount > 0 → «Пересланное сообщение (N)»
+     *  5. replyMessagePreview != null → «Ответ: <превью>»
+     *  6. fallback → «Вложение»
+     *
+     * Fix #138c (URGENT 2026-08-03): если text состоит ТОЛЬКО из цифр и длина
+     * 9-13 символов — это подозрительно на Unix timestamp / random_id, не на
+     * реальный текст сообщения. Такие сообщения показывались в шторке как
+     * «1785781370» (просто число) — пользователь жаловался на «непонятные
+     * уведомления». Если text выглядит как timestamp — пропускаем его и
+     * строим описание из вложений/forward/reply, либо fallback «Новое сообщение».
+     */
+    private fun describeMessageForPush(event: vk.mint.realtime.LongPollEvent.NewMessage): String {
+        // 1. Сервисные сообщения (chat_create, chat_kick_user, chat_pin_message, ...).
+        if (!event.action.isNullOrBlank()) {
+            return describeActionForPush(event.action, event.actionText)
+        }
+        // Fix #138c: проверка text на «timestamp pattern» — только цифры, 9-13 символов.
+        // Типичные Unix timestamps: 1785781370 (10 цифр, секунды), 1785781370123 (13, миллис).
+        // Если text такой — игнорируем его, идём к описанию вложений.
+        val realText = if (looksLikeTimestamp(event.text)) "" else event.text
+
+        // 2. Текст сообщения — приоритет, если есть (даже с вложением — VK
+        //    обычно отдаёт caption в text, а photo в attachType).
+        if (realText.isNotBlank()) {
+            val base = realText.take(200).replace("\n", " ").trim()
+            // Если есть reply — добавляем контекст «↩ Ответ: <превью>».
+            return if (event.replyMessagePreview != null && event.replyMessagePreview != "<вложение>") {
+                "↩ Ответ: $base"
+            } else {
+                base
+            }
+        }
+        // 3. Вложение по типу.
+        val attachDesc = if (event.attachType != null) {
+            describeAttachTypeForPush(event.attachType)
+        } else if (event.fwdCount > 0) {
+            // 4. Только пересланные сообщения, без своего вложения.
+            if (event.fwdCount == 1) "Пересланное сообщение" else "Пересланные сообщения (${event.fwdCount})"
+        } else if (event.replyMessagePreview != null) {
+            // 5. Только reply, без своего текста/вложения (редкий случай).
+            "↩ Ответ"
+        } else if (realText.isBlank() && event.text.isBlank()) {
+            // Fix #139-P0.6 (2026-08-03): РАНЬШЕ возвращала «Вложение» даже
+            // когда вложения нет (если text пустой). Это вводило пользователя
+            // в заблуждение — пуш показывал «Вложение» для служебных/meta-events
+            // которые прошли фильтр Fix #139, но не имели реального контента.
+            // Теперь показываем нейтральное «Новое сообщение».
+            // (event.attachType здесь всегда null — если бы был не null,
+            // зашли бы в ветку 3 выше.)
+            "Новое сообщение"
+        } else {
+            // Fix #138c: text был, но мы его отбросили как timestamp-pattern.
+            // Не показываем «Вложение» (это введёт в заблуждение — вложения нет),
+            // показываем нейтральное «Новое сообщение».
+            "Новое сообщение"
+        }
+        // Доп. маркеры: если есть reply или forward одновременно с вложением.
+        val extras = mutableListOf<String>()
+        if (event.replyMessagePreview != null) extras.add("↩")
+        if (event.fwdCount > 0) extras.add("↪${event.fwdCount}")
+        return if (extras.isEmpty()) attachDesc else "$attachDesc ${extras.joinToString(" ")}"
+    }
+
+    /**
+     * Fix #138c: проверка, выглядит ли строка как Unix timestamp / random_id.
+     *
+     * Признаки:
+     *  - Состоит ТОЛЬКО из цифр (после trim).
+     *  - Длина 9-13 символов (10 = seconds, 13 = millis).
+     *  - Не empty.
+     *
+     * Используется в [describeMessageForPush] чтобы отбрасывать подозрительные
+     * «числовые» text'ы, которые на самом деле являются random_id или msg_date
+     * из VK LP v14 echo-events (см. Fix #138 в LongPollClient.handleNewMessage).
+     *
+     * ВНИМАНИЕ: это эвристика. Реальный текст сообщения МОЖЕТ состоять только
+     * из цифр (например, пользователь отправил «1234567890» как код). Но:
+     *  - Такие сообщения редки.
+     *  - Если это реальный текст, пользователь всё равно откроет чат и увидит его.
+     *  - Лучше показать «Новое сообщение» чем «1785781370» — это менее запутывает.
+     *
+     * Альтернатива: проверять что число попадает в диапазон реальных Unix
+     * timestamps (1_000_000_000..2_000_000_000 для секунд, или
+     * 1_000_000_000_000..2_000_000_000_000 для миллисекунд). Но VK random_id
+     * может быть любым — и он тоже часто похож на timestamp. Поэтому оставляем
+     * простую эвристику по длине.
+     */
+    private fun looksLikeTimestamp(s: String): Boolean {
+        if (s.length !in 9..13) return false
+        if (s.isBlank()) return false
+        // Только цифры (без пробелов, точек, дефисов).
+        return s.all { it.isDigit() }
+    }
+
+    /** Fix #135: красивое описание типа вложения для пуша.
+     *  Fix #139-P0.7 (2026-08-03): добавлены 12 недостающих типов из анализа
+     *  архивов m.vk.ru и VK API docs. */
+    private fun describeAttachTypeForPush(type: String): String = when (type) {
+        "sticker"       -> "Стикер"
+        "photo"         -> "Фото"
+        "video"         -> "Видео"
+        "audio"         -> "Аудиозапись"
+        "audio_message" -> "Голосовое сообщение"
+        "doc"           -> "Документ"
+        "wall"          -> "Запись на стене"
+        "gift"          -> "Подарок"
+        "link"          -> "Ссылка"
+        "poll"          -> "Опрос"
+        "story"         -> "История"
+        "market"        -> "Товар"
+        "call"          -> "Звонок"
+        "money_request" -> "Запрос денег"
+        "article"       -> "Статья"
+        "podcast"       -> "Подкаст"
+        "narrative"     -> "Сюжет"
+        "event"         -> "Событие"
+        // Fix #139-P0.7: недостающие типы
+        "graffiti"              -> "Граффити"
+        "audio_playlist"        -> "Плейлист"
+        "money_transfer"        -> "Денежный перевод"
+        "widget"                -> "Виджет"
+        "podcast_episode"       -> "Эпизод подкаста"
+        "story_reply"           -> "Ответ на историю"
+        "call_missed"           -> "Пропущенный звонок"
+        "market_album"          -> "Подборка товаров"
+        "narrative_reply"       -> "Ответ на сюжет"
+        "curator"               -> "Куратор"
+        "video_message"         -> "Видеосообщение"
+        "currency"              -> "Валюта"
+        "app_action"            -> "Действие в приложении"
+        else            -> "Вложение"
+    }
+
+    /** Fix #135: описание сервисных action-сообщений (chat_create, kick, pin, ...). */
+    private fun describeActionForPush(action: String, actionText: String?): String {
+        if (!actionText.isNullOrBlank()) return actionText
+        return when (action) {
+            "chat_create"            -> "Создал(а) беседу"
+            "chat_title_update"      -> "Изменил(а) название беседы"
+            "chat_photo_update"      -> "Обновил(а) фото беседы"
+            "chat_photo_remove"      -> "Удалил(а) фото беседы"
+            "chat_invite_user"       -> "Пригласил(а) пользователя"
+            "chat_kick_user"         -> "Исключил(а) пользователя"
+            "chat_pin_message"       -> "Закрепил(а) сообщение"
+            "chat_unpin_message"     -> "Открепил(а) сообщение"
+            "chat_invite_user_by_link" -> "Присоединился(ась) по ссылке"
+            "accepted_message_request" -> "Принял(а) запрос на сообщение"
+            else                     -> "Сервисное сообщение"
+        }
+    }
+
+    /**
+     * §42 #PUSH-NOTIFICATIONS: подписка на LongPoll code 114
+     * (NotificationsCountChanged) + запуск периодического poller'а.
+     *
+     * - LongPoll code 114 → notificationsPoller.triggerImmediatePoll()
+     *   → notifications.getRedesign → diff → system notifications.
+     * - Периодический poll (pushPollingIntervalSec, default 120с) — fallback
+     *   если code 114 не пришёл (LongPoll отключён или VK не шлёт).
+     *
+     * Poller сам проверяет pushEnabled и hasValidToken перед каждым poll.
+     */
+    private fun startNotificationsPoller() {
+        val poller = notificationsPoller
+        if (poller == null) {
+            AppLog.w("VkMintApp", "startNotificationsPoller: poller is null — skip")
+            return
+        }
+        // Подписка на LongPoll code 114 → немедленный poll.
+        keepAliveScope.launch {
+            longPollClient.events.collect { event ->
+                if (event is vk.mint.realtime.LongPollEvent.NotificationsCountChanged) {
+                    AppLog.d("VkMintApp", "LongPoll code 114 → triggerImmediatePoll")
+                    poller.triggerImmediatePoll()
+                }
+            }
+        }
+        // Запуск периодического poller'а.
+        poller.start()
+        AppLog.i("VkMintApp", "NotificationsPoller started (push notifications)")
+    }
+
+    /**
+     * §49.5.1 #SAFETY-NET-ALERTS (2026-08-04): запуск SecurityAlertsPoller.
+     *
+     * Poller каждые safetyNetPollIntervalMin минут (default 10) опрашивает
+     * `accountPersonal.getSecurityAlerts`. При новом alert'е — heads-up
+     * notification (channel `vk_security_alerts`, IMPORTANCE_HIGH, bypassDnd).
+     *
+     * НЕ зависит от LongPoll — это REST API polling.
+     *
+     * Poller сам проверяет pushSafetyNetAlerts и hasValidToken перед каждым poll.
+     */
+    private fun startSecurityAlertsPoller() {
+        val poller = securityAlertsPoller
+        if (poller == null) {
+            AppLog.w("VkMintApp", "startSecurityAlertsPoller: poller is null — skip")
+            return
+        }
+        poller.start()
+        AppLog.i("VkMintApp", "SecurityAlertsPoller started (§49.5.1 safety-net alerts)")
+    }
+
+    /**
+     * Fix #45: Единый обработчик переключения сети (WiFi↔Mobile).
+     * Fix #171: разделены ПОЛНАЯ потеря сети (onLostListeners) и СМЕНА default
+     * network (onDefaultNetworkChangedListener). Раньше onLost срабатывал на
+     * любую потерю сети → cancelAll() убивал HLS-стрим ExoPlayer при switch
+     * mobile→Wi-Fi даже когда сеть оставалась онлайн.
+     */
+    private fun registerGlobalNetworkWatcher() {
+        // Полная потеря сети — жёсткий reset (evictAll + cancelAll).
+        // Срабатывает ТОЛЬКО когда checkOnline() == false (см. NetworkObserver.onLost).
+        networkObserver.addOnNetworkLostListener {
+            AppLog.w("VkMintApp", "Network FULLY lost — evicting OkHttp pool + cancelling in-flight calls (global)")
+            try { httpClient.connectionPool.evictAll() } catch (e: Exception) { AppLog.w("VkMintApp", "evictAll on network lost: ${e.message}") }
+            try { httpClient.dispatcher.cancelAll() } catch (e: Exception) { AppLog.w("VkMintApp", "cancelAll on network lost: ${e.message}") }
+            try { vk.mint.media.PlayerConnection.onNetworkChanged(online = false) } catch (e: Exception) { AppLog.w("VkMintApp", "onNetworkChanged false: ${e.message}") }
+            // #NET-SWITCH-POPUP: полная потеря сети → Offline state.
+            setNetworkSwitchState(NetworkSwitchState.Offline)
+        }
+
+        // Fix #171: СМЕНА default network (mobile→Wi-Fi или Wi-Fi→mobile), сеть
+        // осталась онлайн. Мягкий reset: только evictAll (закрыть keep-alive на
+        // старом мёртвом интерфейсе), БЕЗ cancelAll (не рвать HLS-стрим).
+        // + переподготовка плеера чтобы ExoPlayer перестроил MediaSource на новом
+        // интерфейсе с сохранением позиции.
+        networkObserver.addOnDefaultNetworkChangedListener {
+            val ctype = try { networkObserver.connectionType() } catch (_: Exception) { "network" }
+            AppLog.i("VkMintApp", "Default network SWITCHED to $ctype — soft reset (evictAll, NO cancelAll) + reprepare player")
+            try { httpClient.connectionPool.evictAll() } catch (e: Exception) { AppLog.w("VkMintApp", "evictAll on switch: ${e.message}") }
+            // #AUTO-OFFLINE-REMOVAL (W41): resetNetworkErrorCounter/clearAutoOffline
+            // убраны вместе с авто-офлайном #38.
+            try { vk.mint.media.PlayerConnection.onNetworkChanged(online = true, forceReprepare = true) } catch (e: Exception) { AppLog.w("VkMintApp", "onNetworkChanged reprepare: ${e.message}") }
+
+            // #VKID-SEAMLESS (vk.id.md P0-5): PROACTIVE silent refresh на смене сети.
+            // Раньше refresh запускался ТОЛЬКО реактивно — когда следующий API-вызов
+            // падал с err=5/1117 (VK инвалидировал token из-за IP change) и VKApiClient
+            // err-handler вызывал ensureFreshToken(force=true). Это значит пользователь
+            // успевал увидеть ошибку / NetworkSwitchPopup c spinner.
+            //
+            // Теперь: СРАЗУ на onAvailable(default route switched) запускаем
+            // ensureFreshToken(force=true) в фоне. Path 1.5 silentRefreshViaRemixsid
+            // использует p cookie (1 год, НЕ IP-bound) + remixsid + полный cookie-set
+            // → получает новый web_token на новый IP ДО того, как UI сделает API-запрос.
+            // Бесшовно: пользователь не видит ни popup, ни AuthActivity.
+            //
+            // Guard hasSilentReloginMeans() (теперь включает pCookie — см. P0-2):
+            // если совсем нет credentials (пользователь не залогинен) — пропускаем,
+            // не делаем холостых HTTP-вызовов. refreshMutex внутри ensureFreshToken
+            // сериализует concurrent вызовы (keepAlive / reactive err-handler / этот).
+            if (::exchangeAuthRepository.isInitialized) {
+                keepAliveScope.launch {
+                    // #SESSION-WEB-MECHANISM (2026-09-24): cookie-sync удалён —
+                    // hasSilentReloginMeans() теперь читает ЖИВОЙ CookieManager
+                    // (без стейл-копий), ложных «средств нет» больше не бывает.
+                    val canSilent = try { exchangeAuthRepository.hasSilentReloginMeans() } catch (_: Exception) { false }
+                    if (canSilent) {
+                        try {
+                            val refreshed = exchangeAuthRepository.ensureFreshToken(force = true)
+                            if (refreshed != null) {
+                                AppLog.i("VkMintApp", "Proactive silent refresh after network switch: OK — token valid on new IP")
+                                setNetworkSwitchState(NetworkSwitchState.Idle)
+                            } else {
+                                AppLog.w("VkMintApp", "Proactive silent refresh after network switch: null " +
+                                    "(reactive err-handler path will retry on next API call)")
+                            }
+                        } catch (e: Exception) {
+                            AppLog.w("VkMintApp", "Proactive silent refresh after network switch failed: ${e.message}")
+                        }
+                    } else {
+                        AppLog.i("VkMintApp", "Proactive silent refresh skipped — no silent relogin means (user not logged in)")
+                        // #SESSION-HOLD (упрощён #SESSION-WEB-MECHANISM): нет cookies в
+                        // CookieManager (типично для VK-app SSO — токен без web-сессии).
+                        // Best-effort: прогреваем cookie jar скрытым WebView — если
+                        // VK-сессия есть в webview-хранилище, cookies осядут в
+                        // CookieManager и следующие смены сети будут тихими.
+                        // Дёшево (≤10с в фоне), UI не блокирует.
+                        val signedIn = try { exchangeAuthRepository.isSignedIn() } catch (_: Exception) { false }
+                        if (signedIn) {
+                            try {
+                                val captured = RemixsidCapturer.capture(this@VkMintApp)
+                                AppLog.i("VkMintApp", "#SESSION-HOLD: cookie jar прогрет после смены сети " +
+                                    "(remixsid=${captured?.remixsid?.length ?: "null"}) — cookies в CookieManager")
+                            } catch (e: Exception) {
+                                AppLog.w("VkMintApp", "#SESSION-HOLD: cookie capture failed: ${e.message}")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // #NET-SWITCH-POPUP: смена default route → Switching state.
+            // Popup покажет спиннер + «Отмена»/«Закрыть». При успехе proactive refresh
+            // выше переведёт в Idle; при неудаче VKApiClient err-handler переведёт в
+            // Refreshing, затем Failed. Если VK не вернёт err=5 (IP binding не изменился)
+            // — Switching auto-очистится в Idle через короткий таймаут в NetworkSwitchPopup.
+            setNetworkSwitchState(NetworkSwitchState.Switching(
+                sinceMs = System.currentTimeMillis(),
+                reason = "Смена сети → $ctype",
+            ))
+        }
+
+        keepAliveScope.launch {
+            var wasOnline = networkObserver.isOnline()
+            networkObserver.isOnlineFlow.collect { online ->
+                if (!wasOnline && online) {
+                    AppLog.i("VkMintApp", "Network restored (offline→online)")
+                    // #AUTO-OFFLINE-REMOVAL (W41): resetNetworkErrorCounter/clearAutoOffline
+                    // убраны вместе с авто-офлайном #38.
+                    try { vk.mint.media.PlayerConnection.onNetworkChanged(online = true) } catch (e: Exception) { AppLog.w("VkMintApp", "onNetworkChanged true: ${e.message}") }
+                    // #NET-SWITCH-POPUP: сеть восстановилась → Idle (скрыть popup).
+                    setNetworkSwitchState(NetworkSwitchState.Idle)
+                }
+                wasOnline = online
+            }
+        }
+    }
+
+    /**
+     * S7-4: Session keep-alive — proactively refreshes the access token every 60s
+     * to prevent session drops during idle. Uses [ExchangeAuthRepository.keepAlive]
+     * which only triggers a network call when the token is within 300 seconds of
+     * expiry (Fix #216, P1.1 — было 60с, стало 300с).
+     *
+     * 60-секундный polling интервал остаётся — это частота проверки, а не окно
+     * refresh. Окно refresh (когда silentAuth вызывается) теперь 300с.
+     */
+    private fun startKeepAlive() {
+        keepAliveScope.launch {
+            var failStreak = 0
+            while (true) {
+                delay(keepAliveDelayMs(failStreak))
+                try {
+                    if (!::exchangeAuthRepository.isInitialized) {
+                        failStreak = 0
+                        continue
+                    }
+                    when (exchangeAuthRepository.keepAlive()) {
+                        KeepAliveResult.REFRESHED -> {
+                            failStreak = 0
+                            AppLog.i("VkMintApp", "Keep-alive: token refreshed proactively")
+                        }
+                        KeepAliveResult.NOT_NEEDED -> {
+                            failStreak = 0
+                        }
+                        KeepAliveResult.FAILED -> {
+                            failStreak++
+                            AppLog.w("VkMintApp", "Keep-alive: refresh needed but failed " +
+                                "(streak=$failStreak) — retry with backoff (#KEEPALIVE-BACKOFF)")
+                        }
+                    }
+                } catch (e: Exception) {
+                    failStreak++
+                    AppLog.w("VkMintApp", "Keep-alive failed: ${e.message}")
+                }
+            }
+        }
+        // #SETTINGS-FIX: периодический account.setOnline — посылает VK ping
+        // каждые ~5 минут, обновляя last_seen. Пропускается если
+        // privacyHideLastSeen=true (тогда accountSetOnline() → no-op).
+        keepAliveScope.launch {
+            while (true) {
+                try { apiClient.accountSetOnline() } catch (e: Exception) { AppLog.w("VkMintApp", "accountSetOnline ping error: ${e.message}") }
+                delay(300_000L) // 5 минут (как в оригинальном VK Android)
+            }
+        }
+    }
+
+    /**
+     * P0 #KEEPALIVE-BACKOFF: интервал опроса keepAlive зависит от числа подряд
+     * идущих провалов. Если токен в окне истечения, а silent refresh падает —
+     * ретраим быстрее (15с/30с/45с), а не ждём полные 60с. Успех/not-needed
+     * сбрасывает интервал на базовые 60с.
+     */
+    private fun keepAliveDelayMs(failStreak: Int): Long = when (failStreak) {
+        0 -> 60_000L
+        1 -> 15_000L
+        2 -> 30_000L
+        else -> 45_000L
+    }
+
+    /**
+     * Coil 3 single-image-loader factory — reuses our OkHttp client
+     * so images go through the same User-Agent / connection pool as API calls.
+     *
+     * Fix #229: анимированные стикеры (GIF + animated WebP).
+     * В Coil 3.3.0 API поменялся относительно Coil 2:
+     *  - GifDecoder / AnimatedWebPDecoder / AnimatedImageDecoder — это Decoder,
+     *    а НЕ Decoder.Factory → add() их НЕ принимает.
+     *  - Регистрируем через вложенный класс Factory: AnimatedImageDecoder.Factory()
+     *    (один декодер для GIF + animated WebP + animated HEIF, на android.graphics.ImageDecoder).
+     *  - AnimatedImageDecoder требует API 28+. На API 24-27 фолбэк на GifDecoder.Factory()
+     *    (GIF только, animated WebP НЕ поддерживается — стикеры покажутся статичными).
+     */
+    override fun newImageLoader(context: PlatformContext): ImageLoader {
+        return ImageLoader.Builder(context)
+            .components {
+                add(OkHttpNetworkFetcherFactory(callFactory = httpClient))
+                if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    add(coil3.gif.AnimatedImageDecoder.Factory())
+                } else {
+                    add(coil3.gif.GifDecoder.Factory())
+                }
+            }
+            .crossfade(true)
+            .build()
+    }
+
+    companion object {
+        private const val SECURE_PREFS_FILE = "vkmint_secure_prefs.xml"
+
+        @Volatile
+        private var instance: VkMintApp? = null
+
+        fun get(): VkMintApp = instance ?: error("VkMintApp not initialized")
+
+        fun getOrNull(): VkMintApp? = instance
+
+        fun get(context: Context): VkMintApp =
+            context.applicationContext as? VkMintApp ?: get()
+
+        /**
+         * #LOG-SECTIONS (волна 31-f): разбор CSV выключенных секций логов
+         * ("#IM,#AUDIO" → {"#IM", "#AUDIO"}; blank/"" → пустое множество =
+         * все секции логируются). Пустые/пробельные элементы отбрасываются.
+         * Живёт в app-слое по решению задачи 31-f: core/data логики не
+         * содержит (там только CSV-строка в Snapshot.logSectionsOff);
+         * вызывается из VkMintApp.onCreate (старт) и SettingsScreen LoggingTab
+         * (тумблер секции — и запись префа, и применение гейта немедленно).
+         */
+        fun parseLogSectionsOff(csv: String): Set<String> {
+            if (csv.isBlank()) return emptySet()
+            return csv.split(',')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .toSet()
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  #CALLS-DNS-PIN (Task 26-2-b): file-level хелперы DNS-пина звонков.
+//
+//  Встроенный IPv4 для okcdn-доменов звонков (calls.okcdn.ru /
+//  calls-test.okcdn.ru / api.mycdn.me). OkHttp/Java InetAddress не резолвит
+//  calls.okcdn.ru (IPv6-проблема) — см. Dns-объект в onCreate. Ручной IP из
+//  Настройки → Звонки (callsDnsPinIp) перекрывает это значение; пустой/
+//  невалидный ручной IP → снова встроенный.
+//  File-level private — виден только внутри VkMintApp.kt (политика #NULL-ЯВНО
+//  распространяется на сами проверки в lookup, а не на имена хелперов).
+// ══════════════════════════════════════════════════════════════════════════
+private const val AUTO_IP = "155.212.204.12"
+
+/**
+ * #CALLS-DNS-PIN: проверка строкового IPv4 — ровно 4 октета, только цифры,
+ * каждый 0..255, длина октета 1..3 символа. Ведущие нули отсечены намеренно:
+ * java.net.InetAddress.getByName трактует «012» как ВОСЬМЕРИЧНУЮ запись, и
+ * пин ушёл бы на другой адрес, чем показал бы валидатор/поле настроек.
+ * Дубликат с SettingsScreen.kt (там своя file-level private копия) —
+ * допустим по спецификации задачи: file-level private наружу не виден.
+ */
+private fun isValidIpv4(s: String): Boolean {
+    val parts = s.split(".")
+    if (parts.size != 4) return false
+    for (part in parts) {
+        if (part.isEmpty() || part.length > 3) return false
+        for (ch in part) {
+            if (ch < '0' || ch > '9') return false
+        }
+        if (part.length > 1 && part[0] == '0') return false
+        val octet = part.toInt()
+        if (octet < 0 || octet > 255) return false
+    }
+    return true
+}

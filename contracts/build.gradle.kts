@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "re.pinok.contracts"
+    namespace = "vk.mint.contracts"
     compileSdk = 36
 
     defaultConfig {

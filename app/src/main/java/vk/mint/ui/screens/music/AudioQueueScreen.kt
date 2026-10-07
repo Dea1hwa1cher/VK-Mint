@@ -1,0 +1,360 @@
+// File: ui/screens/music/AudioQueueScreen.kt
+package vk.mint.ui.screens.music
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import vk.mint.data.model.PlayerState
+import vk.mint.data.model.Track
+import vk.mint.media.PlayerConnection
+import kotlin.math.abs
+
+/**
+ * Fix #62: Экран очереди воспроизведения (список «Далее»).
+ *
+ * Моделирован по скриншоту VK Mint reference (Screenshot_20260628_185136.png):
+ *  — Заголовок «Далее» + кнопка «Сохранить как плейлист» (TODO)
+ *  — Список треков очереди
+ *  — Текущий трек выделен иконкой play/pause
+ *  — Тап по треку → переключение на него (seekToDefaultPosition)
+ *  — Нижний ряд контролов: shuffle / list / repeat
+ *
+ * Волна 31 #AUDIO-QUEUE-PLAYLIST: playlist-семантика вместо «потребляемой»
+ * очереди. Раньше рендерился только sublist(currentIndex..end) — пройденные
+ * треки исчезали из списка и очередь «уменьшалась по мере воспроизведения».
+ * Теперь показывается ВСЯ очередь PlayerState.queue (= полный список
+ * загруженных треков источника; для «Моей музыки» — все страницы пейджера,
+ * append догруженных страниц — PlayerConnection.onMyMusicPageLoaded):
+ *  — пройденные (выше текущего) — приглушены (alpha),
+ *  — текущий — выделен (карточка + акцент + play/pause),
+ *  — предстоящие — обычные.
+ * Тап по любому треку — seek по очереди (PlayerConnection.seekToQueueIndex):
+ * список НЕ пересобирается, курсор просто переезжает (prev/next/shuffle/repeat
+ * в PlayerConnection тоже только двигают курсор — треки не удаляются).
+ */
+@Composable
+fun AudioQueueScreen(
+    onBack: () -> Unit,
+) {
+    BackHandler { onBack() }
+
+    val playerState by PlayerConnection.playerState.collectAsState()
+
+    // Адаптивная палитра: привязка к MaterialTheme (Material You / VkMintTheme)
+    val colorScheme = MaterialTheme.colorScheme
+    val vkBlack = colorScheme.background
+    val vkCard = colorScheme.surface
+    val vkTextPrimary = colorScheme.onSurface
+    val vkTextSecondary = colorScheme.onSurfaceVariant
+    val vkAccent = colorScheme.primary
+
+    val queue = playerState.queue
+    val currentIndex = playerState.currentIndex
+
+    // Волна 31 #AUDIO-QUEUE-PLAYLIST: при открытии экрана сразу показываем
+    // текущую позицию очереди (для длинных списков «Моей музыки» 500+ треков
+    // без этого юзер видит начало списка, а не место воспроизведения).
+    val listState = rememberLazyListState()
+    LaunchedEffect(Unit) {
+        val idx = currentIndex
+        if (idx > 0 && idx < queue.size) listState.scrollToItem(idx)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(vkBlack)
+            .statusBarsPadding(),
+    ) {
+        // ─── Top bar: back + «Далее» + «Сохранить как плейлист» ────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад", tint = vkTextPrimary)
+            }
+            Text(
+                text = "Далее",
+                color = vkTextPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            // #QUEUE-COUNT (2026-08-01): счётчик треков в очереди. Раньше его не
+            // было — пользователь жаловался «не отображается количество треков».
+            // Показываем «N треков» (с правильным склонением) рядом с заголовком.
+            if (queue.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                val n = queue.size
+                val countLabel = when {
+                    n % 100 in 11..14 -> "$n треков"
+                    n % 10 == 1 -> "$n трек"
+                    n % 10 in 2..4 -> "$n трека"
+                    else -> "$n треков"
+                }
+                Text(
+                    text = countLabel,
+                    color = vkTextSecondary,
+                    fontSize = 14.sp,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+            Text(
+                text = "Сохранить как плейлист",
+                color = vkAccent,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .clickable { /* TODO: сохранение в плейлист */ }
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            )
+        }
+
+        // ─── Список очереди ────────────────────────────────────────────
+        // #QUEUE-LAYOUT (2026-08-01): contentPadding уменьшен с 80dp до 16dp.
+        // Раньше 80dp резервировали место под нижнюю панель контролов — но
+        // панель теперь в Column-flow (не overlay), список её не перекрывает.
+        // 80dp давали лишний пустой хвост при скролле.
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().weight(1f),
+            contentPadding = PaddingValues(bottom = 16.dp),
+        ) {
+            if (queue.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(48.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Filled.MusicNote, null,
+                                tint = vkTextSecondary, modifier = Modifier.size(48.dp),
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("Очередь пуста", color = vkTextSecondary, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Выберите треки в разделе «Музыка»", color = vkTextSecondary, fontSize = 12.sp)
+                        }
+                    }
+                }
+            } else {
+                // Волна 31 #AUDIO-QUEUE-PLAYLIST: ВСЯ очередь (пройденные +
+                // текущий + предстоящие). Ключи с индексом — защита от краша
+                // LazyColumn «Key was already used», если в очереди есть дубль
+                // трека (ownerId_id совпадает) — см. finalizeAudioSearchResult.
+                itemsIndexed(
+                    queue,
+                    key = { idx, track -> "queue_${idx}_${track.ownerId}_${track.id}" },
+                ) { idx, track ->
+                    val isCurrent = idx == currentIndex
+                    QueueTrackRow(
+                        track = track,
+                        isCurrent = isCurrent,
+                        isPast = idx < currentIndex,
+                        isPlaying = isCurrent && playerState.isPlaying,
+                        cardColor = vkCard,
+                        textColor = vkTextPrimary,
+                        secondaryColor = vkTextSecondary,
+                        accentColor = vkAccent,
+                        onClick = {
+                            if (!isCurrent) {
+                                // Playlist-семантика: seek по ЖИВОЙ очереди по
+                                // индексу (плейлист НЕ пересобирается, пройденные
+                                // остаются). Индекс в displayed-списке совпадает с
+                                // индексом таймлайна контроллера (queue = playlist,
+                                // currentMediaItemIndex — тоже индекс таймлайна,
+                                // shuffle меняет только ПОРЯДОК движения курсора).
+                                PlayerConnection.seekToQueueIndex(idx)
+                            } else {
+                                PlayerConnection.togglePlayPause()
+                            }
+                        },
+                    )
+                }
+            }
+        }
+
+        // ─── Нижний ряд: shuffle / list / repeat ───────────────────────
+        // Fix #258: панель узкая (wrapContentWidth) и центрированная,
+        // а не fillMaxWidth + SpaceEvenly (растягивалось на весь экран).
+        // #QUEUE-LAYOUT (2026-08-01): УБРАН windowInsetsPadding(navigationBars).
+        // Этот экран хостится внутри Scaffold, чей bottomBar-слот (GlobalMiniPlayer
+        // + NavigationBar) САМ резервирует navigationBars inset (VkMintNavHost:806).
+        // Дублирование inset здесь создавало ~48dp пустоты между панелью контролов
+        // и мини-плеером (жёлтая зона на Screenshot_20260801_194131.png).
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(vkCard)
+                .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(vkBlack.copy(alpha = 0.5f))
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = {
+                    PlayerConnection.setShuffleModeEnabled(!playerState.shuffleModeEnabled)
+                }) {
+                    Icon(
+                        Icons.Filled.Shuffle, "Перемешать",
+                        tint = if (playerState.shuffleModeEnabled) vkAccent else vkTextSecondary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+                // Иконка «список» (текущий экран)
+                Icon(
+                    Icons.Filled.MusicNote, "Список",
+                    tint = vkAccent, modifier = Modifier.size(24.dp),
+                )
+                IconButton(onClick = { PlayerConnection.cycleRepeatMode() }) {
+                    val repeatIcon = when (playerState.repeatMode) {
+                        PlayerState.REPEAT_MODE_ONE -> Icons.Filled.RepeatOne
+                        else -> Icons.Filled.Repeat
+                    }
+                    val repeatTint = if (playerState.repeatMode != PlayerState.REPEAT_MODE_OFF) vkAccent else vkTextSecondary
+                    Icon(repeatIcon, "Повтор", tint = repeatTint, modifier = Modifier.size(24.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QueueTrackRow(
+    track: Track,
+    isCurrent: Boolean,
+    isPast: Boolean,
+    isPlaying: Boolean,
+    cardColor: Color,
+    textColor: Color,
+    secondaryColor: Color,
+    accentColor: Color,
+    onClick: () -> Unit,
+) {
+    // Волна 31 #AUDIO-QUEUE-PLAYLIST: пройденные треки приглушены (как в VK
+    // web queue). alpha стоит ПОСЛЕ background в цепочке — фон текущего трека
+    // не мутнеет, приглушается только контент.
+    val contentAlpha = if (isPast && !isCurrent) 0.45f else 1f
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .background(if (isCurrent) cardColor.copy(alpha = 0.6f) else Color.Transparent)
+            .alpha(contentAlpha)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Обложка / иконка play
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.hsl((abs(track.artist.hashCode()) % 360).toFloat(), 0.55f, 0.45f),
+                            Color.hsl(((abs(track.artist.hashCode() * 31)) % 360).toFloat(), 0.45f, 0.55f),
+                        ),
+                    ),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            val albumThumb = track.albumThumb
+            if (!albumThumb.isNullOrBlank()) {
+                AsyncImage(
+                    model = albumThumb,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            } else if (isCurrent) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
+                )
+            } else {
+                Icon(Icons.Filled.MusicNote, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = track.title,
+                color = if (isCurrent) accentColor else textColor,
+                fontSize = 15.sp,
+                fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = track.artist,
+                color = secondaryColor,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        IconButton(onClick = { /* TODO: меню трека */ }) {
+            Icon(Icons.Filled.MoreVert, "Ещё", tint = secondaryColor, modifier = Modifier.size(20.dp))
+        }
+    }
+}

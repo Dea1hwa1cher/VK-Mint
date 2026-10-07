@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-sign_manifest.py — подпись/проверка манифеста обновлений PinoK (волна 46 #UPDATER-SIGNING).
+sign_manifest.py — подпись/проверка манифеста обновлений VK Mint (волна 46 #UPDATER-SIGNING).
 
 Ed25519 по RFC 8032. Один файл, НОЛЬ зависимостей: ниже адаптация public-domain
 reference-реализации (ed25519.cr.yp.to, D. J. Bernstein et al.; та же математика,
@@ -9,7 +9,7 @@ reference-реализации (ed25519.cr.yp.to, D. J. Bernstein et al.; та �
 
 Поток доверия (docs/UPDATER.md §3):
   приватный ключ (32 байта seed, hex) — ТОЛЬКО у релиз-менеджера, вне репозитория;
-  публичный ключ (base64) — зашит в APK (re.pinok.updater.UpdaterSigning);
+  публичный ключ (base64) — зашит в APK (vk.mint.updater.UpdaterSigning);
   version.json.sig — base64 detached-подписи РОВНО над байтами version.json.
 
 Команды:
@@ -242,7 +242,7 @@ def cmd_keygen(args):
     print("Публичный ключ (base64): " + base64.b64encode(pk).decode("ascii"))
     print("Отпечаток публичного (sha256, hex): " + hashlib.sha256(pk).hexdigest())
     print()
-    print("Готовая константа для re.pinok.updater.UpdaterSigning:")
+    print("Готовая константа для vk.mint.updater.UpdaterSigning:")
     print('    const val RELEASE_PUBLIC_KEY_B64 = "' + base64.b64encode(pk).decode("ascii") + '"')
     return 0
 
@@ -292,7 +292,7 @@ def cmd_verify(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ed25519-подпись манифеста обновлений PinoK (волна 46 #UPDATER-SIGNING)",
+        description="ed25519-подпись манифеста обновлений VK Mint (волна 46 #UPDATER-SIGNING)",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 

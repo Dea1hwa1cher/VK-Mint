@@ -107,7 +107,7 @@
          Android Doze через ~1-2 часа сна убивает LongPoll polling → сообщения
          перестают приходить, пока пользователь не откроет приложение.
          Запрос делается через Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-         (см. SovaApp.requestBatteryOptimizationExemption). -->
+         (см. VkMintApp.requestBatteryOptimizationExemption). -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!--
@@ -186,7 +186,7 @@
     </queries>
 
     <application
-        android:name=".SovaApp"
+        android:name=".VkMintApp"
         android:enableOnBackInvokedCallback="true"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -195,7 +195,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.PinoK.Splash"
+        android:theme="@style/Theme.VkMint.Splash"
         android:usesCleartextTraffic="false"
         android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="34">
@@ -227,7 +227,7 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.PinoK.Splash"
+            android:theme="@style/Theme.VkMint.Splash"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|uiMode|density|fontScale">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -238,13 +238,13 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="sova2" android:host="oauth" />
+                <data android:scheme="vkmint" android:host="oauth" />
             </intent-filter>
             <!--
-              Fix #154: PinoK как target в системном share-меню ("Отправить/Поделиться").
+              Fix #154: VK Mint как target в системном share-меню ("Отправить/Поделиться").
               Пользователь может поделиться текстом, ссылками, файлами или изображениями
-              из других приложений (браузер, галерея, etc.) → PinoK появляется в списке
-              получателей наравне с SOVA V RE / Telegram / VK.
+              из других приложений (браузер, галерея, etc.) → VK Mint появляется в списке
+              получателей наравне с VK Mint / Telegram / VK.
 
               Fix #156: расширил MIME-типы — изначально был только text/plain, но:
                 - .txt файлы из некоторых FileProvider идут как application/octet-stream
@@ -252,32 +252,32 @@
                 - share sheet на разных оболочностях (MIUI, OneUI) капризно матчит
               Теперь ловим text/* (все текстовые), application/octet-stream (бинарный
               без явного типа — часто .txt/.log), и image/* (картинки).
-              Каждый intent-filter имеет явный android:label="PinoK" — без него
+              Каждый intent-filter имеет явный android:label="VK Mint" — без него
               share sheet может показать техническое имя активности вместо бренда.
             -->
-            <intent-filter android:label="PinoK">
+            <intent-filter android:label="VK Mint">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/*" />
             </intent-filter>
-            <intent-filter android:label="PinoK">
+            <intent-filter android:label="VK Mint">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
             </intent-filter>
-            <intent-filter android:label="PinoK">
+            <intent-filter android:label="VK Mint">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/octet-stream" />
             </intent-filter>
             <!--
-              §47 #URL-INTENT-FILTER: PinoK как target для тапа по VK-ссылкам.
+              §47 #URL-INTENT-FILTER: VK Mint как target для тапа по VK-ссылкам.
               Пользователь тапает на https://vk.com/wall-123_456 в браузере,
-              Telegram, мессенджере → Android показывает chooser с PinoK.
+              Telegram, мессенджере → Android показывает chooser с VK Mint.
 
               Без autoVerify="true" (App Links требует assetlinks.json на домене,
-              что для vk.com невозможно) — пользователь выбирает PinoK вручную
-              в chooser dialog. После выбора можно нажать "Всегда" чтобы PinoK
+              что для vk.com невозможно) — пользователь выбирает VK Mint вручную
+              в chooser dialog. После выбора можно нажать "Всегда" чтобы VK Mint
               стал default handler.
 
               Hosts: vk.com, m.vk.com, vk.ru, m.vk.ru (4 домена VK).
@@ -288,7 +288,7 @@
               Связанные: §42.4 #PUSH-DEEPLINK (тап на push), §46 #REMOTE-INPUT
               (ответ из шторки).
             -->
-            <intent-filter android:label="PinoK">
+            <intent-filter android:label="VK Mint">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -305,7 +305,7 @@
             </intent-filter>
             <!-- §47: http fallback для старых ссылок (VK редиректит на https,
                  но некоторые legacy-ссылки в Telegram/браузерах идут как http). -->
-            <intent-filter android:label="PinoK">
+            <intent-filter android:label="VK Mint">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -336,7 +336,7 @@
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:supportsPictureInPicture="true"
-            android:theme="@style/Theme.PinoK"
+            android:theme="@style/Theme.VkMint"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|uiMode|density|fontScale" />
 
         <!-- Auth activity (Direct Auth primary + OAuth WebView fallback) -->
@@ -346,7 +346,7 @@
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|density|uiMode|navigation"
-            android:theme="@style/Theme.PinoK" />
+            android:theme="@style/Theme.VkMint" />
 
         <!-- OAuth WebView — открывает oauth.vk.com/authorize, пароль вводится на VK.
              configChanges ОБЯЗАТЕЛЬНО: VK ID страница (id.vk.com/auth) триггерит
@@ -358,7 +358,7 @@
             android:exported="false"
             android:launchMode="singleTop"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout|density|uiMode|navigation"
-            android:theme="@style/Theme.PinoK" />
+            android:theme="@style/Theme.VkMint" />
 
         <!-- Locker activity (PIN + biometric) -->
         <activity
@@ -366,7 +366,7 @@
             android:exported="false"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
-            android:theme="@style/Theme.PinoK" />
+            android:theme="@style/Theme.VkMint" />
 
         <!-- Foreground media player service -->
         <service
@@ -446,9 +446,9 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="re.pinok.action.MARK_READ" />
-                <action android:name="re.pinok.action.REPLY" />
-                <action android:name="re.pinok.action.DISMISS" />
+                <action android:name="vk.mint.action.MARK_READ" />
+                <action android:name="vk.mint.action.REPLY" />
+                <action android:name="vk.mint.action.DISMISS" />
             </intent-filter>
         </receiver>
 

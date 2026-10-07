@@ -10,7 +10,7 @@ plugins {
 }
 
 android {
-    namespace = "re.pinok.baselineprofile"
+    namespace = "vk.mint.baselineprofile"
     compileSdk = 36
 
     defaultConfig {

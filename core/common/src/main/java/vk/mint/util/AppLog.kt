@@ -1,0 +1,1229 @@
+package vk.mint.util
+
+import android.content.Context
+import android.util.Log
+import java.io.File
+import java.io.OutputStreamWriter
+import java.io.PrintWriter
+import java.io.StringWriter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/**
+ * Многоуровневый логгер с расширенной диагностикой (v2 — detailed diagnostics).
+ *
+ * Возможности:
+ *  - 5 уровней: V / D / I / W / E (цвета в logcat + в UI)
+ *  - Авто-место вызова: `file:line#method` (через проход стека, пропуская фреймы AppLog)
+ *  - Имя потока на каждой записи (main / OkHttp… / DefaultDispatcher…)
+ *  - Структурированный контекст: key-value пары (ownerId, postId, apiMethod…)
+ *  - Полная цепочка Throwable: cause chain + suppressed exceptions
+ *  - In-memory ring buffer на [BUFFER_CAPACITY] записей ([LogEntry])
+ *  - File persistence с rotation (max [PERSIST_MAX_BYTES])
+ *  - Таймирование блоков: [time]
+ *  - Логирование VK API: [api] (с маскированием токенов/секретов)
+ *  - Детальный экспорт: [exportDetailed] — полный дамп со всеми полями
+ *
+ * Потокобезопасность: все операции с buffer/persistFile синхронизированы.
+ *
+ * Обратная совместимость: [snapshot] возвращает строки в прежнем формате
+ * `<ts> <LVL>/<PREFIX>/<tag>: <msg>` — просмотрщики логов не требуют изменений.
+ * Для расширенного рендеринга использовать [snapshotEntries].
+ */
+object AppLog {
+
+    private const val PREFIX = "VK Mint"
+
+    /**
+     * #LOG-CONFIG (2026-10-01): настраиваемые параметры хранения логов.
+     * Жёсткие константы BUFFER_CAPACITY / PERSIST_MAX_BYTES заменены на
+     * изменяемые [@Volatile] поля — их можно менять в рантайме через
+     * [applyLogConfig] (из Настроек → Логирование). Вместимость in-memory
+     * буфера и лимит ротации файла больше не фиксированы на этапе компиляции.
+     */
+
+    /** In-memory буфер (most-recent first). Вместимость настраивается в рантайме ([applyLogConfig]). */
+    @Volatile
+    var bufferCapacity: Int = 4000
+
+    /** Максимум размера файла логов перед rotation (по умолчанию 2 MB — было 512 KB). */
+    @Volatile
+    var persistMaxBytes: Long = 2 * 1024 * 1024L
+
+    /** Срок хранения файлов логов в днях (0 = очистка по сроку выключена). */
+    @Volatile
+    var logRetentionDays: Int = 0
+
+    /** Автоочистка логов по сроку хранения (используется вместе с [logRetentionDays]). */
+    @Volatile
+    var autoCleanEnabled: Boolean = false
+
+    /** Имя файла персистентного лога в cacheDir/logs/. */
+    private const val PERSIST_FILE = "persistent.log"
+
+    /**
+     * Ключи параметров, значения которых маскируются при логировании API.
+     *
+     * #LOG-MASK (P2.2, 2026-10): расширено VK-credentials множество.
+     * Кроме уже ловимых через `k.contains("token")` (access_token, silent_token,
+     * httoken, sat_token, exchange_token, anonymous_token, …), добавлены:
+     *   - silent_token_uuid — парный с silent_token, вместе = полная credential
+     *     для auth.getAuthData (contains "token" уже ловит, но добавлено явно
+     *     для документирования и защит от изменения matcher'а);
+     *   - remixsid, remixstid, remixstlid, remixnttpid — browser session cookies
+     *     VK (RemixsidCapturer.snapshotCookies);
+     *   - remixuas, remixuacck, remixdmgr, remixmvkfp — anti-CSRF/anti-fraud
+     *     VK cookies (SSO full cookie-set §55);
+     *   - trusted_hash, logout_hash — VK web_token derivatives.
+     *
+     * Matcher в [maskParams]: точное совпадение (lowercase) ИЛИ содержит
+     * подстроку "token". Существующее поведение сохранено — contains("token")
+     * по-прежнему ловит access_token/silent_token/exchange_token/httoken/sat_token/
+     * anonymous_token; новые explicit-entries ловят *_hash / remix* cookies.
+     */
+    private val SENSITIVE_KEYS = setOf(
+        "access_token", "token", "secret", "sig", "password",
+        "captcha_key", "user_secret", "api_key", "client_secret",
+        // P2.2: VK ID silent_token pair
+        "silent_token_uuid",
+        // P2.2: VK browser session cookies (RemixsidCapturer)
+        "remixsid", "remixstid", "remixstlid", "remixnttpid",
+        "remixuas", "remixuacck", "remixdmgr", "remixmvkfp",
+        // P2.2: VK web_token derivatives
+        "trusted_hash", "logout_hash", "sat_token", "httoken",
+    )
+
+    /**
+     * Структурированная запись лога. Хранится в in-memory буфере;
+     * [snapshot] и [exportDetailed] форматируют её по-разному.
+     */
+    data class LogEntry(
+        val timestamp: Long,
+        val level: Int,
+        val tag: String,
+        val message: String,
+        val threadName: String,
+        /** `file:line#method` места вызова (например `FeedScreen.kt:142#loadFeed`). */
+        val callerLocation: String?,
+        /** Опциональный key-value контекст (ownerId, postId, apiMethod…). */
+        val context: Map<String, String>?,
+        val throwable: Throwable?,
+    )
+
+    private val buffer = ArrayDeque<LogEntry>()
+    private val bufferLock = Any()
+
+    @Volatile
+    private var persistFile: File? = null
+
+    @Volatile
+    private var persistWriter: OutputStreamWriter? = null
+
+    private val persistLock = Any()
+
+    // ─── Fix #281 (ANR музыки-поиска): асинхронная запись файла ─────────
+    //
+    // Раньше appendToFile выполнял write + flush + file.length() (stat-сисвызов)
+    // НА ПОТОКЕ ВЫЗЫВАЮЩЕГО — включая main. Во время поиска музыки всплеск
+    // логов (AppLog.api на каждый запрос, W-логи fallback-веток, per-track
+    // логи playTrackList) + постоянный фоновый спам поллеров (LongPoll,
+    // NotificationsPoller) означали: main-поток регулярно упирался в
+    // synchronized(persistLock) за фоновым писателем и делал дисковый I/O
+    // сам — это давало jank и вкладывалось в ANR «приложение не отвечает».
+    //
+    // Теперь: логирующий поток только кладёт задачу в однопоточный executor
+    // "VK Mint-LogWriter"; форматирование строки, запись, batch-flush (когда
+    // очередь исчерпана) и rotation выполняются на writer-потоке.
+    // In-memory buffer (для LogViewer/snapshot) остаётся синхронным — он
+    // дешёвый (addFirst + removeLast под коротким локом).
+    private val persistExecutor: java.util.concurrent.ExecutorService =
+        java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "VK Mint-LogWriter").apply { isDaemon = true }
+        }
+
+    /** Счётчик задач в очереди writer-потока (для batch-flush при исчерпании). */
+    private val pendingPersistWrites = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /**
+     * #LOGCAT-NOISE-FIX (2026-08-03): gate verbose logcat output.
+     *
+     * В release-сборке (debugBuild == false) DEBUG и VERBOSE логи НЕ
+     * пишутся в `adb logcat` — они засоряли logcat «мусором» (per-segment
+     * download progress, per-op URL unmask, per-recompose getLocalFile и т.д.).
+     * Но ВСЕ записи (включая DEBUG/VERBOSE) по-прежнему попадают в in-memory
+     * buffer + persistent.log файл — in-app LogViewer и export работают полноценно.
+     *
+     * INFO/WARN/ERROR всегда идут в logcat (важные события).
+     *
+     * Runtime-переключатель: пользователь может включить verbose logcat в
+     * Настройки -> Логирование -> «Подробный лог в logcat» (для глубокой
+     * отладки через adb). Default = режим сборки хоста (debug-сборка = verbose,
+     * release = тихий) — передаётся через [setAppBuildInfo].
+     *
+     * #ARCH-CONTAINERS (Этап 1.2-а): AppLog живёт в :core:common и больше НЕ читает
+     * BuildConfig хоста напрямую — хост (:app, VkMintApp.onCreate) передаёт
+     * идентификацию сборки вызовом [setAppBuildInfo] ДО первого лог-вызова.
+     * До инициализации — безопасные release-дефолты (Application.onCreate
+     * стартует раньше любого нашего кода, окно с дефолтами не наблюдаемо).
+     */
+    @Volatile
+    var verboseToLogcat: Boolean = false
+
+    /** Идентификация приложения для заголовков экспорта/persistent.log ("# App:", "# App ID:"). */
+    @Volatile
+    var appId: String = "vk.mint"
+
+    /** Имя версии для заголовков экспорта/persistent.log ("# Version:"). */
+    @Volatile
+    var versionName: String = "unknown"
+
+    /** DEBUG-сборка хоста (до Этапа 1.2-а читалось напрямую из BuildConfig.DEBUG в :app). */
+    @Volatile
+    var debugBuild: Boolean = false
+
+    /**
+     * #ARCH-CONTAINERS (Этап 1.2-а): хост (:app) передаёт идентификацию сборки
+     * ДО первого лог-вызова (VkMintApp.onCreate — раньше эти поля читались
+     * напрямую из BuildConfig хоста). Вызывается один раз при старте процесса,
+     * до любых вызовов AppLog — поэтому безусловно выставляет и
+     * [verboseToLogcat] (прежний default = BuildConfig.DEBUG хоста).
+     */
+    fun setAppBuildInfo(appId: String, versionName: String, debuggable: Boolean) {
+        this.appId = appId
+        this.versionName = versionName
+        this.debugBuild = debuggable
+        verboseToLogcat = debuggable
+    }
+
+    /**
+     * Runtime-переключатель verbose logcat (вызывается из SettingsScreen LoggingTab).
+     *
+     * Имя функции НЕ может быть `setVerboseToLogcat` — это сгенерирует JVM-метод
+     * `setVerboseToLogcat(Z)V`, который clash'ит с synthetic setter'ом свойства
+     * [verboseToLogcat] (Kotlin генерирует `setVerboseToLogcat(Z)V` для `var`).
+     * Поэтому функция названа `setVerboseLogcatEnabled` — уникальная JVM-сигнатура.
+     */
+    fun setVerboseLogcatEnabled(enabled: Boolean) {
+        if (verboseToLogcat != enabled) {
+            verboseToLogcat = enabled
+            // Логируем смену режима на INFO — всегда видно в logcat.
+            Log.i("$PREFIX/AppLog", "verboseToLogcat = $enabled " +
+                "(DEBUG/VERBOSE logcat output ${if (enabled) "enabled" else "suppressed"})")
+        }
+    }
+
+    // ─── #LOG-CATEGORIES (2026-08-04): per-category gating ──────────────
+    //
+    // Пользователь просил в Настройки → Лог добавить тумблеры для выборочного
+    // логирования по разделам приложения (Музыка, Сообщения, Лента и т.д.),
+    // чтобы убрать «шум» в логе.
+    //
+    // Архитектура:
+    //  - 11 категорий покрывают все 80+ тегов в кодовой базе.
+    //  - Mapping tag → category через [categoryForTag] (when по known tags).
+    //  - [enabledCategories] — mutable set, default = CRITICAL_CATEGORIES
+    //    (#LOG-CATEGORIES-DEFAULT-CRITICAL: AUTH+SYSTEM+NETWORK, остальные ВЫКЛ).
+    //  - В [log()]: если категория отключена — пропускаем запись ВООБЩЕ
+    //    (buffer + file + logcat). Исключение: WARN/ERROR всегда пишутся
+    //    (критичные события нельзя терять при диагностике).
+    //  - VkMintPrefs.persistLogCategoriesDisabled() хранит множество отключенных
+    //    категорий (как JSON array строк) — загружается в VkMintApp.onCreate.
+
+    /**
+     * Категории логов для per-category gating в Settings → Log.
+     *
+     * Порядок объявления = порядок отображения в UI (SettingsScreen LoggingTab).
+     * Каждая категория покрывает группу связанных тегов — см. [categoryForTag].
+     */
+    enum class LogCategory(val title: String, val description: String) {
+        AUDIO("Музыка и звук",
+            "Воспроизведение аудио, загрузка треков, плейлисты, эквалайзер, визуализатор"),
+        MESSAGES("Сообщения",
+            "Чаты, диалоги, отправка/получение сообщений, вложения, пересылка"),
+        FEED("Лента",
+            "Посты, комментарии, лайки, репосты, вложения в ленте"),
+        AUTH("Авторизация",
+            "Вход, OAuth, токены, silent refresh, WebView auth"),
+        NETWORK("Сеть и API",
+            "VK API запросы, Retrofit, OkHttp, смена сети, NetworkObserver"),
+        REALTIME("LongPoll (реалтайм)",
+            "LongPoll цикл, push-уведомления в реальном времени, keep-alive сервис"),
+        NOTIFICATIONS("Уведомления",
+            "NotificationsPoller, VkNotificationsNotifier, RemoteInput, настройки пушей"),
+        DOWNLOADS("Загрузки",
+            "Video/Audio DownloadManager, DocumentFile SD-card, кэш сегментов"),
+        STORIES("Истории и клипы",
+            "Stories viewer, Clips feed, StoryOfflinePlayer, жесты"),
+        UI("Интерфейс",
+            "Навигация, активити, настройки, разрешения, FAB, темы"),
+        SYSTEM("Система",
+            "VkMintApp lifecycle, BootReceiver, Linkify, прочее"),
+        CALLS("Звонки",
+            "WebRTC, Queuev4, сигналинг, микрофон, динамик"),
+    }
+
+    /**
+     * Mapping tag → category. Теги не из списка попадают в [LogCategory.SYSTEM].
+     *
+     * Поддерживается автоматически: новые теги добавлять сюда по мере роста
+     * кодовой базы. Если тег не найден — логируется в SYSTEM (видно всегда,
+     * если SYSTEM включён).
+     */
+    private fun categoryForTag(tag: String): LogCategory = when (tag) {
+        // AUDIO
+        "AudioPlayer", "AudioPlayerScreen", "AudioPicker", "MusicHomeTab",
+        "MusicScreen", "MyMusicMenuList", "PlaylistsDialog", "PlaylistAttachment",
+        "SpectrumVisualizer", "VoicePlayback", "AudioUrlUnmasker", "SirenTranscoder",
+        "EqualizerManager" -> LogCategory.AUDIO
+
+        // MESSAGES
+        "ChatDetailScreen", "ChatInfoScreen", "MessagesScreen", "ForwardDialog",
+        "PinnedConvsRepo", "ShareSheet", "ShareToChat", "ConversationsRepo",
+        "MessagesRepo" -> LogCategory.MESSAGES
+
+        // FEED
+        "FeedScreen", "PostDetail", "PostDetailScreen", "CommentsBottomSheet",
+        "RepostDialog", "FeedRepository", "WallRepository" -> LogCategory.FEED
+
+        // AUTH
+        "AuthActivity", "ExchangeTokenStorage", "VkAuthWebView", "ExchangeAuthRepo",
+        "WebTokenAuth", "ExternalBrowserAuth", "AuthViewModel", "VkUrlDeepLinker" -> LogCategory.AUTH
+
+        // NETWORK
+        "NetworkObserver", "NetworkSwitchPopup", "VKApiClient", "VKApi",
+        "OkHttpInterceptor", "LayerAnonymTokenHandler", "AuthDomainsConfig" -> LogCategory.NETWORK
+
+        // REALTIME
+        "LongPollClient", "LongPollKeepAliveService", "RealtimeHub",
+        "WebSocketClient" -> LogCategory.REALTIME
+
+        // NOTIFICATIONS
+        "NotificationsScreen", "NotificationsTab", "NotificationSettings",
+        "NotificationsPoller", "VkNotificationsNotifier", "NotificationActionReceiver",
+        "ReplyResultNotifier" -> LogCategory.NOTIFICATIONS
+
+        // DOWNLOADS
+        "VideoDownloadsCard", "TrackDownloadManager", "VideoDownloadManager",
+        "DocumentFileStorage", "DownloadManager", "AudioCacheManager",
+        "VideoCacheManager", "StoryVideoCache" -> LogCategory.DOWNLOADS
+
+        // STORIES
+        "StoriesRow", "StoryOfflinePlayer", "StoryViewer", "ClipsRepository",
+        "ClipsViewModel", "StoryCache" -> LogCategory.STORIES
+
+        // UI
+        "VkMintNavHost", "Settings", "LogScreen", "LogExport", "PermissionManager",
+        "DraggableLogFab", "BugReport", "ThemeManager", "BottomNav" -> LogCategory.UI
+
+        // CALLS
+        // #CALLS-ACK-REOFFER (2026-08-29): "CallSignaling" добавлен (раньше падал в
+        // else → SYSTEM). Категория CALLS принудительно включается в VkMintApp.startCallSignaling.
+        "WebRtcEngine", "Queuev4Client", "CallScreen", "CallsHistory", "CallSignaling" -> LogCategory.CALLS
+
+        // SYSTEM
+        "VkMintApp", "MainActivity", "BootReceiver", "Linkify", "AppLog",
+        "CrashHandler", "WorkManager", "PrefsMigration" -> LogCategory.SYSTEM
+
+        else -> LogCategory.SYSTEM
+    }
+
+    /**
+     * #LOG-CATEGORIES-DEFAULT-CRITICAL (2026-08-05): критичные категории логов,
+     * которые включены по умолчанию. Остальные выключены (молчаливый дефолт).
+     *
+     * Пользователь: «по умолчанию в логирование надо включить только критические
+     * источники, остальные выключить».
+     *
+     * Критичные = AUTH (авторизация/токены), SYSTEM (lifecycle/crash),
+     * NETWORK (VK API/смена сети) — минимум для диагностики проблем входа и
+     * сети. UI/FEED/AUDIO/MESSAGES/STORIES/DOWNLOADS/REALTIME/NOTIFICATIONS
+     * выключены по умолчанию (шум), пользователь может включить вручную в
+     * Настройки→Лог.
+     *
+     * Тот же набор что в SettingsScreen.kt кнопка «Только критичные».
+     */
+    val CRITICAL_CATEGORIES: Set<LogCategory> = setOf(
+        LogCategory.AUTH,
+        LogCategory.SYSTEM,
+        LogCategory.NETWORK,
+    )
+
+    /**
+     * Имена НЕ-критичных категорий (для VkMintPrefs default logCategoriesDisabled).
+     * VkMintPrefs не ссылается на LogCategory напрямую чтобы не тащить зависимость
+     * от enum — использует строковые имена.
+     */
+    val NON_CRITICAL_CATEGORY_NAMES: Set<String> =
+        (LogCategory.values().toSet() - CRITICAL_CATEGORIES).map { it.name }.toSet()
+
+    /**
+     * Активные категории. Default = только критичные (#LOG-CATEGORIES-DEFAULT-CRITICAL).
+     * VkMintApp.onCreate перезапишет из prefs (applyDisabledCategories).
+     * Изменяется через [setCategoryEnabled] из SettingsScreen.
+     */
+    @Volatile
+    private var enabledCategories: Set<LogCategory> = CRITICAL_CATEGORIES
+
+    /**
+     * Включить/выключить категорию логов.
+     * Вызывается из SettingsScreen LoggingTab. Потокобезопасно (@Volatile + copy set).
+     */
+    fun setCategoryEnabled(category: LogCategory, enabled: Boolean) {
+        val current = enabledCategories
+        val newSet = if (enabled) current + category else current - category
+        if (newSet != current) {
+            enabledCategories = newSet
+            Log.i("$PREFIX/AppLog", "LogCategory.$category = $enabled " +
+                "(now ${newSet.size}/${LogCategory.values().size} categories enabled)")
+        }
+    }
+
+    /** Проверить, включена ли категория. Для UI (SettingsScreen). */
+    fun isCategoryEnabled(category: LogCategory): Boolean = category in enabledCategories
+
+    /**
+     * Загрузить состояние категорий из VkMintPrefs при старте приложения.
+     * Вызывается из VkMintApp.onCreate после инициализации prefs.
+     *
+     * @param disabledCategories множество имён категорий (LogCategory.name),
+     *        которые пользователь отключил. Default в VkMintPrefs =
+     *        NON_CRITICAL_CATEGORY_NAMES (только критичные включены).
+     */
+    fun applyDisabledCategories(disabledCategories: Set<String>) {
+        val allCats = LogCategory.values().toSet()
+        val disabled = disabledCategories.mapNotNull { name ->
+            runCatching { LogCategory.valueOf(name) }.getOrNull()
+        }.toSet()
+        enabledCategories = allCats - disabled
+        Log.i("$PREFIX/AppLog", "applyDisabledCategories: ${disabled.size} disabled " +
+            "(${disabled.joinToString(",") { it.name }}) — " +
+            "${enabledCategories.size}/${allCats.size} categories enabled")
+    }
+
+    // ─── #LOG-SECTIONS (волна 31-f): гейты секций по префиксу ────────────
+    //
+    // Второй уровень фильтрации рядом с #LOG-CATEGORIES. Секция определяется
+    // ПО ПРЕФИКСУ тега ИЛИ сообщения: маркеры диагностических крошек стоят
+    // в начале сообщения ("#IM-CHANNEL-OPEN enter: …", "#AUDIO-PAGING page: …",
+    // "#VIDEO-SESSION …", "#NOTIFY …", "#PIN …"), а «Сеть и API» гейтится
+    // отдельным путём в [api] (маркер "API" не совпадает по префиксу с тегом
+    // "VKApi" — поэтому там явная проверка).
+    //
+    // Это позволяет гейтить целые диагностические паттерны, НЕ правя сотни
+    // вызовов: гейт проверяется в [log] — общем входе всех публичных методов
+    // v/d/i/w (+перегрузки с контекстом, lp/backfill/execute/ws).
+    //
+    // СЕМАНТИКА (требование пользователя, волна 31): по умолчанию множество
+    // ПУСТОЕ — ВСЁ пишется в logcat, ring buffer и persistent.log как раньше.
+    // Выключенная секция полностью скипается (ни logcat, ни буфер, ни файл).
+    // Уровень ERROR не гейтится НИКОГДА (аварийная диагностика — см. [log]).
+    //
+    // Хранение: VkMintPrefs.LOG_SECTIONS_OFF — CSV выключенных секций
+    // ("" = все секции включены). Читается в VkMintApp.onCreate (парсинг CSV
+    // в Set — в app-слое), меняется из SettingsScreen LoggingTab:
+    // AppLog.setDisabledSections(...) сразу после записи префа.
+
+    /**
+     * Выключенные секции (префиксы тегов/сообщений, например "#AUDIO").
+     * Пустое множество = логируется всё (дефолт). Инвариант: без пустых
+     * строк (пустой префикс «выключил» бы вообще все записи).
+     */
+    @Volatile
+    private var disabledSections: Set<String> = emptySet()
+
+    /**
+     * Заменить множество выключенных секций (потокобезопасно: @Volatile-своп
+     * неизменяемого множества — читатели видят либо старое, либо новое целиком).
+     * Вызывается из VkMintApp (старт процесса) и SettingsScreen (тумблер секции,
+     * сразу после записи префа). Пустые/пробельные элементы отбрасываются —
+     * защита от «пустой префикс выключает вообще всё».
+     */
+    fun setDisabledSections(tags: Set<String>) {
+        val cleaned = tags.filter { it.isNotBlank() }.toSet()
+        if (cleaned != disabledSections) {
+            disabledSections = cleaned
+            // Прямой Log.i, не AppLog.i: смена гейта обязана быть видимой
+            // всегда (секционные гейты на системный лог не действуют).
+            Log.i("$PREFIX/AppLog", "disabledSections = $cleaned " +
+                "(prefix match on tag/message; empty set = everything logged)")
+        }
+    }
+
+    /**
+     * Секция выключена, если какой-либо элемент [disabledSections] — префикс
+     * тега [tag] или сообщения [msg] (либо равен им целиком). Пустое множество
+     * = всегда true (дефолт «логируется всё», нулевая цена проверки).
+     */
+    /**
+     * #LOG-ERRORS-ONLY (2026-09-30): quiet mode - only ERROR entries are
+     * recorded (logcat + buffer + persistent.log). WARN/INFO/DEBUG/VERBOSE
+     * are skipped before any write. Default = true.
+     */
+    @Volatile
+    private var errorsOnly: Boolean = true
+
+    /** Enable/disable errors-only quiet mode (ERROR is never gated). */
+    fun setErrorsOnly(enabled: Boolean) {
+        if (errorsOnly != enabled) {
+            errorsOnly = enabled
+            Log.i("$PREFIX/AppLog", "errorsOnly = $enabled (only ERROR logged)")
+        }
+    }
+
+    private fun sectionEnabled(tag: String, msg: String): Boolean {
+        val disabled = disabledSections
+        if (disabled.isEmpty()) return true
+        for (s in disabled) {
+            if (tag.startsWith(s) || msg.startsWith(s)) return false
+        }
+        return true
+    }
+
+    private val isoFormat = ThreadLocal.withInitial {
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+    }
+
+    // ─── Public API: базовые уровни логирования ──────────────────────────
+
+    fun v(tag: String, msg: String) = log(Log.VERBOSE, tag, msg, null, null)
+    fun d(tag: String, msg: String) = log(Log.DEBUG, tag, msg, null, null)
+    fun i(tag: String, msg: String) = log(Log.INFO, tag, msg, null, null)
+    fun w(tag: String, msg: String, t: Throwable? = null) = log(Log.WARN, tag, msg, t, null)
+    fun e(tag: String, msg: String, t: Throwable? = null) = log(Log.ERROR, tag, msg, t, null)
+
+    // ─── Перегрузки со структурированным контекстом ───────────────────────
+
+    /** Debug-лог со структурированным контекстом (key-value). */
+    fun d(tag: String, msg: String, context: Map<String, String>) =
+        log(Log.DEBUG, tag, msg, null, context)
+
+    /** Info-лог со структурированным контекстом (key-value). */
+    fun i(tag: String, msg: String, context: Map<String, String>) =
+        log(Log.INFO, tag, msg, null, context)
+
+    /** Warn-лог со структурированным контекстом (key-value). */
+    fun w(tag: String, msg: String, context: Map<String, String>, t: Throwable? = null) =
+        log(Log.WARN, tag, msg, t, context)
+
+    /** Error-лог со структурированным контекстом (key-value). */
+    fun e(tag: String, msg: String, context: Map<String, String>, t: Throwable? = null) =
+        log(Log.ERROR, tag, msg, t, context)
+
+    // ─── Специализированные хелперы ───────────────────────────────────────
+
+    /**
+     * Замеряет длительность блока [block] и логирует результат (DEBUG).
+     * При исключении внутри блока — логирует ERROR с длителькой и пробрасывает исключение.
+     *
+     * Пример:
+     * ```
+     * val posts = AppLog.time("FeedScreen", "loadFeed") { api.wallGet(...) }
+     * ```
+     */
+    inline fun <T> time(tag: String, label: String, block: () -> T): T {
+        val start = System.nanoTime()
+        return try {
+            val result = block()
+            val ms = (System.nanoTime() - start) / 1_000_000.0
+            d(tag, "⏱ $label done in ${"%.2f".format(ms)}ms")
+            result
+        } catch (t: Throwable) {
+            val ms = (System.nanoTime() - start) / 1_000_000.0
+            e(tag, "⏱ $label FAILED in ${"%.2f".format(ms)}ms", t)
+            throw t
+        }
+    }
+
+    /**
+     * Логирование VK API запроса с маскированием чувствительных параметров.
+     *
+     * Используется из [vk.mint.api.VKApiClient.callInternal] для единообразной
+     * трассировки всех запросов: метод, параметры, длительность, статус, ошибки.
+     *
+     * Параметры [params] маскируются через [maskParams] (token, secret, sig…).
+     */
+    fun api(
+        tag: String = "VKApi",
+        method: String,
+        params: Map<String, String> = emptyMap(),
+        direction: ApiDirection,
+        durationMs: Long? = null,
+        httpStatus: Int? = null,
+        apiCode: Int? = null,
+        bodySize: Int? = null,
+        error: Throwable? = null,
+    ) {
+        val masked = maskParams(params)
+        val ctx = buildMap {
+            put("method", method)
+            if (params.isNotEmpty()) put("params", masked)
+            durationMs?.let { put("durationMs", it.toString()) }
+            apiCode?.let { put("apiCode", it.toString()) }
+            httpStatus?.let { put("http", it.toString()) }
+            bodySize?.let { put("bytes", it.toString()) }
+        }
+        val arrow = when (direction) {
+            ApiDirection.REQUEST -> "→"
+            ApiDirection.RESPONSE_OK -> "←"
+            ApiDirection.RESPONSE_ERR -> "✗"
+            ApiDirection.NETWORK_FAIL -> "✗NET"
+        }
+        val msg = buildString {
+            append("$arrow $method")
+            if (params.isNotEmpty()) append(" $masked")
+            durationMs?.let { append(" ${it}ms") }
+            httpStatus?.let { append(" HTTP $it") }
+            bodySize?.let { append(" ${it}B") }
+            apiCode?.let { append(" err=$it") }
+        }
+        // #LOG-SECTIONS (волна 31-f): секция «Сеть и API» (маркер "API")
+        // глушит только REQUEST/RESPONSE_OK (d-путь). ERR/NETWORK_FAIL идут
+        // через e() — на ошибки секционные гейты не действуют никогда.
+        // Явная проверка здесь, а не через sectionEnabled(): маркер "API" не
+        // префикс тега "VKApi", общий гейт в log() его бы не поймал.
+        val apiSectionOff = "API" in disabledSections
+        when (direction) {
+            ApiDirection.REQUEST -> if (!apiSectionOff) d(tag, msg, ctx)
+            ApiDirection.RESPONSE_OK -> if (!apiSectionOff) d(tag, msg, ctx)
+            ApiDirection.RESPONSE_ERR -> e(tag, msg, ctx, error)
+            ApiDirection.NETWORK_FAIL -> e(tag, msg, ctx, error)
+        }
+    }
+
+    /** Направление VK API лог-события. */
+    enum class ApiDirection { REQUEST, RESPONSE_OK, RESPONSE_ERR, NETWORK_FAIL }
+
+    // ─── P4.1/P4.2: LongPoll-specific helpers ───────────────────────────
+
+    /**
+     * P4.1/P4.2: Логирование LongPoll-цикла с structured context.
+     *
+     * Используется из [vk.mint.realtime.LongPollClient] для единообразной
+     * трассировки: версия LP (3/14), ts, pts, mode, failed code, кол-во events,
+     * длительность wait'а.
+     *
+     * @param tag лог-тег (обычно "LongPollClient")
+     * @param phase фаза цикла: "server-fetch" / "poll-start" / "poll-response" /
+     *        "backfill-start" / "backfill-replay" / "backfill-done" / "failed" / "reconnect"
+     * @param level V/D/I/W/E (по умолчанию I)
+     * @param fields key-value контекст (ts, pts, version, mode, failed, events, ms, delta...)
+     */
+    fun lp(
+        tag: String = "LongPollClient",
+        phase: String,
+        level: Int = Log.INFO,
+        fields: Map<String, Any?> = emptyMap(),
+        throwable: Throwable? = null,
+    ) {
+        val ctx = fields.entries
+            .filter { it.value != null }
+            .associate { it.key to it.value.toString() }
+        val msg = buildString {
+            append("[LP:$phase]")
+            fields.forEach { (k, v) ->
+                if (v != null) {
+                    val display = when (v) {
+                        is Float, is Double -> "%.2f".format(v)
+                        is Long, is Int -> v.toString()
+                        else -> v.toString()
+                    }
+                    append(" $k=$display")
+                }
+            }
+        }
+        log(level, tag, msg, throwable, ctx)
+    }
+
+    /**
+     * P4.2: Логирование backfill-операции (восстановление пропущенных событий).
+     *
+     * @param stage "start" / "skip-no-flag" / "skip-no-state" / "skip-up-to-date" /
+     *        "fetch" / "fetch-failed" / "replay" / "replay-event" / "persist" / "done" /
+     *        "failed1-start" / "failed1-done"
+     * @param savedPts pts сохранённый в prefs (точка отсчёта backfill)
+     * @param currentPts актуальный pts от VK
+     * @param eventsCount кол-во восстановленных событий
+     * @param messagesCount кол-во сообщений в ответе
+     * @param durationMs длительность операции (для perf tracking)
+     * @param error опциональная ошибка
+     */
+    fun backfill(
+        tag: String = "LongPollClient",
+        stage: String,
+        savedPts: Long? = null,
+        currentPts: Long? = null,
+        eventsCount: Int? = null,
+        messagesCount: Int? = null,
+        conversationsCount: Int? = null,
+        durationMs: Long? = null,
+        error: Throwable? = null,
+    ) {
+        val fields = buildMap {
+            put("stage", stage)
+            savedPts?.let { put("savedPts", it.toString()) }
+            currentPts?.let { put("currentPts", it.toString()) }
+            eventsCount?.let { put("events", it.toString()) }
+            messagesCount?.let { put("msgs", it.toString()) }
+            conversationsCount?.let { put("convs", it.toString()) }
+            durationMs?.let { put("ms", it.toString()) }
+            savedPts?.let { sp ->
+                currentPts?.let { cp ->
+                    if (cp > sp) put("delta", (cp - sp).toString())
+                }
+            }
+        }
+        val level = when {
+            error != null -> Log.WARN
+            stage.contains("failed") || stage.contains("skip") -> Log.DEBUG
+            stage == "done" || stage == "replay" -> Log.INFO
+            else -> Log.INFO
+        }
+        val msg = buildString {
+            append("[BACKFILL:$stage]")
+            fields.forEach { (k, v) -> append(" $k=$v") }
+        }
+        log(level, tag, msg, error, fields)
+    }
+
+    /**
+     * P4.4: Логирование execute (VKScript) вызова.
+     *
+     * @param stage "request" / "response-ok" / "response-partial" / "response-err" /
+     *        "script-empty"
+     * @param scriptLength длина VKScript (символов) — сам скрипт НЕ логируем
+     *        целиком (может содержать PII), только длину и первые 80 символов
+     * @param scriptPreview первые 80 символов скрипта (для debugging)
+     * @param executeErrorsCount кол-во execute_errors (частичный fail)
+     * @param durationMs длительность запроса
+     * @param bodySize размер ответа в байтах
+     */
+    fun execute(
+        tag: String = "VKApiClient",
+        stage: String,
+        scriptLength: Int? = null,
+        scriptPreview: String? = null,
+        executeErrorsCount: Int? = null,
+        durationMs: Long? = null,
+        bodySize: Int? = null,
+        error: Throwable? = null,
+    ) {
+        val ctx = buildMap {
+            put("stage", stage)
+            scriptLength?.let { put("scriptLen", it.toString()) }
+            executeErrorsCount?.let { put("execErrors", it.toString()) }
+            durationMs?.let { put("ms", it.toString()) }
+            bodySize?.let { put("bytes", it.toString()) }
+        }
+        val level = when {
+            error != null -> Log.ERROR
+            executeErrorsCount != null && executeErrorsCount > 0 -> Log.WARN
+            stage == "script-empty" -> Log.WARN
+            else -> Log.DEBUG
+        }
+        val msg = buildString {
+            append("[EXEC:$stage]")
+            scriptLength?.let { append(" scriptLen=$it") }
+            scriptPreview?.let {
+                val safe = it.take(80).replace("\n", " ")
+                append(" preview=\"$safe\"")
+            }
+            executeErrorsCount?.let { if (it > 0) append(" execErrors=$it") }
+            durationMs?.let { append(" ${it}ms") }
+            bodySize?.let { append(" ${it}B") }
+        }
+        log(level, tag, msg, error, ctx)
+    }
+
+    /**
+     * P4.3: Логирование WebSocket-событий (для ChannelWebSocketClient).
+     *
+     * @param stage "stub-start" / "stub-stop" / "stub-subscribe" / "stub-unsubscribe" /
+     *        "ws-open" / "ws-message" / "ws-closed" / "ws-failure" / "ws-ping" / "ws-pong"
+     * @param peerId опциональный peer (для subscribe/unsubscribe)
+     * @param code WebSocket close code (1000/1001/...)
+     * @param bytes размер message (без содержимого — privacy)
+     */
+    fun ws(
+        tag: String = "ChannelWSClient",
+        stage: String,
+        peerId: Long? = null,
+        code: Int? = null,
+        bytes: Int? = null,
+        error: Throwable? = null,
+    ) {
+        val ctx = buildMap {
+            put("stage", stage)
+            peerId?.let { put("peerId", it.toString()) }
+            code?.let { put("code", it.toString()) }
+            bytes?.let { put("bytes", it.toString()) }
+        }
+        val level = when {
+            error != null -> Log.ERROR
+            stage.startsWith("ws-closed") || stage.startsWith("ws-failure") -> Log.WARN
+            stage.startsWith("stub") -> Log.DEBUG
+            else -> Log.INFO
+        }
+        val msg = buildString {
+            append("[WS:$stage]")
+            peerId?.let { append(" peerId=$it") }
+            code?.let { append(" code=$it") }
+            bytes?.let { append(" ${it}B") }
+        }
+        log(level, tag, msg, error, ctx)
+    }
+
+    /**
+     * Маскирует чувствительные значения параметров (token, secret, sig…)
+     * и обрезает слишком длинные значения. Возвращает строку вида `{k=v, k=v}`.
+     */
+    fun maskParams(params: Map<String, String>): String {
+        if (params.isEmpty()) return "{}"
+        return params.entries.joinToString(prefix = "{", postfix = "}", separator = ", ") { (k, v) ->
+            val value = when {
+                k.lowercase() in SENSITIVE_KEYS || k.contains("token", ignoreCase = true) -> {
+                    if (v.length > 8) "${v.take(4)}…${v.takeLast(3)}" else "***"
+                }
+                v.length > 120 -> "${v.take(120)}…(${v.length})"
+                else -> v
+            }
+            "$k=$value"
+        }
+    }
+
+    // ─── Внутренняя реализация ────────────────────────────────────────────
+
+    private fun log(
+        level: Int,
+        tag: String,
+        msg: String,
+        t: Throwable?,
+        context: Map<String, String>?,
+    ) {
+        // #LOG-CATEGORIES (2026-08-04): per-category gating.
+        // Если категория этого тега отключена пользователем в Settings → Log —
+        // пропускаем запись ВООБЩЕ (buffer + file + logcat), чтобы убрать «шум».
+        // Исключение: WARN/ERROR всегда пишутся — критичные события (краши,
+        // ошибки сети, инвалидация токена) нельзя терять при диагностике.
+        val category = categoryForTag(tag)
+        val categoryEnabled = category in enabledCategories
+        if (!categoryEnabled && level != Log.WARN && level != Log.ERROR) {
+            return
+        }
+
+        // #LOG-ERRORS-ONLY (2026-09-30): quiet mode - only ERROR is written.
+        if (errorsOnly && level != Log.ERROR) {
+            return
+        }
+
+        // #LOG-SECTIONS (волна 31-f): гейт секций по префиксу тега/сообщения.
+        // Пустое множество (дефолт) = ничего не меняется, всё пишется как раньше.
+        // Выключенная секция скипается ПОЛНОСТЬЮ (logcat + buffer + persist-файл).
+        // ERROR проходит ВСЕГДА — ошибки не теряются даже в выключенной секции
+        // (аварийная диагностика). Проверка здесь — общий вход v/d/i/w и
+        // перегрузок с контекстом, поэтому сотни вызовов править не нужно.
+        if (level != Log.ERROR && !sectionEnabled(tag, msg)) {
+            return
+        }
+
+        val fullTag = "$PREFIX/$tag"
+        val levelStr = levelChar(level)
+        val ts = System.currentTimeMillis()
+        val thread = Thread.currentThread().name
+        val caller = callerLocation()
+        val entry = LogEntry(ts, level, tag, msg, thread, caller, context, t)
+
+        // In-memory buffer (most-recent first)
+        synchronized(bufferLock) {
+            buffer.addFirst(entry)
+            while (buffer.size > bufferCapacity) buffer.removeLast()
+        }
+
+        // File persistence (chronological order, с расширенными полями)
+        appendToFile(entry, levelStr)
+
+        // Logcat — msg enriched с thread+caller+ctx для удобства в adb logcat
+        val logcatMsg = buildString {
+            append(msg)
+            if (caller != null) {
+                append("  [").append(thread).append(" @ ").append(caller).append("]")
+            }
+            if (context != null && context.isNotEmpty()) {
+                append("  ").append(context.entries.joinToString(",", "{", "}") { "${it.key}=${it.value}" })
+            }
+        }
+        // #LOGCAT-NOISE-FIX: DEBUG/VERBOSE пишутся в logcat ТОЛЬКО если
+        // verboseToLogcat==true (default = debugBuild хоста). В release-сборке
+        // logcat чистый — но buffer + persistent.log содержат всё (для LogViewer).
+        // INFO/WARN/ERROR всегда в logcat.
+        when (level) {
+            Log.VERBOSE -> if (verboseToLogcat) Log.v(fullTag, logcatMsg, t)
+            Log.DEBUG -> if (verboseToLogcat) Log.d(fullTag, logcatMsg, t)
+            Log.INFO -> Log.i(fullTag, logcatMsg, t)
+            Log.WARN -> Log.w(fullTag, logcatMsg, t)
+            Log.ERROR -> Log.e(fullTag, logcatMsg, t)
+        }
+    }
+
+    /**
+     * Определяет место вызова лога (`file:line#method`), проходя стек и пропуская
+     * все фреймы внутри [AppLog] (включая inline-обёртки time/api/d/i/w/e).
+     * Возвращает null, если определить не удалось.
+     */
+    private fun callerLocation(): String? {
+        val stack = Throwable().stackTrace
+        for (i in 1 until stack.size) {
+            val el = stack[i]
+            if (el.className.startsWith("vk.mint.util.AppLog")) continue
+            val file = el.fileName ?: "?"
+            return "$file:${el.lineNumber}#${el.methodName}"
+        }
+        return null
+    }
+
+    /**
+     * Fix #281 (ANR музыки-поиска): файловая запись — ТОЛЬКО на writer-потоке.
+     *
+     * Вызывающий поток (включая main) платит только за постановку задачи в
+     * очередь executor'а. Форматирование строки (SimpleDateFormat, stack trace
+     * Throwable), write, batch-flush и rotation — на "VK Mint-LogWriter".
+     *
+     * Batch-flush: flush выполняется когда очередь задач исчерпана
+     * (pendingPersistWrites == 0) — при burst'е логов (поиск музыки, старт
+     * приложения) это N записей на один flush вместо N flush'ей.
+     */
+    private fun appendToFile(entry: LogEntry, levelStr: String) {
+        if (persistWriter == null) return  // init не вызывался — только буфер
+        pendingPersistWrites.incrementAndGet()
+        persistExecutor.execute {
+            synchronized(persistLock) {
+                val w = persistWriter
+                if (w == null) {
+                    pendingPersistWrites.decrementAndGet()
+                    return@execute
+                }
+                try {
+                    val dateStr = isoFormat.get()?.format(Date(entry.timestamp)) ?: return@execute
+                    val threadStr = "  [${entry.threadName}]"
+                    val callerStr = entry.callerLocation?.let { "  @ $it" } ?: ""
+                    val ctxStr = entry.context?.takeIf { it.isNotEmpty() }?.let {
+                        "  " + it.entries.joinToString(",", "{", "}") { (k, v) -> "$k=$v" }
+                    } ?: ""
+                    val traceStr = entry.throwable?.let {
+                        "\n" + formatThrowable(it).prependIndent("    ")
+                    } ?: ""
+                    val line = "$dateStr $levelStr/$PREFIX/${entry.tag}: " +
+                        "${entry.message}$threadStr$callerStr$ctxStr$traceStr\n"
+                    w.write(line)
+                } catch (_: Exception) {
+                    // Не падаем если файл недоступен — in-memory буфер всё ещё работает
+                } finally {
+                    // Batch-flush: доливаем на диск когда очередь опустела.
+                    if (pendingPersistWrites.decrementAndGet() <= 0) {
+                        try { w.flush() } catch (_: Exception) {}
+                    }
+                }
+                // Rotation check (только на writer-потоке — конкуренции с
+                // вызывающими потоками больше нет).
+                try {
+                    val file = persistFile
+                    if (file != null && file.length() > persistMaxBytes) {
+                        w.close()
+                        val old = File(file.parentFile, "$PERSIST_FILE.old")
+                        old.delete()
+                        file.renameTo(old)
+                        val newFile = File(file.parentFile, PERSIST_FILE)
+                        persistFile = newFile
+                        persistWriter = OutputStreamWriter(
+                            java.io.FileOutputStream(newFile, true),
+                            Charsets.UTF_8,
+                        )
+                    }
+                } catch (_: Exception) {
+                    // rotation не удался — пишем дальше в текущий writer
+                }
+            }
+        }
+    }
+
+    /**
+     * Fix #281: синхронный flush персистентного файла с таймаутом.
+     * Для путей, где важна полнота файла на диске СЕЙЧАС: [clear] (перед
+     * закрытием writer) и будущие экспортные ветки, читающие persistent.log.
+     *
+     * Не бросает исключений: при таймауте/недоступности executor'а просто
+     * возвращается (batch-flush на writer-потоке долоёт файл позже).
+     */
+    fun flushSync(timeoutMs: Long = 2000L) {
+        try {
+            val f = persistExecutor.submit {
+                synchronized(persistLock) {
+                    val w = persistWriter
+                    if (w != null) {
+                        try { w.flush() } catch (_: Exception) {}
+                    }
+                }
+            }
+            f.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+        } catch (_: Exception) {
+            // таймаут / executor недоступен — не критично
+        }
+    }
+
+    /**
+     * Полное форматирование Throwable: stack trace + cause chain + suppressed.
+     * Аналог `Log.getStackTraceString`, но с явным перебором cause и suppressed.
+     */
+    private fun formatThrowable(t: Throwable): String {
+        val sw = StringWriter()
+        PrintWriter(sw).use { pw ->
+            pw.println(t.toString())
+            t.stackTrace.forEach { pw.println("    at $it") }
+            // Cause chain
+            var cause: Throwable? = t.cause
+            while (cause != null) {
+                pw.println("Caused by: $cause")
+                cause.stackTrace.forEach { pw.println("    at $it") }
+                cause = cause.cause
+            }
+            // Suppressed exceptions (try-with-resources / addSuppressed)
+            if (t.suppressed.isNotEmpty()) {
+                pw.println("Suppressed:")
+                t.suppressed.forEach { s ->
+                    pw.println("  $s")
+                    s.stackTrace.forEach { pw.println("    at $it") }
+                }
+            }
+        }
+        return sw.toString().trim()
+    }
+
+    // ─── Snapshot / Export ────────────────────────────────────────────────
+
+    /**
+     * Snapshot in-memory буфера как отформатированные строки (most-recent first).
+     * Формат совместим со старым просмотрщиком: `<ts> <LVL>/<PREFIX>/<tag>: <msg>`.
+     */
+    fun snapshot(): List<String> = synchronized(bufferLock) {
+        buffer.map { formatEntrySimple(it) }
+    }
+
+    /** Структурированные записи (most-recent first) для расширенного рендеринга. */
+    fun snapshotEntries(): List<LogEntry> = synchronized(bufferLock) { buffer.toList() }
+
+    private fun formatEntrySimple(e: LogEntry): String =
+        "${e.timestamp} ${levelChar(e.level)}/$PREFIX/${e.tag}: ${e.message}"
+
+    /**
+     * Полный детальный экспорт логов (в хронологическом порядке) со ВСЕМИ полями:
+     * timestamp, level, thread, caller, message, context, stack trace (с cause chain).
+     *
+     * Это формат, который отправляется разработчику для глубокой диагностики —
+     * подключён к кнопкам экспорта в [LogViewerDialogContent] и [LogScreen].
+     */
+    fun exportDetailed(): String {
+        val entries = synchronized(bufferLock) { buffer.toList() }
+        val sb = StringBuilder()
+        sb.append("# VK Mint detailed log dump — ${Date()}\n")
+        sb.append("# App: $appId v$versionName (debug=$debugBuild)\n")
+        sb.append("# Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} ")
+        sb.append("(Android API ${android.os.Build.VERSION.SDK_INT}, release ${android.os.Build.VERSION.RELEASE})\n")
+        sb.append("# Entries: ${entries.size} (chronological order below)\n")
+        sb.append("# Fields: timestamp | level/tag | thread | caller | message | context | throwable\n")
+        sb.append("\n")
+        // buffer хранит most-recent first → реверсим для хронологического порядка
+        for (e in entries.asReversed()) {
+            val dateStr = isoFormat.get()?.format(Date(e.timestamp)) ?: e.timestamp.toString()
+            val lvl = levelChar(e.level)
+            sb.append("$dateStr $lvl/${e.tag}")
+            sb.append("  [${e.threadName}]")
+            e.callerLocation?.let { sb.append("  @ $it") }
+            sb.append("\n    ${e.message}")
+            e.context?.takeIf { it.isNotEmpty() }?.let {
+                sb.append("\n    ctx: ")
+                sb.append(it.entries.joinToString(", ") { (k, v) -> "$k=$v" })
+            }
+            e.throwable?.let {
+                sb.append("\n    throwable: ")
+                sb.append(formatThrowable(it).replace("\n", "\n    "))
+            }
+            sb.append("\n")
+        }
+        return sb.toString()
+    }
+
+    private fun levelChar(level: Int): String = when (level) {
+        Log.VERBOSE -> "V"
+        Log.DEBUG -> "D"
+        Log.INFO -> "I"
+        Log.WARN -> "W"
+        Log.ERROR -> "E"
+        else -> "?"
+    }
+
+    // ─── Lifecycle ────────────────────────────────────────────────────────
+
+    /**
+     * Инициализация файлового лога. Вызывается из [vk.mint.VkMintApp.onCreate].
+     * Создаёт cacheDir/logs/persistent.log, добавляет заголовок сессии с версией
+     * и устройством.
+     */
+    fun init(context: Context) {
+        synchronized(persistLock) {
+            if (persistFile != null) return  // уже инициализирован
+            val dir = File(context.cacheDir, "logs").apply { mkdirs() }
+            var file = File(dir, PERSIST_FILE)
+
+            // Rotation: если файл больше лимита — переименовываем в .old и начинаем новый.
+            if (file.exists() && file.length() > persistMaxBytes) {
+                val old = File(dir, "$PERSIST_FILE.old")
+                old.delete()
+                file.renameTo(old)
+                file = File(dir, PERSIST_FILE)  // пересоздаём File object после rename
+            }
+
+            persistFile = file
+            persistWriter = OutputStreamWriter(
+                java.io.FileOutputStream(file, true),
+                Charsets.UTF_8,
+            )
+            // Заголовок сессии
+            persistWriter?.apply {
+                write("\n# === VK Mint session ${Date()} ===\n")
+                write("# Version: $versionName (debug=$debugBuild)\n")
+                write("# App ID: $appId\n")
+                write("# Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} " +
+                    "(API ${android.os.Build.VERSION.SDK_INT})\n")
+                write("# Encoding: UTF-8\n\n")
+                flush()
+            }
+        }
+        i("AppLog", "Persistent log initialized: ${persistFile?.absolutePath}")
+    }
+
+    /**
+     * Returns the persisted log file (chronological order, includes previous sessions).
+     * Может быть null если [init] не вызывался.
+     */
+    fun persistFile(): File? = persistFile
+
+    // ─── #LOG-CONFIG (2026-10-01): настройка хранения + очистка по сроку ──
+
+    /**
+     * Применить настраиваемые параметры хранения логов.
+     *
+     * Вызывается из Settings → Логирование (LoggingTab). Каждый параметр
+     * применяется только если передан корректное значение:
+     *  - [maxBytes] > 0 → обновляет [persistMaxBytes] (лимит ротации файла);
+     *  - bufferCapacity > 0 → обновляет [bufferCapacity] и триммит in-memory
+     *    буфер до нового размера (защита от перерасхода памяти при уменьшении);
+     *  - [retentionDays] → обновляет [logRetentionDays];
+     *  - [autoClean] → обновляет [autoCleanEnabled];
+     *  - если [retentionDays] > 0 — сразу запускает [cleanupByRetention].
+     *
+     * @throws IllegalArgumentException если и [maxBytes] ≤ 0, и bufferCapacity ≤ 0
+     *         одновременно без валидного значения (иначе конфиг был бы пустым).
+     */
+    fun applyLogConfig(
+        maxBytes: Long,
+        bufferCapacity: Int,
+        retentionDays: Int,
+        autoClean: Boolean,
+    ) {
+        if (maxBytes > 0) {
+            persistMaxBytes = maxBytes
+        }
+        if (bufferCapacity > 0) {
+            this.bufferCapacity = bufferCapacity
+            // Тримм буфер до нового размера — убираем лишние записи при
+            // уменьшении вместимости, чтобы не держать лишнюю память.
+            synchronized(bufferLock) {
+                while (buffer.size > this.bufferCapacity) buffer.removeLast()
+            }
+        }
+        logRetentionDays = retentionDays
+        autoCleanEnabled = autoClean
+        if (retentionDays > 0) {
+            cleanupByRetention()
+        }
+    }
+
+    /**
+     * Очистить файлы логов старше [logRetentionDays] дней.
+     *
+     * Проходит по всем файлам в папке логов (cacheDir/logs/) и удаляет те,
+     * чей [File.lastModified] старше порога `now - logRetentionDays * 86_400_000L`.
+     * Обрабатываются только валидные имена ([PERSIST_FILE] и `[PERSIST_FILE].old`);
+     * сам [persistFile] удаляется только если это файл `.old` (иначе writer
+     * продолжил бы писать в несуществующий файл, и все записи потерялись бы).
+     *
+     * Безопасен: если [logRetentionDays] ≤ 0 — делает ничего, любые исключения
+     * глотаются (очистка — фоновый сервис, не должен падать).
+     *
+     * @param now текущее время мс (по умолчанию [System.currentTimeMillis]).
+     */
+    fun cleanupByRetention(now: Long = System.currentTimeMillis()) {
+        if (logRetentionDays <= 0) return
+        val f = persistFile ?: return
+        val dir = f.parentFile ?: return
+        if (!dir.exists()) return
+        val cutoff = now - logRetentionDays * 24L * 60L * 60L * 1000L
+        val validNames = setOf(PERSIST_FILE, "$PERSIST_FILE.old")
+        synchronized(persistLock) {
+            for (file in dir.listFiles() ?: emptyArray()) {
+                if (file.name !in validNames) continue
+                if (file.lastModified() < cutoff) {
+                    try {
+                        // Сам активный файл не удаляем (в него активно пишется) —
+                        // старые .old удаляются, иначе можно потерять текущие записи.
+                        if (file == persistFile) continue
+                        file.delete()
+                    } catch (_: Exception) { /* ignore — одиночный сбой не роняет очистку */ }
+                }
+            }
+        }
+    }
+
+    /**
+     * Размер активного файла логов в байтах (0 если [init] не вызывался
+     * или файл отсутствует). Для UI (Settings → Логирование).
+     */
+    fun currentLogSizeBytes(): Long = persistFile()?.length() ?: 0L
+
+    /**
+     * Размер архивного файла логов (`persistent.log.old`) в байтах (0 если нет).
+     * Для UI (Settings → Логирование) — показывает занятость после ротации.
+     */
+    fun currentBackupSizeBytes(): Long {
+        val f = persistFile ?: return 0L
+        val dir = f.parentFile ?: return 0L
+        val old = File(dir, "$PERSIST_FILE.old")
+        return if (old.exists()) old.length() else 0L
+    }
+
+    /**
+     * Статус файлов логов: пара (текущий размер, размер бэкапа `.old`).
+     * Для UI — один вызов вместо двух при построении экрана настроек.
+     */
+    fun logFilesStatus(): Pair<Long, Long> =
+        currentLogSizeBytes() to currentBackupSizeBytes()
+
+    fun clear() {
+        synchronized(bufferLock) { buffer.clear() }
+        // Fix #281: writer асинхронный — дренируем очередь задач ДО закрытия,
+        // иначе pending-задачи попытаются писать в закрытый writer
+        // (исключение глотается, но записи теряются).
+        flushSync()
+        synchronized(persistLock) {
+            try {
+                persistWriter?.close()
+                persistFile?.delete()
+                persistFile?.let { f ->
+                    persistWriter = OutputStreamWriter(java.io.FileOutputStream(f, true), Charsets.UTF_8)
+                    persistWriter?.write("# Log cleared ${Date()}\n")
+                    persistWriter?.flush()
+                }
+            } catch (_: Exception) { /* ignore */ }
+        }
+    }
+}

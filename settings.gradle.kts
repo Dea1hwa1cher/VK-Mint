@@ -24,7 +24,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SOVA_2_0"
+rootProject.name = "VK_MINT"
 
 // #ARCH-CONTAINERS (Этап 1.1): контрактный слой модульной архитектуры.
 include(":app")
@@ -44,26 +44,26 @@ include(":core:network")
 // Плеер/download-менеджеры/сервисы остались в :app (data.model/UI/Service —
 // см. контейнеры.план.md, Этап 1.2).
 include(":core:media")
-// #ARCH-DATA (2026-09-03, Task 20): data-слой — SovaPrefs (+Snapshot). Первая
+// #ARCH-DATA (2026-09-03, Task 20): data-слой — VkMintPrefs (+Snapshot). Первая
 // выемка из запланированного выделения data-слоя (контейнеры.план.md, Часть 3):
 // предпосылка — перенос экранов звонков в :feature:calls (6742de6c), экранам
-// нужен тип SovaPrefs в CallsDependencies. Пакеты НЕ переименовываются
-// (re.pinok.data.local) — :app видит класс как раньше.
+// нужен тип VkMintPrefs в CallsDependencies. Пакеты НЕ переименовываются
+// (vk.mint.data.local) — :app видит класс как раньше.
 include(":core:data")
 // #ARCH-CONTAINERS Этап 3.7-1 (2026-09-03, решение пользователя): дом
 // УНИВЕРСАЛЬНЫХ compose-компонентов (без доменной специфики) — виден и ядру,
-// и всем контейнерам. Первый жилец — ErrorView (пакет re.pinok.ui.components
+// и всем контейнерам. Первый жилец — ErrorView (пакет vk.mint.ui.components
 // сохранён; дальше — по потребности контейнеров, §3.3 решатель).
 include(":core:ui")
 // #ARCH-CONTAINERS (Этап 1.3): контейнер-пионер звонков — WebRtcEngine,
-// VideoTextureRenderer (re.pinok.media), CallModels (re.pinok.data.model),
+// VideoTextureRenderer (vk.mint.media), CallModels (vk.mint.data.model),
 // CallsContainer (capability-реестр звонков). UI-экраны звонков пока в :app
-// (блокер SovaApp — см. контейнеры.план.md, Этап 1.3/1.4).
+// (блокер VkMintApp — см. контейнеры.план.md, Этап 1.3/1.4).
 include(":feature:calls")
 // #ARCH-CONTAINERS (Этап 1.5-а): контейнер фото — NavEntry «Фото» (route "photos")
 // + AttachmentRenderer ("photos_inline": инлайн-рендер фото-вложений чата,
 // перенесён из ChatDetailScreen). Этап 3.7-1: сюда же переехал экран раздела
-// PhotosScreen (git mv, пакет re.pinok.ui.screens.photos сохранён) и PhotoViewer
+// PhotosScreen (git mv, пакет vk.mint.ui.screens.photos сохранён) и PhotoViewer
 // (фото-домен); ErrorView — в :core:ui (универсальный).
 include(":feature:photos")
 // #ARCH-CONTAINERS (Этап 1.5-б): контейнер аудио — NavEntry «Эквалайзер»
@@ -72,7 +72,7 @@ include(":feature:photos")
 // AttachmentRenderer ("audio_inline": инлайн-рендер аудио-вложений чата,
 // перенесён из ChatDetailScreen). Плеер/эквалайзер-экраны и движки
 // (PlayerConnection/PlayerService/AudioEffectsEngine/EqualizerHelper) пока
-// в :app — блокер data-слой (SovaApp/data.model) — см. контейнеры.план.md,
+// в :app — блокер data-слой (VkMintApp/data.model) — см. контейнеры.план.md,
 // Этап 1.5-б.
 include(":feature:audio")
 // O1 #PERF-BASELINE (Task 77): модуль-генератор Baseline Profile.

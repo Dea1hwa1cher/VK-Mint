@@ -1,5 +1,5 @@
 # =====================================================================
-# SOVA_2_0 ProGuard rules
+# VK_MINT ProGuard rules
 # =====================================================================
 
 # --- Kotlin ---
@@ -47,23 +47,23 @@
 -dontwarn androidx.media3.**
 
 # --- App models (Gson reflection) ---
-# #PERF-R8 (Task 75): снят широкий -keep class re.pinok.data.model.** { *; }.
+# #PERF-R8 (Task 75): снят широкий -keep class vk.mint.data.model.** { *; }.
 # Gson десериализует поля рефлексией. В Models.kt/UserProfile.kt все поля
 # покрыты @SerializedName (общее правило Gson выше), но в VkAccountModels/
 # CallModels/VideoQuality аннотаций нет — там имя поля берётся из JSON,
 # поэтому его НЕЛЬЗЯ обфусцировать. Сохраняем имена полей, но разрешаем R8
 # удалять/обфусцировать имена классов и неиспользуемые методы.
--keepclassmembers class re.pinok.data.model.** {
+-keepclassmembers class vk.mint.data.model.** {
     <fields>;
 }
 
 # --- BuildConfig ---
--keep class re.pinok.BuildConfig { *; }
+-keep class vk.mint.BuildConfig { *; }
 
 # --- Navigation Screen sealed class ---
 # R8 не должен удалять/обфусцировать sealed class объекты, используемые в Compose Navigation.
--keep class re.pinok.ui.navigation.Screen { *; }
--keepclassmembers class re.pinok.ui.navigation.Screen { *; }
+-keep class vk.mint.ui.navigation.Screen { *; }
+-keepclassmembers class vk.mint.ui.navigation.Screen { *; }
 # --- Room / WorkManager ---
 # #FIX-ROOM (Task 75): R8 удалял no-arg конструктор у androidx.work.impl.WorkDatabase_Impl,
 # а Room/WorkManager инстанцируют *Database_Impl рефлексией -> краш при старте:
