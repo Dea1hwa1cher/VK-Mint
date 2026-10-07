@@ -290,13 +290,14 @@ fun MusicScreen(
     val playerState by PlayerConnection.playerState.collectAsState()
     val downloads by TrackDownloadManager.downloads.collectAsState()
 
-    // ─── Тёмная тема как в нативном ВК Music ───────────────────────────
-    val vkBlack = Color(0xFF0F0F10)
-    val vkCard = Color(0xFF1C1C1E)
-    val vkSurface = Color(0xFF242426)
-    val vkTextPrimary = Color(0xFFFFFFFF)
-    val vkTextSecondary = Color(0xFFA8A8AA)
-    val vkAccent = Color(0xFF3D8BFF)
+    // ─── Адаптивная палитра: привязка к MaterialTheme (Material You / SOVATheme) ───
+    val colorScheme = MaterialTheme.colorScheme
+    val vkBlack = colorScheme.background
+    val vkCard = colorScheme.surface
+    val vkSurface = colorScheme.surfaceVariant
+    val vkTextPrimary = colorScheme.onSurface
+    val vkTextSecondary = colorScheme.onSurfaceVariant
+    val vkAccent = colorScheme.primary
 
     val listState = rememberLazyListState()
 
@@ -1248,7 +1249,7 @@ private fun MusicTabsBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF0F0F10))
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         // Fix #258: inline поиск убран — теперь в TopAppBar.
@@ -1295,7 +1296,7 @@ private fun MusicTab(
                 .width(if (isActive) 24.dp else 0.dp)
                 .height(3.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(if (isActive) Color(0xFF3D8BFF) else Color.Transparent),
+                .background(if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent),
         )
     }
 }
@@ -1619,7 +1620,7 @@ private fun MyMusicMenuList(
                             .height(200.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CircularProgressIndicator(color = Color(0xFF3D8BFF))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else if (playlists.isEmpty()) {
                     Box(
@@ -1673,8 +1674,8 @@ private fun MyMusicMenuList(
                                         .background(
                                             brush = Brush.linearGradient(
                                                 colors = listOf(
-                                                    Color(0xFF3D8BFF),
-                                                    Color(0xFF1A5FCC),
+                                                    MaterialTheme.colorScheme.primary,
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                                                 ),
                                             ),
                                         ),
@@ -1730,7 +1731,7 @@ private fun MyMusicMenuList(
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF3D8BFF))
+                                        .background(MaterialTheme.colorScheme.primary)
                                         .clickable {
                                             scope.launch {
                                                 try {
@@ -1766,7 +1767,7 @@ private fun MyMusicMenuList(
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF3D8BFF).copy(alpha = 0.15f))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                                         .clickable {
                                             scope.launch {
                                                 try {
@@ -1800,7 +1801,7 @@ private fun MyMusicMenuList(
                                     Icon(
                                         imageVector = Icons.Filled.Download,
                                         contentDescription = "Скачать плейлист",
-                                        tint = Color(0xFF3D8BFF),
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp),
                                     )
                                 }
@@ -1814,7 +1815,7 @@ private fun MyMusicMenuList(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     CircularProgressIndicator(
-                                        color = Color(0xFF3D8BFF),
+                                        color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp),
                                         strokeWidth = 2.dp,
                                     )
@@ -1826,7 +1827,7 @@ private fun MyMusicMenuList(
             },
             confirmButton = {
                 TextButton(onClick = { showPlaylists = false }) {
-                    Text("Закрыть", color = Color(0xFF3D8BFF))
+                    Text("Закрыть", color = MaterialTheme.colorScheme.primary)
                 }
             },
         )
@@ -1892,7 +1893,7 @@ private fun MyMusicMenuList(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isCurrentTrack) Color(0xFF3D8BFF).copy(alpha = 0.1f) else Color.Transparent)
+                                    .background(if (isCurrentTrack) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
                                     .clickable {
                                         // Fix #162: ранее трек искался в playerState.queue.
                                         // Если трека там не было (плеер пуст / играл другой
@@ -1926,7 +1927,7 @@ private fun MyMusicMenuList(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = state.title.ifEmpty { "Трек #${state.trackId}" },
-                                        color = if (isCurrentTrack) Color(0xFF3D8BFF) else textColor,
+                                        color = if (isCurrentTrack) MaterialTheme.colorScheme.primary else textColor,
                                         fontSize = 14.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -1964,18 +1965,19 @@ private fun MyMusicMenuList(
                     }
                 }
                 TextButton(onClick = { showDownloaded = false }) {
-                    Text("Закрыть", color = Color(0xFF3D8BFF))
+                    Text("Закрыть", color = MaterialTheme.colorScheme.primary)
                 }
             },
         )
     }
 
+    val accentColor = MaterialTheme.colorScheme.primary
     val menuItems = listOf(
-        Triple("Недавнее", Icons.Outlined.AccessTime, Color(0xFF3D8BFF)),
-        Triple("Плейлисты", Icons.Filled.MusicNote, Color(0xFF3D8BFF)),
-        Triple("Альбомы", Icons.Outlined.Album, Color(0xFF3D8BFF)),
-        Triple("Артисты и кураторы", Icons.Outlined.Person, Color(0xFF3D8BFF)),
-        Triple("Скачанная музыка", Icons.Filled.DownloadDone, Color(0xFF3D8BFF)),
+        Triple("Недавнее", Icons.Outlined.AccessTime, accentColor),
+        Triple("Плейлисты", Icons.Filled.MusicNote, accentColor),
+        Triple("Альбомы", Icons.Outlined.Album, accentColor),
+        Triple("Артисты и кураторы", Icons.Outlined.Person, accentColor),
+        Triple("Скачанная музыка", Icons.Filled.DownloadDone, accentColor),
     )
     Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
         menuItems.forEach { (title, icon, tint) ->

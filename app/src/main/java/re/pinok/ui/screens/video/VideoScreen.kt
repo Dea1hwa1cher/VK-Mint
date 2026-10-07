@@ -296,13 +296,14 @@ fun VideoScreen(
         .collect { loadMoreVideos() }
     }
 
-    // Тёмная тема как в нативном ВК Video — фон почти чёрный.
-    val vkBlack = Color(0xFF0F0F10)
-    val vkCard = Color(0xFF1C1C1E)
-    val vkSurface = Color(0xFF242426)
-    val vkTextPrimary = Color(0xFFFFFFFF)
-    val vkTextSecondary = Color(0xFFA8A8AA)
-    val vkAccent = Color(0xFF3D8BFF)
+    // Адаптивная палитра: привязка к MaterialTheme (Material You / SOVATheme)
+    val colorScheme = MaterialTheme.colorScheme
+    val vkBlack = colorScheme.background
+    val vkCard = colorScheme.surface
+    val vkSurface = colorScheme.surfaceVariant
+    val vkTextPrimary = colorScheme.onSurface
+    val vkTextSecondary = colorScheme.onSurfaceVariant
+    val vkAccent = colorScheme.primary
 
     // Fix #258: фильтрованный список по поисковому запросу.
     val filteredVideos = remember(videos, searchQuery) {
@@ -921,7 +922,7 @@ private fun VideoTabsBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF0F0F10))
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         // Вкладки (#VIDEO-PORT: кликабельны — Мои видео / Альбомы / Каталоги).
@@ -972,7 +973,7 @@ private fun VideoTab(
                 .width(if (isActive) 24.dp else 0.dp)
                 .height(3.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(if (isActive) Color(0xFF3D8BFF) else Color.Transparent),
+                .background(if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent),
         )
     }
 }
@@ -1036,7 +1037,7 @@ private fun VKVideoCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .background(Color(0xFF1A1A1C)),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
             val thumb = video.thumbUrl

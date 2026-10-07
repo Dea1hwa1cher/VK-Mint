@@ -136,12 +136,13 @@ fun AudioPlayerScreen(
     val playerState by PlayerConnection.playerState.collectAsState()
     val downloads by TrackDownloadManager.downloads.collectAsState()
 
-    // Тёмный фон с лёгким gradient от обложки (как в SOVA)
-    val vkBlack = Color(0xFF0F0F10)
-    val vkCard = Color(0xFF1C1C1E)
-    val vkTextPrimary = Color(0xFFFFFFFF)
-    val vkTextSecondary = Color(0xFFA8A8AA)
-    val vkAccent = Color(0xFF3D8BFF)
+    // Адаптивная палитра: привязка к MaterialTheme (Material You / SOVATheme)
+    val colorScheme = MaterialTheme.colorScheme
+    val vkBlack = colorScheme.background
+    val vkCard = colorScheme.surface
+    val vkTextPrimary = colorScheme.onSurface
+    val vkTextSecondary = colorScheme.onSurfaceVariant
+    val vkAccent = colorScheme.primary
 
     val track = playerState.currentTrack
     val app = SovaApp.get()
