@@ -60,6 +60,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -434,7 +435,7 @@ fun MusicScreen(
                         }
                     }
                 },
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color.Transparent,
                     focusedBorderColor = Color.Transparent,
@@ -1284,7 +1285,7 @@ private fun MusicTabsBar(
         val isLibrary = selectedTab == 0
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(50))
+                .clip(CircleShape)
                 .background(if (isLibrary) Color(0xFF382F37) else Color.Transparent)
                 .clickable { onTabSelected(0) }
                 .padding(horizontal = 22.dp, vertical = 8.dp),
@@ -1301,7 +1302,7 @@ private fun MusicTabsBar(
         val isDownloaded = selectedTab == 1
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(50))
+                .clip(CircleShape)
                 .background(if (isDownloaded) Color(0xFF382F37) else Color.Transparent)
                 .clickable { onTabSelected(1) }
                 .padding(horizontal = 22.dp, vertical = 8.dp),
@@ -1515,7 +1516,7 @@ private fun MusicMyTracksTab(
                     val target = currentTrack // captured val
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .clickable {
                                 val idx = displayedTracks.indexOfFirst {
                                     it.id == target.id && it.ownerId == target.ownerId
@@ -1550,7 +1551,7 @@ private fun MusicMyTracksTab(
                 Box {
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .clickable { sortMenuExpanded = true }
                             .padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1606,7 +1607,7 @@ private fun MusicMyTracksTab(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(Color(0xFF282329)),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1796,7 +1797,7 @@ private fun MyMusicMenuList(
         AlertDialog(
             onDismissRequest = { showPlaylists = false },
             containerColor = cardColor,
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     text = "Плейлисты",
@@ -1835,7 +1836,7 @@ private fun MyMusicMenuList(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(MaterialTheme.shapes.small)
                                     .clickable {
                                         scope.launch {
                                             try {
@@ -1863,7 +1864,7 @@ private fun MyMusicMenuList(
                                 Box(
                                     modifier = Modifier
                                         .size(48.dp)
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(MaterialTheme.shapes.small)
                                         .background(
                                             brush = Brush.linearGradient(
                                                 colors = listOf(
@@ -1922,7 +1923,8 @@ private fun MyMusicMenuList(
                                 // Кнопка play
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .minimumInteractiveComponentSize()
+                                        .size(40.dp)
                                         .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary)
                                         .clickable {
@@ -1958,7 +1960,8 @@ private fun MyMusicMenuList(
                                 // (папка + обложка + tracklist.txt + все треки).
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .minimumInteractiveComponentSize()
+                                        .size(40.dp)
                                         .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                                         .clickable {
@@ -2054,7 +2057,7 @@ private fun MyMusicMenuList(
         AlertDialog(
             onDismissRequest = { showDownloaded = false },
             containerColor = cardColor,
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             title = {
                 Column {
                     Text("Скачанная музыка", color = textColor, fontWeight = FontWeight.Bold)
@@ -2085,7 +2088,7 @@ private fun MyMusicMenuList(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(MaterialTheme.shapes.small)
                                     .background(if (isCurrentTrack) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
                                     .clickable {
                                         // Fix #162: ранее трек искался в playerState.queue.
@@ -2172,7 +2175,7 @@ private fun MyMusicMenuList(
         AlertDialog(
             onDismissRequest = { showRecentDialog = false },
             containerColor = Color(0xFF282329),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     text = "Недавнее",
@@ -2200,7 +2203,7 @@ private fun MyMusicMenuList(
         AlertDialog(
             onDismissRequest = { showTransferDialog = false },
             containerColor = Color(0xFF282329),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     text = "Перенос из других сервисов",
@@ -2228,7 +2231,7 @@ private fun MyMusicMenuList(
         AlertDialog(
             onDismissRequest = { showSubscriptionDialog = false },
             containerColor = Color(0xFF282329),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     text = "Подписка на VK Музыку",
@@ -2283,7 +2286,7 @@ private fun MyMusicMenuList(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(Color(0xFF282329)),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -2820,7 +2823,7 @@ private fun SectionHeader(
                 color = secondaryColor,
                 fontSize = 13.sp,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .clickable(onClick = onShowAll)
                     .padding(horizontal = 6.dp, vertical = 4.dp),
             )
@@ -2892,7 +2895,7 @@ private fun AlgorithmCard(
         modifier = Modifier
             .width(180.dp)
             .height(220.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(brush = Brush.verticalGradient(gradient))
             .padding(16.dp),
     ) {
@@ -2966,11 +2969,11 @@ private fun VKTrackRow(
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Обложка трека: сквиркл 44x44dp, 10dp скругление
+            // Обложка трека: сквиркл 44x44dp, 8dp (small) скругление
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .background(Color(0xFF1E1B20)),
                 contentAlignment = Alignment.Center,
             ) {
@@ -3037,7 +3040,6 @@ private fun VKTrackRow(
 
                 IconButton(
                     onClick = onMoreClick,
-                    modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.MoreVert,
@@ -3118,7 +3120,7 @@ private fun MusicDownloadedTab(
                 Box(
                     modifier = Modifier
                         .size(64.dp)
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(MaterialTheme.shapes.large)
                         .background(Color(0xFF282329)),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -3175,7 +3177,7 @@ private fun MusicDownloadedTab(
                     Box {
                         Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(MaterialTheme.shapes.small)
                                 .clickable { sortMenuExpanded = true }
                                 .padding(horizontal = 6.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -3231,7 +3233,7 @@ private fun MusicDownloadedTab(
                     Box(
                         modifier = Modifier
                             .size(44.dp)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(MaterialTheme.shapes.medium)
                             .background(Color(0xFF282329)),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -3287,7 +3289,7 @@ private fun VKDownloadButton(
 ) {
     when {
         state == null -> {
-            IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onClick) {
                 Icon(
                     imageVector = Icons.Filled.Download,
                     contentDescription = "Скачать",
@@ -3300,7 +3302,7 @@ private fun VKDownloadButton(
         // Отдельная иконка MusicOff, чтобы пользователь ВИДЕЛ что трек «скончался»,
         // а не просто «ошибка загрузки». Тап — повтор (вдруг VK вернул URL).
         state.isDead -> {
-            IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onClick) {
                 Icon(
                     imageVector = Icons.Filled.MusicOff,
                     contentDescription = "Недоступен (URL истёк) — тап для повтора",
@@ -3310,7 +3312,7 @@ private fun VKDownloadButton(
             }
         }
         state.status == DownloadStatus.FAILED -> {
-            IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onClick) {
                 Icon(
                     imageVector = Icons.Filled.Download,
                     contentDescription = "Повторить",
@@ -3325,42 +3327,40 @@ private fun VKDownloadButton(
             // Позиция в очереди (1-based). 0 = уже активен (но статус QUEUED —
             // маловероятно, но защитно).
             val queuePos = re.pinok.media.TrackDownloadManager.getQueuePosition(state.trackId)
-            Box(
-                modifier = Modifier.size(36.dp).clickable(onClick = onClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Schedule,  // часики — "ожидание"
-                    contentDescription = if (queuePos > 0) "В очереди: $queuePos" else "В очереди",
-                    tint = secondaryColor,
-                    modifier = Modifier.size(20.dp),
-                )
-                if (queuePos > 1) {
-                    // Badge с номером позиции в очереди
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = 2.dp, y = (-2).dp)
-                            .background(accentColor, shape = RoundedCornerShape(8.dp))
-                            .padding(horizontal = 3.dp, vertical = 0.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = queuePos.toString(),
-                            color = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                        )
+            IconButton(onClick = onClick) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Schedule,  // часики — "ожидание"
+                        contentDescription = if (queuePos > 0) "В очереди: $queuePos" else "В очереди",
+                        tint = secondaryColor,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    if (queuePos > 1) {
+                        // Badge с номером позиции в очереди
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 6.dp, y = (-6).dp)
+                                .background(accentColor, shape = MaterialTheme.shapes.small)
+                                .padding(horizontal = 3.dp, vertical = 0.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = queuePos.toString(),
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }
         }
         state.status == DownloadStatus.DOWNLOADING -> {
-            Box(
-                modifier = Modifier.size(36.dp).clickable(onClick = onClick),
-                contentAlignment = Alignment.Center,
-            ) {
+            IconButton(onClick = onClick) {
                 CircularProgressIndicator(
                     progress = { if (state.progress >= 0) state.progress / 100f else 0f },
                     modifier = Modifier.size(20.dp),
@@ -3374,29 +3374,28 @@ private fun VKDownloadButton(
         // но офлайн не играется (стримится онлайн через HLS). DownloadDone +
         // маленький wifi-бейдж, чтобы пользователь видел: кеш есть, онлайн-only.
         state.isSirenCache -> {
-            Box(
-                modifier = Modifier.size(36.dp).clickable(onClick = onClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.DownloadDone,
-                    contentDescription = "Скачано (онлайн-кеш, siren) — тап чтобы удалить",
-                    tint = accentColor,
-                    modifier = Modifier.size(20.dp),
-                )
-                Icon(
-                    imageVector = Icons.Filled.Wifi,
-                    contentDescription = null,
-                    tint = Color(0xFF22C55E),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset(x = 1.dp, y = 1.dp)
-                        .size(10.dp),
-                )
+            IconButton(onClick = onClick) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.DownloadDone,
+                        contentDescription = "Скачано (онлайн-кеш, siren) — тап чтобы удалить",
+                        tint = accentColor,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.Wifi,
+                        contentDescription = null,
+                        tint = Color(0xFF22C55E),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 2.dp, y = 2.dp)
+                            .size(10.dp),
+                    )
+                }
             }
         }
         state.isCompleted -> {
-            IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onClick) {
                 Icon(
                     imageVector = Icons.Filled.DownloadDone,
                     contentDescription = "Скачано (тап чтобы удалить)",
@@ -3406,7 +3405,7 @@ private fun VKDownloadButton(
             }
         }
         else -> {
-            IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onClick) {
                 Icon(
                     imageVector = Icons.Filled.Download,
                     contentDescription = "Скачивание",
@@ -3454,7 +3453,7 @@ private fun TrackSliderRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(140.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(cardColor),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -3494,7 +3493,7 @@ private fun TrackSliderRow(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .padding(6.dp)
-                                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                                .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
                                 .padding(horizontal = 4.dp, vertical = 1.dp),
                         ) {
                             Text("E", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -3552,7 +3551,7 @@ private fun PlaylistSliderRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -3653,7 +3652,7 @@ private fun SearchArtistCard(
     Column(
         modifier = Modifier
             .width(88.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(cardColor)
             .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -3723,14 +3722,14 @@ private fun SearchPlaylistCard(
     Column(
         modifier = Modifier
             .width(140.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(cardColor)
             .padding(10.dp),
     ) {
         Box(
             modifier = Modifier
                 .size(120.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(cardColor.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center,
         ) {
@@ -3739,7 +3738,7 @@ private fun SearchPlaylistCard(
                 AsyncImage(
                     model = cover,
                     contentDescription = playlist.title,
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                    modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.small),
                     contentScale = ContentScale.Crop,
                 )
             } else {

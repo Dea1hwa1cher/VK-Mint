@@ -515,7 +515,7 @@ fun VideoScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Box(
-                                        modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)).background(vkCard),
+                                        modifier = Modifier.size(64.dp).clip(MaterialTheme.shapes.small).background(vkCard),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         val cover = album.coverUrl
@@ -957,7 +957,7 @@ private fun VideoTab(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .clickable(onClick = onClick)
             .padding(vertical = 2.dp),
     ) {
@@ -1094,7 +1094,7 @@ private fun VKVideoCard(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(Color.Black.copy(alpha = 0.8f))
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
@@ -1112,7 +1112,7 @@ private fun VKVideoCard(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(Color(0xFF4CAF50).copy(alpha = 0.95f))
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
@@ -1187,7 +1187,7 @@ private fun VKVideoCard(
             // CheckCircle (зелёный 0xFF4CAF50 — тот же, что у бейджа «Офлайн»
             // этого файла). NULL-ЯВНО: рендер только при явном коллбеке.
             if (onToggleAdd != null) {
-                IconButton(onClick = onToggleAdd, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onToggleAdd) {
                     Icon(
                         imageVector = if (isAdded) Icons.Filled.CheckCircle else Icons.Filled.AddCircle,
                         contentDescription = if (isAdded) "Добавлено" else "Добавить себе",
@@ -1198,7 +1198,7 @@ private fun VKVideoCard(
             }
 
             // Троеточие-меню
-            IconButton(onClick = { showMenu = true }, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = { showMenu = true }) {
                 Icon(
                     imageVector = Icons.Filled.MoreVert,
                     contentDescription = "Ещё",
@@ -1227,7 +1227,7 @@ private fun VKVideoDownloadButton(
 ) {
     when {
         state == null || state.status == DownloadStatus.FAILED -> {
-            IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onClick) {
                 Icon(
                     imageVector = Icons.Filled.Download,
                     contentDescription = "Скачать",
@@ -1237,10 +1237,7 @@ private fun VKVideoDownloadButton(
             }
         }
         state.isInProgress -> {
-            Box(
-                modifier = Modifier.size(36.dp).clickable(onClick = onClick),
-                contentAlignment = Alignment.Center,
-            ) {
+            IconButton(onClick = onClick) {
                 CircularProgressIndicator(
                     progress = { if (state.progress >= 0) state.progress / 100f else 0f },
                     modifier = Modifier.size(20.dp),
@@ -1251,7 +1248,7 @@ private fun VKVideoDownloadButton(
             }
         }
         state.isCompleted -> {
-            IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onClick) {
                 Icon(
                     imageVector = Icons.Filled.DownloadDone,
                     contentDescription = "Скачано (тап чтобы удалить)",
@@ -1261,7 +1258,7 @@ private fun VKVideoDownloadButton(
             }
         }
         state.status == DownloadStatus.REMOVING -> {
-            IconButton(onClick = {}, modifier = Modifier.size(36.dp), enabled = false) {
+            IconButton(onClick = {}, enabled = false) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
                     strokeWidth = 2.dp,
@@ -1270,7 +1267,7 @@ private fun VKVideoDownloadButton(
             }
         }
         else -> {
-            IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onClick) {
                 Icon(
                     imageVector = Icons.Filled.Download,
                     contentDescription = "Скачивание",

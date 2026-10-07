@@ -265,7 +265,7 @@ fun AudioPlayerScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .background(Color.Black),
             contentAlignment = Alignment.Center,
         ) {
@@ -579,8 +579,8 @@ fun AudioPlayerScreen(
             val isRepeatActive = playerState.repeatMode != PlayerState.REPEAT_MODE_OFF
             Box(
                 modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(48.dp)
+                    .clip(MaterialTheme.shapes.medium)
                     .background(Color(0xFF262626))
                     .clickable { PlayerConnection.cycleRepeatMode() },
                 contentAlignment = Alignment.Center,
@@ -656,7 +656,6 @@ fun AudioPlayerScreen(
             // 5. Перемешать
             IconButton(
                 onClick = { PlayerConnection.setShuffleModeEnabled(!playerState.shuffleModeEnabled) },
-                modifier = Modifier.size(46.dp),
             ) {
                 Icon(
                     imageVector = Icons.Filled.Shuffle,
@@ -887,7 +886,7 @@ fun AudioPlayerScreen(
                         modifier = Modifier
                             .width(32.dp)
                             .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .background(vkTextSecondary.copy(alpha = 0.4f)),
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1028,7 +1027,7 @@ fun AudioPlayerScreen(
         AlertDialog(
             onDismissRequest = { showPlaylistDialog = false },
             containerColor = vkCard,
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -1079,7 +1078,7 @@ fun AudioPlayerScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(MaterialTheme.shapes.medium)
                                     .clickable {
                                         if (addingToPlaylist) return@clickable
                                         addingToPlaylist = true
@@ -1117,7 +1116,7 @@ fun AudioPlayerScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(MaterialTheme.shapes.small)
                                         .background(vkAccent),
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -1199,7 +1198,7 @@ fun AudioPlayerScreen(
                 newPlaylistTitle = ""
             },
             containerColor = vkCard,
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     "Новый плейлист",
@@ -1215,7 +1214,7 @@ fun AudioPlayerScreen(
                     placeholder = { Text("Название", color = vkTextSecondary) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     textStyle = androidx.compose.ui.text.TextStyle(
                         color = vkTextPrimary,
                         fontSize = 15.sp,

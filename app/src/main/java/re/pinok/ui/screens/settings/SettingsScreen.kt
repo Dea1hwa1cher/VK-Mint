@@ -2664,10 +2664,10 @@ private fun DeadTracksCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    IconButton(onClick = { onRetry(st) }, modifier = Modifier.size(36.dp)) {
+                    IconButton(onClick = { onRetry(st) }) {
                         Icon(Icons.Outlined.Refresh, "Повторить", modifier = Modifier.size(18.dp))
                     }
-                    IconButton(onClick = { onRemove(st) }, modifier = Modifier.size(36.dp)) {
+                    IconButton(onClick = { onRemove(st) }) {
                         Icon(Icons.Outlined.Delete, "Удалить", modifier = Modifier.size(18.dp))
                     }
                 }
@@ -4040,7 +4040,7 @@ private fun VideoQualityCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .clickable { scope.launch { app.prefs.setVideoPreferredQuality(value) } }
                         .padding(vertical = 6.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -4101,7 +4101,7 @@ private fun MobileVideoQualityCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .clickable { scope.launch { app.prefs.setMobileVideoQualityLimit(value) } }
                         .padding(vertical = 6.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -4705,7 +4705,7 @@ private fun AccentPicker(selectedIndex: Int, onPick: (Int) -> Unit) {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(accent),
                 )
                 Column(modifier = Modifier.weight(1f)) {
@@ -6077,7 +6077,7 @@ private fun UpdateSourceCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 10.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(MaterialTheme.colorScheme.tertiaryContainer)
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -7186,7 +7186,7 @@ private fun NotificationsTab(
                     Spacer(Modifier.height(10.dp))
                     androidx.compose.material3.Surface(
                         color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.medium,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -7887,7 +7887,7 @@ private fun EmailParamRow(
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 44.dp)
                         .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .then(
                             if (canEdit) {
                                 Modifier.clickable { dropdownExpanded = true }

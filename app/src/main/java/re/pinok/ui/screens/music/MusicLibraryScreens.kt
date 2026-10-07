@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -247,7 +248,7 @@ fun MusicPlaylistsScreen(
         AlertDialog(
             onDismissRequest = { if (!creating) showCreateDialog = false },
             containerColor = Color(0xFF282329),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     text = "Новый плейлист",
@@ -357,7 +358,7 @@ fun MusicPlaylistsScreen(
             Box {
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .clickable { filterMenuExpanded = true }
                         .padding(horizontal = 4.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -421,7 +422,7 @@ fun MusicPlaylistsScreen(
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(MaterialTheme.shapes.large)
                                 .background(Color(0xFF382F37)),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -649,7 +650,7 @@ fun PlaylistDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .size(200.dp)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(MaterialTheme.shapes.medium)
                                     .background(Color(0xFF282329)),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -729,7 +730,7 @@ fun PlaylistDetailScreen(
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(MaterialTheme.shapes.small)
                                         .clickable {
                                             scope.launch {
                                                 isFollowed = !isFollowed
@@ -759,7 +760,7 @@ fun PlaylistDetailScreen(
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(MaterialTheme.shapes.small)
                                         .clickable {
                                             if (tracks.isNotEmpty() && !isCaching) {
                                                 isCaching = true
@@ -798,7 +799,7 @@ fun PlaylistDetailScreen(
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(MaterialTheme.shapes.small)
                                         .clickable {
                                             if (tracks.isNotEmpty()) {
                                                 scope.launch {
@@ -843,7 +844,7 @@ fun PlaylistDetailScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(48.dp)
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(MaterialTheme.shapes.medium)
                                         .background(Color(0xFF282329))
                                         .clickable {
                                             android.widget.Toast.makeText(app.applicationContext, "Режим плейлиста", android.widget.Toast.LENGTH_SHORT).show()
@@ -864,7 +865,7 @@ fun PlaylistDetailScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(48.dp)
-                                        .clip(RoundedCornerShape(24.dp))
+                                        .clip(CircleShape)
                                         .background(Color.White)
                                         .clickable {
                                             if (tracks.isNotEmpty()) {
@@ -897,7 +898,7 @@ fun PlaylistDetailScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(48.dp)
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(MaterialTheme.shapes.medium)
                                         .background(Color(0xFF282329))
                                         .clickable {
                                             if (tracks.isNotEmpty()) {
@@ -918,7 +919,7 @@ fun PlaylistDetailScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(48.dp)
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(MaterialTheme.shapes.medium)
                                         .background(Color(0xFF282329))
                                         .clickable {
                                             if (tracks.isNotEmpty()) {
@@ -976,7 +977,7 @@ fun PlaylistDetailScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .clip(RoundedCornerShape(10.dp))
+                                        .clip(MaterialTheme.shapes.small)
                                         .background(Color(0xFF1E1B20)),
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -1033,7 +1034,6 @@ fun PlaylistDetailScreen(
 
                                 IconButton(
                                     onClick = { selectedMoreTrack = track },
-                                    modifier = Modifier.size(36.dp),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.MoreVert,
@@ -1288,7 +1288,7 @@ fun MusicAlbumsScreen(
             placeholder = { Text("Поиск альбомов…", color = VK_TEXT_SECONDARY, fontSize = 14.sp) },
             leadingIcon = { Icon(Icons.Filled.Search, null, tint = VK_TEXT_SECONDARY) },
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.large,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = VK_CARD,
                 unfocusedContainerColor = VK_CARD,
@@ -1419,7 +1419,7 @@ fun MusicArtistsScreen(
             placeholder = { Text("Поиск артистов…", color = VK_TEXT_SECONDARY, fontSize = 14.sp) },
             leadingIcon = { Icon(Icons.Filled.Search, null, tint = VK_TEXT_SECONDARY) },
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.large,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = VK_CARD,
                 unfocusedContainerColor = VK_CARD,
@@ -1612,7 +1612,7 @@ private fun PlaylistRow(
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(Color(0xFF282329)),
             contentAlignment = Alignment.Center,
         ) {

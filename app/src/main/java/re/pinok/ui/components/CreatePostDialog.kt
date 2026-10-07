@@ -423,7 +423,7 @@ fun CreatePostDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(160.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                     ) {
                         AsyncImage(
@@ -460,7 +460,7 @@ fun CreatePostDialog(
                             Box(
                                 modifier = Modifier
                                     .size(72.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(MaterialTheme.shapes.small)
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                             ) {
                                 AsyncImage(
@@ -534,7 +534,7 @@ fun CreatePostDialog(
                                     contentDescription = null,
                                     modifier = Modifier
                                         .size(36.dp)
-                                        .clip(RoundedCornerShape(6.dp)),
+                                        .clip(MaterialTheme.shapes.small),
                                     contentScale = ContentScale.Crop,
                                 )
                             } else {
@@ -550,7 +550,7 @@ fun CreatePostDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             .clickable(enabled = !posting) { showAttachMenu = true }
                             .padding(vertical = 10.dp, horizontal = 12.dp),
@@ -874,7 +874,7 @@ private fun AttachmentLabelRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

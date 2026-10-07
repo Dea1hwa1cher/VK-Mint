@@ -754,7 +754,7 @@ fun PostDetailScreen(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .aspectRatio(16f / 9f)
-                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clip(MaterialTheme.shapes.small)
                                                     .background(Color.Black)
                                                     .clickable { onVideoClickSavePos(video) },
                                                 contentAlignment = Alignment.Center,
@@ -990,7 +990,7 @@ fun PostDetailScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 2.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(MaterialTheme.shapes.small)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -1020,7 +1020,7 @@ fun PostDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 2.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -2140,7 +2140,7 @@ private fun PostDetailAudioRow(track: Track) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(
                 if (isCurrentPlaying)
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
@@ -2297,7 +2297,7 @@ private fun CommentFileChip(pf: PendingCommentFile, onRemove: () -> Unit) {
     Row(
         modifier = Modifier
             .width(160.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2309,7 +2309,7 @@ private fun CommentFileChip(pf: PendingCommentFile, onRemove: () -> Unit) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(32.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .clip(MaterialTheme.shapes.extraSmall),
             )
         } else {
             Icon(
@@ -2402,13 +2402,11 @@ private fun EmojiGridPanel(
             // Backspace — удаляет последний символ (с учётом суррогатов).
             IconButton(
                 onClick = onBackspace,
-                modifier = Modifier.size(36.dp),
             ) {
                 Text("⌫", fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.size(36.dp),
             ) {
                 Text("✕", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
             }

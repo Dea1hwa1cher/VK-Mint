@@ -1983,7 +1983,7 @@ fun ProfileHeader(
             AsyncImage(
                 model = coverUrl,
                 contentDescription = "Обложка профиля",
-                modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(12.dp)),
+                modifier = Modifier.fillMaxWidth().height(140.dp).clip(MaterialTheme.shapes.medium),
                 contentScale = ContentScale.Crop,
             )
             Spacer(Modifier.height(12.dp))
@@ -2707,7 +2707,7 @@ fun VideoThumbnail(video: Video, onClick: (Video) -> Unit) {
     val thumbUrl = video.thumbUrl
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable { onClick(video) },
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
@@ -2734,7 +2734,7 @@ fun VideoThumbnail(video: Video, onClick: (Video) -> Unit) {
             if (video.duration > 0) {
                 Box(
                     modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                        .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(
@@ -2771,7 +2771,7 @@ fun RepostBlock(
     val ctx = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             // Fix #373: карточка репоста ЦЕЛИКОМ открывает оригинальный пост.
             // clickable ПОСЛЕ clip — риппл по скруглению; вложенные клики
             // (PostPhotoGrid/видео/аудио/ссылки ниже) перехватываются раньше —
@@ -2967,7 +2967,7 @@ private fun ProfileChipsRow(
         options.forEach { (value, label) ->
             val isSelected = value == selected
             Card(
-                modifier = Modifier.clip(RoundedCornerShape(18.dp)).clickable { onSelect(value) },
+                modifier = Modifier.clip(CircleShape).clickable { onSelect(value) },
                 colors = CardDefaults.cardColors(
                     containerColor = if (isSelected) {
                         MaterialTheme.colorScheme.primary
@@ -3054,7 +3054,7 @@ private fun ProfileTrackRow(track: Track, isPlaying: Boolean, onClick: () -> Uni
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp))
+            modifier = Modifier.size(44.dp).clip(MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
@@ -3128,7 +3128,7 @@ private fun ProfileVideoCard(
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.clip(RoundedCornerShape(12.dp)).clickable { onClick() },
+        modifier = modifier.clip(MaterialTheme.shapes.medium).clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         ),
@@ -3158,7 +3158,7 @@ private fun ProfileVideoCard(
                 if (video.duration > 0) {
                     Box(
                         modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                            .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
                         Text(
@@ -3200,7 +3200,7 @@ private fun PhotoGridRow(
         urls.forEachIndexed { colIdx, url ->
             Box(
                 modifier = Modifier.weight(1f).aspectRatio(1f)
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { onPhotoClick(fullList, startIndex + colIdx) },
             ) {
@@ -3285,7 +3285,7 @@ private fun GiftsSection(
                     AsyncImage(
                         model = thumbUrl,
                         contentDescription = "Подарок",
-                        modifier = Modifier.size(72.dp).clip(RoundedCornerShape(10.dp))
+                        modifier = Modifier.size(72.dp).clip(MaterialTheme.shapes.medium)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentScale = ContentScale.Fit,
                     )
@@ -3382,7 +3382,7 @@ private fun ProfileSuggestionCard(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier.width(120.dp).clip(RoundedCornerShape(12.dp)).clickable { onClick() },
+        modifier = Modifier.width(120.dp).clip(MaterialTheme.shapes.medium).clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         ),
@@ -3493,7 +3493,7 @@ private fun ClipsTabSection(
 @Composable
 private fun ProfileClipCard(clip: Video, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.width(110.dp).clip(RoundedCornerShape(12.dp)).clickable { onClick() },
+        modifier = Modifier.width(110.dp).clip(MaterialTheme.shapes.medium).clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         ),
@@ -3522,7 +3522,7 @@ private fun ProfileClipCard(clip: Video, onClick: () -> Unit) {
             if (clip.duration > 0) {
                 Box(
                     modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                        .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(
@@ -3581,7 +3581,7 @@ private fun ArticlesTabSection(
 private fun ProfileArticleRow(item: ProfileArticleInfo, onOpen: (String) -> Unit) {
     val url = item.url
     Card(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
             .then(if (url != null) Modifier.clickable { onOpen(url) } else Modifier),
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
@@ -3594,7 +3594,7 @@ private fun ProfileArticleRow(item: ProfileArticleInfo, onOpen: (String) -> Unit
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = item.title,
-                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp))
+                    modifier = Modifier.size(64.dp).clip(MaterialTheme.shapes.small)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentScale = ContentScale.Crop,
                 )
@@ -3722,7 +3722,7 @@ private fun BookmarksTabSection(
 private fun ProfileBookmarkRow(bookmark: Bookmark, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
     val openable = bookmarkIsOpenable(bookmark)
     Card(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
             .combinedClickable(
                 // Тап работает только по открытым типам (как раньше);
                 // long-press всегда доступен — удаление.
@@ -3740,7 +3740,7 @@ private fun ProfileBookmarkRow(bookmark: Bookmark, onClick: () -> Unit, onLongCl
                 AsyncImage(
                     model = thumb,
                     contentDescription = bookmark.title,
-                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+                    modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentScale = ContentScale.Crop,
                 )

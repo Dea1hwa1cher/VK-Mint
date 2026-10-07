@@ -70,6 +70,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ScrollableTabRow
@@ -2258,11 +2259,12 @@ private fun PostCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // VKUI: vkuiAvatar__host 36x36, clickable link to author profile
+                // VKUI: vkuiAvatar__host 40x40, clickable link to author profile (M3 standard target)
                 // vkuiImageBase__imgObjectFitCover
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .minimumInteractiveComponentSize()
+                        .size(40.dp)
                         .clip(CircleShape)
                         .clickable { onAuthorClick(post) },
                 ) {
@@ -2347,7 +2349,7 @@ private fun PostCard(
                         else MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(50))
+                            .clip(CircleShape)
                             .background(
                                 if (subscribed == true) MaterialTheme.colorScheme.surfaceVariant
                                 else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -2675,7 +2677,7 @@ private fun PostCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         // Fix #365: репост-карточка ЦЕЛИКОМ открывает оригинальный
                         // пост (тот же колбэк onPostClick, что у тела поста:
                         // saveScrollPosition → PostHolder.last → PostDetail).
@@ -2683,7 +2685,7 @@ private fun PostCard(
                         // клики (имя автора ниже, ссылки в тексте) перехватываются
                         // раньше — потомки кликабельнее родителя по умолчанию.
                         .clickable { onPostClick(original) }
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
                     elevation = CardDefaults.cardElevation(0.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -3191,7 +3193,7 @@ private fun VideoThumbnail(video: Video, onClick: (Video) -> Unit) {
     val thumbUrl = video.thumbUrl
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable { onClick(video) },
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
@@ -3206,7 +3208,7 @@ private fun VideoThumbnail(video: Video, onClick: (Video) -> Unit) {
                 }
                 if (video.duration > 0) {
                     Box(modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                        .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall).padding(horizontal = 6.dp, vertical = 2.dp)) {
                         Text("${video.duration / 60}:${"%02d".format(video.duration % 60)}",
                             style = MaterialTheme.typography.labelSmall, color = Color.White, fontSize = 11.sp)
                     }
@@ -3272,7 +3274,7 @@ private fun ActionIcon(
 internal fun LinkCard(link: Attachment.Link, onClick: () -> Unit = {}) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
@@ -3377,7 +3379,7 @@ internal fun DocAttachmentCard(doc: Attachment.Doc, onOpen: () -> Unit = {}) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .clickable { onOpen() }
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -3633,7 +3635,7 @@ private fun CommentsBottomSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -3679,7 +3681,7 @@ private fun CommentsBottomSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 2.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -4154,7 +4156,7 @@ internal fun PollCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(12.dp),
     ) {
@@ -4175,7 +4177,7 @@ internal fun PollCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 3.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .background(
                         if (isSelected) MaterialTheme.colorScheme.primaryContainer
                         else MaterialTheme.colorScheme.surface
