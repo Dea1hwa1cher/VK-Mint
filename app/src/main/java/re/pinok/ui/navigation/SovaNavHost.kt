@@ -15,11 +15,17 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -347,8 +353,10 @@ private fun BottomNavScrollButton(
     } else {
         0
     }
-    val tint = if (selected) MaterialTheme.colorScheme.onSurface
-               else MaterialTheme.colorScheme.onSurfaceVariant
+    val iconColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+    val textColor = if (selected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier = modifier
             .height(UiScale.scaled(64.dp))
@@ -356,23 +364,48 @@ private fun BottomNavScrollButton(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        if (navIcon != null) {
-            if (item.destinationRoute == Screen.Messages.route && unreadCount > 0) {
-                BadgedBox(
-                    badge = {
-                        Badge { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
-                    },
-                ) {
-                    // P0.23: иконка 32dp (было default ~24dp).
-                    Icon(navIcon, contentDescription = item.title, tint = tint,
-                        modifier = Modifier.size(32.dp))
+        Box(
+            modifier = Modifier
+                .size(height = 30.dp, width = 56.dp)
+                .background(
+                    if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                    shape = RoundedCornerShape(15.dp),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (navIcon != null) {
+                if (item.destinationRoute == Screen.Messages.route && unreadCount > 0) {
+                    BadgedBox(
+                        badge = {
+                            Badge { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
+                        },
+                    ) {
+                        Icon(
+                            navIcon,
+                            contentDescription = item.title,
+                            tint = iconColor,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                } else {
+                    Icon(
+                        navIcon,
+                        contentDescription = item.title,
+                        tint = iconColor,
+                        modifier = Modifier.size(24.dp),
+                    )
                 }
-            } else {
-                Icon(navIcon, contentDescription = item.title, tint = tint,
-                    modifier = Modifier.size(32.dp))
             }
         }
-        // P0.23: убран Text(item.title) — значки без текста.
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = if (item.key == "messenger") "Чаты" else item.title,
+            style = MaterialTheme.typography.labelSmall,
+            color = textColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+        )
     }
 }
 
@@ -822,31 +855,12 @@ fun SovaNavHost(
     // Локальный список вместо Screen.dock/drawer — исключает любые
     // потенциальные проблемы с инициализацией companion object через R8.
     val dockScreens: List<Screen> = listOf(
-        Screen.Feed, Screen.Messages, Screen.Music, Screen.Video, Screen.Profile,
+        Screen.Feed, Screen.Services, Screen.Messages, Screen.Clips, Screen.Profile,
     )
     val drawerScreens: List<Screen> = listOf(
-        Screen.Friends, Screen.Groups, Screen.Search,
-        // #ARCH-CONTAINERS (Этап 1.5-а): Screen.Photos убран из ядерного
-        // хардкода — пункт «Фото» приходит из реестра (NavEntry контейнера
-        // :feature:photos, route "photos", см. containerNavEntries в
-        // drawerContent). Без контейнера пункта нет, остальное живо
-        // (NavHost-destination photos — остался ниже).
-        Screen.Bookmarks, Screen.Documents,
-        // #ARCH-CONTAINERS (Этап 1.4): Screen.CallsHistory убран из ядерного
-        // хардкода — пункт «Звонки» приходит из реестра (NavEntry контейнера
-        // :feature:calls, route "calls_history", см. containerNavEntries в
-        // drawerContent). Без контейнера пункта нет, остальное живо.
-        Screen.Clips,
-        Screen.Services, Screen.Notifications, Screen.Settings, Screen.Logs,
-        // #38: кнопка офлайн-менеджера в боковой панели — быстрый доступ к
-        // скачанным аудио/видео без переключения в guest-режим. Маршрут
-        // Screen.OfflineManager уже зарегистрирован ниже в NavHost.
-        Screen.OfflineManager,
-        // #ARCH-CONTAINERS (Этап 1.5-б): Screen.Equalizer убран из ядерного
-        // хардкода — пункт «Эквалайзер» приходит из реестра (NavEntry контейнера
-        // :feature:audio, route "equalizer", см. containerNavEntries в
-        // drawerContent). Без контейнера пункта нет, остальное живо; экран
-        // остаётся доступен из плеера (onOpenFullEqualizer) — destination ниже.
+        Screen.Music, Screen.Video, Screen.Friends, Screen.Groups, Screen.Photos,
+        Screen.Bookmarks, Screen.Documents, Screen.Search, Screen.Notifications,
+        Screen.Settings, Screen.Logs, Screen.OfflineManager,
     )
 
     // ── Fix #337 / #PANELEDIT: редактор панелей ─────────────────────────
@@ -1467,8 +1481,9 @@ fun SovaNavHost(
                                         } else {
                                             0
                                         }
+                                        val isSelected = currentRoute == itemDest
                                         NavigationBarItem(
-                                            selected = currentRoute == itemDest,
+                                            selected = isSelected,
                                             onClick = {
                                                 nav.navigatePanelItem(item)
                                             },
@@ -1480,22 +1495,38 @@ fun SovaNavHost(
                                                                 Badge { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
                                                             },
                                                         ) {
-                                                            // P0.23 #BOTTOM-ICON-ONLY: иконки без текста, крупнее (32dp было ~24dp).
-                                                            Icon(navIcon, contentDescription = item.title,
-                                                                tint = if (currentRoute == itemDest) MaterialTheme.colorScheme.onSurface
-                                                                       else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                modifier = Modifier.size(32.dp))
+                                                            Icon(
+                                                                navIcon,
+                                                                contentDescription = item.title,
+                                                                modifier = Modifier.size(24.dp),
+                                                            )
                                                         }
                                                     } else {
-                                                        Icon(navIcon, contentDescription = item.title,
-                                                            tint = if (currentRoute == itemDest) MaterialTheme.colorScheme.onSurface
-                                                                   else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                            modifier = Modifier.size(32.dp))
+                                                        Icon(
+                                                            navIcon,
+                                                            contentDescription = item.title,
+                                                            modifier = Modifier.size(24.dp),
+                                                        )
                                                     }
                                                 }
                                             },
-                                            // P0.23: убран label = { Text(item.title) } —
-                                            // пользователь хочет значки БЕЗ текста (как в VK / Instagram).
+                                            label = {
+                                                Text(
+                                                    text = if (item.key == "messenger") "Чаты" else item.title,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                )
+                                            },
+                                            alwaysShowLabel = true,
+                                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                                                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                                indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            ),
                                         )
                                     }
                                 }

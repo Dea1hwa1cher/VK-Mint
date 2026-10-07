@@ -1023,6 +1023,10 @@ class SovaApp : Application(), SingletonImageLoader.Factory, CallsDependencies, 
                 // спец-пункт «реакции»).
                 val panelV3 = prefs.migratePanelDefaultsV3()
                 if (panelV3) AppLog.i("SovaApp", "Panel defaults v3 migration: applied (PanelItems canonical set)")
+                // #VK-CANONICAL-BOTTOM-NAV (2026-10-07): миграция под каноническую структуру VK
+                // (Главная, Сервисы, Мессенджер, Клипы, Профиль) в нижней панели.
+                val panelV4 = prefs.migratePanelDefaultsV4()
+                if (panelV4) AppLog.i("SovaApp", "Panel defaults v4 migration: applied (VK canonical bottom bar)")
                 // §42.6 #PUSH-NO-GROUP-DEFAULT: сброс pushGroupingMode "category"→"none".
                 // Старый default сворачивал пуш-группы — пользователь не видел отдельные
                 // посты без pinch-out. Новый default = каждое уведомление отдельно.

@@ -2,6 +2,8 @@ package re.pinok.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -71,19 +73,21 @@ object PanelItems {
 
     /** Канонический порядок + полный набор пунктов панелей. */
     val all: List<PanelItem> = listOf(
-        PanelItem("notifications", "Уведомления", Screen.Notifications.icon, PanelAction.Route(Screen.Notifications)),
+        PanelItem("feed", "Главная", Icons.Filled.Home, PanelAction.Route(Screen.Feed)),
+        PanelItem("services", "Сервисы", Screen.Services.icon ?: Icons.Filled.Home, PanelAction.Route(Screen.Services)),
         PanelItem("messenger", "Мессенджер", Icons.AutoMirrored.Filled.Chat, PanelAction.Route(Screen.Messages)),
+        PanelItem("clips", "Клипы", Screen.Clips.icon, PanelAction.Route(Screen.Clips)),
+        PanelItem("profile", "Профиль", Icons.Filled.AccountCircle, PanelAction.Route(Screen.Profile)),
+        PanelItem("notifications", "Уведомления", Screen.Notifications.icon, PanelAction.Route(Screen.Notifications)),
+        PanelItem("music", "Музыка", Screen.Music.icon, PanelAction.Route(Screen.Music)),
+        PanelItem("video", "Видео", Screen.Video.icon, PanelAction.Route(Screen.Video)),
         PanelItem("groups", "Сообщества", Screen.Groups.icon, PanelAction.Route(Screen.Groups)),
         PanelItem("photos", "Фотографии", Screen.Photos.icon, PanelAction.Route(Screen.Photos)),
         PanelItem("friends", "Друзья", Screen.Friends.icon, PanelAction.Route(Screen.Friends)),
-        PanelItem("video", "Видео", Screen.Video.icon, PanelAction.Route(Screen.Video)),
-        PanelItem("clips", "Клипы", Screen.Clips.icon, PanelAction.Route(Screen.Clips)),
-        PanelItem("music", "Музыка", Screen.Music.icon, PanelAction.Route(Screen.Music)),
         PanelItem("bookmarks", "Закладки", Screen.Bookmarks.icon, PanelAction.Route(Screen.Bookmarks)),
         PanelItem("files", "Файлы", Screen.Documents.icon, PanelAction.Route(Screen.Documents)),
         PanelItem("search", "Поиск", Screen.Search.icon, PanelAction.Route(Screen.Search)),
         PanelItem("reactions", "Реакции", Icons.Filled.ThumbUp, PanelAction.FeedFilter("LIKES")),
-        PanelItem("services", "Сервисы", Screen.Services.icon, PanelAction.Route(Screen.Services)),
         PanelItem("logs", "Логи", Screen.Logs.icon, PanelAction.Route(Screen.Logs)),
     )
 

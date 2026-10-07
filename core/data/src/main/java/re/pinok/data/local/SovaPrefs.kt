@@ -971,6 +971,30 @@ class SovaPrefs(context: Context, debugDefault: Boolean = false) {
     }
 
     /**
+     * #VK-CANONICAL-BOTTOM-NAV (2026-10-07): миграция нижней панели под каноническую
+     * структуру мобильного клиента VK (Главная, Сервисы, Мессенджер, Клипы, Профиль).
+     *
+     * Перезаписывает order/hidden новыми дефолтами с каноническими 5 кнопками VK внизу
+     * и полным набором разделов в боковой панели.
+     * Применяется однократно (PANEL_DEFAULTS_V4=1).
+     *
+     * @return true если миграция применила новые дефолты.
+     */
+    suspend fun migratePanelDefaultsV4(): Boolean {
+        val snap = ds.data.first()
+        val cur = snap[Keys.PANEL_DEFAULTS_V4] ?: 0
+        if (cur >= 1) return false
+        ds.edit { p ->
+            p[Keys.SIDEBAR_ITEMS_ORDER] = SIDEBAR_DEFAULT_ORDER
+            p[Keys.SIDEBAR_ITEMS_HIDDEN] = "[]"
+            p[Keys.BOTTOMBAR_ITEMS_ORDER] = BOTTOMBAR_DEFAULT_ORDER
+            p[Keys.BOTTOMBAR_ITEMS_HIDDEN] = BOTTOMBAR_DEFAULT_HIDDEN
+            p[Keys.PANEL_DEFAULTS_V4] = 1
+        }
+        return true
+    }
+
+    /**
      * §42.6 #PUSH-NO-GROUP-DEFAULT: миграция default-режима группировки пушей.
      *
      * До §42.6 default был "category" — 3+ уведомления сворачивались в стопку
@@ -2009,6 +2033,7 @@ class SovaPrefs(context: Context, debugDefault: Boolean = false) {
         // Сообщения, Музыка, Видео). 0 = не применена, 1 = применена.
         val PANEL_DEFAULTS_V2 = intPreferencesKey("panel_defaults_v2")
         val PANEL_DEFAULTS_V3 = intPreferencesKey("panel_defaults_v3")
+        val PANEL_DEFAULTS_V4 = intPreferencesKey("panel_defaults_v4")
 
         // Stories (Fix #100)
         val AUTO_CACHE_STORIES   = booleanPreferencesKey("auto_cache_stories")
@@ -2160,17 +2185,16 @@ class SovaPrefs(context: Context, debugDefault: Boolean = false) {
         // Боковая: только dynamic-пункты (без фикс. хвоста Outlined/Настройки/Выйти).
         // Список пользователя: Уведомления, Мессенджер, Сообщества, Фотографии,
         // Друзья, Видео, Клипы, Музыка, Закладки, Файлы, Поиск, Реакции, Сервисы, Логи.
+        // #VK-CANONICAL-BOTTOM-NAV (2026-10-07): канонический порядок разделов оригинального VK
+        // Боковая панель: все 16 разделов.
         const val SIDEBAR_DEFAULT_ORDER =
-            """["notifications","messenger","groups","photos","friends","video","clips","music","bookmarks","files","search","reactions","services","logs"]"""
-        // Нижняя панель по умолчанию: те же пункты, но visible только первые 4
-        // (Уведомления, Мессенджер, Сообщества, Фотографии) — остальные скрыты.
+            """["feed","services","messenger","clips","profile","notifications","music","video","groups","photos","friends","bookmarks","files","search","reactions","logs"]"""
+        // Нижняя панель по умолчанию: 5 канонических вкладок VK (Главная, Сервисы, Мессенджер, Клипы, Профиль).
         const val BOTTOMBAR_DEFAULT_ORDER =
-            """["notifications","messenger","groups","photos","friends","video","clips","music","bookmarks","files","search","reactions","services","logs"]"""
-        // #BOTTOM-DEFAULT-4: все, кроме первых 4, скрыты по умолчанию.
-        // Пользователь может включить их через «Редактор панелей» — тогда
-        // нижняя панель станет прокручиваемой (см. #BOTTOM-SCROLL в SovaNavHost).
+            """["feed","services","messenger","clips","profile","notifications","music","video","groups","photos","friends","bookmarks","files","search","reactions","logs"]"""
+        // Скрыты по умолчанию в нижней панели (все, кроме первых 5 канонических вкладок VK):
         const val BOTTOMBAR_DEFAULT_HIDDEN =
-            """["friends","video","clips","music","bookmarks","files","search","reactions","services","logs"]"""
+            """["notifications","music","video","groups","photos","friends","bookmarks","files","search","reactions","logs"]"""
 
         // Fix #390 #NOTIFY-MODES: константы режима уведомлений.
         // 0 — «Уведомления Сообщений»: всплывающие только от Сообщений (звук+вибрация
