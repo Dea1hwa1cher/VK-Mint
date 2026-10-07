@@ -2,6 +2,7 @@ package re.pinok.locker
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -26,14 +27,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -202,7 +207,11 @@ class LockerActivity : FragmentActivity() {
  */
 @Composable
 private fun LockerTheme(content: @Composable () -> Unit) {
-    val colorScheme = if (isSystemInDarkTheme()) {
+    val isDark = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val colorScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    } else if (isDark) {
         darkColorScheme(
             background = Color(0xFF121212),       // VK desktop: page background
             onBackground = Color.White,
@@ -214,17 +223,24 @@ private fun LockerTheme(content: @Composable () -> Unit) {
         )
     } else {
         lightColorScheme(
-            background = Color.White,
+            background = Color(0xFFF2F4F7),
             onBackground = Color(0xFF000000),     // SovaColors.Black
             surface = Color.White,
             onSurface = Color(0xFF000000),
-            surfaceVariant = Color(0xFFF5F5F5),
-            onSurfaceVariant = Color(0xFF333333),
-            error = Color(0xFFB00020),
+            surfaceVariant = Color(0xFFF0F2F5),
+            onSurfaceVariant = Color(0xFF555555),
+            error = Color(0xFFBA1A1A),
         )
     }
     MaterialTheme(
         colorScheme = colorScheme,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(4.dp),
+            small = RoundedCornerShape(8.dp),
+            medium = RoundedCornerShape(12.dp),
+            large = RoundedCornerShape(16.dp),
+            extraLarge = RoundedCornerShape(28.dp),
+        ),
         content = content,
     )
 }

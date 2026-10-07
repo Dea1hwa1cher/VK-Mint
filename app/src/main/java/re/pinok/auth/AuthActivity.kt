@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -205,20 +206,28 @@ class AuthActivity : ComponentActivity() {
         }
 
         setContent {
-            SOVATheme {
+            // Читаем prefs до SOVATheme, чтобы экраны авторизации синхронизировались
+            // с Material You, пользовательским акцентом и масштабом (Fix #AUTH-THEME).
+            val app = SovaApp.get(this)
+            val snapshot by app.prefs.data.collectAsState(initial = null)
+            val snap = snapshot
+
+            SOVATheme(
+                darkTheme = snap?.themeDark ?: isSystemInDarkTheme(),
+                dynamicColor = snap?.themeDynamic ?: false,
+                monetHybrid = snap?.themeMonetHybrid ?: true,
+                accentIndex = snap?.themeAccentIndex ?: 0,
+                fontScale = snap?.fontScale ?: 100,
+                uiScale = snap?.uiScale ?: re.pinok.data.local.SovaPrefs.UI_SCALE_DEFAULT,
+            ) {
                 // Fix #107: silent re-login режим — запускается MainActivity при
                 // tokenInvalidationTick, если в storage есть remixsid.
                 val silentMode = intent?.getBooleanExtra(EXTRA_SILENT_MODE, false) ?: false
                 if (silentMode) {
                     AppLog.i(TAG, "Silent re-login mode (Fix #107) — auto WebView, no landing")
                 }
-                // Fix #237: читаем showLogFab из SovaPrefs (для показа FAB логов).
-                val snap by SovaApp.get(this).prefs.data.collectAsState(initial = null)
-                // Локальный захват: snap — delegated property (by collectAsState),
-                // smart cast невозможен. Захватываем в обычную val для null-проверки.
-                val snapLocal = snap
                 // #LOG-FAB-DEFAULT-OFF (14.09): фолбэк до загрузки snap — false.
-                val showLogFab = if (snapLocal != null) snapLocal.showLogFab else false
+                val showLogFab = snap?.showLogFab ?: false
                 Box(modifier = Modifier.fillMaxSize()) {
                     Surface(modifier = Modifier.fillMaxSize()) {
                         AuthScreen(
