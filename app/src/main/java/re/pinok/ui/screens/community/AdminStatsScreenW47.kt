@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -461,7 +460,7 @@ private suspend fun awaitChunk(
 private fun StatsCardView(cardTitle: String, data: StatsChunkParser.DataCard?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
             Text(
@@ -584,7 +583,7 @@ private fun DoughnutChart(segments: List<StatsChunkParser.Segment>) {
             segments.forEachIndexed { i, s ->
                 Row(verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(vertical = 2.dp)) {
-                    Box(modifier = Modifier.size(10.dp).background(palette[i % palette.size], RoundedCornerShape(2.dp)))
+                    Box(modifier = Modifier.size(10.dp).background(palette[i % palette.size], MaterialTheme.shapes.extraSmall))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(s.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                     Text("${s.value.toInt()} (${String.format(Locale.US, "%.0f%%", s.percent)})",
@@ -657,7 +656,7 @@ private fun BarChartView(series: List<StatsChunkParser.BarSeries>) {
     }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
         series.forEachIndexed { si, s ->
-            Box(modifier = Modifier.padding(4.dp).size(10.dp).background(palette[si % palette.size], RoundedCornerShape(2.dp)))
+            Box(modifier = Modifier.padding(4.dp).size(10.dp).background(palette[si % palette.size], MaterialTheme.shapes.extraSmall))
             Text(s.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(end = 12.dp))
         }
     }

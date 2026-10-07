@@ -34,7 +34,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.outlined.AlternateEmail
@@ -534,10 +533,10 @@ private fun NotificationCategoryBar(
             // Чип-категория (аналог FeedFilterBar выбранного раздела).
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(CircleShape)
                     .background(
                         if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        else MaterialTheme.colorScheme.surfaceContainerHigh,
                     )
                     .clickable { onSelect(cat.serverKey) }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -619,7 +618,7 @@ private fun ToggleSegmentItem(
         color = if (selected) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(CircleShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 4.dp),
     )
@@ -1052,11 +1051,12 @@ fun NotificationsScreen(
                         placeholder = { Text("Поиск...", style = MaterialTheme.typography.bodySmall) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        shape = RoundedCornerShape(20.dp),
+                        shape = MaterialTheme.shapes.extraLarge,
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         ),
                         textStyle = MaterialTheme.typography.bodyMedium,
                         trailingIcon = {
@@ -1517,8 +1517,8 @@ private fun NotificationCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -1565,8 +1565,8 @@ private fun NotificationCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                 ) {
                     Text(
@@ -1842,15 +1842,15 @@ private fun NotificationCard(
                 Box(
                     modifier = Modifier
                         .size(56.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (thumbUrl != null) {
                         AsyncImage(
                             model = thumbUrl,
                             contentDescription = "Превью",
-                            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(8.dp)),
+                            modifier = Modifier.size(56.dp).clip(MaterialTheme.shapes.small),
                         )
                     } else {
                         Icon(
@@ -1989,8 +1989,8 @@ private fun AttachmentThumb(
     Box(
         modifier = Modifier
             .size(72.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -1998,7 +1998,7 @@ private fun AttachmentThumb(
             AsyncImage(
                 model = attachment.thumbUrl,
                 contentDescription = attachment.type,
-                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier.size(72.dp).clip(MaterialTheme.shapes.small),
             )
         } else {
             // Fallback-иконка по типу вложения
@@ -2090,7 +2090,7 @@ private fun NotificationSkeletonCard() {
                 modifier = Modifier
                     .fillMaxWidth(0.85f)
                     .height(14.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .drawBehind { drawRect(shimmerColor) },
             )
             Spacer(Modifier.height(8.dp))
@@ -2098,7 +2098,7 @@ private fun NotificationSkeletonCard() {
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
                     .height(10.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .drawBehind { drawRect(shimmerColor) },
             )
             Spacer(Modifier.height(8.dp))
@@ -2106,7 +2106,7 @@ private fun NotificationSkeletonCard() {
                 modifier = Modifier
                     .fillMaxWidth(0.4f)
                     .height(10.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .drawBehind { drawRect(shimmerColor) },
             )
         }

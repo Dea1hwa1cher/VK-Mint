@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.material.icons.outlined.Bookmark
@@ -220,7 +219,7 @@ fun ForwardDialog(
                 placeholder = { Text("Поиск чата…") },
                 leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.extraLarge,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -314,7 +313,7 @@ fun ForwardDialog(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(MaterialTheme.shapes.medium)
                                         .background(bgColor)
                                         .clickable { selectedPeerId = chat.peer.id }
                                         .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -410,7 +409,7 @@ fun ForwardDialog(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = selectedPeerId != null && !forwarding && cmids.isNotEmpty(),
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 if (forwarding) {
                     CircularProgressIndicator(
@@ -481,7 +480,7 @@ private fun ForwardTargetRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(bgColor)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),

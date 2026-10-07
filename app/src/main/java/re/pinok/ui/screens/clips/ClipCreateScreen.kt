@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cameraswitch
@@ -41,6 +40,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -297,7 +297,7 @@ private fun CameraStage(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .padding(bottom = 16.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(Color.Black.copy(alpha = 0.5f))
                         .padding(horizontal = 12.dp, vertical = 4.dp),
                 )
@@ -327,7 +327,7 @@ private fun CameraStage(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(24.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .background(Color.Black.copy(alpha = 0.75f))
                     .padding(16.dp),
             ) {
@@ -376,7 +376,7 @@ private fun RecordButton(
         Box(
             modifier = Modifier
                 .size(if (isRecording) 32.dp else 56.dp)
-                .clip(if (isRecording) RoundedCornerShape(6.dp) else CircleShape)
+                .clip(if (isRecording) MaterialTheme.shapes.extraSmall else CircleShape)
                 .background(Color.Red),
         )
     }
@@ -489,7 +489,7 @@ private fun ReviewStage(
                 singleLine = false,
                 minLines = 1,
                 maxLines = 3,
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
             )
             Spacer(Modifier.height(8.dp))
 
@@ -497,7 +497,7 @@ private fun ReviewStage(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .background(Color.White.copy(alpha = 0.08f))
                     .clickable { /* TODO §37.12: music picker */ }
                     .padding(12.dp),
@@ -516,7 +516,7 @@ private fun ReviewStage(
             Button(
                 onClick = { vm.startPublish(context) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 Text("Опубликовать", fontWeight = FontWeight.SemiBold)
             }
@@ -635,7 +635,7 @@ private fun DoneStage(
                     vm.resetToCamera()
                     onBack()
                 },
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 Text("Готово")
             }

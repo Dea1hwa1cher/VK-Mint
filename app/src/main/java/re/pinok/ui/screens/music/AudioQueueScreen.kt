@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
@@ -241,7 +241,7 @@ fun AudioQueueScreen(
         ) {
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(CircleShape)
                     .background(vkBlack.copy(alpha = 0.5f))
                     .padding(horizontal = 20.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(28.dp),
@@ -303,7 +303,7 @@ private fun QueueTrackRow(
         Box(
             modifier = Modifier
                 .size(44.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(

@@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.PlayArrow
@@ -73,6 +72,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -1610,6 +1610,13 @@ fun FeedScreen(
                             onValueChange = { feedSearchQuery = it },
                             placeholder = { Text("Поиск по новостям…") },
                             singleLine = true,
+                            shape = MaterialTheme.shapes.extraLarge,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 12.dp, vertical = 4.dp),
@@ -2808,7 +2815,7 @@ private fun PostCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .heightIn(max = 160.dp)
-                                        .clip(RoundedCornerShape(6.dp)),
+                                        .clip(MaterialTheme.shapes.extraSmall),
                                     contentScale = ContentScale.Crop,
                                 )
                             }
@@ -3012,7 +3019,7 @@ private fun LikedPhotosSection(
                         modifier = Modifier
                             .weight(1f)
                             .aspectRatio(1f)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .clickable { onPhotoClick(photos.map { it.url }, flatIndex) },
                         contentScale = ContentScale.Crop,
                     )
@@ -3814,7 +3821,13 @@ private fun CommentsBottomSheet(
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Ваш комментарий…") },
                     maxLines = 3,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 TextButton(
@@ -4221,7 +4234,7 @@ internal fun PollCard(
                         modifier = Modifier
                             .fillMaxWidth(pct / 100f)
                             .height(3.dp)
-                            .clip(RoundedCornerShape(1.5.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
                     )
                 }

@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -192,9 +191,9 @@ fun CommunityAdminBlock(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(14.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -709,7 +708,7 @@ fun AdminSettingsScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(120.dp)
-                                    .clip(RoundedCornerShape(10.dp)),
+                                    .clip(MaterialTheme.shapes.small),
                             )
                         } else {
                             Text(
@@ -992,7 +991,7 @@ private fun StatSummaryCard(label: String, value: Int, secondary: Int? = null) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
     ) {
         Row(
             modifier = Modifier
@@ -1741,7 +1740,7 @@ fun AdminLinksScreen(groupId: Long, onBack: () -> Unit) {
             links.isEmpty() -> Box(modifier = Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) { Text("Ссылок пока нет") }
             else -> LazyColumn(Modifier.fillMaxSize().padding(pad)) {
                 items(links) { link ->
-                    Card(Modifier.fillMaxWidth().padding(16.dp, 6.dp), RoundedCornerShape(12.dp)) {
+                    Card(Modifier.fillMaxWidth().padding(16.dp, 6.dp), shape = MaterialTheme.shapes.medium) {
                         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 if (link.name.isNotBlank()) { Text(link.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium) }
@@ -2559,7 +2558,7 @@ fun AdminAddressesScreen(
 
             else -> LazyColumn(modifier = Modifier.fillMaxSize().padding(pad)) {
                 items(addresses, key = { it.id }) { addr ->
-                    Card(Modifier.fillMaxWidth().padding(16.dp, 6.dp), RoundedCornerShape(12.dp)) {
+                    Card(Modifier.fillMaxWidth().padding(16.dp, 6.dp), shape = MaterialTheme.shapes.medium) {
                         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 if (addr.title.isNotBlank()) {

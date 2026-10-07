@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Pause
@@ -264,7 +264,7 @@ fun StoryOfflinePlayerScreen(
             // Бейдж «Офлайн».
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .background(Color(0xFF4CAF50).copy(alpha = 0.9f))
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             ) {
@@ -340,7 +340,7 @@ fun StoryOfflinePlayerScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
+                        .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.3f)),
                 ) {
                     val pct = if (durationMs > 0) (positionMs.toFloat() / durationMs) else 0f
@@ -348,7 +348,7 @@ fun StoryOfflinePlayerScreen(
                         modifier = Modifier
                             .fillMaxWidth(pct.coerceIn(0f, 1f))
                             .height(3.dp)
-                            .clip(RoundedCornerShape(2.dp))
+                            .clip(CircleShape)
                             .background(Color.White),
                     )
                 }

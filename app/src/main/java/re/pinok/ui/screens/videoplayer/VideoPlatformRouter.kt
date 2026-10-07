@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.OpenInBrowser
@@ -222,7 +222,7 @@ private fun ExternalVideosDisabledPlaceholder(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(8.dp)
-                .background(Color(0x80000000), RoundedCornerShape(8.dp))
+                .background(Color(0x80000000), MaterialTheme.shapes.small)
                 .clickable { onBack() },
             contentAlignment = Alignment.Center,
         ) {
@@ -260,7 +260,7 @@ private fun ExternalVideosDisabledPlaceholder(
             if (!video.player.isNullOrBlank()) {
                 Box(
                     modifier = Modifier
-                        .background(Color(0xFF2196F3), RoundedCornerShape(8.dp))
+                        .background(Color(0xFF2196F3), MaterialTheme.shapes.small)
                         .clickable { onOpenInBrowser() }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center,

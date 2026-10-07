@@ -151,6 +151,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -3719,6 +3720,12 @@ fun ChatDetailScreen(
                             Icon(Icons.Filled.Close, contentDescription = "Отменить выбор")
                         }
                     },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
                     actions = {
                         IconButton(
                             onClick = { forwardSelected() },
@@ -4033,6 +4040,12 @@ fun ChatDetailScreen(
                             }
                         }
                     },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
             )
             }  // P2.5: closes else (not selection mode)
         },
@@ -4148,7 +4161,7 @@ fun ChatDetailScreen(
                                 val label = if (d.title.isNullOrBlank()) d.ext.ifBlank { "Файл" } else d.title
                                 Row(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
+                                        .clip(MaterialTheme.shapes.large)
                                         .background(MaterialTheme.colorScheme.surfaceVariant)
                                         .padding(start = 8.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -4366,10 +4379,10 @@ fun ChatDetailScreen(
                                 )
                             },
                             maxLines = 4,
-                            shape = RoundedCornerShape(24.dp),
+                            shape = MaterialTheme.shapes.extraLarge,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent,
                                 cursorColor = MaterialTheme.colorScheme.primary,
@@ -4972,9 +4985,9 @@ fun ChatDetailScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Surface(
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f),
-                                        shadowElevation = 0.5.dp,
+                                        shape = MaterialTheme.shapes.large,
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        shadowElevation = 0.dp,
                                     ) {
                                         Text(
                                             text = item.label,
@@ -5079,11 +5092,11 @@ fun ChatDetailScreen(
                                                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                                                     }
                                                     Surface(
-                                                        shape = RoundedCornerShape(12.dp),
+                                                        shape = MaterialTheme.shapes.medium,
                                                         color = pillBg,
                                                         contentColor = pillFg,
                                                         modifier = Modifier
-                                                            .clip(RoundedCornerShape(12.dp))
+                                                            .clip(MaterialTheme.shapes.medium)
                                                             .clickable { reactToMessage(msg.id, chip.id) },
                                                     ) {
                                                         Row(
@@ -5494,8 +5507,8 @@ fun ChatDetailScreen(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                            .clip(MaterialTheme.shapes.small)
+                                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                             .clickable {
                                                 // Тап НЕ заглушка: скролл к сообщению
                                                 // по cmid-индексу в списке чата.
@@ -5535,8 +5548,8 @@ fun ChatDetailScreen(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                            .clip(MaterialTheme.shapes.small)
+                                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                             .clickable {
                                                 showSearch = false
                                                 val scrolled = scrollToLoadedMessage(result.messageId)
@@ -6365,7 +6378,7 @@ private fun MessageBubble(
         }
         // P3.7: bubble-less режим — flat layout (без Card/bubble), как m.vk.ru.
         // В bubble-less: нет clip/rounded, нет background для incoming, subtle tint для outgoing.
-        val bubblelessShape = RoundedCornerShape(4.dp)
+        val bubblelessShape = MaterialTheme.shapes.extraSmall
         val bubblelessBg = if (isOut) {
             MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
         } else {
@@ -6488,7 +6501,7 @@ private fun MessageBubble(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 6.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .background(
                                 (if (isOut) MaterialTheme.colorScheme.primary else replyStripeColor).copy(alpha = 0.10f)
                             )
@@ -6679,7 +6692,7 @@ private fun MessageBubble(
                                         .align(Alignment.BottomEnd)
                                         .background(
                                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                                            shape = RoundedCornerShape(50),
+                                            shape = CircleShape,
                                         )
                                         .padding(2.dp),
                                 ) {
@@ -7244,7 +7257,7 @@ private fun WallAttachmentCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 6.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(textColor.copy(alpha = 0.12f))
             .combinedClickable(
                 onClick = {
@@ -7281,7 +7294,7 @@ private fun WallAttachmentCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .clip(MaterialTheme.shapes.extraSmall),
                 contentScale = ContentScale.Crop,
             )
         }
@@ -7309,7 +7322,7 @@ private fun ReactionBar(
     Row(
         modifier = Modifier
             .padding(top = 2.dp, start = if (isOut) 0.dp else 4.dp, end = if (isOut) 4.dp else 0.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
         .background(bg)
         .clickable { onTap() }
         .padding(horizontal = 8.dp, vertical = 4.dp),
@@ -7367,11 +7380,11 @@ private fun ChannelFeedFilterRow(
         for ((label, value) in CHANNEL_FEED_FILTERS) {
             val selected = current == value
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 color = if (selected) {
                     MaterialTheme.colorScheme.primaryContainer
                 } else {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    MaterialTheme.colorScheme.surfaceContainerHigh
                 },
                 contentColor = if (selected) {
                     MaterialTheme.colorScheme.onPrimaryContainer
@@ -7466,11 +7479,11 @@ private fun ChannelPostInfoRow(
                         textColor.copy(alpha = 0.85f)
                     }
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.medium,
                         color = pillBg,
                         contentColor = pillFg,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(MaterialTheme.shapes.medium)
                             .clickable { onReact(chip.id) },
                     ) {
                         Row(
@@ -7539,7 +7552,7 @@ private fun ChannelPostInfoRow(
         // счётчика) — у постов канала комментарии почти всегда есть. Только
         // действие; обычные диалоги не затрагиваются.
         Surface(
-            shape = RoundedCornerShape(6.dp),
+            shape = MaterialTheme.shapes.extraSmall,
             color = Color.Transparent,
             contentColor = captionColor,
             modifier = Modifier
@@ -7580,8 +7593,8 @@ private fun ChannelPostInfoRow(
             Column(
                 modifier = Modifier
                     .padding(top = 4.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    .clip(MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
             ) {
                 Text(
@@ -7593,7 +7606,7 @@ private fun ChannelPostInfoRow(
                 if (!btn.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
+                        shape = MaterialTheme.shapes.extraSmall,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                         contentColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
@@ -7668,7 +7681,7 @@ private fun ChannelPostWallInfoRow(
         // У модели Post счётчик комментариев из post.comments.count (может быть
         // пуст — тогда просто «Комментарии»). Аддитивно, только для канальных постов.
         Surface(
-            shape = RoundedCornerShape(6.dp),
+            shape = MaterialTheme.shapes.extraSmall,
             color = Color.Transparent,
             contentColor = captionColor,
             modifier = Modifier
@@ -7708,8 +7721,8 @@ private fun ChannelPostWallInfoRow(
             Column(
                 modifier = Modifier
                     .padding(top = 4.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    .clip(MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
             ) {
                 Text(
@@ -7718,7 +7731,7 @@ private fun ChannelPostWallInfoRow(
                     color = captionColor,
                 )
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
+                    shape = MaterialTheme.shapes.extraSmall,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                     contentColor = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
@@ -8149,7 +8162,7 @@ private fun ReactionPicker(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -8198,7 +8211,7 @@ private fun PhotoAttachmentsStub(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(textColor.copy(alpha = 0.08f))
             .combinedClickable(onClick = onClick, onLongClick = onLongPress)
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -8250,7 +8263,7 @@ private fun VideoAttachmentCard(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = 180.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .combinedClickable(
                 onClick = {
                     if (sel != null && sel.selectionMode) sel.onToggleSelection()
@@ -8296,7 +8309,7 @@ private fun VideoAttachmentCard(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(4.dp)
-                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                    .background(Color.Black.copy(alpha = 0.6f), MaterialTheme.shapes.extraSmall)
                     .padding(horizontal = 4.dp, vertical = 2.dp),
             ) {
                 Text(durationStr, color = Color.White, fontSize = 11.sp)
@@ -8546,7 +8559,7 @@ private fun VideoMessageBubble(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(6.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small)
                     .padding(horizontal = 6.dp, vertical = 3.dp),
             ) {
                 Text(
@@ -8575,7 +8588,7 @@ private fun LinkAttachmentCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(textColor.copy(alpha = 0.08f))
             .combinedClickable(
                 onClick = {
@@ -8593,7 +8606,7 @@ private fun LinkAttachmentCard(
                 contentDescription = null,
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .clip(MaterialTheme.shapes.extraSmall),
                 contentScale = ContentScale.Crop,
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -8642,7 +8655,7 @@ private fun DocAttachmentCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(textColor.copy(alpha = 0.08f))
             .padding(8.dp)
             .combinedClickable(
@@ -8743,7 +8756,7 @@ private fun ForwardedMessageBlock(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(textColor.copy(alpha = 0.08f))
             .padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
     ) {
@@ -8839,7 +8852,7 @@ private fun ForwardedMessageBlock(
                                         contentDescription = "Фото",
                                         modifier = Modifier
                                             .let { m -> if (isSingle) m.fillMaxWidth() else m.weight(1f) }
-                                            .clip(RoundedCornerShape(6.dp))
+                                            .clip(MaterialTheme.shapes.extraSmall)
                                             .heightIn(max = 140.dp)
                                             .combinedClickable(
                                                 onClick = {
@@ -8872,7 +8885,7 @@ private fun ForwardedMessageBlock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(textColor.copy(alpha = 0.06f))
                         .clickable { onVideoClick(video) }
                         .padding(6.dp),
@@ -8881,7 +8894,7 @@ private fun ForwardedMessageBlock(
                     Box(
                         modifier = Modifier
                             .size(64.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .background(textColor.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -8939,7 +8952,7 @@ private fun ForwardedMessageBlock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(textColor.copy(alpha = 0.06f))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -8977,7 +8990,7 @@ private fun ForwardedMessageBlock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(textColor.copy(alpha = 0.06f))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -9015,7 +9028,7 @@ private fun ForwardedMessageBlock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(textColor.copy(alpha = 0.06f))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -9061,7 +9074,7 @@ private fun ForwardedMessageBlock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(textColor.copy(alpha = 0.06f))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -9092,7 +9105,7 @@ private fun ForwardedMessageBlock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(textColor.copy(alpha = 0.06f))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -9149,7 +9162,7 @@ private fun ForwardedMessageBlock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 2.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(textColor.copy(alpha = 0.06f))
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -9201,7 +9214,7 @@ private fun AudioAttachmentsStub(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(textColor.copy(alpha = 0.08f))
             .combinedClickable(onClick = onClick, onLongClick = onLongPress)
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -9285,7 +9298,7 @@ private fun PollAttachmentRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .background(textColor.copy(alpha = 0.08f))
             .padding(10.dp),
     ) {
@@ -9312,7 +9325,7 @@ private fun PollAttachmentRow(
                         // P2.3: clickable только если не голосовал и опрос не закрыт.
                         // Fix #244: в selection mode — toggle вместо голосования.
                         if (!hasVoted && poll.closed == 0) {
-                            m.clip(RoundedCornerShape(4.dp))
+                            m.clip(MaterialTheme.shapes.extraSmall)
                                 .combinedClickable(
                                     onClick = {
                                         if (sel != null && sel.selectionMode) sel.onToggleSelection()
@@ -10037,7 +10050,7 @@ private fun EmojiStickerPanel(
                                 Box(
                                     modifier = Modifier
                                         .size(32.dp)
-                                        .clip(RoundedCornerShape(6.dp))
+                                        .clip(MaterialTheme.shapes.small)
                                         .background(
                                             if (idx == selectedStickerPack)
                                                 MaterialTheme.colorScheme.primaryContainer
@@ -10119,7 +10132,7 @@ private fun EmojiStickerPanel(
                                     Box(
                                         modifier = Modifier
                                             .aspectRatio(1f)
-                                            .clip(RoundedCornerShape(8.dp))
+                                            .clip(MaterialTheme.shapes.small)
                                             .clickable { onStickerClick(sticker.stickerId) }
                                             .padding(4.dp),
                                         contentAlignment = Alignment.Center,
@@ -10142,7 +10155,7 @@ private fun EmojiStickerPanel(
                                                     .align(Alignment.TopEnd)
                                                     .background(
                                                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                                                        shape = RoundedCornerShape(50),
+                                                        shape = CircleShape,
                                                     )
                                                     .padding(2.dp),
                                             ) {
@@ -10161,7 +10174,7 @@ private fun EmojiStickerPanel(
                                                     .align(Alignment.BottomEnd)
                                                     .background(
                                                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                                                        shape = RoundedCornerShape(4.dp),
+                                                        shape = MaterialTheme.shapes.extraSmall,
                                                     )
                                                     .padding(horizontal = 3.dp, vertical = 1.dp),
                                             ) {
@@ -10196,10 +10209,10 @@ private fun EmojiStickerTabChip(
 ) {
     Surface(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .clickable(onClick = onClick),
         color = if (selected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                else MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
                 else MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
@@ -10504,7 +10517,7 @@ private fun ChannelInfoPanelContent(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .clickable { onCopyLink(linkUrl) }
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
@@ -10570,8 +10583,8 @@ private fun ChannelInfoSectionItem(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier,
     ) {
         Row(
@@ -10829,7 +10842,7 @@ private fun ChannelPhotosAlbumRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -10839,15 +10852,15 @@ private fun ChannelPhotosAlbumRow(
             AsyncImage(
                 model = thumb,
                 contentDescription = album.title,
-                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .clip(MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -10972,7 +10985,7 @@ private fun ChannelPhotoGridItem(
         contentDescription = null,
         modifier = Modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(6.dp))
+            .clip(MaterialTheme.shapes.extraSmall)
             .clickable(onClick = onClick),
         contentScale = ContentScale.Crop,
     )
@@ -11395,15 +11408,16 @@ private fun ChannelClipThumbnail(
         modifier = Modifier
             .width(140.dp)
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .clickable { onClick(video) },
+        shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(9f / 16f)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             if (thumbUrl != null) {
@@ -11680,8 +11694,8 @@ private fun ChannelFileRow(doc: DocFile) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -12372,9 +12386,9 @@ private fun PendingFileChip(
 ) {
     val isUploading = file.progress in 0.001f..0.999f
     Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 0.dp,
         modifier = Modifier.width(200.dp),
     ) {
         Column(
@@ -12388,7 +12402,7 @@ private fun PendingFileChip(
                         contentDescription = null,
                         modifier = Modifier
                             .size(40.dp)
-                            .clip(RoundedCornerShape(6.dp)),
+                            .clip(MaterialTheme.shapes.extraSmall),
                         contentScale = ContentScale.Crop,
                     )
                 } else if (file.isVideo && file.thumbPath != null) {
@@ -12396,7 +12410,7 @@ private fun PendingFileChip(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .clip(RoundedCornerShape(6.dp)),
+                            .clip(MaterialTheme.shapes.extraSmall),
                         contentAlignment = Alignment.Center,
                     ) {
                         AsyncImage(
@@ -12423,7 +12437,7 @@ private fun PendingFileChip(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -12438,7 +12452,7 @@ private fun PendingFileChip(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(MaterialTheme.shapes.extraSmall)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {

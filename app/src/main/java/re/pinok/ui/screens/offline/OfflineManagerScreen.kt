@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -1144,8 +1143,8 @@ private fun AudioOfflineRow(
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -1202,8 +1201,8 @@ private fun VideoOfflineRow(
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -1409,15 +1408,15 @@ private fun StoryOfflineRow(
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             if (photoUrl != null) {
                 coil3.compose.AsyncImage(
                     model = photoUrl,
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                    modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.small),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 )
             } else {
@@ -1689,15 +1688,15 @@ private fun ClipOfflineRow(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             if (thumbUrl != null) {
                 coil3.compose.AsyncImage(
                     model = thumbUrl,
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                    modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.small),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 )
             } else {
@@ -1731,7 +1730,7 @@ private fun ClipOfflineRow(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(4.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(Color.Black.copy(alpha = 0.7f))
                         .padding(horizontal = 4.dp, vertical = 1.dp),
                 ) {

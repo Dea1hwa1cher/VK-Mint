@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkAdd
@@ -635,7 +634,7 @@ fun ShareSheet(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 placeholder = { Text("Поиск…") },
                 singleLine = true,
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.extraLarge,
             )
 
             // ── List ─────────────────────────────────────────────
@@ -761,7 +760,7 @@ fun ShareSheet(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 placeholder = { Text("Комментарий…") },
                 maxLines = 3,
-                shape = RoundedCornerShape(20.dp),
+                shape = MaterialTheme.shapes.extraLarge,
             )
 
             // ── Status / Send button ─────────────────────────────
@@ -807,7 +806,7 @@ private fun QuickAction(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(8.dp),
@@ -845,7 +844,7 @@ private fun ShareListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(MaterialTheme.shapes.medium)
             .background(bg)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),

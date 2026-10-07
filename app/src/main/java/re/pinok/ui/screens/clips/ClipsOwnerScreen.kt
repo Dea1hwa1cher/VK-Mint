@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
@@ -176,13 +175,13 @@ private fun ClipsOwnerCard(
     val thumbUrl = video.thumbUrl
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 5.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Box(
             modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {
             if (thumbUrl != null) {
                 AsyncImage(
@@ -202,7 +201,7 @@ private fun ClipsOwnerCard(
             if (video.duration > 0) {
                 Box(
                     modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                        .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(

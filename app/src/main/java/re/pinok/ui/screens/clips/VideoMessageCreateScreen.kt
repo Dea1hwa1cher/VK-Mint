@@ -34,7 +34,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -428,7 +428,7 @@ private fun CameraRecorderStage(
                 Modifier
                     .matchParentSize()
                     .padding(16.dp)
-                    .border(2.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
+                    .border(2.dp, Color.White.copy(alpha = 0.5f), MaterialTheme.shapes.extraLarge),
             )
             // Контур круга (форма №1) поверх заклипованного превью — ориентир маски.
             ShapeOutlineOverlay(shapeId = VideoMessageShapes.SHAPE_ID_BASE, enabled = !isRecording)
@@ -466,7 +466,7 @@ private fun CameraRecorderStage(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(Color.Black.copy(alpha = 0.5f))
                         .padding(horizontal = 12.dp, vertical = 4.dp),
                 )
@@ -491,7 +491,7 @@ private fun CameraRecorderStage(
         cameraError?.let { err ->
             Box(
                 Modifier.align(Alignment.Center).padding(24.dp)
-                    .clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.75f)).padding(16.dp),
+                    .clip(MaterialTheme.shapes.medium).background(Color.Black.copy(alpha = 0.75f)).padding(16.dp),
             ) {
                 Text(err, color = Color.White, fontSize = 14.sp)
             }
@@ -537,7 +537,7 @@ private fun RecordPillButton(
         Box(
             Modifier
                 .size(if (isRecording) 36.dp else 58.dp)
-                .clip(if (isRecording) RoundedCornerShape(8.dp) else CircleShape)
+                .clip(if (isRecording) MaterialTheme.shapes.small else CircleShape)
                 .background(Color.Red)
                 .clickable { if (isRecording) onStop() else onStart() },
         )
@@ -632,7 +632,7 @@ private fun ReviewSendStage(
             Button(
                 onClick = onSend,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 Icon(Icons.Filled.Videocam, contentDescription = null)
                 Spacer(Modifier.width(8.dp))

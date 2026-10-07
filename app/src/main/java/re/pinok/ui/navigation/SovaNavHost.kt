@@ -20,7 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -342,7 +343,7 @@ private fun BottomNavScrollButton(
                 .size(height = 30.dp, width = 56.dp)
                 .background(
                     if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-                    shape = RoundedCornerShape(15.dp),
+                    shape = CircleShape,
                 ),
             contentAlignment = Alignment.Center,
         ) {
@@ -1123,6 +1124,13 @@ fun SovaNavHost(
                             actions = {
                                 ScreenTopBar.actions?.invoke()
                             },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                                navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                                actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
                             // #49: Явный отступ под status bar (время/сеть/батарея).
                             modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
                         )
@@ -1259,7 +1267,7 @@ fun SovaNavHost(
                                         NavigationBarDefaults.containerColor
                                     ),
                                     tonalElevation = NavigationBarDefaults.Elevation,
-                                    shadowElevation = 3.dp,
+                                    shadowElevation = 0.dp,
                                 ) {
                                     Row(
                                         modifier = Modifier

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Bookmark
@@ -285,11 +284,11 @@ fun ServicesScreen(
         item(key = "notify_mode_card") {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
                 NotifyModeItem(
@@ -354,9 +353,9 @@ private fun HubHeader(onOpenSection: ((Screen) -> Unit)?) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
+            shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
             ),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -384,9 +383,9 @@ private fun HubHeader(onOpenSection: ((Screen) -> Unit)?) {
         ) {
             items(quickShortcuts) { (title, icon, screen) ->
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable {
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.clip(MaterialTheme.shapes.medium).clickable {
                         onOpenSection?.invoke(screen)
                     },
                 ) {
@@ -425,13 +424,13 @@ private fun ServiceCard(
 ) {
     Card(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(MaterialTheme.shapes.large)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
@@ -448,7 +447,7 @@ private fun ServiceCard(
                 Box(
                     modifier = Modifier
                         .size(42.dp)
-                        .background(item.iconBgColor, RoundedCornerShape(12.dp)),
+                        .background(item.iconBgColor, MaterialTheme.shapes.medium),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -465,7 +464,7 @@ private fun ServiceCard(
                         modifier = Modifier
                             .background(
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(6.dp),
+                                shape = MaterialTheme.shapes.extraSmall,
                             )
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {

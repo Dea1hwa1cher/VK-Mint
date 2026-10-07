@@ -23,7 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
@@ -1111,12 +1111,12 @@ fun MessagesScreen(
                             placeholder = { Text("Поиск по чатам…", style = MaterialTheme.typography.bodyMedium) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            shape = RoundedCornerShape(24.dp),
+                            shape = MaterialTheme.shapes.extraLarge,
                             colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                             ),
                             textStyle = MaterialTheme.typography.bodyMedium,
                             leadingIcon = {
@@ -2192,7 +2192,7 @@ private fun ChatCard(
             scaleY = scale
             alpha = dragAlpha
         }
-        .shadow(elevation = elevation.dp, shape = RoundedCornerShape(0.dp))
+        .shadow(elevation = elevation.dp, shape = RectangleShape)
         .combinedClickable(
             onClick = {
                 // Тап по чату → открываем экран диалога (#43).
@@ -2422,9 +2422,9 @@ private fun ChatCard(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(CircleShape)
                                         .background(
-                                            if (isMuted) MaterialTheme.colorScheme.surfaceVariant
+                                            if (isMuted) MaterialTheme.colorScheme.surfaceContainerHigh
                                             else MaterialTheme.colorScheme.primary
                                         )
                                         .padding(horizontal = 7.dp, vertical = 2.dp),
@@ -2672,9 +2672,9 @@ private fun ChannelRecommendationCard(
         modifier = Modifier
             .width(240.dp)
             .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -2890,13 +2890,13 @@ private fun FolderTabChip(
     onClick: () -> Unit,
 ) {
     val bg = if (selected) MaterialTheme.colorScheme.primaryContainer
-    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    else MaterialTheme.colorScheme.surfaceContainerHigh
     val fg = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
     else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = Modifier
             .padding(horizontal = 4.dp)
-            .clip(RoundedCornerShape(50))
+            .clip(CircleShape)
             .background(bg)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp),

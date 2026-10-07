@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -102,7 +101,7 @@ fun PostPhotoGrid(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 4.dp)
-                .clip(RoundedCornerShape(8.dp)),
+                .clip(MaterialTheme.shapes.small),
         ) {
             HorizontalPager(
                 state = pagerState,
@@ -129,7 +128,7 @@ fun PostPhotoGrid(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.6f), MaterialTheme.shapes.medium)
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
                     Text(
@@ -156,7 +155,7 @@ fun PostPhotoGrid(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(ratio.coerceIn(0.5f, 2f))
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .clickable { onPhotoClick(allUrls, index) },
                     elevation = CardDefaults.cardElevation(0.dp),
                 ) {
@@ -198,7 +197,7 @@ private fun PostPhotoCarousel(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             // animateContentSize ДО aspectRatio: анимирует смену высоты,
             // которую производит aspectRatio текущей страницы.
             .animateContentSize()
@@ -227,7 +226,7 @@ private fun PostPhotoCarousel(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(8.dp)
-                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .background(Color.Black.copy(alpha = 0.6f), MaterialTheme.shapes.medium)
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
             Text(

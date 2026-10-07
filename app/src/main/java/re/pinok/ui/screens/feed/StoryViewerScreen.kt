@@ -34,7 +34,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -1175,14 +1174,14 @@ private fun StoryProgressBars(
                 modifier = Modifier
                     .weight(1f)
                     .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
                     .background(Color.White.copy(alpha = 0.3f)),
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(barProgress.coerceIn(0f, 1f))
                         .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
+                        .clip(MaterialTheme.shapes.extraSmall)
                         .background(barColor.value),
                 )
             }
@@ -1286,7 +1285,7 @@ private fun StoryLinkButton(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(CircleShape)
             .background(Color.Black.copy(alpha = 0.45f))
             .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
@@ -1348,7 +1347,7 @@ private fun StoryReplyField(
             },
             textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
             maxLines = 1,
-            shape = RoundedCornerShape(20.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             colors = OutlinedTextFieldDefaults.colors(
                 cursorColor = Color.White,
                 focusedBorderColor = Color.White.copy(alpha = 0.7f),
@@ -1599,7 +1598,7 @@ private fun StoryOverlayChip(
     val fg = if (primary) Color.Black else Color.White
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(CircleShape)
             .background(bg)
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 10.dp),
@@ -1675,7 +1674,7 @@ private fun StickerPickerSheet(
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
-                                .clip(RoundedCornerShape(6.dp))
+                                .clip(MaterialTheme.shapes.extraSmall)
                                 .background(
                                     if (idx == selectedPack)
                                         MaterialTheme.colorScheme.primaryContainer
@@ -1754,7 +1753,7 @@ private fun StickerPickerSheet(
                             Box(
                                 modifier = Modifier
                                     .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(MaterialTheme.shapes.small)
                                     .clickable { onStickerClick(sticker.stickerId) }
                                     .padding(4.dp),
                                 contentAlignment = Alignment.Center,
@@ -1776,7 +1775,7 @@ private fun StickerPickerSheet(
                                             .align(Alignment.TopEnd)
                                             .background(
                                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                                                shape = RoundedCornerShape(50),
+                                                shape = CircleShape,
                                             )
                                             .padding(2.dp),
                                     ) {
@@ -1795,7 +1794,7 @@ private fun StickerPickerSheet(
                                             .align(Alignment.BottomEnd)
                                             .background(
                                                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                                                shape = RoundedCornerShape(4.dp),
+                                                shape = MaterialTheme.shapes.extraSmall,
                                             )
                                             .padding(horizontal = 3.dp, vertical = 1.dp),
                                     ) {

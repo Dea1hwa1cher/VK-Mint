@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,8 +59,8 @@ fun PlaylistAttachmentCard(playlist: AudioPlaylist) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .clickable {
                 if (loading) return@clickable
                 if (loadedTracks != null) {
@@ -104,15 +103,15 @@ fun PlaylistAttachmentCard(playlist: AudioPlaylist) {
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             if (cover != null) {
                 AsyncImage(
                     model = cover,
                     contentDescription = playlist.title,
-                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(8.dp)),
+                    modifier = Modifier.size(56.dp).clip(MaterialTheme.shapes.small),
                     contentScale = ContentScale.Crop,
                 )
             } else {

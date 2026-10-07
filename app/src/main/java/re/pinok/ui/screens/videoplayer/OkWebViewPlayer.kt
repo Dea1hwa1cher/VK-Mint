@@ -29,7 +29,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
@@ -592,7 +592,7 @@ fun OkWebViewPlayer(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .background(Color(0x99000000), RoundedCornerShape(12.dp))
+                    .background(Color(0x99000000), MaterialTheme.shapes.medium)
                     .padding(horizontal = 24.dp, vertical = 16.dp),
             ) {
                 CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
@@ -634,7 +634,7 @@ fun OkWebViewPlayer(
                     .align(Alignment.TopStart)
                     .padding(8.dp)
                     .size(40.dp)
-                    .background(Color(0x80000000), RoundedCornerShape(8.dp))
+                    .background(Color(0x80000000), MaterialTheme.shapes.small)
                     .clickable { onBack() },
                 contentAlignment = Alignment.Center,
             ) {
@@ -682,7 +682,7 @@ private fun WebViewDownloadButton(
     Box(
         modifier = Modifier
             .size(40.dp)
-            .background(Color(0x80000000), RoundedCornerShape(8.dp))
+            .background(Color(0x80000000), MaterialTheme.shapes.small)
             .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
@@ -735,7 +735,7 @@ private fun WebViewDownloadButton(
 private fun AdFreeBadge(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
-            .background(Color(0xCC1B5E20), RoundedCornerShape(8.dp))
+            .background(Color(0xCC1B5E20), MaterialTheme.shapes.small)
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -770,7 +770,7 @@ private fun OkWebViewErrorPlaceholder(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .padding(32.dp)
-            .background(Color(0xCC000000), RoundedCornerShape(12.dp))
+            .background(Color(0xCC000000), MaterialTheme.shapes.medium)
             .padding(24.dp),
     ) {
         Text(
@@ -787,7 +787,7 @@ private fun OkWebViewErrorPlaceholder(
             if (canOpenInBrowser) {
                 Box(
                     modifier = Modifier
-                        .background(Color(0xFF2196F3), RoundedCornerShape(8.dp))
+                        .background(Color(0xFF2196F3), MaterialTheme.shapes.small)
                         .clickable { onOpenInBrowser() }
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center,

@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 // W30-1 #VIDEO-ADD-SELF: иконки тумблера «Добавить себе» (оба — core-набор,
 // как Download/PlayArrow этого файла).
@@ -447,11 +446,12 @@ fun VideoScreen(
                         placeholder = { Text("Поиск видео…", style = MaterialTheme.typography.bodySmall) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        shape = RoundedCornerShape(20.dp),
+                        shape = MaterialTheme.shapes.extraLarge,
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                             focusedBorderColor = vkAccent,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         ),
                         textStyle = MaterialTheme.typography.bodyMedium,
                         trailingIcon = {
@@ -972,7 +972,7 @@ private fun VideoTab(
             modifier = Modifier
                 .width(if (isActive) 24.dp else 0.dp)
                 .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .background(if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent),
         )
     }

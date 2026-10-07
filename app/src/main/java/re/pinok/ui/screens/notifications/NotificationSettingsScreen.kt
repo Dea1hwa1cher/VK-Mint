@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
@@ -42,6 +41,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -149,11 +149,11 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                     }
                 },
-                // #SETTINGS-FIX (P3-7, аудит настроек): псевдо-пункт меню «Сбросить» удалён —
-                // он показывал честный тост «не поддерживается VK API», т.е. был пустой
-                // кнопкой (лучше нет пункта, чем мёртвый). Все данные этого экрана —
-                // серверные (BFF/settingsGeneral, silent mode, группы, obscene-фильтр):
-                // локальных push-ключей здесь нет, честная семантика «сброса» отсутствует.
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
                 actions = {},
             )
         },
@@ -557,7 +557,7 @@ private fun ParamRow(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 10.dp)
                         .defaultMinSize(minHeight = 44.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .then(
                             if (canEdit) {
                                 Modifier.clickable { dropdownExpanded = true }

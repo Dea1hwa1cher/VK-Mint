@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -929,7 +928,7 @@ fun CommunityScreen(
         }
         // S6-4: кнопка подписки / отписки.
         item {
-            val buttonShape = RoundedCornerShape(12.dp)
+            val buttonShape = MaterialTheme.shapes.medium
             val context = LocalContext.current
             if (isMember) {
                 OutlinedButton(
@@ -1090,8 +1089,8 @@ fun CommunityScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 .clickable { showComposer = true }
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -1759,7 +1758,7 @@ private fun CommunityPostCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -1777,7 +1776,7 @@ private fun CommunityPostCard(
                 } else {
                     Box(
                         modifier = Modifier.size(36.dp).clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -1905,14 +1904,14 @@ private fun CommunityPostCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         // Fix #365: репост-карточка ЦЕЛИКОМ открывает оригинальный
                         // пост (onPostClick → PostHolder.last + PostDetail, роут
                         // Community в SovaNavHost). clickable ПОСЛЕ clip — риппл по
                         // скруглению; вложенные клики (фото/видео ниже) перехватываются
                         // раньше — просмотр открывается как раньше, а не пост.
                         .clickable { onPostClick(repost) }
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
                     elevation = CardDefaults.cardElevation(0.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 ) {
@@ -2029,14 +2028,14 @@ private fun VideoThumbnail(video: Video, onClick: (Video) -> Unit) {
     val thumbUrl = video.thumbUrl
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable { onClick(video) },
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Column {
             Box(
                 modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center,
             ) {
                 if (thumbUrl != null) {
@@ -2057,7 +2056,7 @@ private fun VideoThumbnail(video: Video, onClick: (Video) -> Unit) {
                 if (video.duration > 0) {
                     Box(
                         modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp)
-                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                            .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
                         Text(
@@ -2132,13 +2131,13 @@ private fun ClipThumbnail(video: Video, onClick: (Video) -> Unit) {
     val thumbUrl = video.clipPosterUrl ?: video.thumbUrl
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             .clickable { onClick(video) },
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Box(
             modifier = Modifier.fillMaxWidth().aspectRatio(9f / 16f)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             if (thumbUrl != null) {
@@ -2233,9 +2232,9 @@ private fun BoardTopicRow(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -2360,7 +2359,7 @@ private fun CommunityPhotosTab(
                         modifier = Modifier
                             .weight(1f)
                             .aspectRatio(1f)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .clickable { onPhotoClick(allUrls, index) },
                         elevation = CardDefaults.cardElevation(0.dp),
                     ) {
@@ -2422,8 +2421,8 @@ private fun CommunityDocRow(doc: re.pinok.data.model.DocFile) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -1344,7 +1343,7 @@ private fun MusicTab(
             modifier = Modifier
                 .width(if (isActive) 24.dp else 0.dp)
                 .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
+                .clip(MaterialTheme.shapes.extraSmall)
                 .background(if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent),
         )
     }

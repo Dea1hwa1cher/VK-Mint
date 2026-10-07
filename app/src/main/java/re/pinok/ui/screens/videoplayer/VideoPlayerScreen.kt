@@ -45,7 +45,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 // W30-2 #VIDEO-ADD-TO-MINE: «Добавить» (data-testid video_page_add_to_my_playlist)
@@ -1960,7 +1960,7 @@ fun VideoPlayerScreen(
                         if (isDownloaded) {
                             Box(
                                 modifier = Modifier
-                                    .background(VK_GREEN, RoundedCornerShape(4.dp))
+                                    .background(VK_GREEN, MaterialTheme.shapes.extraSmall)
                                     .padding(horizontal = 6.dp, vertical = 2.dp),
                             ) {
                                 Text("Офлайн", color = VK_WHITE, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
@@ -2051,7 +2051,7 @@ fun VideoPlayerScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             Box(
                                 modifier = Modifier
-                                    .background(VK_RED, RoundedCornerShape(8.dp))
+                                    .background(VK_RED, MaterialTheme.shapes.small)
                                     .clickable { onBack() }
                                     .padding(horizontal = 20.dp, vertical = 10.dp),
                             ) {
@@ -2082,7 +2082,7 @@ fun VideoPlayerScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Box(
                                     modifier = Modifier
-                                        .background(VK_RED, RoundedCornerShape(8.dp))
+                                        .background(VK_RED, MaterialTheme.shapes.small)
                                         .clickable {
                                             app.clearSuppressAuthRelaunch()
                                             app.notifyTokenInvalidated()
@@ -2122,7 +2122,7 @@ fun VideoPlayerScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Box(
                                     modifier = Modifier
-                                        .background(VK_RED, RoundedCornerShape(8.dp))
+                                        .background(VK_RED, MaterialTheme.shapes.small)
                                         .clickable {
                                             val intent = android.content.Intent(
                                                 android.content.Intent.ACTION_VIEW,
@@ -2202,7 +2202,7 @@ fun VideoPlayerScreen(
                                         .align(Alignment.TopEnd)
                                         .then(overlayTopInset)
                                         .padding(8.dp)
-                                        .background(Color(0xCC1B5E20), RoundedCornerShape(8.dp))
+                                        .background(Color(0xCC1B5E20), MaterialTheme.shapes.small)
                                         .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -2412,7 +2412,7 @@ fun VideoPlayerScreen(
                                         modifier = Modifier
                                             .width(4.dp)
                                             .height(120.dp)
-                                            .clip(RoundedCornerShape(2.dp))
+                                            .clip(CircleShape)
                                             .background(Color(0x4DFFFFFF)),
                                         contentAlignment = Alignment.BottomCenter,
                                     ) {
@@ -2435,7 +2435,7 @@ fun VideoPlayerScreen(
                                 Row(
                                     modifier = Modifier
                                         .align(Alignment.Center)
-                                        .background(Color(0x99000000), RoundedCornerShape(8.dp))
+                                        .background(Color(0x99000000), MaterialTheme.shapes.small)
                                         .padding(horizontal = 16.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -2897,7 +2897,7 @@ private fun VKTimeline(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(3.dp)
-                .clip(RoundedCornerShape(0.dp)),
+                .clip(RectangleShape),
         ) {
             // Background bar (bars.s-1m)
             Box(
@@ -2993,7 +2993,7 @@ private fun VKSettingsPopup(
                 .padding(end = 62.dp, bottom = 57.dp) // Смещено левее чтобы не перекрывать fullscreen кнопку
                 .widthIn(max = 300.dp)
                 .heightIn(max = 350.dp) // Ограничение высоты — ниже пойдёт скролл
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .background(VK_SETTINGS_BG)
                 .verticalScroll(rememberScrollState())
                 .clickable(
@@ -3388,7 +3388,7 @@ private fun ImmersiveVideoActionsColumn(
     var stripMoreOpen by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(18.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(Color(0x66000000))
             .padding(vertical = 4.dp, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -3477,7 +3477,7 @@ private fun VideoStripAction(
         // Явная проверка вместо elvis: кликабельность — отдельный modifier.
         val clickMod = if (onClick != null) {
             Modifier
-                .clip(RoundedCornerShape(12.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .clickable(onClick = onClick)
         } else {
             Modifier
@@ -4120,8 +4120,8 @@ private fun VideoQuickShareButton(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick)
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

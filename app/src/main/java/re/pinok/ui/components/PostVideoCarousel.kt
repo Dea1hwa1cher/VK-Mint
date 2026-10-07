@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -84,7 +83,7 @@ fun PostVideoCarousel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(MaterialTheme.shapes.small),
                 )
             }
         }
@@ -111,7 +110,7 @@ private fun PostVideoCarouselPager(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(MaterialTheme.shapes.small)
             // animateContentSize — как в PostPhotoCarousel (плавная смена высоты).
             .animateContentSize()
             .aspectRatio(16f / 9f),
@@ -132,7 +131,7 @@ private fun PostVideoCarouselPager(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(8.dp)
-                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .background(Color.Black.copy(alpha = 0.6f), MaterialTheme.shapes.medium)
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
             Text(
@@ -242,7 +241,7 @@ private fun VideoSlide(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(6.dp)
-                    .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                    .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             ) {
                 Text(
@@ -258,7 +257,7 @@ private fun VideoSlide(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(6.dp)
-                    .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                    .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             ) {
                 Text(

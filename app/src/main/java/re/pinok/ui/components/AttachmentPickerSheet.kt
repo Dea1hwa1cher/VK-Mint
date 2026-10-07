@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MusicNote
@@ -325,14 +324,14 @@ private fun AudioTrackRow(track: Track, onClick: () -> Unit) {
             AsyncImage(
                 model = track.albumThumb,
                 contentDescription = null,
-                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)),
+                modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
@@ -417,8 +416,8 @@ private fun VideoRow(video: Video, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(96.dp, 54.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center,
         ) {
             if (video.thumbUrl != null) {
@@ -501,8 +500,8 @@ private fun GiftPickerTab(app: SovaApp, onPick: (GiftItem) -> Unit) {
 private fun GiftCell(gift: GiftItem, onClick: () -> Unit) {
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .clickable(onClick = onClick)
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -607,8 +606,8 @@ private fun VkPhotoCell(ref: VkPhotoRef, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

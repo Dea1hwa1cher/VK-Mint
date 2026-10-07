@@ -1,6 +1,5 @@
 package re.pinok.ui.screens.groups
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -28,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -202,7 +202,13 @@ fun GroupsScreen(onGroupClick: (Long) -> Unit = {}) {
                         placeholder = { Text("Поиск сообществ…", style = MaterialTheme.typography.bodySmall) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        shape = RoundedCornerShape(20.dp),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        ),
                         trailingIcon = {
                             if (query.isNotEmpty()) {
                                 IconButton(onClick = { query = "" }) {
@@ -300,13 +306,13 @@ private fun GroupRow(group: Group, onGroupClick: (Long) -> Unit = {}) {
             AsyncImage(
                 model = group.photo100,
                 contentDescription = group.name,
-                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)),
+                modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.medium),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Box(
-                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
