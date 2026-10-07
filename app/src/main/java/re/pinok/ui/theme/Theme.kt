@@ -270,6 +270,7 @@ fun SOVATheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = scaledTypography,
+            shapes = SovaShapes,
             content = content,
         )
     }
