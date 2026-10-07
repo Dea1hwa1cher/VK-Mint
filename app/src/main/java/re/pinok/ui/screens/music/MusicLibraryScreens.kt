@@ -74,9 +74,7 @@ import kotlinx.coroutines.launch
 import re.pinok.SovaApp
 import re.pinok.data.model.AudioArtist
 import re.pinok.data.model.AudioPlaylist
-import re.pinok.data.model.CatalogBlock
 import re.pinok.data.model.CatalogPlaylist
-import re.pinok.data.model.CatalogViewType
 import re.pinok.data.model.Track
 import re.pinok.media.PlayerConnection
 import androidx.compose.runtime.collectAsState
@@ -86,7 +84,6 @@ import java.util.Date
 import java.util.Locale
 import re.pinok.ui.components.shareTrack
 import re.pinok.ui.components.AudioMoreMenu
-import re.pinok.data.model.DownloadState
 import re.pinok.media.TrackDownloadManager
 import re.pinok.ui.components.AudioAttachmentList
 import re.pinok.util.AppLog

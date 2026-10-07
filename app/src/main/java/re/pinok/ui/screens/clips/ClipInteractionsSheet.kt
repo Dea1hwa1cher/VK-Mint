@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import re.pinok.SovaApp
-import re.pinok.api.VKApiClient
 import re.pinok.data.model.Comment
 import re.pinok.data.model.UserProfile
 import re.pinok.data.model.Video

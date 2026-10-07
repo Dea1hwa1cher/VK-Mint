@@ -69,7 +69,6 @@ import androidx.compose.material.icons.automirrored.outlined.Forward
 import androidx.compose.material.icons.automirrored.outlined.Reply
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.EmojiEmotions
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.Close
@@ -156,7 +155,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 // #CHANNEL-WALL-MODE (Fix #393): optimistic-карты лайков постов канала.
 import androidx.compose.runtime.mutableStateMapOf
@@ -178,12 +176,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.ClipOp
-import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.PathParser
@@ -224,7 +218,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import re.pinok.SovaApp
 import re.pinok.data.model.Attachment
-import re.pinok.data.model.GiftItem
 import re.pinok.data.model.Message
 // #CHANNEL-WALL-MODE (Fix #393): посты канала = посты сообщества (wall.get).
 import re.pinok.data.model.Post
@@ -232,7 +225,6 @@ import re.pinok.data.model.PhotoSizes
 // #CHANNEL-PHOTOS (2026-10-03): альбомы/фото канала (photos.getAlbums/photos.get).
 import re.pinok.data.model.Album
 import re.pinok.data.model.PhotoItem
-import re.pinok.data.model.PhotosFeedResult
 import re.pinok.data.model.DocFile
 import re.pinok.data.model.ReactionItem
 import re.pinok.data.model.MessageReaction
@@ -249,7 +241,6 @@ import re.pinok.ui.anim.springScaled
 import re.pinok.ui.anim.tweenScaled
 import re.pinok.ui.theme.UiScale
 import re.pinok.media.VoiceRecorder
-import java.text.DecimalFormat
 import re.pinok.realtime.LongPollEvent
 import re.pinok.ui.components.ForwardDialog
 import re.pinok.ui.components.AttachmentPickerSheet
@@ -269,13 +260,6 @@ import java.util.Calendar
 import java.util.Date
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.LinkInteractionListener
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
 import re.pinok.ui.components.PhotoViewer
 // #CHANNEL-WALL-MODE (Fix #393): «Поделиться» поста канала — существующий
 // компонент (тот же, что в CommunityScreen/UserProfileScreen).
@@ -285,7 +269,6 @@ import re.pinok.ui.components.PendingPhoto
 import re.pinok.ui.components.nextPendingPhotoId
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.roundToInt
 // #CHANNEL-WALL-MODE (Fix #393): переиспользование пост-компонента стены профиля
 // (public, второй вызов UserProfileScreen:768) вместо копипасты + PostHolder для
 // имени сообщества в PostDetailScreen.

@@ -1,7 +1,6 @@
 package re.pinok.auth.exchange
 
 import com.google.gson.JsonObject
-import re.pinok.util.AppLog
 
 /**
  * P2-11 #AUTH-AUDIT: pure-функции парсинга auth response, вынесенные из

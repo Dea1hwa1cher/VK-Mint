@@ -73,7 +73,6 @@ import kotlinx.coroutines.delay
 import re.pinok.SovaApp
 import re.pinok.util.AppLog
 import re.pinok.util.toRecordingTimeString
-import java.util.Locale
 
 private const val TAG = "ClipCreateScreen"
 

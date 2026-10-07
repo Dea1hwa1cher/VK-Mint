@@ -7,7 +7,6 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.io.RandomAccessFile
-import java.nio.ByteBuffer
 
 /**
  * §42.12 P1 #3: запись MP4 metadata тегов (Apple iTunes format).

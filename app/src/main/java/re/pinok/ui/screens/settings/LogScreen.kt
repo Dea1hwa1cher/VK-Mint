@@ -60,7 +60,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import kotlinx.coroutines.launch
 import re.pinok.util.AppLog
 import java.io.File
 import java.text.SimpleDateFormat

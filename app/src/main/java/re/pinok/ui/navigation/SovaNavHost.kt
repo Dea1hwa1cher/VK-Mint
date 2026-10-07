@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -30,7 +28,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Image
@@ -159,7 +156,6 @@ import re.pinok.ui.screens.video.VideoScreen
 import re.pinok.ui.screens.videoplayer.VideoPlatformRouter
 import re.pinok.ui.components.CaptchaDialog
 import re.pinok.ui.components.NetworkSwitchPopup
-import re.pinok.ui.components.OfflineBanner
 import re.pinok.ui.components.GlobalMiniPlayer
 import re.pinok.ui.components.UpdateBanner
 import re.pinok.data.local.SovaPrefs

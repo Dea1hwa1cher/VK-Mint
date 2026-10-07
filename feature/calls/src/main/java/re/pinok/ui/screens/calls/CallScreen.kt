@@ -38,8 +38,6 @@ import androidx.compose.material.icons.filled.MicOff
 // #CALLS-ZH2 (Task 6-a): «Ещё» (меню Ж6/Ж7/Ж8/Ж9) — extended-иконка.
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon

@@ -16,7 +16,6 @@ import re.pinok.auth.exchange.ExchangeAuthRepository
 import re.pinok.auth.exchange.LongPollCredentials
 import re.pinok.auth.exchange.ValidationType
 import re.pinok.auth.exchange.WebTokenAuth
-import re.pinok.SovaApp
 import re.pinok.util.AppLog
 
 /**

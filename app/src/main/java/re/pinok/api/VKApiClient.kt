@@ -47,7 +47,6 @@ import re.pinok.data.model.TrackArtist
 import re.pinok.data.model.UserProfile
 import re.pinok.data.model.Video
 import re.pinok.data.model.VideoMessage
-import re.pinok.data.model.VideoPlatform
 import re.pinok.data.model.Album
 import re.pinok.data.model.Bookmark
 import re.pinok.data.model.QueueCredential

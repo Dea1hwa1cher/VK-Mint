@@ -45,7 +45,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Album
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.GraphicEq
@@ -57,7 +56,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -112,7 +110,6 @@ import re.pinok.media.PlayerConnection
 import re.pinok.media.TrackDownloadManager
 import re.pinok.ui.components.shareTrack
 import re.pinok.util.AppLog
-import kotlin.math.abs
 
 /**
  * Экран «Музыка» — нативный интерфейс VK Music (моделирован по SOVA V RE).
