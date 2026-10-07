@@ -66,6 +66,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 // Fix #378: разделитель над закреплённой кнопкой выхода.
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -3434,7 +3435,7 @@ private fun ProfileSuggestionCard(
                     textAlign = TextAlign.Center,
                 )
             } else {
-                Button(
+                FilledTonalButton(
                     onClick = onAdd,
                     enabled = !inFlight,
                     contentPadding = PaddingValues(horizontal = 10.dp),

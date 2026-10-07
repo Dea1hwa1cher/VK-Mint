@@ -41,6 +41,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -4311,19 +4313,25 @@ private fun ToggleRow(
     onToggle: (Boolean) -> Unit,
 ) {
     Card {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Switch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
-        }
+        ListItem(
+            headlineContent = {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            trailingContent = {
+                Switch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
+            },
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled) { onToggle(!checked) },
+        )
     }
 }
 
@@ -4341,26 +4349,32 @@ private fun ToggleRow(
     onToggle: (Boolean) -> Unit,
 ) {
     Card {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+        ListItem(
+            headlineContent = {
                 Text(
                     title,
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (enabled) MaterialTheme.colorScheme.onSurface
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            },
+            supportingContent = {
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            Switch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
-        }
+            },
+            trailingContent = {
+                Switch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
+            },
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled) { onToggle(!checked) },
+        )
     }
 }
 
@@ -4388,17 +4402,33 @@ private fun FeedCarouselToggleRow(
     val optimisticValue: Boolean? = optimistic
     val checked: Boolean = if (optimisticValue == null) s.feedCarouselEnabled else optimisticValue
 
+    fun applyToggle(newValue: Boolean) {
+        optimistic = newValue
+        scope.launch {
+            try {
+                app.prefs.setFeedCarouselEnabled(newValue)
+                optimistic = null
+            } catch (e: Exception) {
+                optimistic = null
+                AppLog.e("SettingsScreen", "setFeedCarouselEnabled($newValue) failed", e)
+                android.widget.Toast.makeText(
+                    context,
+                    "Не удалось сохранить: ${e.message}",
+                    android.widget.Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
+
     Card {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+        ListItem(
+            headlineContent = {
                 Text(
                     "Карусель фото в постах",
                     style = MaterialTheme.typography.bodyLarge,
                 )
+            },
+            supportingContent = {
                 Text(
                     "Лента, сообщества, профили и открытый пост: несколько " +
                         "фото листаются свайпом и стрелками со счётчиком. " +
@@ -4407,32 +4437,20 @@ private fun FeedCarouselToggleRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            Switch(
-                checked = checked,
-                onCheckedChange = { newValue ->
-                    // Оптимистичное обновление UI до подтверждения записи.
-                    optimistic = newValue
-                    scope.launch {
-                        try {
-                            app.prefs.setFeedCarouselEnabled(newValue)
-                            // Успех: убираем override — Snapshot Flow уже/скоро
-                            // отдаст записанное значение.
-                            optimistic = null
-                        } catch (e: Exception) {
-                            // Откат: override=null → снова значение из Snapshot.
-                            optimistic = null
-                            AppLog.e("SettingsScreen", "setFeedCarouselEnabled($newValue) failed", e)
-                            android.widget.Toast.makeText(
-                                context,
-                                "Не удалось сохранить: ${e.message}",
-                                android.widget.Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                    }
-                },
-            )
-        }
+            },
+            trailingContent = {
+                Switch(
+                    checked = checked,
+                    onCheckedChange = { applyToggle(it) },
+                )
+            },
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { applyToggle(!checked) },
+        )
     }
 }
 

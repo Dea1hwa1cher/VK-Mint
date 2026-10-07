@@ -54,6 +54,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.material3.Icon
@@ -1921,84 +1923,68 @@ private fun MyMusicMenuList(
                                     }
                                 }
                                 // Кнопка play
-                                Box(
-                                    modifier = Modifier
-                                        .minimumInteractiveComponentSize()
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                        .clickable {
-                                            scope.launch {
-                                                try {
-                                                    val (_, tracks) = app.apiClient.audioGetPlaylistTracks(
-                                                        playlistId = playlist.id,
-                                                        ownerId = playlist.ownerId,
-                                                        accessKey = playlist.accessKey,
-                                                    )
-                                                    val filtered = tracks
-                                                        .filter { it.id > 0L && it.ownerId != 0L && !it.url.isNullOrBlank() }
-                                                    if (filtered.isNotEmpty()) {
-                                                        PlayerConnection.playTrackList(filtered, 0)
-                                                    }
-                                                } catch (e: Exception) {
-                                                    AppLog.e("PlaylistsDialog", "Failed to play playlist", e)
+                                FilledIconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                val (_, tracks) = app.apiClient.audioGetPlaylistTracks(
+                                                    playlistId = playlist.id,
+                                                    ownerId = playlist.ownerId,
+                                                    accessKey = playlist.accessKey,
+                                                )
+                                                val filtered = tracks
+                                                    .filter { it.id > 0L && it.ownerId != 0L && !it.url.isNullOrBlank() }
+                                                if (filtered.isNotEmpty()) {
+                                                    PlayerConnection.playTrackList(filtered, 0)
                                                 }
-                                                showPlaylists = false
+                                            } catch (e: Exception) {
+                                                AppLog.e("PlaylistsDialog", "Failed to play playlist", e)
                                             }
-                                        },
-                                    contentAlignment = Alignment.Center,
+                                            showPlaylists = false
+                                        }
+                                    },
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.PlayArrow,
                                         contentDescription = "Играть",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp),
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 // #VK-MUSIC-SAVER-PORT: кнопка «скачать плейлист»
                                 // (папка + обложка + tracklist.txt + все треки).
-                                Box(
-                                    modifier = Modifier
-                                        .minimumInteractiveComponentSize()
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                                        .clickable {
-                                            scope.launch {
-                                                try {
-                                                    val (_, tracks) = app.apiClient.audioGetPlaylistTracks(
-                                                        playlistId = playlist.id,
-                                                        ownerId = playlist.ownerId,
-                                                        accessKey = playlist.accessKey,
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            try {
+                                                val (_, tracks) = app.apiClient.audioGetPlaylistTracks(
+                                                    playlistId = playlist.id,
+                                                    ownerId = playlist.ownerId,
+                                                    accessKey = playlist.accessKey,
+                                                )
+                                                val filtered = tracks
+                                                    .filter { it.id > 0L && it.ownerId != 0L && !it.url.isNullOrBlank() }
+                                                if (filtered.isNotEmpty()) {
+                                                    TrackDownloadManager.enqueuePlaylistDownload(
+                                                        playlistTitle = playlist.title,
+                                                        coverUrl = playlist.coverUrl,
+                                                        tracks = filtered,
                                                     )
-                                                    val filtered = tracks
-                                                        .filter { it.id > 0L && it.ownerId != 0L && !it.url.isNullOrBlank() }
-                                                    if (filtered.isNotEmpty()) {
-                                                        TrackDownloadManager.enqueuePlaylistDownload(
-                                                            playlistTitle = playlist.title,
-                                                            coverUrl = playlist.coverUrl,
-                                                            tracks = filtered,
-                                                        )
-                                                        android.widget.Toast.makeText(
-                                                            app.applicationContext,
-                                                            "Скачивание плейлиста: ${filtered.size} треков",
-                                                            android.widget.Toast.LENGTH_SHORT,
-                                                        ).show()
-                                                    }
-                                                } catch (e: Exception) {
-                                                    AppLog.e("PlaylistsDialog", "Failed to download playlist", e)
+                                                    android.widget.Toast.makeText(
+                                                        app.applicationContext,
+                                                        "Скачивание плейлиста: ${filtered.size} треков",
+                                                        android.widget.Toast.LENGTH_SHORT,
+                                                    ).show()
                                                 }
-                                                showPlaylists = false
+                                            } catch (e: Exception) {
+                                                AppLog.e("PlaylistsDialog", "Failed to download playlist", e)
                                             }
-                                        },
-                                    contentAlignment = Alignment.Center,
+                                            showPlaylists = false
+                                        }
+                                    },
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.Download,
                                         contentDescription = "Скачать плейлист",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp),
                                     )
                                 }
                             }
