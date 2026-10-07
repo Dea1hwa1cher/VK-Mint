@@ -409,24 +409,7 @@ fun SettingsScreen(
             containerSections.forEach { add(SettingsPage.Container(it)) }
         }
     }
-    val initialPage = remember(pages) {
-        val req = re.pinok.ui.navigation.Screen.Settings.requestedTab
-        re.pinok.ui.navigation.Screen.Settings.requestedTab = null
-        if (req != null) {
-            val idx = pages.indexOfFirst {
-                it.key.equals("core:$req", ignoreCase = true) || it.label.equals(req, ignoreCase = true)
-            }
-            if (idx >= 0) idx else 0
-        } else {
-            0
-        }
-    }
-    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { pages.size })
-    LaunchedEffect(initialPage) {
-        if (initialPage > 0 && pagerState.currentPage != initialPage) {
-            pagerState.scrollToPage(initialPage)
-        }
-    }
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { pages.size })
 
     Column(modifier = Modifier.fillMaxSize()) {
         PrimaryScrollableTabRow(
