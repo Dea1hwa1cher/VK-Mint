@@ -172,7 +172,7 @@ fun VideoMessageCreateScreen(
         isRecording = false
         val cause = event.cause
         if (cause != null) {
-            try { outFile.delete() } catch (_: Exception) {}
+            try { outFile.delete() } catch (e: Exception) { AppLog.w(TAG, "Failed to delete error outFile: ${e.message}") }
             uiState = uiState.copy(camError = cause.message?.takeIf { it.isNotBlank() }
                 ?: "Ошибка записи (${cause.javaClass.simpleName})")
             return
@@ -215,7 +215,7 @@ fun VideoMessageCreateScreen(
     }
 
     fun doReset() {
-        recordedFile?.let { try { it.delete() } catch (_: Exception) {} }
+        recordedFile?.let { try { it.delete() } catch (e: Exception) { AppLog.w(TAG, "Failed to delete recordedFile on reset: ${e.message}") } }
         recordedFile = null
         activeRecording = null
         videoCaptureRef = null

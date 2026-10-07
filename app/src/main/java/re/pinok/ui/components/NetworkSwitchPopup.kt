@@ -224,7 +224,11 @@ fun NetworkSwitchPopup(
                         TextButton(onClick = {
                             app.setNetworkSwitchState(NetworkSwitchState.Idle)
                             dismissed = null
-                            try { app.notifyTokenInvalidated() } catch (_: Exception) {}
+                            try {
+                                app.notifyTokenInvalidated()
+                            } catch (e: Exception) {
+                                AppLog.e("NetworkSwitchPopup", "notifyTokenInvalidated failed", e)
+                            }
                         }) { Text("Войти") }
                     }
                 }

@@ -2226,8 +2226,11 @@ fun ChatDetailScreen(
                 val groupId = -peerId
                 val ok = app.apiClient.groupsLeave(groupId)
                 if (ok) {
-                    // Очищаем диалог из списка (иначе он останется как «прочитанный»).
-                    try { app.apiClient.messagesDeleteConversation(peerId) } catch (_: Exception) {}
+                    try {
+                        app.apiClient.messagesDeleteConversation(peerId)
+                    } catch (e: Exception) {
+                        AppLog.w("ChatDetailScreen", "Failed to delete conversation for left channel: ${e.message}")
+                    }
                     AppLog.i("ChatDetailScreen", "left channel: groupId=$groupId peerId=$peerId")
                     Toast.makeText(ctx, "Вы отписались от канала", Toast.LENGTH_SHORT).show()
                     onBack()

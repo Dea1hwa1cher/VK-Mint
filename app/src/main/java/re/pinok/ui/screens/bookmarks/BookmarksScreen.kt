@@ -138,7 +138,9 @@ fun BookmarksScreen(
     LaunchedEffect(Unit) {
         try {
             tags = app.apiClient.faveGetTagList()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w("BookmarksScreen", "faveGetTagList failed: ${e.message}")
+        }
     }
 
     // Загрузка закладок — перезапускается при смене тега; только в разделе «Закладки VK».

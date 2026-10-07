@@ -175,7 +175,7 @@ class ClipCreateViewModel(
         val wasCanceled = canceled
         activeRecording = null
         if (wasCanceled) {
-            try { outFile.delete() } catch (_: Exception) {}
+            try { outFile.delete() } catch (e: Exception) { AppLog.w(TAG, "Failed to delete canceled outFile: ${e.message}") }
             return
         }
         // cause == null означает успешное завершение записи.
@@ -185,7 +185,7 @@ class ClipCreateViewModel(
                 ?: "Ошибка записи (${cause.javaClass.simpleName})"
         } else null
         if (errorMsg != null) {
-            try { outFile.delete() } catch (_: Exception) {}
+            try { outFile.delete() } catch (e: Exception) { AppLog.w(TAG, "Failed to delete error outFile: ${e.message}") }
             _uiState.update {
                 it.copy(
                     isRecording = false,
@@ -227,12 +227,12 @@ class ClipCreateViewModel(
 
     fun cancelRecording() {
         canceled = true
-        try { activeRecording?.stop() } catch (_: Exception) {}
+        try { activeRecording?.stop() } catch (e: Exception) { AppLog.w(TAG, "Failed to stop recording on cancel: ${e.message}") }
         activeRecording = null
         _uiState.value.recordedUri?.let { uri ->
             try {
                 if (uri.scheme == "file") File(uri.path ?: "").delete()
-            } catch (_: Exception) {}
+            } catch (e: Exception) { AppLog.w(TAG, "Failed to delete file on cancel: ${e.message}") }
         }
         _uiState.update { ClipCreateUiState(lensFacing = it.lensFacing) }
     }
@@ -242,7 +242,7 @@ class ClipCreateViewModel(
         _uiState.value.recordedUri?.let { uri ->
             try {
                 if (uri.scheme == "file") File(uri.path ?: "").delete()
-            } catch (_: Exception) {}
+            } catch (e: Exception) { AppLog.w(TAG, "Failed to delete file on discard: ${e.message}") }
         }
         _uiState.update { ClipCreateUiState(lensFacing = it.lensFacing) }
     }

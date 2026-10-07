@@ -10,6 +10,7 @@ import com.arthenica.ffmpegkit.ReturnCode
 import com.arthenica.ffmpegkit.SessionState
 import re.pinok.util.AppLog
 import java.io.File
+import java.util.Locale
 
 /**
  * §42.12 P0 #2: Siren→AAC транскодер через ffmpeg-kit.
@@ -265,12 +266,10 @@ object SirenTranscoder {
             return
         }
 
+        val ratioStr = if (inputSize > 0) String.format(Locale.US, "%.2f", outSize.toFloat() / inputSize) else "N/A"
         AppLog.i(
             TAG,
-            "transcodeToM4a: SUCCESS — ${outSize / 1024} KB output (${inputSize / 1024} KB input, ratio=${String.format(
-                "%.2f",
-                outSize.toFloat() / inputSize
-            )})"
+            "transcodeToM4a: SUCCESS — ${outSize / 1024} KB output (${inputSize / 1024} KB input, ratio=$ratioStr)"
         )
         completion.complete(true)
     }
