@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import re.pinok.data.model.EqualizerPreset
 import re.pinok.data.model.PlayerState
 import re.pinok.data.model.Track
 import re.pinok.service.PlayerService
@@ -774,56 +773,6 @@ object PlayerConnection {
             _playerState.value = _playerState.value.copy(speed = clamped)
             AppLog.i(TAG, "speed → $clamped")
         }
-    }
-
-    // ─── Эквалайзер (прокси → EqualizerHelper) ───────────────────
-
-    /** Применить пресет эквалайзера. */
-    fun setEqualizerPreset(preset: EqualizerPreset) {
-        EqualizerHelper.applyPreset(preset)
-    }
-
-    /** Включить/выключить эквалайзер. */
-    fun setEqualizerEnabled(enabled: Boolean) {
-        EqualizerHelper.setEnabled(enabled)
-    }
-
-    /** Включён ли эквалайзер. */
-    fun isEqualizerEnabled(): Boolean = EqualizerHelper.isEnabled()
-
-    /** Текущие уровни полос в миллибелах. */
-    fun getEqualizerBands(): List<Short> = EqualizerHelper.getBands()
-
-    /** Установить усиление отдельной полосы. */
-    fun setEqualizerBand(bandIndex: Int, gainMB: Short) {
-        EqualizerHelper.setBand(bandIndex, gainMB)
-    }
-
-    // ─── #REVERB-AUX: PresetReverb — AUX-эффект, без привязки через
-    // Player.setAuxEffectInfo() он НЕ влияет на звук (включается, сохраняется,
-    // но молчит). Обёртки применяют настройку в engine И сразу перепривязывают
-    // AUX на активном плеере. ─────────────────────────────────────────────
-
-    /** Включить/выключить Reverb (+ AUX-привязка). */
-    fun setReverbEnabled(on: Boolean) {
-        EqualizerHelper.engine()?.setReverbEnabled(on)
-        applyReverbAux()
-    }
-
-    /** Выбрать пресет Reverb 0..6 (+ AUX-привязка). */
-    fun setReverbPreset(preset: Int) {
-        EqualizerHelper.engine()?.setReverbPreset(preset)
-        applyReverbAux()
-    }
-
-    /** Перепривязать Reverb AUX после пересоздания engine (смена сессии). */
-    fun rebindReverbAux() = applyReverbAux()
-
-    private fun applyReverbAux() {
-        // #BUILD-AUX: setAuxEffectInfo есть только на ExoPlayer, которым
-        // владеет PlayerService — MediaController этого метода не имеет.
-        // Дёргаем hook, установленный сервисом (привязка к его плееру).
-        EqualizerHelper.auxBindingHook?.invoke()
     }
 
     /** Fix #62: перемешать текущий плейлист и начать воспроизведение с первого трека. */
