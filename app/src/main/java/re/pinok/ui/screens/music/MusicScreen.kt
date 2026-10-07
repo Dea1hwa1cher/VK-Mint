@@ -22,14 +22,21 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MoveToInbox
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.MusicOff
 import androidx.compose.material.icons.filled.Pause
@@ -46,6 +53,11 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -190,7 +202,7 @@ fun MusicScreen(
     // «поле поиска не вызывается». Теперь поиск активен = (tab==1 && query не пуст).
     // Локальная val без геттера: т.к. selectedTab/searchQuery — mutableStateOf,
     // чтение их здесь триггерит рекомпозицию, и searchActive пересчитывается.
-    val searchActive = selectedTab == 0 && searchQuery.isNotBlank()
+    val searchActive = (selectedTab == 0 || selectedTab == 1) && searchQuery.isNotBlank()
 
     // Fix #268: FocusRequester для автофокуса при переходе на вкладку «Моя музыка»
     // с непустым запросом (или при первом показе). Без этого поле не получает
@@ -380,7 +392,7 @@ fun MusicScreen(
         // searchActive становится true → ниже показываются результаты поиска
         // вместо основного контента вкладки. Поле остаётся видимым всегда,
         // чтобы пользователь мог изменить запрос.
-        if (selectedTab == 0) {
+        if (selectedTab == 0 || selectedTab == 1) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = {
@@ -392,21 +404,21 @@ fun MusicScreen(
                 },
                 placeholder = {
                     Text(
-                        "Поиск музыки…",
+                        if (selectedTab == 1) "Поиск в загруженном" else "Поиск в библиотеке",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = vkTextSecondary,
+                        color = Color(0xFF8F858F),
                     )
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
                     .focusRequester(searchFocusRequester),
                 singleLine = true,
                 leadingIcon = {
                     Icon(
                         Icons.Outlined.Search,
                         contentDescription = null,
-                        tint = vkTextSecondary,
+                        tint = Color(0xFFB0A4AF),
                         modifier = Modifier.size(20.dp),
                     )
                 },
@@ -420,20 +432,20 @@ fun MusicScreen(
                                 Icons.Outlined.Close,
                                 contentDescription = "Очистить",
                                 modifier = Modifier.size(18.dp),
-                                tint = vkTextSecondary,
+                                tint = Color(0xFFB0A4AF),
                             )
                         }
                     }
                 },
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = vkTextSecondary.copy(alpha = 0.2f),
-                    focusedBorderColor = vkAccent,
-                    unfocusedContainerColor = vkCard.copy(alpha = 0.5f),
-                    focusedContainerColor = vkCard,
-                    cursorColor = vkAccent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedContainerColor = Color(0xFF1E1B20),
+                    focusedContainerColor = Color(0xFF1E1B20),
+                    cursorColor = Color(0xFFF2DAEE),
                 ),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(color = vkTextPrimary),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
             )
         }
 
@@ -712,6 +724,7 @@ fun MusicScreen(
                 onOpenPlaylists = onOpenPlaylists,
                 onOpenAlbums = onOpenAlbums,
                 onOpenArtists = onOpenArtists,
+                onOpenDownloaded = { selectedTab = 1 },
                 // Волна 31 #AUDIO-QUEUE-PLAYLIST: очередь из «Моей музыки» —
                 // все загруженные пейджером треки + append новых страниц в живую
                 // очередь (fromMyMusic=true).
@@ -738,42 +751,59 @@ fun MusicScreen(
                     moreMenuExpanded = true
                 },
             )
-            1 -> MusicHomeTab(
-                tracks = tracks,
-                loading = loading,
-                playerState = playerState,
+            1 -> MusicDownloadedTab(
                 downloads = downloads,
+                libraryTracks = tracks,
+                playerState = playerState,
                 cardColor = vkCard,
                 textColor = vkTextPrimary,
                 secondaryColor = vkTextSecondary,
                 accentColor = vkAccent,
-                apiErrorMessage = apiErrorMessage,
-                // Волна 31 #AUDIO-QUEUE-PLAYLIST: вкладка «Главная» играет из того
-                // же списка «Моей музыки» — очередь тоже appendable (fromMyMusic).
-                onPlayTrack = { idx ->
-                    if (tracks.isNotEmpty()) {
-                        PlayerConnection.playTrackList(tracks, idx.coerceIn(0, tracks.lastIndex), fromMyMusic = true)
-                    }
-                },
-                onToggleTrack = { track ->
+                onPlayTrack = { track ->
                     val isCurrent = track.id == playerState.currentTrack?.id &&
                         track.ownerId == playerState.currentTrack?.ownerId
                     if (isCurrent) {
                         PlayerConnection.togglePlayPause()
                     } else {
-                        PlayerConnection.playTrackList(tracks, tracks.indexOf(track), fromMyMusic = true)
+                        val downloadedTrackList = downloads.values
+                            .filter { it.isCompleted }
+                            .map { ds ->
+                                val lib = tracks.find { it.id == ds.trackId }
+                                Track(
+                                    id = ds.trackId,
+                                    ownerId = ds.ownerId,
+                                    artist = ds.artist,
+                                    title = ds.title,
+                                    duration = lib?.duration ?: 0,
+                                    albumThumb = lib?.albumThumb,
+                                )
+                            }
+                        val idx = downloadedTrackList.indexOfFirst { it.id == track.id }
+                        PlayerConnection.playTrackList(downloadedTrackList, if (idx >= 0) idx else 0)
                     }
                 },
-                onDownloadToggle = { track ->
-                    val dl = downloads[track.id]
-                    if (dl?.isCompleted == true || dl?.isInProgress == true) {
-                        TrackDownloadManager.removeDownload(track.id)
-                    } else {
-                        TrackDownloadManager.enqueueDownload(track)
+                onShuffleAll = {
+                    val downloadedTrackList = downloads.values
+                        .filter { it.isCompleted }
+                        .map { ds ->
+                            val lib = tracks.find { it.id == ds.trackId }
+                            Track(
+                                id = ds.trackId,
+                                ownerId = ds.ownerId,
+                                artist = ds.artist,
+                                title = ds.title,
+                                duration = lib?.duration ?: 0,
+                                albumThumb = lib?.albumThumb,
+                            )
+                        }
+                    if (downloadedTrackList.isNotEmpty()) {
+                        PlayerConnection.shuffleAll(downloadedTrackList)
                     }
                 },
-                onPlaylistClick = { pl -> openPlaylistAndPlay(pl) },
-                onShowAll = onShowAll,
+                onMoreClick = { track ->
+                    moreMenuTrack = track
+                    moreMenuExpanded = true
+                },
             )
             2 -> DiscoverTab(
                 textColor = vkTextPrimary,
@@ -1244,29 +1274,46 @@ private fun MusicTabsBar(
     textColor: Color,
     secondaryColor: Color,
 ) {
-    val tabs = listOf("Моя музыка", "Главная", "Обзор", "Обновления", "Радио")
-
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(top = 10.dp, bottom = 6.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Fix #258: inline поиск убран — теперь в TopAppBar.
-        // Горизонтальный скроллируемый ряд вкладок
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
-            contentPadding = PaddingValues(horizontal = 4.dp),
+        val isLibrary = selectedTab == 0
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(if (isLibrary) Color(0xFF382F37) else Color.Transparent)
+                .clickable { onTabSelected(0) }
+                .padding(horizontal = 22.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            items(tabs.size) { idx ->
-                MusicTab(
-                    name = tabs[idx],
-                    isActive = selectedTab == idx,
-                    textColor = textColor,
-                    secondaryColor = secondaryColor,
-                    onClick = { onTabSelected(idx) },
-                )
-            }
+            Text(
+                text = "Библиотека",
+                color = if (isLibrary) Color(0xFFF2DAEE) else textColor,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        val isDownloaded = selectedTab == 1
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(if (isDownloaded) Color(0xFF382F37) else Color.Transparent)
+                .clickable { onTabSelected(1) }
+                .padding(horizontal = 22.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "Загружено",
+                color = if (isDownloaded) Color(0xFFF2DAEE) else textColor,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
@@ -1301,6 +1348,80 @@ private fun MusicTab(
     }
 }
 
+// ─── Режим сортировки треков ────────────────────────────────────────────────
+enum class TrackSortOrder(val title: String) {
+    DEFAULT("по умолчанию"),
+    NEWEST_FIRST("сначала новые"),
+    OLDEST_FIRST("сначала старые"),
+    BY_TITLE("по названию"),
+    BY_ARTIST("по исполнителю"),
+}
+
+// ─── Плейсхолдер сдвоенных нот из VK Music ───────────────────────────────────
+@Composable
+private fun DualNotesPlaceholder(
+    modifier: Modifier = Modifier,
+    tint: Color = Color.White.copy(alpha = 0.85f),
+) {
+    Canvas(modifier = modifier.size(22.dp)) {
+        val w = size.width
+        val h = size.height
+
+        val headRadiusX = w * 0.15f
+        val headRadiusY = headRadiusY(w, h)
+
+        // Левая нотная головка
+        val leftHeadCenter = Offset(w * 0.28f, h * 0.78f)
+        drawOval(
+            color = tint,
+            topLeft = Offset(leftHeadCenter.x - headRadiusX, leftHeadCenter.y - headRadiusY),
+            size = androidx.compose.ui.geometry.Size(headRadiusX * 2, headRadiusY * 2),
+        )
+
+        // Правая нотная головка
+        val rightHeadCenter = Offset(w * 0.72f, h * 0.68f)
+        drawOval(
+            color = tint,
+            topLeft = Offset(rightHeadCenter.x - headRadiusX, rightHeadCenter.y - headRadiusY),
+            size = androidx.compose.ui.geometry.Size(headRadiusX * 2, headRadiusY * 2),
+        )
+
+        // Левый штиль
+        val stemWidth = 1.8.dp.toPx()
+        val leftStemX = leftHeadCenter.x + headRadiusX * 0.7f
+        val leftStemTop = h * 0.22f
+        drawLine(
+            color = tint,
+            start = Offset(leftStemX, leftHeadCenter.y),
+            end = Offset(leftStemX, leftStemTop),
+            strokeWidth = stemWidth,
+            cap = StrokeCap.Round,
+        )
+
+        // Правый штиль
+        val rightStemX = rightHeadCenter.x + headRadiusX * 0.7f
+        val rightStemTop = h * 0.14f
+        drawLine(
+            color = tint,
+            start = Offset(rightStemX, rightHeadCenter.y),
+            end = Offset(rightStemX, rightStemTop),
+            strokeWidth = stemWidth,
+            cap = StrokeCap.Round,
+        )
+
+        // Связующая перекладина (вязка)
+        drawLine(
+            color = tint,
+            start = Offset(leftStemX, leftStemTop),
+            end = Offset(rightStemX, rightStemTop),
+            strokeWidth = stemWidth * 1.5f,
+            cap = StrokeCap.Round,
+        )
+    }
+}
+
+private fun headRadiusY(w: Float, h: Float): Float = h * 0.11f
+
 // ─── Вкладка «Моя музыка»: меню + мои треки с пагинацией ─────────────────────
 
 @Composable
@@ -1322,6 +1443,7 @@ private fun MusicMyTracksTab(
     onOpenPlaylists: () -> Unit = {},
     onOpenAlbums: () -> Unit = {},
     onOpenArtists: () -> Unit = {},
+    onOpenDownloaded: () -> Unit = {},
     onShuffleAll: () -> Unit,
     onPlayTrack: (Track) -> Unit,
     onDownloadToggle: (Track) -> Unit,
@@ -1332,12 +1454,25 @@ private fun MusicMyTracksTab(
     val hasCurrentInList = currentTrack != null &&
         tracks.any { it.id == currentTrack.id && it.ownerId == currentTrack.ownerId }
 
+    var sortOrder by remember { mutableStateOf(TrackSortOrder.DEFAULT) }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
+
+    val displayedTracks = remember(tracks, sortOrder) {
+        when (sortOrder) {
+            TrackSortOrder.DEFAULT -> tracks
+            TrackSortOrder.NEWEST_FIRST -> tracks
+            TrackSortOrder.OLDEST_FIRST -> tracks.reversed()
+            TrackSortOrder.BY_TITLE -> tracks.sortedBy { it.title.lowercase() }
+            TrackSortOrder.BY_ARTIST -> tracks.sortedBy { it.artist.lowercase() }
+        }
+    }
+
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = if (playerState.currentTrack != null) 100.dp else 16.dp),
     ) {
-        // ─── Меню разделов (Недавнее / Плейлисты / Альбомы / ...) ───
+        // ─── Меню разделов (7 сквиркл-категорий) ───
         item {
             MyMusicMenuList(
                 textColor = textColor,
@@ -1346,92 +1481,150 @@ private fun MusicMyTracksTab(
                 onOpenPlaylists = onOpenPlaylists,
                 onOpenAlbums = onOpenAlbums,
                 onOpenArtists = onOpenArtists,
+                onOpenDownloaded = onOpenDownloaded,
             )
         }
 
-        // ─── Заголовок «Мои треки» + счётчик + «Перемешать все» ───
+        // ─── Заголовок «Мои треки» + счётчик + селектор сортировки ───
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "Мои треки",
-                    color = textColor,
-                    fontSize = 18.sp,
+                    color = Color.White,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    // #AUDIO-COUNTER-HONEST (волна 43): VK total — НЕ истина, а
-                    // приблизительная оценка (VK считает в count дубли собственного
-                    // листинга — лог 2026-09-13: raw-обход 3239, уникальных 3079,
-                    // 160 дублей; бывает и занижен — волна 38). Пока идёт обход —
-                    // показываем с «~»; после полного обхода (hasMore=false) точным
-                    // числом уникальных треков: оно и есть истина.
                     text = when {
                         hasMore && totalCount > 0 -> "${tracks.size} / ~$totalCount"
                         hasMore -> "${tracks.size}…"
                         else -> "${tracks.size}"
                     },
-                    color = secondaryColor,
+                    color = Color(0xFF9E96A0),
                     fontSize = 14.sp,
                 )
                 Spacer(modifier = Modifier.weight(1f))
+
                 // Кнопка «К треку» — прокрутка к текущему играющему треку
                 if (hasCurrentInList) {
                     val target = currentTrack // captured val
                     Row(
                         modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
                             .clickable {
-                                val idx = tracks.indexOfFirst {
+                                val idx = displayedTracks.indexOfFirst {
                                     it.id == target.id && it.ownerId == target.ownerId
                                 }
                                 if (idx >= 0) {
-                                    // LazyColumn items: 0=меню, 1=заголовок, 2...=треки
-                                    val targetIndex = 2 + idx
+                                    // LazyColumn items: 0=меню, 1=заголовок, 2=перемешать, 3...=треки
+                                    val targetIndex = 3 + idx
                                     scope.launch { listState.animateScrollToItem(targetIndex) }
                                 }
                             }
-                            .padding(end = 12.dp),
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = Icons.Filled.GraphicEq,
                             contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(18.dp),
+                            tint = Color(0xFFF2DAEE),
+                            modifier = Modifier.size(16.dp),
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "К треку",
-                            color = accentColor,
+                            color = Color(0xFFF2DAEE),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                         )
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                // Перемешать все
-                Row(
-                    modifier = Modifier.clickable(onClick = onShuffleAll),
-                    verticalAlignment = Alignment.CenterVertically,
+
+                // Селектор сортировки «по умолчанию ⌵»
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { sortMenuExpanded = true }
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = sortOrder.title,
+                            color = Color(0xFF9E96A0),
+                            fontSize = 13.sp,
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowDown,
+                            contentDescription = "Сортировка",
+                            tint = Color(0xFF9E96A0),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false },
+                        modifier = Modifier.background(Color(0xFF282329)),
+                    ) {
+                        TrackSortOrder.entries.forEach { order ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = order.title,
+                                        color = if (sortOrder == order) Color(0xFFF2DAEE) else Color.White,
+                                        fontWeight = if (sortOrder == order) FontWeight.Bold else FontWeight.Normal,
+                                    )
+                                },
+                                onClick = {
+                                    sortOrder = order
+                                    sortMenuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ─── Пункт «Перемешать» (первый элемент списка треков со сквирклом) ───
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onShuffleAll)
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFF282329)),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Shuffle,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Перемешать все",
-                        color = accentColor,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
+                        contentDescription = "Перемешать",
+                        tint = Color(0xFFF2DAEE),
+                        modifier = Modifier.size(22.dp),
                     )
                 }
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "Перемешать",
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
+                )
             }
         }
 
@@ -1469,7 +1662,7 @@ private fun MusicMyTracksTab(
         }
 
         // ─── Список треков ───
-        items(tracks, key = { "${it.ownerId}_${it.id}" }) { track ->
+        items(displayedTracks, key = { "${it.ownerId}_${it.id}" }) { track ->
             val current = playerState.currentTrack
             val isCurrent = current != null &&
                 track.id == current.id &&
@@ -1532,6 +1725,7 @@ private fun MyMusicMenuList(
     onOpenPlaylists: () -> Unit = {},
     onOpenAlbums: () -> Unit = {},
     onOpenArtists: () -> Unit = {},
+    onOpenDownloaded: () -> Unit = {},
 ) {
     val app = SovaApp.get()
     val scope = rememberCoroutineScope()
@@ -1971,54 +2165,144 @@ private fun MyMusicMenuList(
         )
     }
 
-    val accentColor = MaterialTheme.colorScheme.primary
+    var showRecentDialog by remember { mutableStateOf(false) }
+    var showTransferDialog by remember { mutableStateOf(false) }
+    var showSubscriptionDialog by remember { mutableStateOf(false) }
+
+    if (showRecentDialog) {
+        AlertDialog(
+            onDismissRequest = { showRecentDialog = false },
+            containerColor = Color(0xFF282329),
+            shape = RoundedCornerShape(16.dp),
+            title = {
+                Text(
+                    text = "Недавнее",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                Text(
+                    text = "История недавно воспроизведённых треков сохраняется автоматически во время прослушивания.",
+                    color = Color(0xFFDDD5DC),
+                    fontSize = 14.sp,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showRecentDialog = false }) {
+                    Text("Понятно", color = Color(0xFFF2DAEE))
+                }
+            },
+        )
+    }
+
+    if (showTransferDialog) {
+        AlertDialog(
+            onDismissRequest = { showTransferDialog = false },
+            containerColor = Color(0xFF282329),
+            shape = RoundedCornerShape(16.dp),
+            title = {
+                Text(
+                    text = "Перенос из других сервисов",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                Text(
+                    text = "Перенос вашей медиатеки из сторонних сервисов (Яндекс Музыка, Spotify, Apple Music) доступен через официальный инструмент в веб-версии VK Музыки.",
+                    color = Color(0xFFDDD5DC),
+                    fontSize = 14.sp,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showTransferDialog = false }) {
+                    Text("Понятно", color = Color(0xFFF2DAEE))
+                }
+            },
+        )
+    }
+
+    if (showSubscriptionDialog) {
+        AlertDialog(
+            onDismissRequest = { showSubscriptionDialog = false },
+            containerColor = Color(0xFF282329),
+            shape = RoundedCornerShape(16.dp),
+            title = {
+                Text(
+                    text = "Подписка на VK Музыку",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                Text(
+                    text = "В приложении PinoK вся музыка доступна без аудиорекламы и без ограничений на фоновое воспроизведение.",
+                    color = Color(0xFFDDD5DC),
+                    fontSize = 14.sp,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showSubscriptionDialog = false }) {
+                    Text("Отлично", color = Color(0xFFF2DAEE))
+                }
+            },
+        )
+    }
+
     val menuItems = listOf(
-        Triple("Недавнее", Icons.Outlined.AccessTime, accentColor),
-        Triple("Плейлисты", Icons.Filled.MusicNote, accentColor),
-        Triple("Альбомы", Icons.Outlined.Album, accentColor),
-        Triple("Артисты и кураторы", Icons.Outlined.Person, accentColor),
-        Triple("Скачанная музыка", Icons.Filled.DownloadDone, accentColor),
+        Pair("Недавнее", Icons.Filled.History),
+        Pair("Плейлисты", Icons.AutoMirrored.Filled.QueueMusic),
+        Pair("Альбомы", Icons.Filled.Album),
+        Pair("Артисты и кураторы", Icons.AutoMirrored.Filled.PlaylistAddCheck),
+        Pair("Скачанная музыка", Icons.Filled.DownloadDone),
+        Pair("Перенос из других сервисов", Icons.Filled.MoveToInbox),
+        Pair("Подписка на VK Музыку", Icons.Filled.GraphicEq),
     )
-    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-        menuItems.forEach { (title, icon, tint) ->
+    Column(modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)) {
+        menuItems.forEach { (title, icon) ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
                     .clickable {
-                        // #MUSIC-PORT: навигация на экраны библиотеки вместо диалогов.
                         when (title) {
+                            "Недавнее" -> showRecentDialog = true
                             "Плейлисты" -> onOpenPlaylists()
                             "Альбомы" -> onOpenAlbums()
                             "Артисты и кураторы" -> onOpenArtists()
-                            "Скачанная музыка" -> showDownloaded = true
+                            "Скачанная музыка" -> onOpenDownloaded()
+                            "Перенос из других сервисов" -> showTransferDialog = true
+                            "Подписка на VK Музыку" -> showSubscriptionDialog = true
                         }
                     }
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(tint.copy(alpha = 0.15f)),
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFF282329)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = tint,
-                        modifier = Modifier.size(20.dp),
+                        tint = Color(0xFFF2DAEE),
+                        modifier = Modifier.size(22.dp),
                     )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = title,
-                    color = textColor,
+                    color = Color.White,
                     fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal,
                     modifier = Modifier.weight(1f),
                 )
-                Text("›", color = secondaryColor, fontSize = 18.sp)
             }
         }
     }
@@ -2679,23 +2963,16 @@ private fun VKTrackRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onPlayClick)
-                .background(if (isCurrent) cardColor.copy(alpha = 0.5f) else Color.Transparent)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .background(if (isCurrent) Color(0xFF382F37).copy(alpha = 0.5f) else Color.Transparent)
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Обложка трека
+            // Обложка трека: сквиркл 44x44dp, 10dp скругление
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.hsl((abs(track.artist.hashCode()) % 360).toFloat(), 0.55f, 0.45f),
-                                Color.hsl(((abs(track.artist.hashCode() * 31)) % 360).toFloat(), 0.45f, 0.55f),
-                            ),
-                        ),
-                    ),
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF1E1B20)),
                 contentAlignment = Alignment.Center,
             ) {
                 val albumThumb = track.albumThumb
@@ -2706,55 +2983,70 @@ private fun VKTrackRow(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                     )
-                } else {
+                } else if (isPlaying) {
                     Icon(
-                        imageVector = if (isPlaying) Icons.Filled.GraphicEq else Icons.Filled.MusicNote,
+                        imageVector = Icons.Filled.GraphicEq,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.85f),
+                        tint = Color(0xFFF2DAEE),
                         modifier = Modifier.size(22.dp),
                     )
+                } else {
+                    DualNotesPlaceholder()
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             // Название + артист
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = track.title,
-                    color = if (isCurrent) accentColor else textColor,
+                    color = if (isCurrent) Color(0xFFF2DAEE) else Color.White,
                     fontSize = 15.sp,
-                    fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                    fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = track.artist,
-                    color = secondaryColor,
+                    color = Color(0xFF9E96A0),
                     fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
 
-            // Длительность
-            Text(
-                text = track.duration.toDurationString(),
-                color = secondaryColor,
-                fontSize = 12.sp,
-            )
+            Spacer(modifier = Modifier.width(8.dp))
 
-            // Кнопка скачивания (4 состояния)
-            VKDownloadButton(state = downloadState, onClick = onDownloadClick, accentColor = accentColor, secondaryColor = secondaryColor)
+            // Длительность + кнопка скачивания (если активна) + меню ⋮
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (downloadState != null) {
+                    VKDownloadButton(
+                        state = downloadState,
+                        onClick = onDownloadClick,
+                        accentColor = accentColor,
+                        secondaryColor = secondaryColor,
+                    )
+                }
 
-            // Троеточие-меню — открывает AudioMoreMenu (Fix #86).
-            IconButton(onClick = onMoreClick, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "Ещё",
-                    tint = secondaryColor,
-                    modifier = Modifier.size(20.dp),
+                Text(
+                    text = track.duration.toDurationString(),
+                    color = Color(0xFF9E96A0),
+                    fontSize = 13.sp,
                 )
+
+                IconButton(
+                    onClick = onMoreClick,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Ещё",
+                        tint = Color(0xFF9E96A0),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
 
@@ -2768,6 +3060,221 @@ private fun VKTrackRow(
                 color = accentColor,
                 trackColor = Color.Transparent,
             )
+        }
+    }
+}
+
+// ─── Вкладка «Загружено» (офлайн музыка) ──────────────────────────────────────
+
+@Composable
+private fun MusicDownloadedTab(
+    downloads: Map<Long, DownloadState>,
+    libraryTracks: List<Track>,
+    playerState: re.pinok.data.model.PlayerState,
+    cardColor: Color,
+    textColor: Color,
+    secondaryColor: Color,
+    accentColor: Color,
+    onPlayTrack: (Track) -> Unit,
+    onShuffleAll: () -> Unit,
+    onMoreClick: (Track) -> Unit,
+) {
+    val downloadedList = remember(downloads, libraryTracks) {
+        downloads.values
+            .filter { it.isCompleted }
+            .map { ds ->
+                val lib = libraryTracks.find { it.id == ds.trackId }
+                Track(
+                    id = ds.trackId,
+                    ownerId = ds.ownerId,
+                    artist = ds.artist,
+                    title = ds.title,
+                    duration = lib?.duration ?: 0,
+                    albumThumb = lib?.albumThumb,
+                )
+            }
+    }
+
+    var sortOrder by remember { mutableStateOf(TrackSortOrder.DEFAULT) }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
+
+    val displayedTracks = remember(downloadedList, sortOrder) {
+        when (sortOrder) {
+            TrackSortOrder.DEFAULT -> downloadedList
+            TrackSortOrder.NEWEST_FIRST -> downloadedList.reversed()
+            TrackSortOrder.OLDEST_FIRST -> downloadedList
+            TrackSortOrder.BY_TITLE -> downloadedList.sortedBy { it.title.lowercase() }
+            TrackSortOrder.BY_ARTIST -> downloadedList.sortedBy { it.artist.lowercase() }
+        }
+    }
+
+    if (downloadedList.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF282329)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DownloadDone,
+                        contentDescription = null,
+                        tint = Color(0xFFF2DAEE),
+                        modifier = Modifier.size(32.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Нет скачанной музыки",
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Треки, сохранённые для офлайн-прослушивания, появятся здесь",
+                    color = Color(0xFF9E96A0),
+                    fontSize = 14.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = if (playerState.currentTrack != null) 100.dp else 16.dp),
+        ) {
+            // Header
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Скачанная музыка",
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${downloadedList.size}",
+                        color = Color(0xFF9E96A0),
+                        fontSize = 14.sp,
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { sortMenuExpanded = true }
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = sortOrder.title,
+                                color = Color(0xFF9E96A0),
+                                fontSize = 13.sp,
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Icon(
+                                imageVector = Icons.Filled.KeyboardArrowDown,
+                                contentDescription = "Сортировка",
+                                tint = Color(0xFF9E96A0),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false },
+                            modifier = Modifier.background(Color(0xFF282329)),
+                        ) {
+                            TrackSortOrder.entries.forEach { order ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = order.title,
+                                            color = if (sortOrder == order) Color(0xFFF2DAEE) else Color.White,
+                                            fontWeight = if (sortOrder == order) FontWeight.Bold else FontWeight.Normal,
+                                        )
+                                    },
+                                    onClick = {
+                                        sortOrder = order
+                                        sortMenuExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Shuffle row
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onShuffleAll)
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFF282329)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Shuffle,
+                            contentDescription = "Перемешать",
+                            tint = Color(0xFFF2DAEE),
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "Перемешать",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                    )
+                }
+            }
+
+            items(displayedTracks, key = { "dl_${it.ownerId}_${it.id}" }) { track ->
+                val current = playerState.currentTrack
+                val isCurrent = current != null &&
+                    track.id == current.id &&
+                    track.ownerId == current.ownerId
+                val isPlaying = isCurrent && playerState.isPlaying
+                val dl = downloads[track.id]
+                VKTrackRow(
+                    track = track,
+                    isCurrent = isCurrent,
+                    isPlaying = isPlaying,
+                    downloadState = dl,
+                    cardColor = cardColor,
+                    accentColor = accentColor,
+                    textColor = textColor,
+                    secondaryColor = secondaryColor,
+                    onPlayClick = { onPlayTrack(track) },
+                    onDownloadClick = {
+                        TrackDownloadManager.removeDownload(track.id)
+                    },
+                    onMoreClick = { onMoreClick(track) },
+                )
+            }
         }
     }
 }
