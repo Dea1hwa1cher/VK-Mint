@@ -920,6 +920,87 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
      * @return true если миграция применила новые дефолты, false если уже применена
      *         или пользователь настраивал панель сам.
      */
+    suspend fun migrateAllStartupDefaults(): Boolean {
+        val snap = ds.data.first()
+        val curV2 = snap[Keys.PANEL_DEFAULTS_V2] ?: 0
+        val curV3 = snap[Keys.PANEL_DEFAULTS_V3] ?: 0
+        val curV4 = snap[Keys.PANEL_DEFAULTS_V4] ?: 0
+        val curPush = snap[Keys.PUSH_GROUPING_MIGRATED] ?: 0
+        val curRead = snap[Keys.READ_RECEIPTS_MIGRATED] ?: 0
+        val curLockerBg = snap[Keys.LOCKER_BG_MIGRATED] ?: 0
+        val curLockerDep = snap[Keys.LOCKER_DEP_MIGRATED] ?: 0
+
+        val needsV2 = curV2 < 1
+        val needsV3 = curV3 < 1
+        val needsV4 = curV4 < 1
+        val needsPush = curPush < 1
+        val needsRead = curRead < 1
+        val needsLockerBg = curLockerBg < 1
+        val needsLockerDep = curLockerDep < 1
+
+        if (!needsV2 && !needsV3 && !needsV4 && !needsPush && !needsRead && !needsLockerBg && !needsLockerDep) {
+            return false
+        }
+
+        ds.edit { p ->
+            if (needsV2) {
+                val userOrder = snap[Keys.BOTTOMBAR_ITEMS_ORDER]
+                val userHidden = snap[Keys.BOTTOMBAR_ITEMS_HIDDEN]
+                val userTouched = userOrder != null || (userHidden != null && userHidden != "[]")
+                if (!userTouched) {
+                    p[Keys.BOTTOMBAR_ITEMS_ORDER] = BOTTOMBAR_DEFAULT_ORDER
+                    p[Keys.BOTTOMBAR_ITEMS_HIDDEN] = BOTTOMBAR_DEFAULT_HIDDEN
+                }
+                p[Keys.PANEL_DEFAULTS_V2] = 1
+            }
+            if (needsV3) {
+                p[Keys.SIDEBAR_ITEMS_ORDER] = SIDEBAR_DEFAULT_ORDER
+                p[Keys.SIDEBAR_ITEMS_HIDDEN] = "[]"
+                p[Keys.BOTTOMBAR_ITEMS_ORDER] = BOTTOMBAR_DEFAULT_ORDER
+                p[Keys.BOTTOMBAR_ITEMS_HIDDEN] = BOTTOMBAR_DEFAULT_HIDDEN
+                p[Keys.PANEL_DEFAULTS_V3] = 1
+            }
+            if (needsV4) {
+                p[Keys.SIDEBAR_ITEMS_ORDER] = SIDEBAR_DEFAULT_ORDER
+                p[Keys.SIDEBAR_ITEMS_HIDDEN] = "[]"
+                p[Keys.BOTTOMBAR_ITEMS_ORDER] = BOTTOMBAR_DEFAULT_ORDER
+                p[Keys.BOTTOMBAR_ITEMS_HIDDEN] = BOTTOMBAR_DEFAULT_HIDDEN
+                p[Keys.PANEL_DEFAULTS_V4] = 1
+            }
+            if (needsPush) {
+                val currentMode = snap[Keys.PUSH_GROUPING_MODE]
+                val shouldReset = currentMode == null || currentMode == "category"
+                if (shouldReset) {
+                    p[Keys.PUSH_GROUPING_MODE] = "none"
+                }
+                p[Keys.PUSH_GROUPING_MIGRATED] = 1
+            }
+            if (needsRead) {
+                val stored = snap[Keys.MSG_READ_RECEIPTS]
+                if (stored == false) {
+                    p[Keys.MSG_READ_RECEIPTS] = true
+                }
+                p[Keys.READ_RECEIPTS_MIGRATED] = 1
+            }
+            if (needsLockerBg) {
+                val pinSet = (snap[Keys.LOCKER_ENABLED] == true) && !(snap[Keys.LOCKER_PIN_HASH].isNullOrBlank())
+                if (pinSet && snap[Keys.LOCKER_ON_BACKGROUND] == false) {
+                    p[Keys.LOCKER_ON_BACKGROUND] = true
+                }
+                p[Keys.LOCKER_BG_MIGRATED] = 1
+            }
+            if (needsLockerDep) {
+                val bioWasOn = snap[Keys.LOCKER_BIOMETRIC] == true
+                val pinNotSet = snap[Keys.LOCKER_PIN_HASH].isNullOrBlank()
+                val bgWasOnWithoutPin = pinNotSet && snap[Keys.LOCKER_ON_BACKGROUND] == true
+                if (bioWasOn) p[Keys.LOCKER_BIOMETRIC] = false
+                if (bgWasOnWithoutPin) p[Keys.LOCKER_ON_BACKGROUND] = false
+                p[Keys.LOCKER_DEP_MIGRATED] = 1
+            }
+        }
+        return true
+    }
+
     suspend fun migratePanelDefaultsV2(): Boolean {
         val snap = ds.data.first()
         val cur = snap[Keys.PANEL_DEFAULTS_V2] ?: 0

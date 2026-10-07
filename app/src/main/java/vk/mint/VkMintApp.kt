@@ -948,29 +948,26 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
         // UI (SettingsScreen LoggingTab) обновляет множество через
         // prefs.setLogCategoriesDisabled() + AppLog.setCategoryEnabled() —
         // изменения применяются мгновенно (без перезапуска приложения).
-        // P3.10: ANR-риск — runBlocking на Main thread (DataStore.first() + применение
-        // настроек логирования). На медленных устройствах ~0.5-2с. НЕ выношу в
-        // coroutine: блок-комментарий выше явно требует загрузки ДО любого другого
-        // логирования (AppLog.log проверяет enabledCategories перед записью).
-        // Безопасный минимум — measureTimeMillis + AppLog.d для мониторинга регрессий.
-        val logCfgMs = measureTimeMillis {
+        // P3.10: ANR-риск — объединённый runBlocking на Main thread (DataStore.first()
+        // + применение настроек логирования + единая транзакция миграций дефолтов
+        // + инициализация prefsSnapshot seed).
+        // Объединение 3 раздельных runBlocking (лог-конфиг, 7 миграций, seed) в один
+        // атомарный блок сокращает дисковый I/O на холодном старте с 9-16 транзакций до
+        // ровно 1 чтения (0 записей при повторных запусках).
+        lateinit var initialSnap: VkMintPrefs.Snapshot
+        val startupPrefsMs = measureTimeMillis {
             runBlocking {
+                val snap = prefs.data.first()
                 runCatching {
-                    val snap = prefs.data.first()
                     AppLog.applyDisabledCategories(snap.logCategoriesDisabled)
                     // #LOG-SECTIONS (волна 31-f): CSV выключенных секций → гейты
                     // AppLog (префикс тега/сообщения). Пустой CSV = все секции
-                    // логируются (дефолт). Изменение из SettingsScreen применяется
-                    // немедленно (AppLog.setDisabledSections сразу после записи префа).
+                    // логируются (дефолт).
                     AppLog.setDisabledSections(parseLogSectionsOff(snap.logSectionsOff))
                     // #LOG-ERRORS-ONLY (2026-09-30): quiet mode - only ERROR logged.
                     AppLog.setErrorsOnly(snap.logErrorsOnly)
                     // #LOG-CONFIG (2026-10-01): применение сохранённых настроек хранения
-                    // логов при старте приложения. Читаем snapshot prefs (уже получен
-                    // выше как `snap` в этом же runBlocking) и применяем ротацию/буфер/
-                    // retention/автоочистку через AppLog.applyLogConfig. При
-                    // retentionDays>0 это сразу запускает cleanupByRetention() —
-                    // синхронно, как все остальные первичные настройки в этом блоке.
+                    // логов при старте приложения.
                     AppLog.applyLogConfig(
                         maxBytes = snap.logMaxSizeBytes,
                         bufferCapacity = snap.logBufferCapacity,
@@ -981,9 +978,20 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
                     android.util.Log.w("VK Mint/VkMintApp",
                         "loadLogCategories failed: ${e.message} — default (critical only: AUTH+SYSTEM+NETWORK) used")
                 }
+
+                // Атомарное применение всех миграций стартовых дефолтов за одну транзакцию DataStore
+                val migrated = prefs.migrateAllStartupDefaults()
+                if (migrated) {
+                    AppLog.i("VkMintApp", "Startup migrations applied in single transaction")
+                    initialSnap = prefs.data.first()
+                } else {
+                    initialSnap = snap
+                }
             }
         }
-        AppLog.d("VkMintApp", "P3.10: log-config runBlocking took ${logCfgMs}ms (Main thread, ANR risk if >2000ms)")
+        prefsSnapshot = initialSnap   // Fix #336: seed synchronous cache
+        AppLog.d("VkMintApp", "P3.10: combined startup prefs runBlocking took ${startupPrefsMs}ms (Main thread)")
+        android.util.Log.i("VK Mint/Startup", "P3.10: combined startup prefs runBlocking took ${startupPrefsMs}ms (Main thread)")
 
         // 1b. Прогрев CookieManager для обнаружения сессии VK из внешнего браузера.
         //     CookieManager лениво загружает cookies из хранилища — без прогрева
@@ -994,79 +1002,9 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
         // 2. HTTP client — VK Android User-Agent (dynamic, VK Mint RE format).
         //    VK API отбрасывает не-официальные клиенты по UA (error 15 на messages.*).
         //    Хардкод заменён на VkUserAgent.get() — формат идентичен VK.app.
-        //
-        //    #44: Interceptor уважает UA, уже заданный запросом — WebTokenAuth
-        //    стучится на login.vk.com (WEB-flow endpoint) с Chrome UA, и этот UA
-        //    НЕ должен перетираться VKAndroidApp/... иначе VK отдаёт 401 invalid_request
-        //    (layer: LayerAnonymTokenHandler). Аналогично X-VK-Android-Client ставится
-        //    только для api.vk.com — web-эндпоинты его не ждут.
-        //
-        //    #29 (закрытие хвостов): SSL pinning, AdBlock, away.php bypass —
-        //    читаем prefs ОДИН раз синхронно через runBlocking для initial config,
-        //    interceptors будут перечитывать prefs на каждый запрос.
         val ua = VkUserAgent.get(this)
         AppLog.i("VkMintApp", "User-Agent: $ua")
-        // #BOTTOM-DEFAULT-4: миграция дефолта нижней панели (5→4 кнопки).
-        // Применяется только если пользователь не настраивал панель сам.
-        // P3.10: ANR-риск — runBlocking на Main thread (последовательные миграции
-        // DataStore). На медленных устройствах ~0.5-1.5с. НЕ выношу в coroutine:
-        // миграции должны примениться ДО первого рендера UI, иначе пользователь
-        // увидит старые дефолты панелей/пушей/локера на первом кадре. Безопасный
-        // минимум — measureTimeMillis + AppLog.d для мониторинга регрессий.
-        val migrationsMs = measureTimeMillis {
-            runBlocking {
-                val migrated = prefs.migratePanelDefaultsV2()
-                if (migrated) AppLog.i("VkMintApp", "Panel defaults v2 migration: applied (4-button bottom bar)")
-                // #PANELEDIT (2026-10-02): миграция под НОВЫЙ набор пунктов панелей
-                // (PanelItems.key вместо Screen.route) — сбрасывает обе панели на
-                // канонический список пользователя (дубли «мессенджер»/«сообщения»,
-                // спец-пункт «реакции»).
-                val panelV3 = prefs.migratePanelDefaultsV3()
-                if (panelV3) AppLog.i("VkMintApp", "Panel defaults v3 migration: applied (PanelItems canonical set)")
-                // #VK-CANONICAL-BOTTOM-NAV (2026-10-07): миграция под каноническую структуру VK
-                // (Главная, Сервисы, Мессенджер, Клипы, Профиль) в нижней панели.
-                val panelV4 = prefs.migratePanelDefaultsV4()
-                if (panelV4) AppLog.i("VkMintApp", "Panel defaults v4 migration: applied (VK canonical bottom bar)")
-                // §42.6 #PUSH-NO-GROUP-DEFAULT: сброс pushGroupingMode "category"→"none".
-                // Старый default сворачивал пуш-группы — пользователь не видел отдельные
-                // посты без pinch-out. Новый default = каждое уведомление отдельно.
-                val pushMigrated = prefs.migratePushGroupingDefault()
-                if (pushMigrated) AppLog.i("VkMintApp", "Push grouping migration: reset 'category'→'none' (individual notifications)")
-                // #READ-RECEIPTS-DEFAULT (волна 34): одноразовый откат «Статус прочтения
-                // (✓/✓✓)» к default ON — на устройствах, где тумблер отключали в тестах,
-                // в DataStore persistился false (единственный писатель — сам тумблер).
-                val readReceiptsMigrated = prefs.migrateReadReceiptsDefaultOn()
-                if (readReceiptsMigrated) AppLog.i("VkMintApp", "Read receipts migration: msg_read_receipts false→true (default ON per user request)")
-                // #LOCKER-BG-MIGRATION (волна 36): одноразовое включение «Блокировки
-                // при возврате из фона» на устройствах с PIN, заданным ДО #LOCKER-UX
-                // (auto-enable) — там персистился lockerOnBackground=false и PIN
-                // срабатывал только на холодном старте, фича выглядела мёртвой.
-                val lockerBgMigrated = prefs.migrateLockerOnBackgroundOn()
-                if (lockerBgMigrated) AppLog.i("VkMintApp", "Locker bg migration: locker_on_background false→true (PIN was set before #LOCKER-UX auto-enable)")
-                // #LOCKER-UX-3 (волна 36): одноразовый сброс зависимых пунктов
-                // локера — биометрия off всегда (тумблер удалён из UI по запросу
-                // пользователя), onBackground off при незаданном PIN (каскадная
-                // семантика «выключение PIN гасит зависимые пункты»; чистит
-                // сломанное состояние onBackground=true + пустой хэш).
-                val lockerDepMigrated = prefs.migrateLockerDependentsOff()
-                if (lockerDepMigrated) AppLog.i("VkMintApp", "Locker dependents migration: biometric→false, onBackground→false without PIN (#LOCKER-UX-3)")
-            }
-        }
-        AppLog.d("VkMintApp", "P3.10: migrations runBlocking took ${migrationsMs}ms (Main thread, ANR risk if >2000ms)")
-        // P3.10: ANR-риск — третий runBlocking (prefsSnapshot seed). КРИТИЧЕН для
-        // auth-flow: prefsSnapshot и AuthDomainsConfig.update(initialSnap) читаются
-        // ниже в onCreate и в auth flow (AuthActivity/ExternalBrowserLauncher).
-        // НЕ выношу в coroutine — синхронный snapshot обязателен. Мониторинг через
-        // measureTimeMillis + AppLog.d; при регрессии >2с — кандидат на рефакторинг
-        // (seed дефолтом + async-обновление, но требует полного теста auth-flow).
-        // lateinit: measureTimeMillis лямбда присваивает значение синхронно →
-        // после блока initialSnap гарантированно инициализирован (non-null).
-        lateinit var initialSnap: VkMintPrefs.Snapshot
-        val snapSeedMs = measureTimeMillis {
-            initialSnap = runBlocking { prefs.data.first() }
-        }
-        prefsSnapshot = initialSnap   // Fix #336: seed synchronous cache
-        AppLog.d("VkMintApp", "P3.10: prefsSnapshot seed runBlocking took ${snapSeedMs}ms (Main thread, ANR risk if >2000ms)")
+
         // Fix #189: инициализируем AuthDomainsConfig из prefs ДО того, как
         // любой auth flow (AuthActivity, ExternalBrowserLauncher, WebTokenAuth)
         // попытается прочитать домены. initialSnap уже загружен синхронно выше.
