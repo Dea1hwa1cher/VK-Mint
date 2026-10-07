@@ -196,9 +196,6 @@ private enum class SettingsTab(
     NEWS("Новости", Icons.Outlined.Newspaper),
     MESSAGES("Сообщения", Icons.AutoMirrored.Outlined.Chat),
     MUSIC("Музыка", Icons.Outlined.MusicNote),
-    // #OFFLINE-TAB: управление офлайн-кэшем аудио — путь, формат (M4A/MP3),
-    // «Очистить всё», «Загрузить всё» (sequential queue, Fix #265).
-    OFFLINE("Офлайн", Icons.Outlined.CloudOff),
     VIDEO("Видео", Icons.Outlined.VideoLibrary),
     NETWORK("Сеть", Icons.Outlined.Cloud),
     // Fix #298: вкладка «Уведомления» — быстрый доступ к push-настройкам
@@ -451,7 +448,6 @@ fun SettingsScreen(
                     SettingsTab.NEWS -> NewsTab(s, app, scope, onOpenHiddenSources)
                     SettingsTab.MESSAGES -> MessagesTab(s, app, scope)
                     SettingsTab.MUSIC -> MusicTab(s, app, scope, context)
-                    SettingsTab.OFFLINE -> OfflineTab(s, app, scope, context)
                     SettingsTab.VIDEO -> VideoTab(s, app, scope, context)
                     SettingsTab.NETWORK -> NetworkTab(s, app, scope)
                     SettingsTab.NOTIFICATIONS -> NotificationsTab(s, app, scope, onOpenNotificationSettings, onOpenBlacklist)
@@ -1899,116 +1895,19 @@ private fun MusicTab(
     scope: CoroutineScope,
     context: android.content.Context,
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item { SectionHeader("Воспроизведение") }
-        // #FIX-A-HQ (2026-08-03): "Максимальное качество (quality=hq везде)".
-        // Эта настройка применяет quality=hq ко ВСЕМ audio.get-family методам:
-        // audio.get, audio.getById, audio.search, audio.getPlaylistById,
-        // audio.getPlaylistTracks, audio.getRecommendations, audio.getByIdBatch,
-        // audio.getAudiosByArtist, audio.getSnippets. Default = true.
-        item {
-            ToggleRow(
-                title = "Максимальное качество (quality=hq)",
-                subtitle = "320kbps MP3 / HQ AAC для всех аудио-запросов " +
-                           "(библиотека, поиск, плейлисты, рекомендации, артисты).",
-                checked = s.musicHighQuality,
-            ) { scope.launch { app.prefs.setMusicHighQuality(it) } }
-        }
-        item { ToggleRow("Фоновое воспроизведение", s.musicBackgroundPlay) { scope.launch { app.prefs.setMusicBackgroundPlay(it) } } }
-        // #AUD-NET (2026-09-30): HQ на мобильной сети. По умолчанию ON.
-        item {
-            ToggleRow(
-                title = "HQ на мобильной сети",
-                subtitle = "По умолчанию вкл: на мобайле 320kbps. Выключите для 128kbps (меньше перебоев на слабом интернете).",
-                checked = s.musicHqOnMobile,
-            ) { scope.launch { app.prefs.setMusicHqOnMobile(it) } }
-        }
-
-        // #AUDIO-QUALITY: выбор битрейта выходного MP3-файла.
-        item { SectionHeader("Качество MP3") }
-        item { QualityRow(current = s.audioQuality) { q -> scope.launch { app.prefs.setAudioQuality(q) } } }
-
-        // #AUTOLOAD-BACK: секция «Авто-загрузка» возвращена во вкладку Музыка.
-        // Раньше (#AUTO-CACHE-MOVE) тумблер убирали, считая что «Загрузить всё»
-        // из вкладки Офлайн покрывает все сценарии. Но авто-загрузка решает
-        // другую задачу: кэшировать ИГРАЮЩИЙ трек и следующий за ним в фоне —
-        // чтобы при обрыве сети трек продолжал играть из кеша, а следующий
-        // уже был готов. «Загрузить всё» качает всю библиотеку разом, это
-        // другое. Поэтому тумблер нужен.
-        //
-        // PlayerConnection при autoCacheAudio=true:
-        //   1) на onPlay → enqueueDownload(currentTrack) — кешит играющий трек;
-        //   2) precacheNext() — ставит в очередь следующий трек заранее;
-        //   3) при окончании URL — пере-резолвит и кешит заново.
-        // Файлы складываются в ту же папку, что и «Загрузить всё» (s.musicDownloadPath).
-        //
-        // Переименование «Авто Кеш Аудио» → «Авто загрузка Аудио»: слово «кеш»
-        // путало (кеш это технический термин), «загрузка» понятнее пользователю.
-        // Поле в SovaPrefs осталось autoCacheAudio (без переименования, back-compat).
-        item { SectionHeader("Авто-загрузка") }
-        item {
-            ToggleRow(
-                title = "Авто загрузка Аудио",
-                subtitle = "При включении играющий трек и следующий за ним " +
-                    "автоматически кэшируются в фоне. Файлы сохраняются в папку " +
-                    "«Аудио» (вкладка Офлайн). Полезно: при обрыве интернета " +
-                    "трек доиграет до конца, а следующий уже будет готов. " +
-                    "При выключении — только ручная загрузка через «Загрузить всё» " +
-                    "или кнопку скачивания у трека.",
-                checked = s.autoCacheAudio,
-            ) { scope.launch { app.prefs.setAutoCacheAudio(it) } }
-        }
-    }
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  Tab: Офлайн  (#OFFLINE-TAB)
-// ════════════════════════════════════════════════════════════════════
-
-/**
- * #OFFLINE-TAB: управление офлайн-кэшем аудио.
- *
- * Содержит:
- *  - Путь сохранения (PathSettingRow — переиспользуется из MusicTab).
- *  - Формат файлов (M4A по умолчанию | MP3 opt-in через ffmpeg-kit, P0 #2).
- *  - Хранилище: live-статистика из [re.pinok.media.TrackDownloadManager].
- *  - «Очистить всё» → [TrackDownloadManager.clearAllDownloads] (с confirm).
- *  - «Загрузить всё» → пагинация audioGet + [TrackDownloadManager.enqueueAll].
- *    Sequential queue (Fix #265) качает по одному треку за раз.
- */
-@Composable
-private fun OfflineTab(
-    s: SovaPrefs.Snapshot,
-    app: SovaApp,
-    scope: CoroutineScope,
-    context: android.content.Context,
-) {
     // Live-карта загрузок — recompose при каждом изменении (enqueue/progress/done).
     val downloadsMap by re.pinok.media.TrackDownloadManager.downloads.collectAsState()
     val completedCount = downloadsMap.values.count { it.isCompleted }
     val activeCount = downloadsMap.values.count { it.isInProgress }
-    // totalBytes делает File I/O (getLocalFile per track) — пересчитываем ТОЛЬКО
-    // при смене completedCount (трек доскачался / удалён), а не на каждый progress-tick
-    // сегмента (иначе O(N) File.exists на каждом из 50 сегментов трека = jank).
-    // #ANR-MAIN-IO (2026-09-04): плюс — сам расчёт перенесён на Dispatchers.IO:
-    // для большой библиотеки (2516 треков) remember-блок на main давал секунды
-    // блокировки при каждом изменении completedCount (каждое завершение загрузки).
     var totalBytes by remember { mutableStateOf(0L) }
     LaunchedEffect(completedCount) {
         totalBytes = withContext(Dispatchers.IO) {
             re.pinok.media.TrackDownloadManager.getTotalDownloadedBytes()
         }
     }
-    // queueSize — ConcurrentLinkedQueue.size() O(n), n мало (<100); пересчитываем
-    // при изменении activeCount (enqueue / worker-take / complete меняют карту).
     val queueSize = remember(activeCount, completedCount) {
         re.pinok.media.TrackDownloadManager.getQueueSize()
     }
-    // #OFFLINE-STATUS-1: разбивка по статусам — чтобы пользователь ВИДЕЛ дохлые
-    // треки и siren-кеш. deadTracks — для секции «Недоступные».
     val failedCount = downloadsMap.values.count { it.status == DownloadStatus.FAILED }
     val deadCount = downloadsMap.values.count { it.isDead }
     val sirenCount = downloadsMap.values.count { it.isSirenCache }
@@ -2020,11 +1919,7 @@ private fun OfflineTab(
     var showDownloadAllDialog by remember { mutableStateOf(false) }
     var downloadAllStatus by remember { mutableStateOf<DownloadAllStatus>(DownloadAllStatus.Idle) }
 
-    // #DEAD-RECHECK: авто-проверка дохлых треков при открытии вкладки Офлайн.
-    // Треки dead >1ч перепроверяются через audioGetById — VK мог пере-выдать URL.
-    // Запускается ОДИН раз при первом входе во вкладку (Unit key). Если URL
-    // восстановлен — трек авто-ставится в очередь (revived), пользователь видит
-    // прогресс вместо «недоступен».
+    // Авто-проверка недоступных треков при открытии вкладки Музыка.
     LaunchedEffect(Unit) {
         val toRecheck = re.pinok.media.TrackDownloadManager.getDeadTracksForRecheck()
         if (toRecheck.isEmpty()) return@LaunchedEffect
@@ -2051,7 +1946,39 @@ private fun OfflineTab(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // ── Путь сохранения ──────────────────────────────────────────
+        item { SectionHeader("Воспроизведение") }
+        item {
+            ToggleRow(
+                title = "Максимальное качество (quality=hq)",
+                subtitle = "320kbps MP3 / HQ AAC для всех аудио-запросов " +
+                           "(библиотека, поиск, плейлисты, рекомендации, артисты).",
+                checked = s.musicHighQuality,
+            ) { scope.launch { app.prefs.setMusicHighQuality(it) } }
+        }
+        item { ToggleRow("Фоновое воспроизведение", s.musicBackgroundPlay) { scope.launch { app.prefs.setMusicBackgroundPlay(it) } } }
+        item {
+            ToggleRow(
+                title = "HQ на мобильной сети",
+                subtitle = "По умолчанию вкл: на мобайле 320kbps. Выключите для 128kbps (меньше перебоев на слабом интернете).",
+                checked = s.musicHqOnMobile,
+            ) { scope.launch { app.prefs.setMusicHqOnMobile(it) } }
+        }
+
+        item { SectionHeader("Авто-загрузка") }
+        item {
+            ToggleRow(
+                title = "Авто загрузка Аудио",
+                subtitle = "При включении играющий трек и следующий за ним " +
+                    "автоматически кэшируются в фоне. Файлы сохраняются в папку " +
+                    "для скачанных аудио. Полезно: при обрыве интернета " +
+                    "трек доиграет до конца, а следующий уже будет готов. " +
+                    "При выключении — только ручная загрузка через «Загрузить всё» " +
+                    "или кнопку скачивания у трека.",
+                checked = s.autoCacheAudio,
+            ) { scope.launch { app.prefs.setAutoCacheAudio(it) } }
+        }
+
+        // ── Скачивание и сохранение ──────────────────────────────────────────
         item { SectionHeader("Путь сохранения") }
         item {
             PathSettingRow(
@@ -2067,17 +1994,9 @@ private fun OfflineTab(
             )
         }
 
-        // ── Фоновая загрузка (Fix #382 #DL-DISPATCH-PERSIST / #DL-WAKELOCK) ──
-        // Персистентная очередь + foreground-сервис + wakelock — в TrackDownloadManager/
-        // MusicDownloadService. Здесь — ключевой системный рычаг: без отключения
-        // оптимизации батареи OEM-менеджеры (MTK/Samsung/Xiaomi) убивают процесс с
-        // очередью при уходе в фон, и никакой диспетчер не поможет.
         item { SectionHeader("Фоновая загрузка") }
         item {
             val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-            // #NULL-ЯВНО: явная проверка вместо ?. — pm может быть null только при
-            // экзотическом отказе системы; true = «оптимизация включена»
-            // (безопасный дефолт: строка предложит открыть системный диалог).
             val batteryOptimized = if (pm == null) {
                 true
             } else {
@@ -2086,9 +2005,6 @@ private fun OfflineTab(
             Card(modifier = Modifier.fillMaxWidth().clickable {
                 if (batteryOptimized) {
                     try {
-                        // Direct-диалог: «Разрешить приложению PinoK не оптимизировать
-                        // батарею?» — требует REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-                        // (объявлен в манифесте, Fix #382).
                         context.startActivity(
                             Intent(
                                 android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
@@ -2096,7 +2012,6 @@ private fun OfflineTab(
                             )
                         )
                     } catch (e: Exception) {
-                        // Некоторые прошивки убирают direct-intent — открываем системный список.
                         try {
                             context.startActivity(Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                         } catch (e2: Exception) {
@@ -2145,15 +2060,17 @@ private fun OfflineTab(
             }
         }
 
-        // ── Формат файлов ─────────────────────────────────────────────
+        // ── Формат файлов и качество MP3 ─────────────────────────────
         item { SectionHeader("Формат файлов") }
         item {
             AudioFormatRow(current = s.audioFormat) { fmt ->
                 scope.launch { app.prefs.setAudioFormat(fmt) }
             }
         }
+        item { SectionHeader("Качество MP3") }
+        item { QualityRow(current = s.audioQuality) { q -> scope.launch { app.prefs.setAudioQuality(q) } } }
 
-        // ── Метаданные и имена файлов (§42.12 P1 #3 / P2 #8 / P2 #9 / P1 #5) ─
+        // ── Метаданные и имена ───────────────────────────────────────
         item { SectionHeader("Метаданные и имена") }
         item {
             ToggleRow(
@@ -2193,7 +2110,7 @@ private fun OfflineTab(
             ) { scope.launch { app.prefs.setNumTracksInPlaylist(it) } }
         }
 
-        // ── Метод конвертации (§42.12 P3 #11) ─────────────────────────
+        // ── Метод конвертации Siren ──────────────────────────────────
         item { SectionHeader("Метод конвертации Siren") }
         item {
             ConvertMethodRow(current = s.audioConvertMethod) { method ->
@@ -2215,12 +2132,8 @@ private fun OfflineTab(
             )
         }
 
-        // ── Что значат значки (#WIFI-LEGEND) ──────────────────────────
-        // Инструкция-расшифровка: что значит зелёный Wi-Fi на скачанном треке
-        // (siren-кеш), чем отличается от обычной галки (M4A) и красного значка
-        // (недоступен). Ставим сразу после статистики — естественный поток:
-        // вижу числа → вижу расшифровку статусов → вижу действия.
-        item { SectionHeader("Что значят значки") }
+        // ── Что значат значки ─────────────────────────────────────────
+        item { SectionHeader("Что значат значки") }
         item { OfflineLegendCard() }
 
         // ── Действия ──────────────────────────────────────────────────
@@ -2249,16 +2162,11 @@ private fun OfflineTab(
                 }
             }
         }
-        // Inline-статус операции «Загрузить всё».
         item { DownloadAllStatusRow(downloadAllStatus) }
 
-        // ── Недоступные треки (#OFFLINE-STATUS-1) ─────────────────────
-        // Треки с DEAD_URL (URL протух/удалён) — то, что пользователь называет
-        // «трек скончался». Показываем отдельным списком, только если есть дохлые.
+        // ── Недоступные треки ─────────────────────────────────────────
         if (deadTracks.isNotEmpty()) {
             item { SectionHeader("Недоступные (${deadTracks.size})") }
-            // #DEAD-RECHECK: кнопка «Повторить все» — массовый retry всех дохлых
-            // треков через audioGetById. URL мог протухнуть временно (VK пере-выдал).
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -2298,7 +2206,6 @@ private fun OfflineTab(
                     tracks = deadTracks,
                     onRetry = { st ->
                         scope.launch {
-                            // Пере-резолвим URL через audioGetById и ставим в очередь.
                             val minimal = Track(
                                 id = st.trackId, ownerId = st.ownerId,
                                 artist = st.artist, title = st.title,
@@ -2325,7 +2232,7 @@ private fun OfflineTab(
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Очистить офлайн-кэш?") },
+            title = { Text("Очистить скачанные треки?") },
             text = {
                 Text(
                     "Будут удалены все $completedCount скачанных аудио " +
@@ -2370,7 +2277,6 @@ private fun OfflineTab(
                             all.addAll(first.second)
                             downloadAllStatus = DownloadAllStatus.CountingProgress(all.size, total)
                             var offset = first.second.size
-                            // Cap at 5000 to avoid runaway loops on huge libraries.
                             while (offset < total && all.size < 5000) {
                                 val page = app.apiClient.audioGet(count = 100, offset = offset)
                                 if (page.isEmpty()) break
