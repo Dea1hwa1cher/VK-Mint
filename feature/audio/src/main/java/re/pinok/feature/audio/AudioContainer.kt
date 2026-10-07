@@ -4,9 +4,6 @@ import android.app.Application
 import re.pinok.contracts.AppContainer
 import re.pinok.contracts.AttachmentRenderer
 import re.pinok.contracts.Capability
-import re.pinok.contracts.NavEntry
-import re.pinok.contracts.PermissionNeeds
-import re.pinok.contracts.SettingsSection
 import re.pinok.util.AppLog
 
 /**
@@ -51,50 +48,16 @@ class AudioContainer : AppContainer {
     override val id: String = "audio"
 
     override fun capabilities(): List<Capability> = listOf(
-        AudioNavEntry,
-        AudioSettingsSection,
         AudioAttachmentRenderer,
-        AudioPermissions,
     )
 
     override fun init(app: Application) {
-        // Минимум на 1.5-б: состояния у контейнера нет (рендер — чистая функция
-        // данных хоста; экран EqualizerScreen и вкладка настроек — в :app).
-        // Нечего инициализировать.
         AppLog.i("AudioContainer", "init: контейнер аудио зарегистрирован (id=$id)")
     }
 
     override fun release() {
-        // Идемпотентный no-op: ресурсов контейнер не держит (эффекты
-        // эквалайзера принадлежат PlayerService/AudioEffectsEngine в :app).
         AppLog.i("AudioContainer", "release: no-op (идемпотентно)")
     }
-}
-
-/**
- * Кнопка «Эквалайзер» в drawer. route = "equalizer" — прежний route ядерного
- * пункта (Screen.Equalizer); host-маппинг hostDestinationForRoute("equalizer")
- * → Screen.Equalizer, destination в NavHost хоста остаётся (открывается и из
- * плеера — onOpenFullEqualizer — независимо от контейнера).
- * order=30 — после «Звонки»(10) и «Фото»(20).
- */
-private object AudioNavEntry : NavEntry {
-    override val title: String = "Эквалайзер"
-    override val iconKey: String = "equalizer"
-    /** После «Фото» (20); хост сортирует контейнерные пункты по order. */
-    override val order: Int = 30
-    override val route: String = "equalizer"
-}
-
-/**
- * Вкладка настроек «Эквалайзер» (бывшая ядерная SettingsTab.EQUALIZER — тумблеры
- * видимости эффектов). route — новый стабильный ключ (см. KDoc контейнера).
- * order=80 — контейнерные секции рендерятся после ядерных вкладок; до «Звонки»(90).
- */
-private object AudioSettingsSection : SettingsSection {
-    override val title: String = "Эквалайзер"
-    override val order: Int = 80
-    override val route: String = "settings_audio"
 }
 
 /**
@@ -127,18 +90,4 @@ object AudioAttachmentRenderer : AttachmentRenderer {
 
     /** Первый среди рендереров своего типа (photos — order 10 другого kind). */
     override val order: Int = 10
-}
-
-/**
- * Права аудио-домена: эквалайзеру нужен MODIFY_AUDIO_SETTINGS (normal —
- * декларируется в манифесте хоста, runtime-запроса нет; см. комментарий
- * манифеста: без него EqualizerHelper.setEnabled молча fails на ряде OEM).
- * Опасные разрешения аудио-домена хост запрашивает сам: RECORD_AUDIO —
- * запись войсов в чате (ChatDetailScreen), BLUETOOTH_CONNECT — BT-маршрутизация
- * PlayerService. Публикуем как декларативную метадату (потребители — Этап 2+).
- */
-private object AudioPermissions : PermissionNeeds {
-    override val permissions: List<String> = listOf(
-        android.Manifest.permission.MODIFY_AUDIO_SETTINGS,
-    )
 }

@@ -185,15 +185,6 @@ private val categories = listOf(
         title = "Возможности PinoK",
         items = listOf(
             ServiceItem(
-                title = "Эквалайзер",
-                subtitle = "5 полос, бас, виртуализатор и пресеты",
-                icon = Icons.Default.Equalizer,
-                iconColor = Color(0xFF8E24AA),
-                iconBgColor = Color(0x268E24AA),
-                screen = Screen.Equalizer,
-                badge = "DSP",
-            ),
-            ServiceItem(
                 title = "Настройки",
                 subtitle = "Интерфейс, панели, кэш и приватность",
                 icon = Icons.Default.Settings,
@@ -286,7 +277,7 @@ private fun HubHeader(onOpenSection: ((Screen) -> Unit)?) {
         Triple("Сообщества", Icons.Default.Group, Screen.Groups),
         Triple("Закладки", Icons.Default.Bookmark, Screen.Bookmarks),
         Triple("Друзья", Icons.Default.People, Screen.Friends),
-        Triple("Эквалайзер", Icons.Default.Equalizer, Screen.Equalizer),
+        Triple("Уведомления", Icons.Default.Notifications, Screen.Notifications),
     )
 
     Column(modifier = Modifier.fillMaxWidth()) {

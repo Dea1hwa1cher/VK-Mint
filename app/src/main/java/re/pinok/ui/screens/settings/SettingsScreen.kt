@@ -355,7 +355,6 @@ private sealed class SettingsPage(val key: String, val label: String, val icon: 
  */
 private fun hostSettingsIconFor(route: String): ImageVector = when (route) {
     "settings_calls" -> Icons.Filled.Call
-    "settings_audio" -> Icons.Outlined.Equalizer
     else -> Icons.Outlined.Extension
 }
 
@@ -368,11 +367,6 @@ private fun hostSettingsIconFor(route: String): ImageVector = when (route) {
 private fun hostSettingsContentFor(route: String): (@Composable (SovaPrefs.Snapshot, SovaApp, CoroutineScope) -> Unit)? =
     when (route) {
         "settings_calls" -> { s, app, scope -> CallsTab(s, app, scope) }
-        // #ARCH-CONTAINERS (Этап 1.5-б): контент вкладки «Эквалайзер» —
-        // компосабл EqualizerTab остаётся в :app (EqualizerFeatureFlags/
-        // EqualizerHelper — SovaApp + data.model, фиче-модулю недоступны);
-        // параметров вкладка не принимает — лямбда игнорирует s/app/scope.
-        "settings_audio" -> { _, _, _ -> EqualizerTab() }
         else -> null
     }
 
@@ -3011,97 +3005,7 @@ private fun VideoTab(
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════
-//  Tab: Эквалайзер (Этап 2)
-// ══════════════════════════════════════════════════════════════════════
-//  Вкл/выкл отдельных эффектов. Скрывает соответствующие вкладки в
-//  полноэкранном EqualizerScreen и toggle'ы в упрощённом EQ аудиоплеера.
-//
-//  Default: все ВКЛ кроме PresetReverb (часто ломает звук на custom ROM).
-//
-//  ВАЖНО: это НЕ отключает AudioEffect-объект в AudioEffectsEngine —
-//  эффект остаётся созданным (на случай если пользователь вернётся),
-//  но enabled=false и UI не даёт к нему доступа.
-// ══════════════════════════════════════════════════════════════════════
 
-@Composable
-private fun EqualizerTab() {
-    // Читаем snapshot один раз при входе. Перечитывается при возврате на вкладку
-    // (LazyColumn item recompose). Для мгновенного отклика используем mutableState.
-    var flags by remember { mutableStateOf(re.pinok.media.EqualizerFeatureFlags.snapshot()) }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item {
-            SectionHeader("Видимость эффектов")
-        }
-        item {
-            Text(
-                "Отключите эффекты, которые не нужны или плохо работают " +
-                "на вашем устройстве. Они исчезнут из экрана эквалайзера " +
-                "и упрощённой панели в плеере. Сами настройки сохраняются.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-        }
-        item {
-            ToggleRow(
-                title = "Эквалайзер (полосы)",
-                subtitle = "Частотные полосы ±15 dB. Базовая функция — " +
-                    "рекомендуется оставить включённым.",
-                checked = flags.eqEnabled,
-            ) { on ->
-                re.pinok.media.EqualizerFeatureFlags.setEqEnabled(on)
-                flags = re.pinok.media.EqualizerFeatureFlags.snapshot()
-            }
-        }
-        item {
-            ToggleRow(
-                title = "BassBoost",
-                subtitle = "Усиление низких частот (0..1000).",
-                checked = flags.bassEnabled,
-            ) { on ->
-                re.pinok.media.EqualizerFeatureFlags.setBassEnabled(on)
-                flags = re.pinok.media.EqualizerFeatureFlags.snapshot()
-            }
-        }
-        item {
-            ToggleRow(
-                title = "Virtualizer",
-                subtitle = "Пространственный эффект. Лучше работает в наушниках.",
-                checked = flags.virtualizerEnabled,
-            ) { on ->
-                re.pinok.media.EqualizerFeatureFlags.setVirtualizerEnabled(on)
-                flags = re.pinok.media.EqualizerFeatureFlags.snapshot()
-            }
-        }
-        item {
-            ToggleRow(
-                title = "PresetReverb",
-                subtitle = "Реверберация. ВЫКЛ по умолчанию — на некоторых " +
-                    "устройствах (Xiaomi/Huawei custom ROM) искажает звук.",
-                checked = flags.reverbEnabled,
-            ) { on ->
-                re.pinok.media.EqualizerFeatureFlags.setReverbEnabled(on)
-                flags = re.pinok.media.EqualizerFeatureFlags.snapshot()
-            }
-        }
-        item {
-            ToggleRow(
-                title = "LoudnessEnhancer",
-                subtitle = "Нормализация громкости (Android 4.4+). " +
-                    "Поднимает тихие участки трека.",
-                checked = flags.loudnessEnabled,
-            ) { on ->
-                re.pinok.media.EqualizerFeatureFlags.setLoudnessEnabled(on)
-                flags = re.pinok.media.EqualizerFeatureFlags.snapshot()
-            }
-        }
-    }
-}
 
 // ══════════════════════════════════════════════════════════════════════
 //  Tab: Сеть

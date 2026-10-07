@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.DevicesOther
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Notifications
@@ -542,19 +541,6 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
      * при отсутствии сети. Доступен из ошибки ленты или настроек.
      */
     object OfflineManager : Screen("offline_manager", "Офлайн", Icons.Outlined.CloudOff)
-
-    /**
-     * Этап 2 (#Equalizer): Полноэкранный эквалайзер — 5 вкладок:
-     * Пресеты / Полосы / Bass+Virt / Reverb / Loudness.
-     *
-     * Открывается из кнопки в боковом drawer. В аудиоплеере остаётся
-     * упрощённый BottomSheet (только пресеты + master switch + 5 полос).
-     * Полный экран — для тонкой настройки всех 6 эффектов.
-     *
-     * Видимость отдельных вкладок регулируется через [re.pinok.media.EqualizerFeatureFlags]
-     * (настройки → вкладка «Эквалайзер»).
-     */
-    object Equalizer : Screen("equalizer", "Эквалайзер", Icons.Filled.Equalizer)
 
     /**
      * §49.6 Sprint VK-ID-1.2: Экран «Устройства и сессии» — список активных

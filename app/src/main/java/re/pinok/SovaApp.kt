@@ -1345,11 +1345,6 @@ class SovaApp : Application(), SingletonImageLoader.Factory, CallsDependencies, 
                 AppLog.w("SovaApp", "#AUDIO-BG-PAGER: ensureStarted failed: ${e.message}")
             }
         }
-        // Этап 4 EQUALIZER_INTEGRATION_PLAN.md: загрузка кастомных пресетов
-        // эквалайзера из JSON-файла (filesDir/equalizer/custom_presets.json).
-        // Singleton store, lazy-load через ensureLoaded(), но вызываем явно в
-        // onCreate чтобы первый open EqualizerScreen не тормозил на чтение файла.
-        re.pinok.media.CustomPresetStore.load()
 
         // 4b. Async: применим пользовательский путь загрузки музыки из prefs.
         //     DataStore загружается асинхронно — не можем ждать в onCreate().

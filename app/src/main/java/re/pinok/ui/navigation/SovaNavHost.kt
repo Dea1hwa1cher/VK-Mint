@@ -34,7 +34,6 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.outlined.MenuOpen
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Extension
@@ -144,7 +143,6 @@ import re.pinok.ui.screens.browser.InternalBrowserScreen
 import re.pinok.ui.screens.music.MusicScreen
 import re.pinok.ui.screens.music.AudioPlayerScreen
 import re.pinok.ui.screens.music.AudioQueueScreen
-import re.pinok.ui.screens.music.EqualizerScreen
 import re.pinok.ui.screens.music.MusicPlaylistsScreen
 import re.pinok.ui.screens.music.PlaylistDetailScreen
 import re.pinok.ui.screens.music.MusicAlbumsScreen
@@ -236,10 +234,6 @@ private fun hostDestinationForRoute(route: String): Screen? = when (route) {
     // #ARCH-CONTAINERS (Этап 1.5-а): «Фото» — контейнер :feature:photos;
     // destination (Screen.Photos → PhotosScreen) остаётся в NavHost хоста.
     Screen.Photos.route -> Screen.Photos // "photos"
-    // #ARCH-CONTAINERS (Этап 1.5-б): «Эквалайзер» — контейнер :feature:audio;
-    // destination (Screen.Equalizer → EqualizerScreen) остаётся в NavHost хоста
-    // (открывается и из плеера — onOpenFullEqualizer — независимо от контейнера).
-    Screen.Equalizer.route -> Screen.Equalizer // "equalizer"
     else -> null
 }
 
@@ -254,9 +248,6 @@ private fun hostIconForKey(iconKey: String): ImageVector = when (iconKey) {
     // #ARCH-CONTAINERS (Этап 1.5-а): та же иконка, что была у ядерного пункта
     // «Фото» (Screen.Photos: Icons.Outlined.Image).
     "photos" -> Icons.Outlined.Image
-    // #ARCH-CONTAINERS (Этап 1.5-б): та же иконка, что была у ядерного пункта
-    // «Эквалайзер» (Screen.Equalizer: Icons.Filled.Equalizer).
-    "equalizer" -> Icons.Filled.Equalizer
     else -> Icons.Outlined.Extension
 }
 
@@ -957,9 +948,6 @@ fun SovaNavHost(
         Screen.ClipsOwner.route,
         // Fix #50: у офлайн-плеера собственный TopAppBar + back button.
         Screen.OfflineAudioPlayer.route,
-        // Этап 2 (#Equalizer): у EqualizerScreen собственный TopAppBar
-        // (← Эквалайзер + master switch).
-        Screen.Equalizer.route,
         Screen.Community.route, Screen.AudioPlayer.route, Screen.AudioQueue.route,
         // Шаг 4 (#32d): BoardTopicScreen имеет собственный TopAppBar с back button.
         Screen.BoardTopic.route,
@@ -1794,7 +1782,6 @@ fun SovaNavHost(
                     AudioPlayerScreen(
                         onBack = { nav.popBackStack() },
                         onOpenQueue = { nav.navigate(Screen.AudioQueue.route) },
-                        onOpenFullEqualizer = { nav.navigate(Screen.Equalizer.route) },
                     )
                 }
                 composable(Screen.AudioQueue.route) {
@@ -2479,14 +2466,6 @@ composable(Screen.CallsHistory.route) {
                 // из TrackDownloadManager и текущий стейт из PlayerConnection.
                 composable(Screen.OfflineAudioPlayer.route) {
                     OfflineAudioPlayerScreen(
-                        onBack = { nav.popBackStack() },
-                    )
-                }
-                // Этап 2 (#Equalizer): полноэкранный эквалайзер — 5 вкладок.
-                // Открывается из кнопки в боковом drawer. Упрощённый EQ
-                // остаётся в аудиоплеере (BottomSheet с пресетами + switch).
-                composable(Screen.Equalizer.route) {
-                    EqualizerScreen(
                         onBack = { nav.popBackStack() },
                     )
                 }
