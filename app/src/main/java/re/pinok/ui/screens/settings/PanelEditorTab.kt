@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Card
@@ -72,15 +71,6 @@ import re.pinok.ui.navigation.Screen
  */
 private val CANONICAL_PANEL_ITEMS: List<PanelItem> = PanelItems.all
 
-/**
- * Фиксированный «хвост» боковой панели: Настройки → Выйти.
- * Не редактируется пользователем. Показывается в редакторе как info-блок.
- */
-private val SIDEBAR_FIXED_TAIL: List<Pair<String, ImageVector?>> = listOf(
-    Screen.Settings.title to Screen.Settings.icon,
-    "Выйти из приложения" to null,
-)
-
 // ── JSON helpers ────────────────────────────────────────────────────────
 
 private fun parseRoutes(json: String): List<String> {
@@ -134,13 +124,6 @@ fun PanelEditorTab(
     app: SovaApp,
     scope: CoroutineScope,
 ) {
-    // Локальный редактируемый state — коммитим в prefs при каждом изменении.
-    var sidebarOrder by remember(s.sidebarItemsOrder) {
-        mutableStateOf(normalizeOrder(parseRoutes(s.sidebarItemsOrder), CANONICAL_PANEL_ITEMS))
-    }
-    var sidebarHidden by remember(s.sidebarItemsHidden) {
-        mutableStateOf(parseRoutes(s.sidebarItemsHidden).toSet())
-    }
     var bottomOrder by remember(s.bottomBarItemsOrder) {
         mutableStateOf(normalizeOrder(parseRoutes(s.bottomBarItemsOrder), CANONICAL_PANEL_ITEMS))
     }
@@ -148,12 +131,6 @@ fun PanelEditorTab(
         mutableStateOf(parseRoutes(s.bottomBarItemsHidden).toSet())
     }
 
-    fun commitSidebar() {
-        scope.launch {
-            app.prefs.setSidebarItemsOrder(sidebarOrder.toJson())
-            app.prefs.setSidebarItemsHidden(sidebarHidden.toList().toJson())
-        }
-    }
     fun commitBottom() {
         scope.launch {
             app.prefs.setBottomBarItemsOrder(bottomOrder.toJson())
@@ -165,52 +142,7 @@ fun PanelEditorTab(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { SectionHeader("Боковая панель") }
-        item {
-            Text(
-                "Перетаскивайте кнопки стрелками ↑↓ и включайте/выключайте их. " +
-                    "Кнопки «Офлайн», «Настройки» и «Выйти из приложения» закреплены " +
-                    "внизу панели и не редактируются.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
-        }
-        item {
-            ReorderableListCard(
-                title = "Кнопки панели",
-                orderedKeys = sidebarOrder,
-                hiddenKeys = sidebarHidden,
-                itemByKey = PanelItems.byKey,
-                onMoveUp = { idx ->
-                    if (idx > 0) {
-                        sidebarOrder = sidebarOrder.toMutableList().apply {
-                            add(idx - 1, removeAt(idx))
-                        }
-                        commitSidebar()
-                    }
-                },
-                onMoveDown = { idx ->
-                    if (idx < sidebarOrder.lastIndex) {
-                        sidebarOrder = sidebarOrder.toMutableList().apply {
-                            add(idx + 1, removeAt(idx))
-                        }
-                        commitSidebar()
-                    }
-                },
-                onToggleVisible = { key ->
-                    sidebarHidden = if (key in sidebarHidden) {
-                        sidebarHidden - key
-                    } else {
-                        sidebarHidden + key
-                    }
-                    commitSidebar()
-                },
-            )
-        }
-        item { FixedTailCard() }
-
-        item { SectionHeader("Нижняя панель") }
+        item { SectionHeader("Нижняя панель навигации") }
         item {
             Text(
                 "Редактируется полностью: порядок, видимость. " +
@@ -385,67 +317,6 @@ private fun ReorderableListCard(
                             else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FixedTailCard() {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                "Закреплённые кнопки (не редактируются)",
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Text(
-                "Всегда в этом порядке внизу боковой панели.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(4.dp))
-            SIDEBAR_FIXED_TAIL.forEach { (title, icon) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (icon != null) {
-                        Icon(
-                            icon,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    } else {
-                        // Выход из приложения — иконка PowerSettingsNew из SovaNavHost.
-                        Icon(
-                            Icons.Outlined.PowerSettingsNew,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Icon(
-                        Icons.Filled.DragHandle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                        modifier = Modifier.size(20.dp),
-                    )
                 }
             }
         }

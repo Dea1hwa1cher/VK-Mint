@@ -29,37 +29,26 @@ import androidx.compose.ui.text.style.TextOverflow
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-// Fix #369: иконка «Выйти из аккаунта» в drawer (уже используется в ProfileScreen).
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.automirrored.outlined.MenuOpen
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDrawerState
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,9 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -175,7 +162,6 @@ import re.pinok.ui.components.NetworkSwitchPopup
 import re.pinok.ui.components.OfflineBanner
 import re.pinok.ui.components.GlobalMiniPlayer
 import re.pinok.ui.components.UpdateBanner
-import re.pinok.ui.components.NotifyModeItem
 import re.pinok.data.local.SovaPrefs
 import re.pinok.util.AppLog
 
@@ -413,7 +399,6 @@ fun SovaNavHost(
     pendingDeepLink: re.pinok.realtime.VkUrlDeepLinker.DeepLinkAction? = null,
     onDeepLinkConsumed: () -> Unit = {},
 ) {
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val app = remember { SovaApp.get(nav.context) }
 
@@ -860,25 +845,15 @@ fun SovaNavHost(
     // (Офлайн/Настройки/Выйти — рендерятся отдельно и не редактируются).
     // Нижняя: тот же список (требование пользователя).
 
-    // Парсим order/hidden из prefsSnap (null-safe для холодного старта).
+    // Парсим order/hidden нижней панели из prefsSnap (null-safe для холодного старта).
     // #PANELEDIT: keys — это PanelItems.key (НЕ Screen.route), см. PanelItems.kt.
-    val sidebarOrderKeys: List<String> = remember(prefsSnap?.sidebarItemsOrder) {
-        parseRoutesJson(prefsSnap?.sidebarItemsOrder)
-    }
-    val sidebarHiddenKeys: Set<String> = remember(prefsSnap?.sidebarItemsHidden) {
-        parseRoutesJson(prefsSnap?.sidebarItemsHidden).toSet()
-    }
     val bottomOrderKeys: List<String> = remember(prefsSnap?.bottomBarItemsOrder) {
         parseRoutesJson(prefsSnap?.bottomBarItemsOrder)
     }
     val bottomHiddenKeys: Set<String> = remember(prefsSnap?.bottomBarItemsHidden) {
         parseRoutesJson(prefsSnap?.bottomBarItemsHidden).toSet()
     }
-    // Нормализованные списки PanelItem для рендера: порядок из prefs, скрытые убраны.
-    val visibleSidebarItems: List<PanelItem> = remember(sidebarOrderKeys, sidebarHiddenKeys) {
-        normalizePanelKeys(sidebarOrderKeys, PanelItems.all)
-            .filter { it.key !in sidebarHiddenKeys }
-    }
+    // Нормализованный список PanelItem для рендера нижней панели: порядок из prefs, скрытые убраны.
     val visibleBottomItems: List<PanelItem> = remember(bottomOrderKeys, bottomHiddenKeys) {
         normalizePanelKeys(bottomOrderKeys, PanelItems.all)
             .filter { it.key !in bottomHiddenKeys }
@@ -1096,226 +1071,9 @@ fun SovaNavHost(
         scrollDeltaAccumulator.floatValue = 0f
     }
 
-    // Fix #258: динамическая ширина drawer — по самому длинному пункту меню.
-    // Раньше было 280dp * fontScale (240..420dp) — пользователь видел слишком
-    // широкий drawer. Теперь измеряем самый длинный заголовок через
-    // TextMeasurer и добавляем отступы (иконка + padding + запас).
-    // Самые длинные пункты: «Выйти из приложения» (19), «Выйти из аккаунта» (18),
-    // «Уведомления» (11), «Сообщества» (10), «Документы» (9).
-    val textMeasurer = rememberTextMeasurer()
-    val density = LocalDensity.current
-    val drawerTextStyle = MaterialTheme.typography.labelLarge
-    val longestDrawerText = remember(allScreens, containerNavEntries) {
-        // allScreens + контейнерные NavEntry + фиксированный хвост drawer:
-        // «Выйти из приложения» И «Выйти из аккаунта» (Fix #369 — отдельные кнопки).
-        val titles = allScreens.map { it.title } + containerNavEntries.map { it.title } +
-            listOf("Выйти из приложения", "Выйти из аккаунта")
-        titles.maxByOrNull { it.length } ?: "PinoK"
-    }
-    val drawerWidth = remember(textMeasurer, longestDrawerText, density.fontScale) {
-        val measured = textMeasurer.measure(
-            text = longestDrawerText,
-            style = drawerTextStyle,
-        )
-        // measured.size.width — в пикселях. Конвертируем в Dp через density.
-        val contentWidthDp = with(density) { measured.size.width.toDp() }
-        // Ширина текста + иконка (24dp) + gap (12dp) + горизонтальные
-        // padding'и drawer-пункта (16+16=32dp) + запас (16dp).
-        (contentWidthDp + 24.dp + 12.dp + 32.dp + 16.dp).coerceIn(200.dp, 320.dp)
-    }
-
     // Sprint 1, P0-3 (#76): CaptchaDialog поверх всего — captcha может
     // потребоваться в любом запросе, независимо от активного экрана.
     Box {
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        // #247: ModalDrawerSheet с адаптивной шириной под fontScale.
-        // Без modifier.width() drawer использует дефолт 360dp — слишком
-        // узко для крупного шрифта, слишком широко для мелкого.
-        drawerContent = {
-            ModalDrawerSheet(
-                modifier = Modifier
-                    .width(drawerWidth)
-                    // Fix #337: drawer на всю высоту — header сверху, fixed-tail
-                    // снизу, middle скроллится если пунктов много.
-                    .fillMaxHeight(),
-            ) {
-                Column(modifier = Modifier.fillMaxHeight()) {
-                    // #247: заголовок с кнопкой сворачивания drawer.
-                    // Кнопка MenuOpen (AutoMirrored — RTL-совместимая) вызывает
-                    // drawerState.close() — альтернатива свайпу влево.
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            "PinoK",
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        IconButton(onClick = { scope.launch { drawerState.close() } }) {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.MenuOpen,
-                                contentDescription = "Свернуть меню",
-                            )
-                        }
-                    }
-                    // Fix #390 #NOTIFY-MODES: закреплённый блок «Режим уведомлений» в
-                    // шапке ГЛОБАЛЬНОГО drawer (доступен из любого раздела). Стоит
-                    // ВНЕ прокрутки — виден всегда; тап открывает диалог выбора режима.
-                    // Текущий режим — из реактивного снапшота prefs (prefsSnap.notifyMode),
-                    // выбор пишется в SovaPrefs.setNotifyMode (перезапуск не нужен:
-                    // SovaApp/VkNotificationsNotifier читают АКТУАЛЬНЫЙ снапшот).
-                    NotifyModeItem(
-                        notifyMode = prefsSnap?.notifyMode ?: SovaPrefs.NOTIFY_MODE_ALL,
-                        onNotifyModeSelected = { mode ->
-                            AppLog.i("SovaNavHost", "notify mode set: $mode")
-                            scope.launch { app.prefs.setNotifyMode(mode) }
-                        },
-                    )
-                    // Fix #337: dynamic-пункты в скроллящемся Column.
-                    // Если пунктов много (или крупный шрифт) — скролл работает.
-                    // #PANELEDIT: visibleSidebarItems — List<PanelItem> (уже
-                    // отфильтрован от hidden, упорядочен по prefs пользователя).
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState()),
-                    ) {
-                        // Destinations, уже покрытые каноническими пунктами.
-                        // #PANELEDIT: «Фотографии» теперь ядерный пункт канона
-                        // (route "photos") — контейнерный NavEntry "photos"
-                        // ниже не дублируем (паттерн, см. containerNavEntries).
-                        val panelDestRoutes = visibleSidebarItems.map { it.destinationRoute }.toSet()
-                        visibleSidebarItems.forEach { item ->
-                            val itemDest = item.destinationRoute
-                            // §37.12 Phase 7: badge с кол-вом новых clips на пункте «Клипы».
-                            val clipsBadge = if (itemDest == Screen.Clips.route) {
-                                re.pinok.realtime.ClipsCounter.count.collectAsState().value
-                            } else 0
-                            NavigationDrawerItem(
-                                label = { Text(item.title) },
-                                selected = currentRoute == itemDest,
-                                onClick = {
-                                    // #30 (nav fix): popUpTo + saveState — как в dock items.
-                                    if (itemDest == Screen.Clips.route && clipsBadge > 0) {
-                                        // Сбрасываем счётчик при открытии clips-экрана.
-                                        re.pinok.realtime.ClipsCounter.reset()
-                                    }
-                                    nav.navigatePanelItem(item)
-                                    scope.launch { drawerState.close() }
-                                },
-                                icon = {
-                                    if (item.icon != null) {
-                                        if (clipsBadge > 0) {
-                                            BadgedBox(
-                                                badge = {
-                                                    Badge { Text(if (clipsBadge > 99) "99+" else clipsBadge.toString()) }
-                                                },
-                                            ) {
-                                                Icon(item.icon, contentDescription = null)
-                                            }
-                                        } else {
-                                            Icon(item.icon, contentDescription = null)
-                                        }
-                                    }
-                                },
-                            )
-                        }
-                        // #ARCH-CONTAINERS (Этап 1.4): контейнерные пункты панели —
-                        // из реестра (NavEntry), ПОСЛЕ ядерных (внутри группы —
-                        // по order, см. containerNavEntries). Нет контейнера →
-                        // пунктов нет (graceful); неизвестный хосту route →
-                        // предупреждение в лог и пропуск (не падаем).
-                        // #PANELEDIT: контейнерный пункт, чей destination уже
-                        // покрыт каноническим пунктом панели ("photos"), пропускаем.
-                        containerNavEntries.forEach { entry ->
-                            val dest = hostDestinationForRoute(entry.route)
-                            if (dest == null) {
-                                LaunchedEffect(entry.route) {
-                                    AppLog.w(
-                                        "SovaNavHost",
-                                        "CONTAINERS: NavEntry route '${entry.route}' не зарегистрирован в хосте — пункт «${entry.title}» скрыт",
-                                    )
-                                }
-                            } else if (dest.route in panelDestRoutes) {
-                                // Дубликат канонического пункта — не рисуем.
-                                LaunchedEffect(entry.route) {
-                                    AppLog.i(
-                                        "SovaNavHost",
-                                        "CONTAINERS: NavEntry '${entry.route}' продублирован каноническим пунктом панели — пропуск",
-                                    )
-                                }
-                            } else {
-                                NavigationDrawerItem(
-                                    label = { Text(entry.title) },
-                                    selected = currentRoute == dest.route,
-                                    onClick = {
-                                        nav.navigate(dest.route) {
-                                            popUpTo(nav.graph.startDestinationId) { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                        scope.launch { drawerState.close() }
-                                    },
-                                    icon = {
-                                        Icon(hostIconForKey(entry.iconKey), contentDescription = null)
-                                    },
-                                )
-                            }
-                        }
-                    }
-                    // Фиксированный хвост drawer: Настройки → Выйти из аккаунта → Выйти из приложения.
-                    HorizontalDivider()
-                    NavigationDrawerItem(
-                        label = { Text(Screen.Settings.title) },
-                        selected = currentRoute == Screen.Settings.route,
-                        onClick = {
-                            nav.navigate(Screen.Settings.route) {
-                                popUpTo(nav.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                            scope.launch { drawerState.close() }
-                        },
-                        icon = {
-                            Icon(Screen.Settings.icon ?: Icons.Default.Settings, contentDescription = null)
-                        },
-                    )
-                    // Fix #369: «Выйти из аккаунта» — ПОЛНЫЙ logout: диалог-
-                    // предупреждение → onLogoutWithHoldersClear (сброс in-memory
-                    // кэшей holders → mainActivity-логика: longPoll stop →
-                    // signOut → cookies+storage clear → AuthActivity). Раньше
-                    // полный logout жил только глубоко в ProfileScreen. ЭТО
-                    // РАЗНОЕ действие с пунктом ниже («Выйти из приложения» —
-                    // finishAffinity с СОХРАНЕНИЕМ авторизации). Порядок хвоста:
-                    // Настройки → Выйти из аккаунта → Выйти из приложения.
-                    NavigationDrawerItem(
-                        label = { Text("Выйти из аккаунта") },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            showLogoutDialog = true
-                        },
-                        icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
-                    )
-                    // #247: «Выйти из приложения» — закрывает приложение целиком,
-                    // сохраняя авторизацию. При следующем запуске пользователь
-                    // сразу попадёт в ленту. Полный logout из аккаунта — пункт
-                    // ВЫШЕ «Выйти из аккаунта» (Fix #369) и в ProfileScreen.
-                    NavigationDrawerItem(
-                        label = { Text("Выйти из приложения") },
-                        selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            showExitAppDialog = true
-                        },
-                        icon = { Icon(Icons.Outlined.PowerSettingsNew, contentDescription = null) },
-                    )
-                }
-            }
-        },
-    ) {
         Scaffold(
             // Hide-on-scroll (#299): connection ловит дельты скролла от
             // LazyColumn/verticalScroll внутри экранов и переключает
@@ -1340,34 +1098,29 @@ fun SovaNavHost(
                             // TextField для поиска) или navigationIcon (back button).
                             title = ScreenTopBar.titleOverride ?: { Text(currentTitle) },
                             navigationIcon = {
-                                ScreenTopBar.navigationIconOverride?.invoke()
-                                    ?: run {
-                                        // Fix #261: на Ленте — hamburger (открытие drawer).
-                                        // На всех остальных экранах — кнопка «Назад»
-                                        // (popBackStack). Drawer всё ещё доступен через
-                                        // свайп от левого края (ModalNavigationDrawer).
-                                        if (currentRoute == Screen.Feed.route) {
-                                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                                Icon(Icons.Default.Menu, contentDescription = "Меню")
-                                            }
-                                        } else {
-                                            IconButton(onClick = {
-                                                if (!nav.popBackStack()) {
-                                                    // Fallback: если назад некуда — на Ленту.
-                                                    nav.navigate(Screen.Feed.route) {
-                                                        popUpTo(nav.graph.startDestinationId) { saveState = true }
-                                                        launchSingleTop = true
-                                                        restoreState = true
-                                                    }
+                                val override = ScreenTopBar.navigationIconOverride
+                                if (override != null) {
+                                    override()
+                                } else {
+                                    val isRootTab = currentRoute in dockScreens.map { it.route }
+                                    if (!isRootTab) {
+                                        IconButton(onClick = {
+                                            if (!nav.popBackStack()) {
+                                                // Fallback: если назад некуда — на Ленту.
+                                                nav.navigate(Screen.Feed.route) {
+                                                    popUpTo(nav.graph.startDestinationId) { saveState = true }
+                                                    launchSingleTop = true
+                                                    restoreState = true
                                                 }
-                                            }) {
-                                                Icon(
-                                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                                    contentDescription = "Назад",
-                                                )
                                             }
+                                        }) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.ArrowBack,
+                                                contentDescription = "Назад",
+                                            )
                                         }
                                     }
+                                }
                             },
                             // Fix #256: экраны регистрируют свои actions (search, filter,
                             // mark-all-read) через ScreenTopBar.configure().
@@ -2183,9 +1936,13 @@ composable(Screen.CallsHistory.route) {
                 // разделы (Сообщества/Друзья/Закладки/Документы/Фото/Видео) —
                 // раньше ВСЕ плитки были заглушками с тостом.
                 composable(Screen.Services.route)      {
-                    ServicesScreen(onOpenSection = { screen ->
-                        nav.navigate(screen.navRoute())
-                    })
+                    ServicesScreen(
+                        onOpenSection = { screen ->
+                            nav.navigate(screen.navRoute())
+                        },
+                        onLogout = { showLogoutDialog = true },
+                        onExitApp = { showExitAppDialog = true },
+                    )
                 }
                 // #VM-3 волна 3: видео-сообщение («кружок») — рекордер с выбором
                 // формы-маски и отправкой в чат (peerId из path-параметра).
@@ -3084,7 +2841,6 @@ composable(Screen.CallsHistory.route) {
             }
         }
 
-    }
     // #57: GlobalMiniPlayer перенесён обратно в bottomBar Scaffold (в Column
     // с NavigationBar). Overlay в Box убран — он перекрывал NavigationBar.
     // Sprint 1, P0-3 (#76): captcha dialog — overlay поверх всего app.
