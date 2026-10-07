@@ -12518,8 +12518,7 @@ class VKApiClient(
                         //
                         // Теперь: сообщаем MainActivity что токен невалиден →
                         // boot LaunchedEffect запустит AuthActivity (silent re-login
-                        // через remixsid если есть, иначе полный вход).
-                        try { SovaApp.get().notifyTokenInvalidated() } catch (_: Exception) {}
+                        try { SovaApp.get().notifyTokenInvalidated() } catch (e: Exception) { AppLog.w("VKApiClient", "notifyTokenInvalidated failed: ${e.message}") }
                         return null
                     }
                     refreshed
@@ -12860,7 +12859,7 @@ class VKApiClient(
                         // grace истёк (>30с) — тогда полный re-login (нижний блок).
                         val graceDelayMs = if (method == "messages.getLongPollServer") 2_000L else 5_000L
                         AppLog.w("VKApiClient", "API error $code${if (isIpMismatch) "/1130 (IP mismatch)" else ""} on $method — network switched + NO silent means. VK обновляет IP binding асинхронно — ждём ${graceDelayMs}мс и делаем single retry со старым токеном (#IP-BINDING-RETRY).")
-                        try { SovaApp.get().setNetworkSwitchState(re.pinok.util.NetworkSwitchState.Refreshing(attempt = 1)) } catch (_: Exception) {}
+                        try { SovaApp.get().setNetworkSwitchState(re.pinok.util.NetworkSwitchState.Refreshing(attempt = 1)) } catch (e: Exception) { AppLog.w("VKApiClient", "setNetworkSwitchState Refreshing(1) failed: ${e.message}") }
                         kotlinx.coroutines.delay(graceDelayMs)
                         attempt++
                         continue
@@ -12904,7 +12903,7 @@ class VKApiClient(
                     var refreshedDuringGrace: String? = null
                     for (graceAttempt in 1..maxGraceAttempts) {
                         try { SovaApp.get().setNetworkSwitchState(
-                            re.pinok.util.NetworkSwitchState.Refreshing(attempt = graceAttempt)) } catch (_: Exception) {}
+                            re.pinok.util.NetworkSwitchState.Refreshing(attempt = graceAttempt)) } catch (e: Exception) { AppLog.w("VKApiClient", "setNetworkSwitchState Refreshing($graceAttempt) failed: ${e.message}") }
                         AppLog.i("VKApiClient", "grace period silent refresh attempt $graceAttempt/$maxGraceAttempts on $method")
                         runCatching {
                             // #FORCE-REFRESH (2026-08-02): err=5/1130 means VK rejected
@@ -12930,7 +12929,7 @@ class VKApiClient(
                     }
                     if (refreshedDuringGrace != null) {
                         // #NET-SWITCH-POPUP: новый токен получен → Idle (скрыть popup).
-                        try { SovaApp.get().setNetworkSwitchState(re.pinok.util.NetworkSwitchState.Idle) } catch (_: Exception) {}
+                        try { SovaApp.get().setNetworkSwitchState(re.pinok.util.NetworkSwitchState.Idle) } catch (e: Exception) { AppLog.w("VKApiClient", "setNetworkSwitchState Idle failed: ${e.message}") }
                         attempt++
                         continue
                     }
@@ -12952,7 +12951,7 @@ class VKApiClient(
                     // Если retry упадёт — следующий err=5 (не recentlySwitched) → AuthActivity.
                     val canRetryFlag = try { authRepo.hasSilentReloginMeans() } catch (_: Exception) { true }
                     try { SovaApp.get().setNetworkSwitchState(re.pinok.util.NetworkSwitchState.Failed(
-                        "Не удалось обновить токен автоматически.", canRetry = canRetryFlag)) } catch (_: Exception) {}
+                        "Не удалось обновить токен автоматически.", canRetry = canRetryFlag)) } catch (e: Exception) { AppLog.w("VKApiClient", "setNetworkSwitchState Failed failed: ${e.message}") }
                     attempt++
                     continue
                 }
@@ -12995,7 +12994,7 @@ class VKApiClient(
                 if (!hasSilentMeans) {
                     AppLog.e("VKApiClient", "Refresh failed (no silent means: no remixsid/exchange_token/trusted_hash) — web OAuth token permanently IP-rejected. Launching AuthActivity for re-login (#RELOGIN-FORCE).")
                     tokenStorage.clearAccessToken()
-                    try { SovaApp.get().notifyTokenInvalidated() } catch (_: Exception) {}
+                    try { SovaApp.get().notifyTokenInvalidated() } catch (e: Exception) { AppLog.w("VKApiClient", "notifyTokenInvalidated (no silent means) failed: ${e.message}") }
                     return null
                 }
                 // P3 #IP-MISMATCH-RETRY: 5/1130 = VK привязал токен к другому IP.
@@ -13022,7 +13021,7 @@ class VKApiClient(
                 // Fix #50-A: уведомляем MainActivity о потере токена, иначе
                 // приложение остаётся на главном экране с пустым токеном →
                 // все API вызовы возвращают null → пустая лента → БЕЛЫЙ ЭКРАН.
-                try { SovaApp.get().notifyTokenInvalidated() } catch (_: Exception) {}
+                try { SovaApp.get().notifyTokenInvalidated() } catch (e: Exception) { AppLog.w("VKApiClient", "notifyTokenInvalidated (refresh failed) failed: ${e.message}") }
                 return null
             }
 
@@ -13076,14 +13075,14 @@ class VKApiClient(
                 if (!hasSilentMeans) {
                     AppLog.e("VKApiClient", "API error $code on $method (attempt=$attempt) — no silent means, retry exhausted — launching AuthActivity for re-login (#RELOGIN-FORCE).")
                     tokenStorage.clearAccessToken()
-                    try { SovaApp.get().notifyTokenInvalidated() } catch (_: Exception) {}
+                    try { SovaApp.get().notifyTokenInvalidated() } catch (e: Exception) { AppLog.w("VKApiClient", "notifyTokenInvalidated (no silent means fallback) failed: ${e.message}") }
                     return null
                 }
                 // Fix #106: только access_token, сохраняем remixsid для silent re-login.
                 tokenStorage.clearAccessToken()
                 // Fix #50-A: тот же механизм — пользователь увидит AuthActivity
                 // вместо пустой ленты.
-                try { SovaApp.get().notifyTokenInvalidated() } catch (_: Exception) {}
+                try { SovaApp.get().notifyTokenInvalidated() } catch (e: Exception) { AppLog.w("VKApiClient", "notifyTokenInvalidated (clearAccessToken fallback) failed: ${e.message}") }
             }
             // Error 15 (access denied) — sig issue. Помогаем диагностировать:
             //  • vk1.a.* web token (client_id=6287487) — error 15 невозможен,

@@ -298,7 +298,7 @@ object PlayerConnection {
                             val pos = ctrl.currentPosition.coerceAtLeast(0L)
                             ctrl.prepare()
                             if (pos > 1000L) {
-                                try { ctrl.seekTo(pos) } catch (_: Exception) {}
+                                try { ctrl.seekTo(pos) } catch (e: Exception) { AppLog.w(TAG, "seekTo($pos) on pending reprepare failed: ${e.message}") }
                             }
                             AppLog.i(TAG, "connectController: pending network reprepare applied (track=#${track.id}, pos=${pos}ms)")
                         } catch (e: Exception) {
@@ -342,7 +342,7 @@ object PlayerConnection {
             lastReconnectTs = now
             AppLog.i(TAG, "reconnectController: пересоздаём MediaController (старый устарел после Doze)")
             // Старый controller мог остаться non-null но мёртвым — освобождаем.
-            try { controller?.release() } catch (_: Exception) {}
+            try { controller?.release() } catch (e: Exception) { AppLog.w(TAG, "release controller on reconnect failed: ${e.message}") }
             controller = null
             connectController(ctx)
         }
@@ -929,7 +929,7 @@ object PlayerConnection {
                 // в любом состоянии (IDLE/BUFFERING/READY) — это задокументировано
                 // в media3 docs: «Can be called from any state».
                 if (pos > 1000L) {
-                    try { ctrl.seekTo(pos) } catch (_: Exception) {}
+                    try { ctrl.seekTo(pos) } catch (e: Exception) { AppLog.w(TAG, "seekTo($pos) on network changed failed: ${e.message}") }
                     AppLog.d(TAG, "onNetworkChanged: seekTo($pos) applied immediately (no delay, reason=$reason)")
                 }
             } catch (e: Exception) {
@@ -1468,7 +1468,7 @@ object PlayerConnection {
                             val pos = c.currentPosition.coerceAtLeast(0L)
                             c.prepare()
                             if (pos > 1000L) {
-                                try { c.seekTo(pos) } catch (_: Exception) {}
+                                try { c.seekTo(pos) } catch (e: Exception) { AppLog.w(TAG, "seekTo($pos) on watchdog failed: ${e.message}") }
                             }
                             AppLog.i(TAG, "BUFFERING watchdog: reprepare applied (pos=${pos}ms)")
                         } catch (e: Exception) {

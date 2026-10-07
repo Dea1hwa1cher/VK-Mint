@@ -638,6 +638,8 @@ object ClipVideoDownloadManager {
         try {
             val metaFile = File(downloadDir, "$key.meta")
             if (metaFile.exists()) metaFile.delete()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w(TAG, "deleteMetadata failed for $key: ${e.message}")
+        }
     }
 }

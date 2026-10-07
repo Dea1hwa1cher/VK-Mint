@@ -415,7 +415,9 @@ object RemixsidCapturer {
                         }
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                AppLog.w(TAG, "captureFromCookieManager failed for $url: ${e.message}")
+            }
         }
 
         // remixsid — обязательный минимум. p/remixnsid без remixsid бесполезны
@@ -485,7 +487,9 @@ object RemixsidCapturer {
                             }
                         }
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "buildVkCookieHeader failed for $url: ${e.message}")
+                }
             }
             all.entries.joinToString("; ") { "${it.key}=${it.value}" }
         } catch (e: Exception) {

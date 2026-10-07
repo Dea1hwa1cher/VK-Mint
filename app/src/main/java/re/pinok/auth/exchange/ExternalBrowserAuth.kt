@@ -190,7 +190,9 @@ object ExternalBrowserAuth {
             for (url in VK_COOKIE_URLS) {
                 try {
                     cm.getCookie(url)
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "warmup getCookie failed for $url: ${e.message}")
+                }
             }
             AppLog.d(TAG, "CookieManager warmed up")
         } catch (e: Exception) {
@@ -287,7 +289,9 @@ object ExternalBrowserAuth {
                     cm.setCookie(url, "$name=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/")
                     clearedCount++
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                AppLog.w(TAG, "clearCookie failed for $url: ${e.message}")
+            }
         }
         // #LOGOUT-WEBVIEW-HANG: removeAllCookies СИНХРОННО через callback.
         // Раньше null callback → async fire-and-forget → race с WebView load
@@ -307,7 +311,9 @@ object ExternalBrowserAuth {
         // flush() — persist изменений на диск (sync).
         try {
             cm.flush()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w(TAG, "CookieManager.flush failed: ${e.message}")
+        }
         val waitStatus = if (removedAll != null) "sync" else "timeout(${REMOVE_ALL_COOKIES_TIMEOUT_MS}ms)"
         AppLog.i(TAG, "clearAllVkCookies: cleared $clearedCount cookie-slots across ${allVkUrls.size} domains + removeAllCookies($waitStatus) + flush")
     }

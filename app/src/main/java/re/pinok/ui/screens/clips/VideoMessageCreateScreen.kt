@@ -309,13 +309,23 @@ fun VideoMessageCreateScreen(
     // Unbind камеры при выходе с экрана.
     DisposableEffect(Unit) {
         onDispose {
-            try { activeRecording?.stop() } catch (_: Exception) {}
+            try {
+                activeRecording?.stop()
+            } catch (e: Exception) {
+                AppLog.w(TAG, "activeRecording.stop failed: ${e.message}")
+            }
             try {
                 val future = ProcessCameraProvider.getInstance(context)
                 future.addListener({
-                    try { future.get().unbindAll() } catch (_: Exception) {}
+                    try {
+                        future.get().unbindAll()
+                    } catch (e: Exception) {
+                        AppLog.w(TAG, "Camera unbindAll failed: ${e.message}")
+                    }
                 }, ContextCompat.getMainExecutor(context))
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                AppLog.w(TAG, "ProcessCameraProvider.getInstance failed: ${e.message}")
+            }
         }
     }
 }
@@ -564,7 +574,7 @@ private fun ReviewSendStage(
     } else null
 
     DisposableEffect(file) {
-        onDispose { try { player?.release() } catch (_: Exception) {} }
+        onDispose { try { player?.release() } catch (e: Exception) { AppLog.w(TAG, "player.release failed: ${e.message}") } }
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {

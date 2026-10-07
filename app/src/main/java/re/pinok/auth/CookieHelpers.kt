@@ -1,6 +1,7 @@
 package re.pinok.auth
 
 import android.webkit.CookieManager
+import re.pinok.util.AppLog
 
 /**
  * Cookie helpers — извлечение remixsid и userId из CookieManager WebView.
@@ -43,7 +44,9 @@ internal fun getRemixSidFromCookieManager(): String? {
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w("CookieHelpers", "getCookie failed for $url: ${e.message}")
+        }
     }
     return null
 }
@@ -83,7 +86,9 @@ internal fun getUserIdFromCookieManager(): Long {
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w("CookieHelpers", "getCookie failed for $url: ${e.message}")
+        }
     }
     return 0L
 }

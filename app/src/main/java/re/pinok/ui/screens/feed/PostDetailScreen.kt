@@ -265,7 +265,9 @@ fun PostDetailScreen(
                             nameFromResolver = cursor.getString(nameIdx)
                         }
                     }
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    AppLog.w("PostDetail", "contentResolver.query failed: ${e.message}")
+                }
                 val mimeFromResolver = ctx.contentResolver.getType(uri)
                 val rawName = nameFromResolver
                     ?: uri.lastPathSegment?.let { java.net.URLDecoder.decode(it, "UTF-8") }

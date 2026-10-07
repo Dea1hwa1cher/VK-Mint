@@ -215,9 +215,15 @@ private fun CameraStage(
             try {
                 val future = ProcessCameraProvider.getInstance(context)
                 future.addListener({
-                    try { future.get().unbindAll() } catch (_: Exception) {}
+                    try {
+                        future.get().unbindAll()
+                    } catch (e: Exception) {
+                        AppLog.w("ClipCreateScreen", "Camera unbindAll failed: ${e.message}")
+                    }
                 }, ContextCompat.getMainExecutor(context))
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                AppLog.w("ClipCreateScreen", "ProcessCameraProvider.getInstance failed: ${e.message}")
+            }
         }
     }
 
@@ -433,7 +439,7 @@ private fun ReviewStage(
         }
     }
     DisposableEffect(uri) {
-        onDispose { try { player.release() } catch (_: Exception) {} }
+        onDispose { try { player.release() } catch (e: Exception) { AppLog.w("ClipCreateScreen", "player.release onDispose failed: ${e.message}") } }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -451,7 +457,7 @@ private fun ReviewStage(
 
         IconButton(
             onClick = {
-                try { player.release() } catch (_: Exception) {}
+                try { player.release() } catch (e: Exception) { AppLog.w("ClipCreateScreen", "player.release onClick failed: ${e.message}") }
                 vm.discardRecording()
             },
             modifier = Modifier

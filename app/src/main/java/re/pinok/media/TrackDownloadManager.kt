@@ -3046,7 +3046,9 @@ object TrackDownloadManager {
         try {
             val metaFile = File(downloadDir, "$trackId.meta")
             if (metaFile.exists()) metaFile.delete()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w(TAG, "deleteMetadata failed for #$trackId: ${e.message}")
+        }
     }
 
     // ─── Fix #166: SHA-256 integrity sidecar ──────────────────────
@@ -3120,7 +3122,9 @@ object TrackDownloadManager {
         try {
             val shaFile = java.io.File(downloadDir, "$trackId.sha256")
             if (shaFile.exists()) shaFile.delete()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w(TAG, "deleteSha256 failed for #$trackId: ${e.message}")
+        }
     }
 
     /**
@@ -3209,7 +3213,9 @@ object TrackDownloadManager {
         try {
             val infoFile = java.io.File(downloadDir, "$trackId.m3u8info")
             if (infoFile.exists()) infoFile.delete()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w(TAG, "deleteM3u8Info failed for #$trackId: ${e.message}")
+        }
     }
 
     /**

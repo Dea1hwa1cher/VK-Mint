@@ -733,9 +733,9 @@ fun ChatDetailScreen(
     var previewPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
     val cleanUpPreviewPlayer: () -> Unit = {
         previewPlayer?.let { p ->
-            try { p.setOnCompletionListener(null); p.setOnPreparedListener(null) } catch (_: Exception) {}
-            try { p.reset() } catch (_: Exception) {}
-            try { p.release() } catch (_: Exception) {}
+            try { p.setOnCompletionListener(null); p.setOnPreparedListener(null) } catch (e: Exception) { AppLog.w("ChatDetailScreen", "previewPlayer listeners clear failed: ${e.message}") }
+            try { p.reset() } catch (e: Exception) { AppLog.w("ChatDetailScreen", "previewPlayer reset failed: ${e.message}") }
+            try { p.release() } catch (e: Exception) { AppLog.w("ChatDetailScreen", "previewPlayer release failed: ${e.message}") }
         }
         previewPlayer = null
     }
@@ -1451,7 +1451,9 @@ fun ChatDetailScreen(
                             nameFromResolver = cursor.getString(nameIdx)
                         }
                     }
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    AppLog.w("ChatDetailScreen", "contentResolver.query failed: ${e.message}")
+                }
                 val mimeFromResolver = ctx.contentResolver.getType(uri)
                 val rawName = nameFromResolver
                     ?: uri.lastPathSegment?.let { java.net.URLDecoder.decode(it, "UTF-8") }
@@ -3199,7 +3201,9 @@ fun ChatDetailScreen(
                 lastActivity = app.apiClient.messagesGetLastActivity(peerId)
             } catch (ce: kotlinx.coroutines.CancellationException) {
                 throw ce
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                AppLog.w("ChatDetailScreen", "messagesGetLastActivity failed: ${e.message}")
+            }
         }
         // P0.3 + P3.2 + P3.4: загружаем pinned message (group chats) + push settings
         // (mute state) + can_write (channel detection).
@@ -8422,7 +8426,7 @@ private fun VideoMessageBubble(
 
     // Освобождение плеера (без утечек).
     DisposableEffect(player) {
-        onDispose { try { player?.release() } catch (_: Exception) {} }
+        onDispose { try { player?.release() } catch (e: Exception) { AppLog.w("ChatDetailScreen", "inline video player.release failed: ${e.message}") } }
     }
 
     fun togglePlayPause() {
@@ -12101,11 +12105,11 @@ private class VoicePlaybackController {
             val p = player
             if (p != null) {
                 if (isPlaying) {
-                    try { p.pause() } catch (_: Exception) {}
+                    try { p.pause() } catch (e: Exception) { AppLog.w("VoicePlaybackController", "p.pause failed: ${e.message}") }
                     isPlaying = false
                     stopProgressTracking()
                 } else {
-                    try { p.play() } catch (_: Exception) {}
+                    try { p.play() } catch (e: Exception) { AppLog.w("VoicePlaybackController", "p.play failed: ${e.message}") }
                     isPlaying = true
                     startProgressTracking()
                 }
@@ -12243,7 +12247,7 @@ private class VoicePlaybackController {
     private fun releasePlayer() {
         stopProgressTracking()
         player?.let { p ->
-            try { p.release() } catch (_: Exception) {}
+            try { p.release() } catch (e: Exception) { AppLog.w("VoicePlaybackController", "p.release failed: ${e.message}") }
         }
         player = null
         currentMessageId = null

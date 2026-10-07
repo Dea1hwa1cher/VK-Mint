@@ -176,7 +176,7 @@ class NetworkObserver(private val context: Context) {
                 if (!stillOnline) {
                     AppLog.i("NetworkObserver", "onLost: fully offline — evicting pool + cancelAll")
                     onLostListeners.forEach { listener ->
-                        try { listener() } catch (_: Exception) {}
+                        try { listener() } catch (e: Exception) { AppLog.w("NetworkObserver", "onLost listener failed: ${e.message}") }
                     }
                 } else {
                     AppLog.i("NetworkObserver", "onLost: network switched (still online) — skip cancelAll, default-network-changed listener will handle")
@@ -233,7 +233,7 @@ class NetworkObserver(private val context: Context) {
                     // Смена default network — уведомляем подписчиков для мягкого
                     // reset'а (evictAll без cancelAll) + reprepare плеера.
                     onDefaultNetworkChangedListeners.forEach { listener ->
-                        try { listener() } catch (_: Exception) {}
+                        try { listener() } catch (e: Exception) { AppLog.w("NetworkObserver", "onDefaultNetworkChanged listener failed: ${e.message}") }
                     }
                 }
 
@@ -277,7 +277,7 @@ class NetworkObserver(private val context: Context) {
                         // OkHttp connection pool может держать stale connections
                         // на старом DNS resolution.
                         onDefaultNetworkChangedListeners.forEach { listener ->
-                            try { listener() } catch (_: Exception) {}
+                            try { listener() } catch (e: Exception) { AppLog.w("NetworkObserver", "onDefaultNetworkChanged listener on IP change failed: ${e.message}") }
                         }
                     }
                 }
@@ -329,7 +329,7 @@ class NetworkObserver(private val context: Context) {
                         // из-за возврата из фона. Grace period срабатывает только
                         // при реальном onAvailable (смена default route).
                         onDefaultNetworkChangedListeners.forEach { listener ->
-                            try { listener() } catch (_: Exception) {}
+                            try { listener() } catch (e: Exception) { AppLog.w("NetworkObserver", "onDefaultNetworkChanged listener on unblock failed: ${e.message}") }
                         }
                     }
                 }
@@ -346,11 +346,13 @@ class NetworkObserver(private val context: Context) {
         val cb = callback ?: return
         try {
             connectivityManager.unregisterNetworkCallback(cb)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w("NetworkObserver", "unregisterNetworkCallback failed: ${e.message}")
+        }
         callback = null
         // Fix #171: снимаем и default network callback.
         defaultCallback?.let { dcb ->
-            try { connectivityManager.unregisterNetworkCallback(dcb) } catch (_: Exception) {}
+            try { connectivityManager.unregisterNetworkCallback(dcb) } catch (e: Exception) { AppLog.w("NetworkObserver", "unregister defaultCallback failed: ${e.message}") }
         }
         defaultCallback = null
         // Fix #250: сбрасываем флаг первого onAvailable — при следующем register()

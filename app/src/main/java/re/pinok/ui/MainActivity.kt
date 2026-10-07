@@ -1511,14 +1511,20 @@ class MainActivity : ComponentActivity() {
                                     // finishAffinity() и держать процесс активным.
                                     try {
                                         re.pinok.media.PlayerConnection.pauseIfPlaying()
-                                    } catch (_: Exception) { }
+                                    } catch (e: Exception) {
+                                        AppLog.w("MainActivity", "pauseIfPlaying onExitApp failed: ${e.message}")
+                                    }
                                     try {
                                         app.longPollClient.stop()
-                                    } catch (_: Exception) { }
+                                    } catch (e: Exception) {
+                                        AppLog.w("MainActivity", "longPollClient.stop onExitApp failed: ${e.message}")
+                                    }
                                     // Fix #340: останавливаем keep-alive сервис при полном выходе.
                                     try {
                                         re.pinok.realtime.LongPollKeepAliveService.stop(this@MainActivity)
-                                    } catch (_: Exception) { }
+                                    } catch (e: Exception) {
+                                        AppLog.w("MainActivity", "LongPollKeepAliveService.stop onExitApp failed: ${e.message}")
+                                    }
                                     finishAffinity()
                                 },
                             )

@@ -1025,7 +1025,9 @@ fun MusicScreen(
                                     null -> "Не удалось обновить закладку — попробуйте ещё раз"
                                 }
                                 android.widget.Toast.makeText(app.applicationContext, msg, android.widget.Toast.LENGTH_SHORT).show()
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) {
+                                AppLog.w("MusicScreen", "Toast display failed: ${e.message}")
+                            }
                         }
                     },
                     onCopyLink = {

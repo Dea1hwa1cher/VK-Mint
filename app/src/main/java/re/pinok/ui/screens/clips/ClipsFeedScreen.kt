@@ -412,7 +412,9 @@ private fun ClipPlayerItem(
     // Освобождаем player при уходе со страницы.
     DisposableEffect(clip.id, clip.ownerId) {
         onDispose {
-            try { player?.release() } catch (_: Exception) {}
+            try { player?.release() } catch (e: Exception) {
+                AppLog.w(TAG, "player.release failed: ${e.message}")
+            }
         }
     }
 

@@ -169,8 +169,8 @@ class LongPollClient(
         // явно хочет немедленного переподключения (возврат в foreground), не ждём
         // истечения 15-секундной паузы token invalidation.
         tokenPauseUntilMs = 0L
-        try { httpClient.connectionPool.evictAll() } catch (_: Exception) {}
-        try { currentCall?.cancel() } catch (_: Exception) {}
+        try { httpClient.connectionPool.evictAll() } catch (e: Exception) { AppLog.w(TAG, "evictAll error on resume: ${e.message}") }
+        try { currentCall?.cancel() } catch (e: Exception) { AppLog.w(TAG, "cancel in-flight call error on resume: ${e.message}") }
     }
 
     /** Запуск LongPoll-цикла. Idempotent — повторный вызов ничего не делает. */
@@ -223,9 +223,8 @@ class LongPollClient(
         // не вызывался) — снимаем, чтобы не плодить дубли.
         lostListener?.let { observer.removeOnNetworkLostListener(it) }
         val listener: () -> Unit = {
-            AppLog.w(TAG, "Network lost — evicting pool + cancelling in-flight calls")
-            try { httpClient.connectionPool.evictAll() } catch (_: Exception) {}
-            try { httpClient.dispatcher.cancelAll() } catch (_: Exception) {}
+            try { httpClient.connectionPool.evictAll() } catch (e: Exception) { AppLog.w(TAG, "evictAll error on network lost: ${e.message}") }
+            try { httpClient.dispatcher.cancelAll() } catch (e: Exception) { AppLog.w(TAG, "cancelAll error on network lost: ${e.message}") }
         }
         lostListener = listener
         observer.addOnNetworkLostListener(listener)
@@ -295,8 +294,7 @@ class LongPollClient(
                     "to let AuthActivity/ensureFreshToken complete re-login (§43 #NET-SWITCH-DELAY)")
                 // Прерываем текущий wait/poll — loop выйдет и проверит tokenPauseUntilMs.
                 interruptWait = true
-                // Отменяем in-flight HTTP call (messagesGetLongPollServer с невалидным токеном).
-                try { currentCall?.cancel() } catch (_: Exception) {}
+                try { currentCall?.cancel() } catch (e: Exception) { AppLog.w(TAG, "cancel in-flight call error on token invalid: ${e.message}") }
             }
         }
     }
@@ -383,7 +381,9 @@ class LongPollClient(
                                     tokenRestored = true
                                     break
                                 }
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) {
+                                AppLog.w(TAG, "isTokenValid check failed: ${e.message}")
+                            }
                         }
                     }
                     if (interrupted) {

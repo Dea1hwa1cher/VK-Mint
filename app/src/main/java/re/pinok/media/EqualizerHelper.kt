@@ -157,8 +157,12 @@ object EqualizerHelper {
     fun savePreset(name: String?) {
         // Сохраняем даже если engine null (SovaApp может быть не готов).
         engine?.savePreset(name) ?: run {
-            try { SovaApp.get().getSharedPreferences("equalizer", 0)
-                .edit().putString("eq_preset", name).apply() } catch (_: Exception) {}
+            try {
+                SovaApp.get().getSharedPreferences("equalizer", 0)
+                    .edit().putString("eq_preset", name).apply()
+            } catch (e: Exception) {
+                AppLog.w(TAG, "savePreset failed: ${e.message}")
+            }
         }
     }
 
@@ -169,8 +173,12 @@ object EqualizerHelper {
 
     fun saveBands(bands: List<Short>) {
         engine?.saveBands(bands) ?: run {
-            try { SovaApp.get().getSharedPreferences("equalizer", 0)
-                .edit().putString("eq_bands", bands.joinToString(",")).apply() } catch (_: Exception) {}
+            try {
+                SovaApp.get().getSharedPreferences("equalizer", 0)
+                    .edit().putString("eq_bands", bands.joinToString(",")).apply()
+            } catch (e: Exception) {
+                AppLog.w(TAG, "saveBands failed: ${e.message}")
+            }
         }
     }
 

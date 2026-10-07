@@ -295,8 +295,11 @@ object WebTokenAuth {
                 )
             }
 
-            // Step 2: Пробуем прочитать SAT токен (не критично для работы мессенджера)
-            try { persistQueueCredential(webView, webTokenResp.userId) } catch (_: Exception) {}
+            try {
+                persistQueueCredential(webView, webTokenResp.userId)
+            } catch (e: Exception) {
+                AppLog.w(TAG, "persistQueueCredential failed: ${e.message}")
+            }
             val satToken = try {
                 tryReadSatToken(webView).also {
                     if (it != null) AppLog.i(TAG, "Step 2: SAT token из localStorage -> OK")

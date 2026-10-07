@@ -570,7 +570,9 @@ private fun AuthScreen(
                             "Не удалось обновить авторизацию ($errKind) — войдите вручную из бокового меню",
                             android.widget.Toast.LENGTH_LONG,
                         ).show()
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        AppLog.w("AuthActivity", "Toast display failed: ${e.message}")
+                    }
                     onCancel()
                 }
             }

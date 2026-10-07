@@ -115,7 +115,9 @@ class ChannelWebSocketClient(
         running = false
         try {
             webSocket?.close(1000, "client stop")
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.ws(stage = "stop-error", error = e)
+        }
         webSocket = null
         AppLog.ws(stage = "stub-stop")
     }

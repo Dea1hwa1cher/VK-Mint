@@ -287,7 +287,9 @@ object NetworkInterceptors {
                                     AppLog.i(TAG, "IOException + recently switched → evictAll() for $host (attempt ${attempt + 1}/${maxRetries + 1})")
                                     pool.evictAll()
                                 }
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) {
+                                AppLog.w(TAG, "pool.evictAll() failed: ${e.message}")
+                            }
                         }
                     }
                     if (attempt >= maxRetries) {

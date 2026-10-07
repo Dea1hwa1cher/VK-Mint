@@ -250,7 +250,9 @@ fun CreatePostDialog(
                             nameFromResolver = cursor.getString(nameIdx)
                         }
                     }
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    AppLog.w("CreatePostDialog", "contentResolver.query failed: ${e.message}")
+                }
                 val rawName = nameFromResolver
                     ?: uri.lastPathSegment?.let { java.net.URLDecoder.decode(it, "UTF-8") }
                     ?: "file"

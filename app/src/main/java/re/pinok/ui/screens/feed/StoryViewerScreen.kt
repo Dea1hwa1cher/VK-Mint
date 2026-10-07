@@ -550,7 +550,9 @@ fun StoryViewerScreen(
     // Релиз плеера при смене истории или выходе.
     DisposableEffect(exoPlayer) {
         onDispose {
-            try { exoPlayer?.release() } catch (_: Exception) {}
+            try { exoPlayer?.release() } catch (e: Exception) {
+                AppLog.w("StoryViewer", "exoPlayer.release failed: ${e.message}")
+            }
         }
     }
 

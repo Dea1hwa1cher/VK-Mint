@@ -204,7 +204,9 @@ fun ChatInfoScreen(
             if (!isGroupChat && isUserDialog) {
                 try {
                     lastActivity = app.apiClient.messagesGetLastActivity(peerId)
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    AppLog.w("ChatInfoScreen", "messagesGetLastActivity failed: ${e.message}")
+                }
             }
         } catch (e: Exception) {
             AppLog.e("ChatInfoScreen", "load meta error", e)

@@ -2362,9 +2362,9 @@ class SovaApp : Application(), SingletonImageLoader.Factory, CallsDependencies, 
         // Срабатывает ТОЛЬКО когда checkOnline() == false (см. NetworkObserver.onLost).
         networkObserver.addOnNetworkLostListener {
             AppLog.w("SovaApp", "Network FULLY lost — evicting OkHttp pool + cancelling in-flight calls (global)")
-            try { httpClient.connectionPool.evictAll() } catch (_: Exception) {}
-            try { httpClient.dispatcher.cancelAll() } catch (_: Exception) {}
-            try { re.pinok.media.PlayerConnection.onNetworkChanged(online = false) } catch (_: Exception) {}
+            try { httpClient.connectionPool.evictAll() } catch (e: Exception) { AppLog.w("SovaApp", "evictAll on network lost: ${e.message}") }
+            try { httpClient.dispatcher.cancelAll() } catch (e: Exception) { AppLog.w("SovaApp", "cancelAll on network lost: ${e.message}") }
+            try { re.pinok.media.PlayerConnection.onNetworkChanged(online = false) } catch (e: Exception) { AppLog.w("SovaApp", "onNetworkChanged false: ${e.message}") }
             // #NET-SWITCH-POPUP: полная потеря сети → Offline state.
             setNetworkSwitchState(NetworkSwitchState.Offline)
         }
@@ -2377,10 +2377,10 @@ class SovaApp : Application(), SingletonImageLoader.Factory, CallsDependencies, 
         networkObserver.addOnDefaultNetworkChangedListener {
             val ctype = try { networkObserver.connectionType() } catch (_: Exception) { "network" }
             AppLog.i("SovaApp", "Default network SWITCHED to $ctype — soft reset (evictAll, NO cancelAll) + reprepare player")
-            try { httpClient.connectionPool.evictAll() } catch (_: Exception) {}
+            try { httpClient.connectionPool.evictAll() } catch (e: Exception) { AppLog.w("SovaApp", "evictAll on switch: ${e.message}") }
             // #AUTO-OFFLINE-REMOVAL (W41): resetNetworkErrorCounter/clearAutoOffline
             // убраны вместе с авто-офлайном #38.
-            try { re.pinok.media.PlayerConnection.onNetworkChanged(online = true, forceReprepare = true) } catch (_: Exception) {}
+            try { re.pinok.media.PlayerConnection.onNetworkChanged(online = true, forceReprepare = true) } catch (e: Exception) { AppLog.w("SovaApp", "onNetworkChanged reprepare: ${e.message}") }
 
             // #VKID-SEAMLESS (vk.id.md P0-5): PROACTIVE silent refresh на смене сети.
             // Раньше refresh запускался ТОЛЬКО реактивно — когда следующий API-вызов
@@ -2457,7 +2457,7 @@ class SovaApp : Application(), SingletonImageLoader.Factory, CallsDependencies, 
                     AppLog.i("SovaApp", "Network restored (offline→online)")
                     // #AUTO-OFFLINE-REMOVAL (W41): resetNetworkErrorCounter/clearAutoOffline
                     // убраны вместе с авто-офлайном #38.
-                    try { re.pinok.media.PlayerConnection.onNetworkChanged(online = true) } catch (_: Exception) {}
+                    try { re.pinok.media.PlayerConnection.onNetworkChanged(online = true) } catch (e: Exception) { AppLog.w("SovaApp", "onNetworkChanged true: ${e.message}") }
                     // #NET-SWITCH-POPUP: сеть восстановилась → Idle (скрыть popup).
                     setNetworkSwitchState(NetworkSwitchState.Idle)
                 }
@@ -2510,7 +2510,7 @@ class SovaApp : Application(), SingletonImageLoader.Factory, CallsDependencies, 
         // privacyHideLastSeen=true (тогда accountSetOnline() → no-op).
         keepAliveScope.launch {
             while (true) {
-                try { apiClient.accountSetOnline() } catch (_: Exception) {}
+                try { apiClient.accountSetOnline() } catch (e: Exception) { AppLog.w("SovaApp", "accountSetOnline ping error: ${e.message}") }
                 delay(300_000L) // 5 минут (как в оригинальном VK Android)
             }
         }

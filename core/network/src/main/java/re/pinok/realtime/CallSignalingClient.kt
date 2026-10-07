@@ -200,7 +200,7 @@ class CallSignalingClient(
         if (ws != null) {
             scope.launch {
                 delay(300)
-                try { ws.close(1000, "client stop") } catch (_: Exception) {}
+                try { ws.close(1000, "client stop") } catch (e: Exception) { AppLog.w(TAG, "ws close error: ${e.message}") }
             }
         }
     }
@@ -223,7 +223,7 @@ class CallSignalingClient(
         val ws = webSocket
         webSocket = null
         AppLog.w(TAG, "bounce: закрываю WS сигналинга — переподключение ради свежего connection (TURN-креды/перерегистрация)")
-        try { ws?.close(1000, "bounce") } catch (_: Exception) {}
+        try { ws?.close(1000, "bounce") } catch (e: Exception) { AppLog.w(TAG, "ws bounce close error: ${e.message}") }
     }
 
     /** #CALLS-IN-FIX (2026-08-29): WS сигналинга открыт — команды уходят, а не отбрасываются. */
@@ -688,7 +688,7 @@ class CallSignalingClient(
                     waited += 100
                 }
                 if (!isWsOpen()) {
-                    try { webSocket?.cancel() } catch (_: Exception) {}
+                    try { webSocket?.cancel() } catch (e: Exception) { AppLog.w(TAG, "cancel on ws timeout failed: ${e.message}") }
                     if (running) {
                         val why = lastWsError ?: "таймаут ${CONNECT_TIMEOUT_MS}мс"
                         lastWsError = why
@@ -828,7 +828,7 @@ class CallSignalingClient(
             // длинных звонках сервер может счесть соединение неактивным
             // (activityTimeout=120000) и оборвать сигналинг.
             if (text == "ping") {
-                try { webSocket?.send("pong") } catch (_: Exception) {}
+                try { webSocket?.send("pong") } catch (e: Exception) { AppLog.w(TAG, "send pong failed: ${e.message}") }
                 AppLog.d(TAG, "ping → pong")
                 return
             }

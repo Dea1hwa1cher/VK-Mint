@@ -52,7 +52,7 @@ fun CallsWebViewScreen(
         try {
             val cm = CookieManager.getInstance()
             cm.setAcceptCookie(true)
-            if (webView != null) { try { cm.setAcceptThirdPartyCookies(webView, true) } catch (_: Exception) {} }
+            if (webView != null) { try { cm.setAcceptThirdPartyCookies(webView, true) } catch (e: Exception) { AppLog.w(TAG, "setAcceptThirdPartyCookies failed: ${e.message}") } }
             val domains = listOf(".vk.ru", "vk.ru", ".calls.vk.ru", "calls.vk.ru",
                 ".m.vk.ru", "m.vk.ru", ".login.vk.com", "login.vk.com",
                 ".id.vk.com", "id.vk.com", ".vk.com", "vk.com")

@@ -188,7 +188,9 @@ fun VkAuthWebViewScreenV2(
                 context, text,
                 if (long) android.widget.Toast.LENGTH_LONG else android.widget.Toast.LENGTH_SHORT,
             ).show()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            AppLog.w(TAG, "authToast failed: ${e.message}")
+        }
     }
 
     // Флаг причины закрытия — для точного лога в onDispose.
@@ -386,8 +388,12 @@ fun VkAuthWebViewScreenV2(
                     if (parent is android.view.ViewGroup) {
                         parent.removeView(wv)
                     }
-                } catch (_: Exception) {}
-                try { wv.destroy() } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "onDispose removeView failed: ${e.message}")
+                }
+                try { wv.destroy() } catch (e: Exception) {
+                    AppLog.w(TAG, "onDispose wv.destroy failed: ${e.message}")
+                }
                 AppLog.i(TAG, "onDispose: WebView destroyed ($reason)")
                 webViewRef = null
             }
@@ -571,7 +577,11 @@ fun VkAuthWebViewScreenV2(
                                         is SilentTokenExchanger.Result.Success -> {
                                             AppLog.i(TAG, "silent_token exchange УСПЕШЕН → user_id=${result.userId}")
                                             PendingAuthResult.save(result.accessToken, result.userId)
-                                            try { onSilentTokenExchanged(result.accessToken, result.userId) } catch (_: Exception) {}
+                                            try {
+                                                onSilentTokenExchanged(result.accessToken, result.userId)
+                                            } catch (e: Exception) {
+                                                AppLog.e(TAG, "onSilentTokenExchanged callback failed: ${e.message}", e)
+                                            }
                                         }
                                         is SilentTokenExchanger.Result.TokenInvalid -> {
                                             AppLog.w(TAG, "silent_token exchange: токен невалиден — ${result.message}")
@@ -857,8 +867,12 @@ fun VkAuthWebViewScreenV2(
                 try {
                     val parent = wv.parent
                     if (parent is android.view.ViewGroup) parent.removeView(wv)
-                } catch (_: Exception) {}
-                try { wv.destroy() } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "onRelease removeView failed: ${e.message}")
+                }
+                try { wv.destroy() } catch (e: Exception) {
+                    AppLog.w(TAG, "onRelease wv.destroy failed: ${e.message}")
+                }
                 AppLog.i(TAG, "AndroidView onRelease: WebView destroyed (epoch=$webViewEpoch)")
             },
         )
