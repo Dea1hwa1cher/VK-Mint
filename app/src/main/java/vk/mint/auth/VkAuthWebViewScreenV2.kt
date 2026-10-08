@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -143,7 +142,6 @@ fun VkAuthWebViewScreenV2(
     onTokenExchange: (remixsid: String, SessionCookies, WebView) -> Unit,
     onBack: () -> Unit,
     onCancel: () -> Unit = {},
-    onOfflineMode: () -> Unit = {},
     onSilentTokenExchanged: (accessToken: String, userId: Long) -> Unit = { _, _ -> },
     silentMode: Boolean = false,
     // Fix #370 #LOGOUT-WEBTOKEN-CLEAR: запуск после logout (AuthActivity передаёт
@@ -200,10 +198,6 @@ fun VkAuthWebViewScreenV2(
     val handleClose: () -> Unit = {
         userClosing = true
         onBack()
-    }
-    val handleOffline: () -> Unit = {
-        userClosing = true
-        onOfflineMode()
     }
 
     // PendingAuthResult polling — SSO callback (silent_token из shouldOverrideUrlLoading).
@@ -988,29 +982,13 @@ fun VkAuthWebViewScreenV2(
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedButton(
                     onClick = onCancel,
-                    modifier = Modifier.weight(1f).height(44.dp),
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
                 ) {
                     Text("Отмена", style = MaterialTheme.typography.labelLarge)
-                }
-                OutlinedButton(
-                    onClick = handleOffline,
-                    modifier = Modifier.weight(1f).height(44.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary,
-                    ),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CloudOff,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text("Офлайн", style = MaterialTheme.typography.labelLarge)
                 }
             }
         }

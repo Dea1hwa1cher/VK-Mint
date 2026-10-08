@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Image
@@ -389,51 +388,6 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
      */
     object StoryViewer : Screen("story_viewer", "Истории", null)
 
-    /**
-     * Fix #50: Экран офлайн аудиоплеера — минималистичный, без сетевых запросов.
-     *
-     * Показывает только скачанные треки из [vk.mint.media.TrackDownloadManager]:
-     * прогресс, controls (play/pause/prev/next), seek bar, очередь, shuffle/repeat.
-     * Никаких обложек/лайков/репостов — только локальные файлы.
-     */
-    object OfflineAudioPlayer : Screen("offline_audio_player", "Офлайн плеер", null)
-
-    /**
-     * Fix #111: Экран офлайн-просмотра скачанной видео-истории.
-     *
-     * Принимает ownerId + storyId как nav args, читает локальный файл через
-     * [vk.mint.media.StoryVideoDownloadManager.getLocalFile] и meta через
-     * [vk.mint.media.StoryVideoDownloadManager.getStoryMeta]. Воспроизводит
-     * через ExoPlayer с file:// URI — без сети, без CDN URL refresh.
-     *
-     * Отдельный экран от [StoryViewer] (который работает с live API stories
-     * через StoryHolder) и от [VideoPlayer] (работает с Video model, не Story).
-     */
-    object StoryOfflinePlayer : Screen("story_offline_player/{ownerId}/{storyId}", "История", null) {
-        const val ARG_OWNER_ID = "ownerId"
-        const val ARG_STORY_ID = "storyId"
-        fun buildRoute(ownerId: Long, storyId: Int): String = "story_offline_player/$ownerId/$storyId"
-    }
-
-    /**
-     * §37.12 #330: Экран офлайн-просмотра скачанного клипа.
-     *
-     * Принимает ownerId + videoId (Long) как nav args, читает локальный файл
-     * через [vk.mint.media.ClipVideoDownloadManager.getLocalFile] и meta через
-     * [vk.mint.media.ClipVideoDownloadManager.getClipMeta]. Воспроизводит через
-     * ExoPlayer с file:// URI и RESIZE_MODE_ZOOM (TikTok-стиль 9:16 vertical).
-     *
-     * Отдельный экран от [StoryOfflinePlayer]:
-     *  - clips используют Long videoId (у stories — Int storyId);
-     *  - clips хранятся в ClipVideoDownloadManager (clip_downloads/, ключ "c_*");
-     *  - clips имеют TikTok-стиль ZOOM-resize + ContentScale.Crop.
-     */
-    object ClipOfflinePlayer : Screen("clip_offline_player/{ownerId}/{videoId}", "Клип", null) {
-        const val ARG_OWNER_ID = "ownerId"
-        const val ARG_VIDEO_ID = "videoId"
-        fun buildRoute(ownerId: Long, videoId: Long): String = "clip_offline_player/$ownerId/$videoId"
-    }
-
     // Drawer — основные разделы социальной сети
     object Friends       : Screen("friends",       "Друзья",       Icons.Default.Group)
     object Groups        : Screen("groups",        "Сообщества",   Icons.Outlined.Groups)
@@ -535,12 +489,6 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object About         : Screen("about",         "О приложении", null)
 
     object Logs          : Screen("logs",          "Логи",         Icons.Default.BugReport)
-
-    /**
-     * Экран офлайн-менеджера — просмотр скачанных аудио и видео
-     * при отсутствии сети. Доступен из ошибки ленты или настроек.
-     */
-    object OfflineManager : Screen("offline_manager", "Офлайн", Icons.Outlined.CloudOff)
 
     /**
      * §49.6 Sprint VK-ID-1.2: Экран «Устройства и сессии» — список активных

@@ -82,8 +82,6 @@ internal fun LandingScreen(
     onCancelTokenPaste: () -> Unit = {},
     showManualPaste: Boolean = false,
     onShowManualPaste: () -> Unit = {},
-    // «Офлайн-режим» — вызывает OfflineManager (guest mode), оставлена по запросу.
-    onOfflineMode: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isLoading = state is AuthState.Loading

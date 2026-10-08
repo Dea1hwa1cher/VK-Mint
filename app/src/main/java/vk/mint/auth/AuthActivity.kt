@@ -249,15 +249,6 @@ class AuthActivity : ComponentActivity() {
                                 setResult(RESULT_CANCELED)
                                 finish()
                             },
-                            onOfflineMode = {
-                                // #34: Пользователь выбрал «Офлайн-режим» — завершаем
-                                // AuthActivity с кастомным результатом. MainActivity
-                                // покажет OfflineManagerScreen в guest-режиме (без токена).
-                                AppLog.i(TAG, "Offline mode requested — finishing with RESULT_OFFLINE_MODE")
-                                PendingAuthResult.clear()
-                                setResult(RESULT_OFFLINE_MODE)
-                                finish()
-                            },
                             onLaunchWebView = {
                                 AppLog.i(TAG, "Launching OAuth WebView (vk.com web client_id=6287487)")
                                 oauthWebViewLauncher.launch(
@@ -415,17 +406,6 @@ class AuthActivity : ComponentActivity() {
         const val TAG = "AuthActivity"
 
         /**
-         * #34: Кастомный результат AuthActivity — пользователь выбрал
-         * «Офлайн-режим» на LandingScreen. MainActivity получает этот код
-         * через authLauncher и показывает OfflineManagerScreen без авторизации
-         * (guest-режим: просмотр/воспроизведение уже скачанных аудио/видео).
-         *
-         * Значение 2 — первое доступное user-defined resultCode
-         * (RESULT_OK=-1, RESULT_CANCELED=0, RESULT_FIRST_USER=1).
-         */
-        const val RESULT_OFFLINE_MODE = 2
-
-        /**
          * Fix #107: Extra для silent re-login режима.
          *
          * Когда MainActivity ловит tokenInvalidationTick (error 5/1117),
@@ -483,7 +463,6 @@ private fun AuthScreen(
     viewModel: AuthViewModel,
     onSuccess: () -> Unit,
     onCancel: () -> Unit,
-    onOfflineMode: () -> Unit,
     onLaunchWebView: () -> Unit,
     silentMode: Boolean = false,
     // Fix #370 #LOGOUT-WEBTOKEN-CLEAR: запуск после logout (EXTRA_AUTH_REASON=
@@ -650,7 +629,6 @@ private fun AuthScreen(
                     },
                     showManualPaste = showManualPaste,
                     onShowManualPaste = { showManualPaste = true },
-                    onOfflineMode = onOfflineMode,
                     modifier = Modifier.fillMaxSize(),
                 )
                 // Fix #189: шестерёнка с настройками VK доменов — доступна
@@ -690,7 +668,6 @@ private fun AuthScreen(
                     viewModel.cancel()
                     phase = AuthPhase.LANDING
                 },
-                onOfflineMode = onOfflineMode,
                 onSilentTokenExchanged = { accessToken, userId ->
                     AppLog.i("AuthActivity", "silent_token exchange УСПЕШЕН → user_id=$userId, сохраняем OAuth token")
                     // #SESSION-HOLD: silent_token (VK ID/SSO) даёт токен БЕЗ remixsid.

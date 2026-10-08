@@ -19,7 +19,6 @@
     <string name="auth_title">Вход ВКонтакте</string>
     <string name="auth_hint">Войдите через аккаунт ВК</string>
     <string name="auth_sign_in">Войти</string>
-    <string name="auth_offline_mode">Режим офлайн</string>
     <string name="auth_error">Ошибка авторизации</string>
 
     <!-- Locker -->
@@ -70,9 +69,6 @@
     <string name="clip_video_download_notification_complete_title">Клип загружен</string>
     <string name="clip_video_download_notification_text">Прогресс: %1$d%%</string>
 
-    <!-- OfflineManager: Stories tab (Fix #100) -->
-    <string name="offline_tab_stories">Истории (%1$d)</string>
-
     <!-- Settings categories -->
     <string name="settings_news">Новости</string>
     <string name="settings_interface">Интерфейс</string>
@@ -107,7 +103,6 @@
     <string name="mod_dnt">DNT (не печатать)</string>
     <string name="mod_undelete">Показать удалённые</string>
     <string name="mod_unedit">Показать оригинал правок</string>
-    <string name="mod_offline">Офлайн-режим</string>
     <string name="mod_device_mask">Маскировка устройства</string>
     <string name="mod_antitelemetry">Анти-телеметрия</string>
     <string name="mod_ssl_pinning">SSL pinning</string>

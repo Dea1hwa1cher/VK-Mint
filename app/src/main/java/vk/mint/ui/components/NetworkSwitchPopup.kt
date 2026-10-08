@@ -60,9 +60,7 @@ import vk.mint.util.NetworkSwitchState
  * (VK не вернул err=5 — сеть стабилизировалась без IP-конфликта) -> auto-Idle.
  */
 @Composable
-fun NetworkSwitchPopup(
-    onOpenOfflineManager: (() -> Unit)? = null,
-) {
+fun NetworkSwitchPopup() {
     val app = VkMintApp.get()
     val state by app.networkSwitchState.collectAsState()
     // prefsSnapshot — синхронный O(1) кеш (seeded в VkMintApp.onCreate, всегда non-null
@@ -155,7 +153,7 @@ fun NetworkSwitchPopup(
         }
         NetworkSwitchState.Offline -> {
             title = "Нет сети"
-            message = "Сетевое подключение потеряно. Доступен офлайн-контент."
+            message = "Сетевое подключение потеряно."
             isBusy = false
         }
         NetworkSwitchState.Idle -> return

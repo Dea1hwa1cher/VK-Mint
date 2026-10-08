@@ -48,8 +48,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
@@ -68,12 +66,8 @@ import vk.mint.ui.components.DraggableLogFab
 import vk.mint.ui.components.LogDialogState
 import vk.mint.ui.components.LogViewerDialog
 import vk.mint.ui.components.ShareToChatSheet
-import vk.mint.ui.navigation.GuestDrawer
 import vk.mint.ui.navigation.VkMintNavHost
 import vk.mint.ui.navigation.VideoHolder
-import vk.mint.ui.screens.offline.OfflineAudioPlayerScreen
-import vk.mint.ui.screens.offline.OfflineManagerScreen
-import vk.mint.ui.screens.offline.StoryOfflinePlayerScreen
 import vk.mint.ui.screens.settings.SettingsScreen
 import vk.mint.ui.screens.videoplayer.VideoPlatformRouter
 import vk.mint.data.model.Video
@@ -205,11 +199,6 @@ class MainActivity : ComponentActivity() {
      * Запускает AuthActivity (OAuth WebView как primary + Phone+Password как fallback).
      * Возвращает RESULT_OK если любой из способов авторизации успешен —
      * токен уже сохранён в ExchangeTokenStorage к этому моменту.
-     *
-     * #34: RESULT_OFFLINE_MODE (2) — пользователь выбрал «Офлайн-режим» на
-     * LandingScreen. MainActivity переключается в guest-режим: показывает
-     * OfflineManagerScreen без авторизации. Выйти из guest-режима можно
-     * кнопкой «Войти» в TopAppBar офлайн-экрана.
      */
     private val authLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -230,15 +219,6 @@ class MainActivity : ComponentActivity() {
         // VK app. Гуард нужен только ПОКА пользователь подтверждает в VK app;
         // после return'а блокировка больше не нужна.
         lastAuthActivityLaunchedAt = 0L
-        if (result.resultCode == AuthActivity.RESULT_OFFLINE_MODE) {
-            // #34: guest-режим — показываем офлайн-менеджер без токена.
-            isOfflineMode = true
-            // #AUTH-OFFLINE-GUARD: юзер выбрал офлайн сам — автологин отменён.
-            autoOfflineGuest = false
-            // Fix #386: guest-сессия — главный UI больше «не показан»;
-            // последующие silent-сценарии не должны удерживать старый UI.
-            mainUiEverShown = false
-        }
         // Fix #49 #SILENT-LOOP-BREAK: считаем SILENT-провалы. Если SILENT-запуск
         // завершился БЕЗ токена (не RESULT_OK) — инкрементим. При успехе — сброс.
         // Это заставит следующий launchAuth пойти в FULL режиме (см. 3 места
@@ -248,13 +228,6 @@ class MainActivity : ComponentActivity() {
                 AppLog.i("MainActivity", "SILENT loop broken — silentFailCount $silentFailCount → 0 (Fix #49)")
             }
             silentFailCount = 0
-            // #AUTH-FIRST-OPEN-GUEST: успешный вход из guest-режима (кнопка
-            // «Войти в аккаунт» в guest-drawer) — сбрасываем guest-флаг.
-            if (isOfflineMode) {
-                isOfflineMode = false
-                autoOfflineGuest = false
-                AppLog.i("MainActivity", "#AUTH-FIRST-OPEN-GUEST: login OK from guest — isOfflineMode reset")
-            }
             // Fix #176-auth-loop: успешный логин — сбрасываем флаг форсированного
             // FULL re-login. Если в будущем снова потребуется форсировать (новый
             // апдейт), VkMintApp.onCreate выставит его заново.
@@ -309,7 +282,7 @@ class MainActivity : ComponentActivity() {
                 appCtx.longPollClient.notifyResumed()
                 AppLog.i("MainActivity", "#SILENT-AUTH-KEEP-UI: silent auth OK — pool evicted + LP woken (UI stayed mounted)")
             }
-        } else if (lastLaunchWasSilent && result.resultCode != AuthActivity.RESULT_OFFLINE_MODE) {
+        } else if (lastLaunchWasSilent) {
             silentFailCount++
             AppLog.w("MainActivity", "SILENT auth failed (${result.resultCode}) — " +
                 "silentFailCount=$silentFailCount/$MAX_SILENT_FAILURES (Fix #49)" +
@@ -337,45 +310,6 @@ class MainActivity : ComponentActivity() {
      * Без этого hasValidToken() не observable и UI не обновляется после OAuth.
      */
     private var authVersion by mutableIntStateOf(0)
-
-    /**
-     * #34 / #AUTH-FIRST-OPEN-GUEST: guest-режим — приложение работает БЕЗ токена
-     * (офлайн-менеджер + GuestDrawer). Включается:
-     *  1) вручную — «Офлайн-режим» на LandingScreen (RESULT_OFFLINE_MODE);
-     *  2) автоматически — первый запуск без токена и без silent-возможности,
-     *     network-restored без silent, token-invalidation без silent
-     *     (#AUTH-FIRST-OPEN-GUEST, 2026-09-23: экран входа больше НЕ
-     *     показывается автоматически — только кнопка «Войти в аккаунт»
-     *     в guest-drawer).
-     * Сбрасывается при успешном логине (result RESULT_OK).
-     */
-    private var isOfflineMode by mutableStateOf(false)
-
-    /**
-     * #AUTH-OFFLINE-GUARD (2026-09-25): guest-режим, введённый АВТОМАТИЧЕСКИ
-     * из-за отсутствия сети (не выбором юзера через «Офлайн-режим»).
-     * Отличие от ручного guest: при появлении сети приложение САМО молча
-     * пере-логинится через silent remixsid (networkRestoredAuthRetry) — юзер
-     * не должен тапать «Войти в аккаунт» только потому, что был выключен WiFi.
-     */
-    private var autoOfflineGuest by mutableStateOf(false)
-
-    /**
-     * Fix #183: Оверлеи для guest-режима (офлайн без авторизации).
-     *
-     * В guest-режиме OfflineManagerScreen показывается напрямую (без VkMintNavHost),
-     * поэтому навигация к VideoPlayerScreen / StoryOfflinePlayerScreen /
-     * OfflineAudioPlayerScreen невозможна через NavController. Эти переменные
-     * хранят state оверлеев и обрабатываются в compose-дереве guest-режима.
-     *
-     * - [guestVideoOverlay]: видео для оверлей-плеера (VideoHolder используется
-     *   для совместимости с authorized-режимом — но в guest-режиме читаем его
-     *   через VideoHolder.active.collectAsState()).
-     * - [guestStoryOverlay]: пара (ownerId, storyId) для StoryOfflinePlayerScreen.
-     * - [guestAudioPlayerOpen]: флаг открытия OfflineAudioPlayerScreen.
-     */
-    private var guestStoryOverlay by mutableStateOf<Pair<Long, Int>?>(null)
-    private var guestAudioPlayerOpen by mutableStateOf(false)
 
     /**
      * Fix #112: флаг «AuthActivity сейчас показывается».
@@ -501,12 +435,7 @@ class MainActivity : ComponentActivity() {
         // не мучить юзера при реальном edge-case.
         // isManualAction: явное действие пользователя — throttle/guard отключены.
         //   - "logout": юзер нажал «Выйти», хочет немедленно войти обратно.
-        //   - "drawer-login": #AUTH-FIRST-OPEN-GUEST — юзер нажал «Войти в аккаунт»
-        //     в guest-drawer. Без исключения throttle 20с мог заблокировать
-        //     повторный тап после быстрой отмены AuthActivity → кнопка «не работает».
-        //   - "offline-back-to-login": устаревший путь (до #AUTH-FIRST-OPEN-GUEST),
-        //     оставлен для совместимости.
-        val isManualAction = reason == "logout" || reason == "drawer-login" || reason == "offline-back-to-login"
+        val isManualAction = reason == "logout"
 
         // =================================================================
         // #AUTH-OFFLINE-GUARD (2026-09-25): БЕЗ СЕТИ авторизацию НЕ НАЧИНАЕМ.
@@ -574,12 +503,6 @@ class MainActivity : ComponentActivity() {
                         AppLog.i("MainActivity", "SILENT loop broken — silentFailCount $silentFailCount → 0 (Fix #49, headless)")
                     }
                     silentFailCount = 0
-                    // #AUTH-OFFLINE-GUARD: headless-успех после auto-offline-guest —
-                    // выходим из guest-режима (главный UI восстановлен).
-                    if (isOfflineMode) {
-                        isOfflineMode = false
-                        autoOfflineGuest = false
-                    }
                     authVersion++
                     AppLog.i("MainActivity", "SILENT-HEADLESS: токен восстановлен без окна — главный UI восстановлен (authVersion++)")
                 } else {
@@ -776,7 +699,6 @@ class MainActivity : ComponentActivity() {
                     AppLog.d("MainActivity", "SILENT retry: app backgrounded again — #BG-AUTH-LOOP-FIX handles on next resume")
                     return@withContext
                 }
-                if (isOfflineMode) return@withContext
                 if (app.tokenStorage.hasValidToken()) return@withContext
                 if (authActivityShowing) return@withContext
                 if (!app.networkObserver.isOnline()) {
@@ -993,7 +915,7 @@ class MainActivity : ComponentActivity() {
 
                 // Boot logic: запуск AuthActivity / LockerActivity при первом показе.
                 // Срабатывает один раз (bootLocal guard). Рестартит при смене
-                // authVersion (login/logout) и isOfflineMode.
+                // authVersion (login/logout).
                 //
                 // Fix #112 (сессия после долгого фона): guard теперь проверяет
                 // ТОЖЕ валидность токена. Раньше `if (bootLocal) return` скипал
@@ -1010,7 +932,7 @@ class MainActivity : ComponentActivity() {
                 // Если токен невалиден (истёк/очищен) — boot выполняется заново,
                 // запускает AuthActivity для silent re-login через remixsid (Fix #107).
                 if (snap != null) {
-                    LaunchedEffect(snap.lockerEnabled, snap.lockerPinHash, bootLocal, currentAuthVersion, isOfflineMode) {
+                    LaunchedEffect(snap.lockerEnabled, snap.lockerPinHash, bootLocal, currentAuthVersion) {
                         // Скип только если уже загрузились AND токен жив AND
                         // boot-решение (локер) в этом процессе уже принято.
                         // Если токен умер — boot должен перезапуститься.
@@ -1027,22 +949,13 @@ class MainActivity : ComponentActivity() {
                         if (authActivityShowing) return@LaunchedEffect
                         bootLocal = true
 
-                        // #34: guest-режим — не запускаем AuthActivity, пользователь
-                        // явно выбрал «Офлайн-режим».
-                        if (isOfflineMode) {
-                            AppLog.i("MainActivity", "Offline (guest) mode — skipping auth")
-                            return@LaunchedEffect
-                        }
                         if (!app.tokenStorage.hasValidToken()) {
                             // #AUTH-OFFLINE-GUARD: нет сети — авторизацию не начинаем.
-                            // Сессия НЕ стирается; ждём сеть в guest-режиме с автологином:
-                            // когда сеть вернётся, networkRestoredAuthRetry молча
-                            // восстановит вход через silent remixsid.
+                            // Сессия НЕ стирается; ждём сеть: networkRestoredAuthRetry
+                            // запустит silent re-login при подключении.
                             if (!app.networkObserver.isOnline()) {
                                 lockerBootCheckDone = true
-                                isOfflineMode = true
-                                autoOfflineGuest = true
-                                AppLog.i("MainActivity", "#AUTH-OFFLINE-GUARD: boot offline + no valid token (remixsid=${!app.exchangeAuthRepository.remixsid().isNullOrBlank()}) → auto-guest, silent re-login deferred to network restore")
+                                AppLog.i("MainActivity", "#AUTH-OFFLINE-GUARD: boot offline + no valid token — waiting for network restore")
                                 return@LaunchedEffect
                             }
                             // Fix #339: web_token истекает каждые ~15 мин. При холодном
@@ -1123,10 +1036,6 @@ class MainActivity : ComponentActivity() {
                     // networkRestoredAuthRetry сам запустит silent re-login.
                     if (!app.networkObserver.isOnline()) {
                         AppLog.w("MainActivity", "Token invalidated (tick=$tokenInvalidationTick) but NO network — auth postponed (#AUTH-OFFLINE-GUARD)")
-                        return@LaunchedEffect
-                    }
-                    if (isOfflineMode) {
-                        AppLog.i("MainActivity", "Token invalidated (tick=$tokenInvalidationTick) but offline mode — skip AuthActivity relaunch")
                         return@LaunchedEffect
                     }
                     if (app.tokenStorage.hasValidToken()) {
@@ -1245,27 +1154,6 @@ class MainActivity : ComponentActivity() {
                         if (now - lastRetryMs < 3_000L) return
                         // только если токена реально нет
                         if (app.tokenStorage.hasValidToken()) return
-                        // не мешаем офлайн-режиму, КРОМЕ auto-offline-guest:
-                        // #AUTH-OFFLINE-GUARD — guest был введён ИЗ-ЗА отсутствия
-                        // сети; сеть вернулась → молча пере-логиниваемся через
-                        // silent remixsid. Флаги не сбрасываем здесь: при успехе
-                        // их сбросит headless-ветка launchAuth / RESULT_OK,
-                        // при сбое юзер остаётся в guest (сессия цела).
-                        if (isOfflineMode) {
-                            val hasRemixsidAuto = !app.exchangeAuthRepository.remixsid().isNullOrBlank()
-                            if (autoOfflineGuest && hasRemixsidAuto && silentFailCount < MAX_SILENT_FAILURES
-                                && !app.forceFullReloginOnNextLaunch) {
-                                AppLog.i("MainActivity", "#AUTH-OFFLINE-GUARD: network restored after auto-offline-guest — silent re-login (session preserved)")
-                                lastRetryMs = now
-                                val autoGuestIntent = Intent(this@MainActivity, AuthActivity::class.java).apply {
-                                    putExtra(AuthActivity.EXTRA_SILENT_MODE, true)
-                                }
-                                launchAuth(autoGuestIntent, reason = "network-restored-auto-guest")
-                            } else {
-                                AppLog.i("MainActivity", "Network restored but offline mode — skip auth retry (#341)")
-                            }
-                            return
-                        }
                         // не запускаем второй AuthActivity
                         if (authActivityShowing) {
                             AppLog.i("MainActivity", "Network restored but AuthActivity already showing — skip (#341)")
@@ -1303,20 +1191,14 @@ class MainActivity : ComponentActivity() {
                         val useSilent = hasRemixsid && silentFailCount < MAX_SILENT_FAILURES
                             && !app.forceFullReloginOnNextLaunch
                         if (useSilent) {
-                            AppLog.i("MainActivity", "Network restored + no token — retry auth via silent remixsid (#341; #AUTH-FIRST-OPEN-GUEST — невидимый)")
+                            AppLog.i("MainActivity", "Network restored + no token — retry auth via silent remixsid (#341; невидимый)")
                             val retryIntent = Intent(this@MainActivity, AuthActivity::class.java).apply {
                                 putExtra(AuthActivity.EXTRA_SILENT_MODE, true)
                             }
                             launchAuth(retryIntent, reason = "network-restored-no-token")
                         } else {
-                            // #AUTH-FIRST-OPEN-GUEST (2026-09-23): silent невозможен —
-                            // НЕ запускаем видимый логин. Переключаемся в guest-режим
-                            // (вместо вечного StartupLoadingScreen из сценария #341);
-                            // вход — кнопка «Войти в аккаунт» в guest-drawer.
-                            isOfflineMode = true
-                            AppLog.i("MainActivity", "#AUTH-FIRST-OPEN-GUEST: network restored but silent unavailable " +
-                                "(hasRemixsid=$hasRemixsid, silentFailCount=$silentFailCount/$MAX_SILENT_FAILURES, " +
-                                "forceFull=${app.forceFullReloginOnNextLaunch}) → guest mode, login via drawer button")
+                            AppLog.i("MainActivity", "Network restored + no token — launching AuthActivity")
+                            launchAuth(Intent(this@MainActivity, AuthActivity::class.java), reason = "network-restored-no-token")
                         }
                     }
                     // Fix #377 #NET-RESTORE-IMMEDIATE-CHECK: StateFlow может быть
@@ -1531,171 +1413,7 @@ class MainActivity : ComponentActivity() {
                             } // CompositionLocalProvider(LocalCallsDeps, LocalPhotosDeps)
                         }
 
-                        // #34 / #AUTH-FIRST-OPEN-GUEST: guest-режим (ручной выбор
-                        // «Офлайн-режим» на LandingScreen ИЛИ авто-вход — первый
-                        // запуск без токена/silent-возможности). Показываем
-                        // OfflineManagerScreen + GuestDrawer без токена: доступны
-                        // просмотр и воспроизведение уже скачанных аудио/видео
-                        // (PlayerConnection инициализирован в VkMintApp).
-                        // Экран входа НЕ запускается автоматически (#AUTH-FIRST-OPEN-GUEST):
-                        // иконка меню в TopAppBar открывает guest-drawer, вход —
-                        // фиксированная кнопка «Войти в аккаунт» (drawer-login).
-                        //
-                        // Fix #183: раньше колбэки onPlayVideo/onPlayStory/onOpenPlayer
-                        // не передавались (default null/{}) → тапы по видео/историям/
-                        // кнопке плеера игнорировались. Теперь передаём колбэчи, которые
-                        // открывают оверлеи ниже (overlayVideo, StoryOfflinePlayer,
-                        // OfflineAudioPlayer). Это позволяет воспроизводить кэш без
-                        // авторизации.
-                        isOfflineMode -> {
-                            // Fix #183: подписываемся на VideoHolder.active чтобы
-                            // оверлей VideoPlayerScreen показывался в guest-режиме.
-                            val overlayVideo by VideoHolder.active.collectAsState()
-                            // #AUTH-FIRST-OPEN-GUEST: drawerState хостится здесь (не
-                            // внутри GuestDrawer) — иконка меню в TopAppBar
-                            // OfflineManagerScreen (onMenu) открывает панель.
-                            val guestDrawerState = rememberDrawerState(DrawerValue.Closed)
-                            val guestScope = rememberCoroutineScope()
-                            // #AUTH-FIRST-OPEN-GUEST-2 (2026-09-23): guest-настройки —
-                            // SettingsScreen рендерится локально (DataStore, без токена):
-                            // интерфейс/сеть/офлайн/данные/обновления работают; секции
-                            // с API (звонки, VK ID, уведомления) — inline-ошибка при попытке.
-                            var guestSettingsOpen by rememberSaveable { mutableStateOf(false) }
-                            BackHandler(enabled = guestSettingsOpen) {
-                                guestSettingsOpen = false
-                            }
-                            // #AUTH-FIRST-OPEN-GUEST-3: при входе в guest (первый
-                            // запуск без токена) боковая панель открыта по умолчанию —
-                            // юзер сразу видит «Офлайн-данные», «Настройки» и
-                            // «Войти в аккаунт». Закрытие — свайпом/тапом по меню.
-                            LaunchedEffect(Unit) {
-                                if (guestDrawerState.currentValue == DrawerValue.Closed) {
-                                    guestDrawerState.open()
-                                }
-                            }
-                            GuestDrawer(
-                                drawerState = guestDrawerState,
-                                onSettings = { guestSettingsOpen = true },
-                                onLogin = {
-                                    // #AUTH-FIRST-OPEN-GUEST: ЕДИНСТВЕННЫЙ вход из
-                                    // guest-режима. AuthActivity покажет LandingScreen
-                                    // (внутренняя фаза AuthPhase.LANDING).
-                                    // reason="drawer-login" — manual-action (throttle/
-                                    // SSO-guard отключены: юзер явно нажал кнопку).
-                                    launchAuth(Intent(this@MainActivity, AuthActivity::class.java), reason = "drawer-login")
-                                },
-                            ) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                Surface(modifier = Modifier.fillMaxSize()) {
-                                    if (guestSettingsOpen) {
-                                        // #AUTH-FIRST-OPEN-GUEST-2: guest-настройки —
-                                        // свой Scaffold с TopAppBar (глобальный ScreenTopBar
-                                        // VkMintNavHost здесь не монтируется). Все переходы
-                                        // к API-экранам — default {} (пункт не активен без токена).
-                                        Scaffold(
-                                            topBar = {
-                                                TopAppBar(
-                                                    title = { Text("Настройки") },
-                                                    navigationIcon = {
-                                                        IconButton(onClick = { guestSettingsOpen = false }) {
-                                                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                                                        }
-                                                    },
-                                                )
-                                            },
-                                        ) { pad ->
-                                            // SettingsScreen не принимает modifier —
-                                            // обёртка Box с content-padding Scaffold'а.
-                                            Box(modifier = Modifier.padding(pad)) {
-                                                SettingsScreen()
-                                            }
-                                        }
-                                    } else {
-                                    OfflineManagerScreen(
-                                        // #AUTH-FIRST-OPEN-GUEST: иконка меню вместо
-                                        // «Назад» — открывает guest-drawer.
-                                        onMenu = { guestScope.launch { guestDrawerState.open() } },
-                                        // onBack больше не используется в guest-ветке
-                                        // (onMenu заменяет navigationIcon) — no-op.
-                                        onBack = {
-                                            AppLog.i("MainActivity", "Guest: onBack ignored (menu mode, #AUTH-FIRST-OPEN-GUEST)")
-                                        },
-                                        // Fix #183: открываем оверлей VideoPlayerScreen.
-                                        // VideoHolder — singleton object, общий с authorized-режимом.
-                                        onPlayVideo = { ownerId, videoId, title ->
-                                            AppLog.i("MainActivity", "Guest: play video owner=$ownerId id=$videoId")
-                                            VideoHolder.open(Video(
-                                                id = videoId,
-                                                ownerId = ownerId,
-                                                title = title,
-                                                description = null,
-                                                duration = 0,
-                                                date = 0,
-                                            ))
-                                        },
-                                        // Fix #183: открываем StoryOfflinePlayerScreen как
-                                        // fullscreen overlay. Читает локальный .mp4 через
-                                        // StoryVideoDownloadManager.getLocalFile — без сети.
-                                        onPlayStory = { ownerId, storyId ->
-                                            AppLog.i("MainActivity", "Guest: play story owner=$ownerId id=$storyId")
-                                            guestStoryOverlay = ownerId to storyId
-                                        },
-                                        // Fix #183: открываем OfflineAudioPlayerScreen как
-                                        // fullscreen overlay. Читает скачанные треки из
-                                        // TrackDownloadManager и играет через PlayerConnection
-                                        // (инициализирован в VkMintApp, не требует auth token).
-                                        onOpenPlayer = {
-                                            AppLog.i("MainActivity", "Guest: open offline audio player")
-                                            guestAudioPlayerOpen = true
-                                        },
-                                    )
-                                    } // else (guestSettingsOpen, #AUTH-FIRST-OPEN-GUEST-2)
-                                }
-
-                                // Fix #183: оверлей VideoPlayerScreen — показывается
-                                // поверх OfflineManagerScreen когда VideoHolder.active != null.
-                                // VideoPlayerScreen сам проверяет VideoDownloadManager.getLocalFile
-                                // и играет локальный файл без сети (LaunchedEffect return'ит
-                                // раньше если localFile != null). Требует VkMintApp (для app.apiClient),
-                                // но apiClient не вызывается если видео скачано.
-                                overlayVideo?.let { video ->
-                                    BackHandler(enabled = true) {
-                                        VideoHolder.close()
-                                    }
-                                    VideoPlatformRouter(
-                                        video = video,
-                                        onBack = { VideoHolder.close() },
-                                    )
-                                }
-
-                                // Fix #183: оверлей StoryOfflinePlayerScreen — fullscreen.
-                                // Полностью офлайн: читает StoryVideoDownloadManager.
-                                guestStoryOverlay?.let { (ownerId, storyId) ->
-                                    BackHandler(enabled = true) {
-                                        guestStoryOverlay = null
-                                    }
-                                    StoryOfflinePlayerScreen(
-                                        ownerId = ownerId,
-                                        storyId = storyId,
-                                        onBack = { guestStoryOverlay = null },
-                                    )
-                                }
-
-                                // Fix #183: оверлей OfflineAudioPlayerScreen — fullscreen.
-                                // PlayerConnection + TrackDownloadManager работают без auth token.
-                                if (guestAudioPlayerOpen) {
-                                    BackHandler(enabled = true) {
-                                        guestAudioPlayerOpen = false
-                                    }
-                                    OfflineAudioPlayerScreen(
-                                        onBack = { guestAudioPlayerOpen = false },
-                                    )
-                                }
-                            }
-                            } // GuestDrawer content
-                        }
-
-                        // Нет токена, не offline — AuthActivity запускается в
+                        // Нет токена — AuthActivity запускается в
                         // LaunchedEffect выше. Пока она не показалась — loading,
                         // чтобы не было белого экрана без FAB.
                         // Fix #386: сюда попадаем и в паузах МЕЖДУ silent-ретраями
@@ -1930,7 +1648,7 @@ class MainActivity : ComponentActivity() {
         // лёгким HTTP-путём (Path 1.5/5), если он на исходе или уже помечен
         // invalidated — ДО checkTokenValidity/launchAuth, чтобы по возможности
         // обойтись вообще без AuthActivity (см. KDoc метода — анализ гонок).
-        if (wasStopped && !isOfflineMode) {
+        if (wasStopped) {
             maybeProactiveTokenRefresh(app)
         }
 
@@ -1940,7 +1658,7 @@ class MainActivity : ComponentActivity() {
         // для silent re-login через remixsid). Без этого мы ждём пока LongPoll
         // сделает следующий API запрос и VK вернёт error 5 — а это до 45с
         // если LongPoll был в doRequest.
-        if (wasStopped && !isOfflineMode) {
+        if (wasStopped) {
             app.checkTokenValidity()
         }
 
@@ -1960,7 +1678,7 @@ class MainActivity : ComponentActivity() {
         // Throttle (20с) уже есть в launchAuth (Fix #230) — не будет zацикливаться.
         // #AUTH-OFFLINE-GUARD: без сети auth-процесс не начинаем — сессия цела,
         // при появлении сети отработает networkRestoredAuthRetry.
-        if (wasStopped && !isOfflineMode && !authActivityShowing && app.networkObserver.isOnline()) {
+        if (wasStopped && !authActivityShowing && app.networkObserver.isOnline()) {
             if (!app.tokenStorage.hasValidToken()) {
                 val hasRemixsid = !app.exchangeAuthRepository.remixsid().isNullOrBlank()
                 AppLog.i("MainActivity", "onResume (#BG-AUTH-LOOP-FIX): token invalid after background — launching AuthActivity (${if (hasRemixsid) "SILENT" else "FULL"})")

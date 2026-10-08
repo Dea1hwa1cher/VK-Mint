@@ -136,10 +136,6 @@ import vk.mint.ui.screens.music.ArtistDetailScreen
 import vk.mint.ui.screens.music.CatalogSectionScreen
 import vk.mint.ui.screens.notifications.NotificationsScreen
 import vk.mint.ui.screens.notifications.NotificationSettingsScreen
-import vk.mint.ui.screens.offline.ClipOfflinePlayerScreen
-import vk.mint.ui.screens.offline.OfflineAudioPlayerScreen
-import vk.mint.ui.screens.offline.OfflineManagerScreen
-import vk.mint.ui.screens.offline.StoryOfflinePlayerScreen
 import vk.mint.ui.screens.photos.PhotosScreen
 import vk.mint.ui.screens.profile.EditProfileScreen
 // П-7-AB: экран «Подписчики»/«Подписки» (правая колонка веба — списки).
@@ -909,17 +905,10 @@ fun VkMintNavHost(
         // не нужен — по паттерну экранов записи (ClipCreate не показывает бар).
         Screen.VideoMessageCreate.route,
         Screen.Logs.route, Screen.StoryViewer.route,
-        Screen.OfflineManager.route,
-        // Fix #111: у офлайн-плеера историй собственный TopAppBar + back button.
-        Screen.StoryOfflinePlayer.route,
-        // §37.12 #330: у офлайн-плеера клипов собственный fullscreen UI + back button.
-        Screen.ClipOfflinePlayer.route,
         // Клипы автора: собственный Scaffold+TopAppBar («Клипы…» + back) —
         // та же схема hasOwnTopBar (иначе двойной AppBar — класс бага
         // Fix #272/#NOTIF-SETTINGS-DUAL-BAR).
         Screen.ClipsOwner.route,
-        // Fix #50: у офлайн-плеера собственный TopAppBar + back button.
-        Screen.OfflineAudioPlayer.route,
         Screen.Community.route, Screen.AudioPlayer.route, Screen.AudioQueue.route,
         // Шаг 4 (#32d): BoardTopicScreen имеет собственный TopAppBar с back button.
         Screen.BoardTopic.route,
@@ -1142,7 +1131,7 @@ fun VkMintNavHost(
             bottomBar = {
                 // #57: GlobalMiniPlayer + NavigationBar в Column.
                 // Мини-плеер показываем ВСЕГДА (кроме AudioPlayer/VideoPlayer) —
-                // даже на экранах с hasOwnTopBar (OfflineManager, Community, и т.д.).
+                // даже на экранах с hasOwnTopBar (Community, и т.д.).
                 // NavigationBar — только на основных экранах (не hasOwnTopBar).
                 // Раньше мини-плеер был overlay в Box → перекрывал NavigationBar.
                 val showMiniPlayer = currentRoute != Screen.AudioPlayer.route &&
@@ -2189,84 +2178,6 @@ composable(Screen.CallsHistory.route) {
                                 }
                             }
                         },
-                    )
-                }
-                composable(Screen.OfflineManager.route) {
-                    OfflineManagerScreen(
-                        onBack = { nav.popBackStack() },
-                        // Fix #50: кнопка «Открыть плеер» в AudioOfflineTab ведёт
-                        // на новый минималистичный офлайн-плеер (без сетевых запросов).
-                        onOpenPlayer = { nav.navigate(Screen.OfflineAudioPlayer.route) },
-                        onPlayVideo = { ownerId, videoId, title ->
-                            // #34: Воспроизведение скачанного видео из офлайн-менеджера.
-                            // Создаём минимальный Video объект — VideoPlayerScreen сам проверит
-                            // VideoDownloadManager.getLocalFile() и проиграет локальный файл.
-                            VideoHolder.open(Video(
-                                id = videoId,
-                                ownerId = ownerId,
-                                title = title,
-                                description = null,
-                                duration = 0,
-                                date = 0,
-                            ))
-                        },
-                        // Fix #111: тап по story row в OfflineManager → StoryOfflinePlayerScreen.
-                        // file:// URI, без сети, без CDN URL refresh.
-                        onPlayStory = { ownerId, storyId ->
-                            nav.navigate(Screen.StoryOfflinePlayer.buildRoute(ownerId, storyId))
-                        },
-                        // §37.12 #330: тап по clip row в OfflineManager → ClipOfflinePlayerScreen.
-                        // file:// URI, без сети, TikTok-стиль 9:16 vertical (RESIZE_MODE_ZOOM).
-                        onPlayClip = { ownerId, videoId ->
-                            nav.navigate(Screen.ClipOfflinePlayer.buildRoute(ownerId, videoId))
-                        },
-                    )
-                }
-                // Fix #50: собственный офлайн аудиоплеер — открывается из
-                // OfflineManagerScreen через onOpenPlayer. Читает скачанные треки
-                // из TrackDownloadManager и текущий стейт из PlayerConnection.
-                composable(Screen.OfflineAudioPlayer.route) {
-                    OfflineAudioPlayerScreen(
-                        onBack = { nav.popBackStack() },
-                    )
-                }
-                // Fix #111: офлайн-просмотр скачанной видео-истории.
-                // Читает локальный .mp4 через StoryVideoDownloadManager.getLocalFile()
-                // и meta через getStoryMeta(). Воспроизведение через ExoPlayer с
-                // file:// URI — полностью офлайн, без сети.
-                composable(
-                    route = Screen.StoryOfflinePlayer.route,
-                    arguments = listOf(
-                        navArgument(Screen.StoryOfflinePlayer.ARG_OWNER_ID) { type = NavType.LongType },
-                        navArgument(Screen.StoryOfflinePlayer.ARG_STORY_ID) { type = NavType.IntType },
-                    ),
-                ) { entry ->
-                    val ownerId = entry.arguments?.getLong(Screen.StoryOfflinePlayer.ARG_OWNER_ID) ?: 0L
-                    val storyId = entry.arguments?.getInt(Screen.StoryOfflinePlayer.ARG_STORY_ID) ?: 0
-                    StoryOfflinePlayerScreen(
-                        ownerId = ownerId,
-                        storyId = storyId,
-                        onBack = { nav.popBackStack() },
-                    )
-                }
-                // §37.12 #330: офлайн-просмотр скачанного клипа.
-                // Читает локальный .mp4 через ClipVideoDownloadManager.getLocalFile()
-                // и meta через getClipMeta(). Воспроизведение через ExoPlayer с
-                // file:// URI, RESIZE_MODE_ZOOM (TikTok-стиль 9:16 vertical) — полностью
-                // офлайн, без сети. Открывается из OfflineManager → «Клипы» tab.
-                composable(
-                    route = Screen.ClipOfflinePlayer.route,
-                    arguments = listOf(
-                        navArgument(Screen.ClipOfflinePlayer.ARG_OWNER_ID) { type = NavType.LongType },
-                        navArgument(Screen.ClipOfflinePlayer.ARG_VIDEO_ID) { type = NavType.LongType },
-                    ),
-                ) { entry ->
-                    val ownerId = entry.arguments?.getLong(Screen.ClipOfflinePlayer.ARG_OWNER_ID) ?: 0L
-                    val videoId = entry.arguments?.getLong(Screen.ClipOfflinePlayer.ARG_VIDEO_ID) ?: 0L
-                    ClipOfflinePlayerScreen(
-                        ownerId = ownerId,
-                        videoId = videoId,
-                        onBack = { nav.popBackStack() },
                     )
                 }
                 // #90: VideoPlayer удалён из NavHost — теперь рендерится как overlay.

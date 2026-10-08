@@ -630,7 +630,7 @@ private fun ClipPlayerItem(
                     if (isDownloaded) {
                         // Уже скачано — показываем Toast (или можно открыть офлайн-плеер).
                         android.widget.Toast.makeText(
-                            context, "Клип уже скачан — откройте в Офлайн-менеджере",
+                            context, "Клип уже скачан",
                             android.widget.Toast.LENGTH_SHORT,
                         ).show()
                     } else if (!isDownloading) {
