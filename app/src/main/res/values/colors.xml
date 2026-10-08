@@ -5,5 +5,5 @@
     <color name="vkmint_bg_dark">#FF000000</color>
     <color name="vkmint_fg">#FF000000</color>
     <color name="vkmint_fg_dark">#FFFFFFFF</color>
-    <color name="ic_launcher_background">#FF000000</color>
+    <color name="ic_launcher_background">#FF0077FF</color>
 </resources>
