@@ -249,6 +249,7 @@ import vk.mint.ui.components.AttachmentPickerTab
 import vk.mint.ui.components.UnifiedAttachMenu
 import vk.mint.ui.components.VideoMessageShapes
 import vk.mint.util.AppLog
+import vk.mint.util.createCameraImageUri
 import vk.mint.util.toChatDate
 import vk.mint.util.toDayKey
 import vk.mint.util.toMsgTime
@@ -4723,8 +4724,10 @@ fun ChatDetailScreen(
                                                 // БЕЗ вложенного клика (вне clickable Card).
                                                 IconButton(
                                                     onClick = {
-                                                        channelPinIndex =
-                                                            (effectivePinIndex - 1 + pinnedPosts.size) % pinnedPosts.size
+                                                        if (pinnedPosts.isNotEmpty()) {
+                                                            channelPinIndex =
+                                                                (effectivePinIndex - 1 + pinnedPosts.size) % pinnedPosts.size
+                                                        }
                                                     },
                                                     enabled = effectivePinIndex > 0,
                                                 ) {
@@ -4735,8 +4738,10 @@ fun ChatDetailScreen(
                                                 }
                                                 IconButton(
                                                     onClick = {
-                                                        channelPinIndex =
-                                                            (effectivePinIndex + 1) % pinnedPosts.size
+                                                        if (pinnedPosts.isNotEmpty()) {
+                                                            channelPinIndex =
+                                                                (effectivePinIndex + 1) % pinnedPosts.size
+                                                        }
                                                     },
                                                     enabled = effectivePinIndex < pinnedPosts.size - 1,
                                                 ) {
@@ -12027,23 +12032,6 @@ private fun ChannelSearchPanel(
     }
 }
 
-/**
- * P5.3: Создаёт временный URI для сохранения фото с камеры через FileProvider.
- * Возвращает null если FileProvider не настроен или нет кеш-директории.
- */
-private fun createCameraImageUri(ctx: android.content.Context): android.net.Uri? {
-    return try {
-        val photoFile = java.io.File(ctx.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
-        androidx.core.content.FileProvider.getUriForFile(
-            ctx,
-            "${ctx.packageName}.fileprovider",
-            photoFile,
-        )
-    } catch (e: Exception) {
-        AppLog.e("ChatDetailScreen", "createCameraImageUri failed", e)
-        null
-    }
-}
 
 /**
  * Fix #126: Saver для Uri — позволяет rememberSaveable хранить Uri в Bundle.

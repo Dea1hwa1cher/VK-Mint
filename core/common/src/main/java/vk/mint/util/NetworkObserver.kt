@@ -407,3 +407,23 @@ class NetworkObserver(private val context: Context) {
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 }
+
+/**
+ * #CALLS-DNS-PIN: проверка строкового IPv4 — ровно 4 октета,
+ * только цифры, каждый 0..255, длина октета 1..3, ведущие нули запрещены
+ * (java.net.InetAddress трактует «012» как восьмеричную запись).
+ */
+fun isValidIpv4(s: String): Boolean {
+    val parts = s.split(".")
+    if (parts.size != 4) return false
+    for (part in parts) {
+        if (part.isEmpty() || part.length > 3) return false
+        for (ch in part) {
+            if (ch < '0' || ch > '9') return false
+        }
+        if (part.length > 1 && part[0] == '0') return false
+        val octet = part.toInt()
+        if (octet < 0 || octet > 255) return false
+    }
+    return true
+}

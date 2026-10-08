@@ -2772,13 +2772,6 @@ class VKApiClient(
     }
 
     /**
-     * Парсит успешный ответ audio.get (или audio.getById) — массив items в response.
-     */
-    private fun parseAudioResponse(json: JsonObject): List<Track>? {
-        return parseAudioResponseWithCount(json).second.takeIf { it.isNotEmpty() }
-    }
-
-    /**
      * Извлекает URL обложки альбома из audio-объекта.
      * VK возвращает два варианта:
      *  1. album_thumb (прямая строка-URL) — старый формат
@@ -3756,88 +3749,6 @@ class VKApiClient(
             tracks = tracks,
             playlists = playlists,
             subtitle = null,
-        )
-    }
-
-    /**
-     * Парсит массив блоков из ответа catalog.getAudio.
-     *
-     * Формат ответа:
-     *   response.items[] — массив блоков
-     *   Каждый блок имеет: type (view_type), title, id (block_id),
-     *   и вложенные data.items[] — треки или плейлисты.
-     */
-    private fun parseCatalogBlocks(resp: JsonObject): List<vk.mint.data.model.CatalogBlock> {
-        val items = resp.getAsJsonArray("items") ?: return emptyList()
-        return items.mapNotNull { el ->
-            if (!el.isJsonObject) return@mapNotNull null
-            val o = el.asJsonObject
-            val viewTypeRaw = o.get("view_type")?.takeIf { !it.isJsonNull }?.asString
-            val viewType = vk.mint.data.model.CatalogViewType.fromRaw(viewTypeRaw)
-
-            // Пропускаем рекламные блоки и промо-подписки
-            val title = o.get("title")?.takeIf { !it.isJsonNull }?.asString
-            if (isAdOrSubscriptionBlock(title, viewType)) return@mapNotNull null
-
-            val blockId = o.get("id")?.takeIf { !it.isJsonNull }?.asString
-            val subtitle = o.get("subtitle")?.takeIf { !it.isJsonNull }?.asString
-
-            // Вложенные элементы (треки или плейлисты)
-            val dataObj = o.getAsJsonObject("data")
-            val nestedItems = dataObj?.getAsJsonArray("items")
-
-            val tracks = mutableListOf<Track>()
-            val playlists = mutableListOf<vk.mint.data.model.CatalogPlaylist>()
-
-            if (nestedItems != null) {
-                for (ni in nestedItems) {
-                    if (!ni.isJsonObject) continue
-                    val nio = ni.asJsonObject
-                    // Плейлисты имеют type="audio_playlist" или поле playlist
-                    val itemType = nio.get("type")?.takeIf { !it.isJsonNull }?.asString
-                    if (itemType == "audio_playlist" || nio.has("playlist")) {
-                        playlists.add(parseCatalogPlaylist(nio))
-                    } else {
-                        val t = parseTrackFromCatalogItem(nio)
-                        if (t != null) tracks.add(t)
-                    }
-                }
-            }
-
-            vk.mint.data.model.CatalogBlock(
-                viewType = viewType,
-                title = title,
-                blockId = blockId,
-                showAllId = blockId,
-                tracks = tracks,
-                playlists = playlists,
-                subtitle = subtitle,
-            )
-        }
-    }
-
-    /** Парсит трек из элемента каталога (format может отличаться от audio.get). */
-    private fun parseTrackFromCatalogItem(o: JsonObject): Track? {
-        // Формат 1: прямые поля (audio.get style)
-        val id = o.get("id")?.takeIf { !it.isJsonNull }?.asLong ?: return null
-        val ownerId = o.get("owner_id")?.takeIf { !it.isJsonNull }?.asLong ?: return null
-        if (id <= 0L || ownerId == 0L) return null
-
-        return Track(
-            id = id,
-            ownerId = ownerId,
-            artist = o.get("artist")?.takeIf { !it.isJsonNull }?.asString ?: "",
-            title = o.get("title")?.takeIf { !it.isJsonNull }?.asString ?: "",
-            duration = o.get("duration")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
-            url = extractAudioUrl(o),  // #AUDIO-UNMASK
-            albumId = o.get("album_id")?.takeIf { !it.isJsonNull }?.asLong,
-            albumThumb = extractCatalogAlbumThumb(o),
-            accessKey = o.get("access_key")?.takeIf { !it.isJsonNull }?.asString,
-            lyricsId = o.get("lyrics_id")?.takeIf { !it.isJsonNull }?.asLong,
-            isExplicit = o.get("is_explicit")?.takeIf { !it.isJsonNull }?.asBoolean ?: false,
-            mainArtists = parseMainArtists(o),
-            subtitle = o.get("subtitle")?.takeIf { !it.isJsonNull }?.asString,
-            genreId = o.get("genre_id")?.takeIf { !it.isJsonNull }?.asInt,
         )
     }
 

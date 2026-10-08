@@ -101,6 +101,7 @@ import vk.mint.data.model.SettingsParam
 import vk.mint.data.model.SettingsSection as BffSettingsSection
 import vk.mint.ui.theme.VkMintColors
 import vk.mint.util.AppLog
+import vk.mint.util.isValidIpv4
 // Fix #391 #IN-APP-UPDATER (волна 29-i): модель/менеджер обновлений — вкладка «Обновления».
 import vk.mint.updater.UpdateInfo
 import vk.mint.updater.UpdaterManager
@@ -4276,28 +4277,6 @@ private fun SectionHeader(title: String) {
     )
 }
 
-/**
- * #CALLS-DNS-PIN (Task 26-2-b): проверка строкового IPv4 — ровно 4 октета,
- * только цифры, каждый 0..255, длина октета 1..3, ведущие нули запрещены
- * (java.net.InetAddress трактует «012» как восьмеричную запись — пин ушёл бы
- * на другой адрес, чем показал валидатор). Потребитель — секция
- * «DNS-пин звонков» в CallsTab. Дубликат file-level private isValidIpv4 из
- * VkMintApp.kt (там он наружу не виден) — допустим по спецификации задачи.
- */
-private fun isValidIpv4(s: String): Boolean {
-    val parts = s.split(".")
-    if (parts.size != 4) return false
-    for (part in parts) {
-        if (part.isEmpty() || part.length > 3) return false
-        for (ch in part) {
-            if (ch < '0' || ch > '9') return false
-        }
-        if (part.length > 1 && part[0] == '0') return false
-        val octet = part.toInt()
-        if (octet < 0 || octet > 255) return false
-    }
-    return true
-}
 
 // ВАЖНО: onToggle должен быть ПОСЛЕДНИМ параметром, чтобы работала
 // trailing-lambda форма вызова: ToggleRow("x", bool) { ... }.
@@ -8028,15 +8007,6 @@ private fun minutesToTime(min: Int): String {
     return "%02d:%02d".format(h, m)
 }
 
-/** Человекочитаемый лейбл для задержки показа. */
-private fun delayMsLabel(ms: Long): String = when (ms) {
-    0L -> "сразу"
-    500L -> "0.5 сек"
-    1000L -> "1 сек"
-    3000L -> "3 сек"
-    5000L -> "5 сек"
-    else -> "${ms / 1000} сек"
-}
 
 // #SETTINGS-FIX: диалог задания PIN-кода при включении блокировки.
 // Fix #380 #LOCKER-MANAGE: используется и для смены уже установленного PIN

@@ -216,19 +216,6 @@ private fun hostDestinationForRoute(route: String): Screen? = when (route) {
     else -> null
 }
 
-/**
- * iconKey → реальная иконка (контракты без compose, иконку мапит хост —
- * см. KDoc NavEntry). "calls" → та же иконка, что была у ядерного пункта
- * «Звонки» (Icons.Filled.Call). Неизвестный ключ → нейтральная иконка
- * (расширение) — НЕ падаем.
- */
-private fun hostIconForKey(iconKey: String): ImageVector = when (iconKey) {
-    "calls" -> Icons.Filled.Call
-    // #ARCH-CONTAINERS (Этап 1.5-а): та же иконка, что была у ядерного пункта
-    // «Фото» (Screen.Photos: Icons.Outlined.Image).
-    "photos" -> Icons.Outlined.Image
-    else -> Icons.Outlined.Extension
-}
 
 /**
  * #FEED-MENU-NOTIF (2026-10-01): маршрут для НАВИГАЦИИ на top-level экран.

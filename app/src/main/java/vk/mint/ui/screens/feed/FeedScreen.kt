@@ -149,6 +149,7 @@ import vk.mint.ui.navigation.ScreenTopBar
 import vk.mint.ui.navigation.ScrollPosition
 import vk.mint.ui.theme.UiScale
 import vk.mint.util.AppLog
+import vk.mint.util.createCameraImageUri
 import vk.mint.util.toCountString
 import vk.mint.util.toRelativeTime
 import java.io.File
@@ -3349,24 +3350,7 @@ private fun formatDocSize(size: Long): String = when {
     else -> String.format("%.1f МБ", size / 1024.0 / 1024.0)
 }
 
-/**
- * #ATTACH-UNIFY (P0.2): URI для снимка камеры через FileProvider (cache-path
- * заявлен в manifest, authority «<pkg>.fileprovider» — паттерн 1:1 из
- * ChatDetailScreen.createCameraImageUri). null — FileProvider не настроен.
- */
-private fun createCameraImageUri(ctx: android.content.Context): Uri? {
-    return try {
-        val photoFile = File(ctx.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
-        androidx.core.content.FileProvider.getUriForFile(
-            ctx,
-            "${ctx.packageName}.fileprovider",
-            photoFile,
-        )
-    } catch (e: Exception) {
-        AppLog.e("CommentsBottomSheet", "createCameraImageUri failed", e)
-        null
-    }
-}
+
 
 /**
  * #ATTACH-UNIFY: Saver для Uri — rememberSaveable переживает process death

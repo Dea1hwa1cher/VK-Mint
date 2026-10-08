@@ -9,6 +9,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import vk.mint.BuildConfig
+import vk.mint.auth.OAuthTokenUtils.maskTokenPrefix
 import vk.mint.util.AppLog
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
@@ -1634,15 +1635,4 @@ object WebTokenAuth {
             .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
         return sdf.format(java.util.Date(expiresSec * 1000L)) + " UTC"
     }
-}
-
-/**
- * P2.1 #LOG-MASK: маска для логов sensitive-значений (silent_token,
- * silent_token_uuid и т.п.). Возвращает `первые8…последние4` для длинных
- * значений (>12 символов) и `***` для коротких (нечего показывать).
- *
- * Применяется только к строкам для логирования — на логику авторизации
- * НЕ влияет.
- */
-private fun maskTokenPrefix(v: String): String =
-    if (v.length > 12) "${v.take(8)}…${v.takeLast(4)}" else "***"
+}

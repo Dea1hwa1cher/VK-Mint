@@ -46,6 +46,7 @@ import vk.mint.util.AppLog
 import vk.mint.util.NetworkObserver
 import vk.mint.util.NetworkSwitchState
 import vk.mint.util.VkUserAgent
+import vk.mint.util.isValidIpv4
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -2539,25 +2540,3 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
 // ══════════════════════════════════════════════════════════════════════════
 private const val AUTO_IP = "155.212.204.12"
 
-/**
- * #CALLS-DNS-PIN: проверка строкового IPv4 — ровно 4 октета, только цифры,
- * каждый 0..255, длина октета 1..3 символа. Ведущие нули отсечены намеренно:
- * java.net.InetAddress.getByName трактует «012» как ВОСЬМЕРИЧНУЮ запись, и
- * пин ушёл бы на другой адрес, чем показал бы валидатор/поле настроек.
- * Дубликат с SettingsScreen.kt (там своя file-level private копия) —
- * допустим по спецификации задачи: file-level private наружу не виден.
- */
-private fun isValidIpv4(s: String): Boolean {
-    val parts = s.split(".")
-    if (parts.size != 4) return false
-    for (part in parts) {
-        if (part.isEmpty() || part.length > 3) return false
-        for (ch in part) {
-            if (ch < '0' || ch > '9') return false
-        }
-        if (part.length > 1 && part[0] == '0') return false
-        val octet = part.toInt()
-        if (octet < 0 || octet > 255) return false
-    }
-    return true
-}

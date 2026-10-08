@@ -48,22 +48,6 @@ internal fun extractCatalogAlbumThumb(o: JsonObject): String? {
     return null
 }
 
-/** Извлекает обложку плейлиста (разные форматы VK). */
-internal fun extractPlaylistCover(o: JsonObject): String? {
-    for (key in listOf("photo_600", "photo_300", "photo_270", "photo_200", "photo_135", "photo_100")) {
-        val url = o.get(key)?.takeIf { !it.isJsonNull }?.asString
-        if (!url.isNullOrBlank()) return url
-    }
-    val photos = o.getAsJsonArray("thumbs")
-    if (photos != null && photos.size() > 0) {
-        // Берём последний (самый большой)
-        for (i in (photos.size() - 1) downTo 0) {
-            val url = photos.get(i)?.takeIf { !it.isJsonNull }?.asString
-            if (!url.isNullOrBlank()) return url
-        }
-    }
-    return o.get("photo")?.takeIf { !it.isJsonNull }?.asString
-}
 
 // ─── Шаг 2.2 (2026-09-16): audio playlist / artist / search finalizer ───
 

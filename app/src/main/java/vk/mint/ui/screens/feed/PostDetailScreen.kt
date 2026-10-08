@@ -118,6 +118,7 @@ import vk.mint.ui.components.ShareSheet
 import vk.mint.ui.components.UnifiedAttachMenu
 import vk.mint.ui.components.buildVkAttachment
 import vk.mint.util.AppLog
+import vk.mint.util.createCameraImageUri
 import vk.mint.util.toFileSizeString
 import vk.mint.ui.components.PendingPhotosBar
 import vk.mint.ui.components.PendingPhoto
@@ -2218,24 +2219,7 @@ data class PendingCommentFile(
 private val commentFileIdCounter = java.util.concurrent.atomic.AtomicLong(0)
 fun nextPendingCommentFileId(): Long = commentFileIdCounter.incrementAndGet()
 
-/**
- * #ATTACH-UNIFY (P0.2): URI для снимка камеры через FileProvider (cache-path
- * заявлен в manifest, authority «<pkg>.fileprovider» — паттерн 1:1 из
- * ChatDetailScreen.createCameraImageUri). null — FileProvider не настроен.
- */
-private fun createCameraImageUri(ctx: android.content.Context): Uri? {
-    return try {
-        val photoFile = File(ctx.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
-        androidx.core.content.FileProvider.getUriForFile(
-            ctx,
-            "${ctx.packageName}.fileprovider",
-            photoFile,
-        )
-    } catch (e: Exception) {
-        AppLog.e("PostDetail", "createCameraImageUri failed", e)
-        null
-    }
-}
+
 
 /**
  * #ATTACH-UNIFY: Saver для Uri — rememberSaveable переживает process death

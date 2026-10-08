@@ -47,24 +47,6 @@ internal fun parseMainArtists(o: JsonObject): List<TrackArtist>? {
     }.takeIf { it.isNotEmpty() }
 }
 
-/** Парсит плейлист из элемента каталога. */
-internal fun parseCatalogPlaylist(o: JsonObject): vk.mint.data.model.CatalogPlaylist {
-    val playlist = o.getAsJsonObject("playlist") ?: o
-    return vk.mint.data.model.CatalogPlaylist(
-        id = playlist.get("id")?.takeIf { !it.isJsonNull }?.asLong ?: 0L,
-        ownerId = playlist.get("owner_id")?.takeIf { !it.isJsonNull }?.asLong ?: 0L,
-        title = playlist.get("title")?.takeIf { !it.isJsonNull }?.asString ?: "",
-        subtitle = playlist.get("subtitle")?.takeIf { !it.isJsonNull }?.asString,
-        description = playlist.get("description")?.takeIf { !it.isJsonNull }?.asString,
-        coverUrl = extractPlaylistCover(playlist),
-        count = playlist.get("count")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
-        plays = playlist.get("plays")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
-        accessKey = playlist.get("access_key")?.takeIf { !it.isJsonNull }?.asString,
-        blockId = o.get("id")?.takeIf { !it.isJsonNull }?.asString,
-        // match_percent для блока «Слушайте друг друга»
-        matchPercent = o.get("match_percent")?.takeIf { !it.isJsonNull }?.asInt,
-    )
-}
 
 /** Фильтрация рекламных/подписочных блоков. */
 internal fun isAdOrSubscriptionBlock(title: String?, viewType: CatalogViewType): Boolean {
