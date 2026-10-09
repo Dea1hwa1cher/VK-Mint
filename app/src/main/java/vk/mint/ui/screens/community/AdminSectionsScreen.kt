@@ -35,6 +35,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import vk.mint.ui.components.ExpressiveSegmentedButtonRow
 import vk.mint.ui.components.ExpressiveSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -474,22 +475,20 @@ fun AdminSectionsScreen(
     }
 }
 
-/** Ряд чипов для выбора значения (0..3). */
+/** Ряд сегментных кнопок для выбора значения (0..3) в стиле Material 3 Expressive. */
 @Composable
 private fun ChipRow(
     values: List<Pair<Int, String>>,
     selected: Int,
     onSelect: (Int) -> Unit,
 ) {
-    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-        values.forEach { (value, label) ->
-            FilterChip(
-                selected = selected == value,
-                onClick = { onSelect(value) },
-                label = { Text(label) },
-                modifier = Modifier.padding(end = 8.dp),
-            )
-        }
+    ExpressiveSegmentedButtonRow(
+        items = values,
+        selectedItem = values.firstOrNull { it.first == selected } ?: values.first(),
+        onItemSelected = { onSelect(it.first) },
+        modifier = Modifier.fillMaxWidth(),
+    ) { item ->
+        Text(item.second, maxLines = 1)
     }
 }
 

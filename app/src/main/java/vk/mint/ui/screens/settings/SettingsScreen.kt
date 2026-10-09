@@ -99,6 +99,7 @@ import vk.mint.data.model.Track
 // уже занято контрактом vk.mint.contracts.SettingsSection (импорт выше) — алиас.
 import vk.mint.data.model.SettingsParam
 import vk.mint.data.model.SettingsSection as BffSettingsSection
+import vk.mint.ui.components.ExpressiveSegmentedButtonRow
 import vk.mint.ui.components.ExpressiveSwitch
 import vk.mint.ui.theme.VkMintColors
 import vk.mint.util.AppLog
@@ -2380,13 +2381,13 @@ private fun DownloadAllStatusRow(status: DownloadAllStatus) {
     }
 }
 
-/** Радио-выбор формата сохранения (M4A / MP3). */
+/** Выбор битрейта MP3 в стиле Material 3 Expressive. */
 @Composable
 private fun QualityRow(current: AudioQuality, onChange: (AudioQuality) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 "Битрейт MP3",
@@ -2399,26 +2400,24 @@ private fun QualityRow(current: AudioQuality, onChange: (AudioQuality) -> Unit) 
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(4.dp))
-            for (q in AudioQuality.entries) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { onChange(q) }.padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = current == q, onClick = { onChange(q) })
-                    Spacer(Modifier.width(8.dp))
-                    Text(q.label, style = MaterialTheme.typography.bodyLarge)
-                }
+            ExpressiveSegmentedButtonRow(
+                items = AudioQuality.entries,
+                selectedItem = current,
+                onItemSelected = onChange,
+            ) { q ->
+                Text(q.label)
             }
         }
     }
 }
 
+/** Выбор формата сохранения аудио в стиле Material 3 Expressive. */
 @Composable
 private fun AudioFormatRow(current: AudioFormat, onChange: (AudioFormat) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 "Формат сохранения скачанных аудио",
@@ -2426,37 +2425,30 @@ private fun AudioFormatRow(current: AudioFormat, onChange: (AudioFormat) -> Unit
                 fontWeight = FontWeight.Medium,
             )
             Spacer(Modifier.height(4.dp))
-            for (fmt in AudioFormat.entries) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onChange(fmt) }
-                        .padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = current == fmt, onClick = { onChange(fmt) })
-                    Spacer(Modifier.width(8.dp))
-                    Column {
-                        Text(fmt.label, style = MaterialTheme.typography.bodyLarge)
-                        if (fmt == AudioFormat.M4A) {
-                            Text(
-                                "AAC в MP4-контейнере. Играет везде, без зависимостей. " +
-                                    "Используется по умолчанию. Siren-треки транскодируются " +
-                                    "в M4A через ffmpeg-kit (§42.12 P0 #2).",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            Text(
-                                "Универсальный формат для экспорта (рингтоны, плееры), " +
-                                    "ID3v2.4 теги. ffmpeg-kit подключён (P0 #2) — MP3 " +
-                                    "кодирование доступно через transcoding pipeline.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
+            ExpressiveSegmentedButtonRow(
+                items = AudioFormat.entries,
+                selectedItem = current,
+                onItemSelected = onChange,
+            ) { fmt ->
+                Text(fmt.label)
+            }
+            Spacer(Modifier.height(4.dp))
+            if (current == AudioFormat.M4A) {
+                Text(
+                    "AAC в MP4-контейнере. Играет везде, без зависимостей. " +
+                        "Используется по умолчанию. Siren-треки транскодируются " +
+                        "в M4A через ffmpeg-kit (§42.12 P0 #2).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    "Универсальный формат для экспорта (рингтоны, плееры), " +
+                        "ID3v2.4 теги. ffmpeg-kit подключён (P0 #2) — MP3 " +
+                        "кодирование доступно через transcoding pipeline.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -2932,24 +2924,12 @@ private fun VideoTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
                     )
-                    listOf(5, 10, 15).forEach { step ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 44.dp)
-                                .clickable { scope.launch { app.prefs.setVideoSeekStepSec(step) } },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = currentStep == step,
-                                onClick = { scope.launch { app.prefs.setVideoSeekStepSec(step) } },
-                            )
-                            Text(
-                                "$step секунд",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
+                    ExpressiveSegmentedButtonRow(
+                        items = listOf(5, 10, 15),
+                        selectedItem = currentStep,
+                        onItemSelected = { step -> scope.launch { app.prefs.setVideoSeekStepSec(step) } },
+                    ) { step ->
+                        Text("$step сек")
                     }
                 }
             }
@@ -4531,19 +4511,13 @@ private fun UiScaleRow(value: Float, onChange: (Float) -> Unit) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            options.forEach { (factor, label) ->
-                val selected = factor == value
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onChange(factor) }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = selected, onClick = { onChange(factor) })
-                    Spacer(Modifier.width(8.dp))
-                    Text(label, style = MaterialTheme.typography.bodyMedium)
-                }
+            ExpressiveSegmentedButtonRow(
+                items = options.map { it.first },
+                selectedItem = value,
+                onItemSelected = onChange,
+            ) { factor ->
+                val label = options.firstOrNull { it.first == factor }?.second ?: ""
+                Text(label)
             }
         }
     }
@@ -7231,23 +7205,21 @@ private fun NotificationsTab(
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                    androidx.compose.foundation.layout.Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                    ) {
+                    val groupingModes = remember {
                         listOf(
                             "none" to "Выкл",
                             "category" to "По типу",
-                            "community" to "По сообществу",
-                            "user" to "По человеку",
-                        ).forEach { (mode, label) ->
-                            androidx.compose.material3.FilterChip(
-                                selected = s.pushGroupingMode == mode,
-                                onClick = { scope.launch { app.prefs.setPushGroupingMode(mode) } },
-                                label = { Text(label) },
-                                enabled = s.pushEnabled,
-                            )
-                        }
+                            "community" to "Группы",
+                            "user" to "Диалоги",
+                        )
+                    }
+                    ExpressiveSegmentedButtonRow(
+                        items = groupingModes.map { it.first },
+                        selectedItem = s.pushGroupingMode,
+                        onItemSelected = { mode -> scope.launch { app.prefs.setPushGroupingMode(mode) } },
+                        enabled = s.pushEnabled,
+                    ) { mode ->
+                        Text(groupingModes.firstOrNull { it.first == mode }?.second ?: mode, maxLines = 1)
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(
@@ -7263,18 +7235,13 @@ private fun NotificationsTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(8.dp))
-                    androidx.compose.foundation.layout.Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                    ) {
-                        listOf(1, 2, 3, 5, 10).forEach { thr ->
-                            androidx.compose.material3.FilterChip(
-                                selected = s.pushGroupThreshold == thr,
-                                onClick = { scope.launch { app.prefs.setPushGroupThreshold(thr) } },
-                                label = { Text("$thr") },
-                                enabled = s.pushEnabled,
-                            )
-                        }
+                    ExpressiveSegmentedButtonRow(
+                        items = listOf(1, 2, 3, 5, 10),
+                        selectedItem = s.pushGroupThreshold,
+                        onItemSelected = { thr -> scope.launch { app.prefs.setPushGroupThreshold(thr) } },
+                        enabled = s.pushEnabled,
+                    ) { thr ->
+                        Text("$thr")
                     }
                 }
             }
@@ -7299,22 +7266,20 @@ private fun NotificationsTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(8.dp))
-                    androidx.compose.foundation.layout.Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                    ) {
+                    val previewModes = remember {
                         listOf(
                             "full" to "Полное",
                             "sender_only" to "Отправитель",
                             "hidden" to "Скрыто",
-                        ).forEach { (mode, label) ->
-                            androidx.compose.material3.FilterChip(
-                                selected = s.pushPreviewMode == mode,
-                                onClick = { scope.launch { app.prefs.setPushPreviewMode(mode) } },
-                                label = { Text(label) },
-                                enabled = s.pushEnabled,
-                            )
-                        }
+                        )
+                    }
+                    ExpressiveSegmentedButtonRow(
+                        items = previewModes.map { it.first },
+                        selectedItem = s.pushPreviewMode,
+                        onItemSelected = { mode -> scope.launch { app.prefs.setPushPreviewMode(mode) } },
+                        enabled = s.pushEnabled,
+                    ) { mode ->
+                        Text(previewModes.firstOrNull { it.first == mode }?.second ?: mode, maxLines = 1)
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(
@@ -7324,18 +7289,13 @@ private fun NotificationsTab(
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(8.dp))
-                    androidx.compose.foundation.layout.Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                    ) {
-                        listOf(0, 40, 80, 160).forEach { len ->
-                            androidx.compose.material3.FilterChip(
-                                selected = s.pushPreviewLength == len,
-                                onClick = { scope.launch { app.prefs.setPushPreviewLength(len) } },
-                                label = { Text(if (len == 0) "выкл" else "$len") },
-                                enabled = s.pushEnabled,
-                            )
-                        }
+                    ExpressiveSegmentedButtonRow(
+                        items = listOf(0, 40, 80, 160),
+                        selectedItem = s.pushPreviewLength,
+                        onItemSelected = { len -> scope.launch { app.prefs.setPushPreviewLength(len) } },
+                        enabled = s.pushEnabled,
+                    ) { len ->
+                        Text(if (len == 0) "выкл" else "$len")
                     }
                 }
             }
