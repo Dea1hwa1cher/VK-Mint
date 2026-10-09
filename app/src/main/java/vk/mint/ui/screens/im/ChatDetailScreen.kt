@@ -12070,6 +12070,10 @@ private class VoicePlaybackController {
     private var progressJob: kotlinx.coroutines.Job? = null
     // Fix #237: альтернативный URL для fallback при ошибке воспроизведения.
     private var currentFallbackUrl: String? = null
+    // #VOICE-PROXIMITY: менеджер датчика приближения (earpiece + screen-off wake lock).
+    private val proximityManager by lazy {
+        VkMintApp.getOrNull()?.applicationContext?.let { vk.mint.media.VoiceProximityManager(it) }
+    }
     private val scope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main
     )
@@ -12112,10 +12116,12 @@ private class VoicePlaybackController {
                     try { p.pause() } catch (e: Exception) { AppLog.w("VoicePlaybackController", "p.pause failed: ${e.message}") }
                     isPlaying = false
                     stopProgressTracking()
+                    proximityManager?.stop()
                 } else {
                     try { p.play() } catch (e: Exception) { AppLog.w("VoicePlaybackController", "p.play failed: ${e.message}") }
                     isPlaying = true
                     startProgressTracking()
+                    proximityManager?.start(p)
                 }
                 return
             }
@@ -12179,6 +12185,7 @@ private class VoicePlaybackController {
                             progress = 0f
                             currentPositionMs = 0L
                             stopProgressTracking()
+                            proximityManager?.stop()
                         }
                         else -> {}
                     }
@@ -12189,12 +12196,15 @@ private class VoicePlaybackController {
                         progress = 0f
                         currentPositionMs = 0L
                         startProgressTracking()
+                        ep.let { p -> proximityManager?.start(p) }
                     } else {
                         stopProgressTracking()
+                        proximityManager?.stop()
                     }
                 }
                 override fun onPlayerError(error: PlaybackException) {
                     AppLog.e("VoicePlayback", "ExoPlayer error url=$url: ${error.message}", error)
+                    proximityManager?.stop()
                     releasePlayer()
                     // Fix #237: пробуем fallback URL.
                     val fb = currentFallbackUrl
@@ -12250,6 +12260,7 @@ private class VoicePlaybackController {
 
     private fun releasePlayer() {
         stopProgressTracking()
+        proximityManager?.stop()
         player?.let { p ->
             try { p.release() } catch (e: Exception) { AppLog.w("VoicePlaybackController", "p.release failed: ${e.message}") }
         }
@@ -12263,6 +12274,7 @@ private class VoicePlaybackController {
 
     /** Вызывать при выходе с экрана чата. */
     fun dispose() {
+        proximityManager?.stop()
         releasePlayer()
         scope.cancel()
     }

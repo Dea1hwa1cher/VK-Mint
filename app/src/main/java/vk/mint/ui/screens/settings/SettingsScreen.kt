@@ -1876,6 +1876,15 @@ private fun MessagesTab(
         // P3.6: dual send/mic button — state machine (EDIT/LOADING/LIMIT/MIC/SUBMIT).
         item { ToggleRow("Умная кнопка отправки", s.msgDualButton) { scope.launch { app.prefs.setMsgDualButton(it) } } }
 
+        item { SectionHeader("Голосовые сообщения") }
+        item {
+            ToggleRow(
+                title = "Отключить датчик приближения",
+                subtitle = "Не выключать экран и не переключать звук на разговорный динамик при поднесении телефона к уху",
+                checked = s.voiceDisableProximity,
+            ) { scope.launch { app.prefs.setVoiceDisableProximity(it) } }
+        }
+
         item { SectionHeader("Ссылки и браузер") }
         // P5.1: открытие ссылок из чата во внутреннем браузере (WebView).
         item { ToggleRow(
@@ -1990,6 +1999,13 @@ private fun MusicTab(
                 subtitle = "По умолчанию вкл: на мобайле 320kbps. Выключите для 128kbps (меньше перебоев на слабом интернете).",
                 checked = s.musicHqOnMobile,
             ) { scope.launch { app.prefs.setMusicHqOnMobile(it) } }
+        }
+        item {
+            ToggleRow(
+                title = "Отключить датчик приближения (аудио/голосовые)",
+                subtitle = "Не выключать экран и не переключать звук на разговорный динамик при прослушивании голосовых сообщений",
+                checked = s.voiceDisableProximity,
+            ) { scope.launch { app.prefs.setVoiceDisableProximity(it) } }
         }
 
         item { SectionHeader("Авто-загрузка") }
