@@ -64,6 +64,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import vk.mint.ui.components.ExpressiveSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -1592,7 +1593,7 @@ private fun ActionToggleRow(
             Spacer(modifier = Modifier.width(16.dp))
             Text(title, style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f))
-            Switch(checked = checked, onCheckedChange = onToggle)
+            ExpressiveSwitch(checked = checked, onCheckedChange = onToggle)
         }
     }
 }

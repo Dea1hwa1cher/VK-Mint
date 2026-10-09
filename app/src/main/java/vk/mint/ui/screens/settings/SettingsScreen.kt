@@ -99,6 +99,7 @@ import vk.mint.data.model.Track
 // уже занято контрактом vk.mint.contracts.SettingsSection (импорт выше) — алиас.
 import vk.mint.data.model.SettingsParam
 import vk.mint.data.model.SettingsSection as BffSettingsSection
+import vk.mint.ui.components.ExpressiveSwitch
 import vk.mint.ui.theme.VkMintColors
 import vk.mint.util.AppLog
 import vk.mint.util.isValidIpv4
@@ -942,7 +943,7 @@ private fun CallsServerSettingsCard(app: VkMintApp, scope: CoroutineScope) {
                                 )
                             }
                             // Read-only: onCheckedChange = null — Switch без взаимодействия.
-                            Switch(checked = t.enabled, onCheckedChange = null)
+                            ExpressiveSwitch(checked = t.enabled, onCheckedChange = null)
                         }
                         HorizontalDivider()
                     }
@@ -4301,7 +4302,7 @@ private fun ToggleRow(
                 )
             },
             trailingContent = {
-                Switch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
+                ExpressiveSwitch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
             },
             colors = ListItemDefaults.colors(
                 containerColor = Color.Transparent,
@@ -4344,7 +4345,7 @@ private fun ToggleRow(
                 )
             },
             trailingContent = {
-                Switch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
+                ExpressiveSwitch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
             },
             colors = ListItemDefaults.colors(
                 containerColor = Color.Transparent,
@@ -4417,7 +4418,7 @@ private fun FeedCarouselToggleRow(
                 )
             },
             trailingContent = {
-                Switch(
+                ExpressiveSwitch(
                     checked = checked,
                     onCheckedChange = { applyToggle(it) },
                 )
@@ -5357,7 +5358,7 @@ private fun DataTab(app: VkMintApp, scope: CoroutineScope) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Switch(
+                        ExpressiveSwitch(
                             checked = exportEncrypt,
                             onCheckedChange = { v -> scope.launch { app.prefs.setSettingsExportEncrypt(v) } },
                         )
@@ -5383,7 +5384,7 @@ private fun DataTab(app: VkMintApp, scope: CoroutineScope) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Switch(
+                        ExpressiveSwitch(
                             checked = exportNoSession,
                             onCheckedChange = { exportNoSession = it },
                         )
@@ -6112,7 +6113,7 @@ private fun UpdateSourceCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Switch(
+                ExpressiveSwitch(
                     checked = s.updateAutostartCheck,
                     onCheckedChange = { v -> scope.launch { app.prefs.setUpdateAutostartCheck(v) } },
                 )
@@ -6558,7 +6559,7 @@ private fun ToggleRowWithLoading(
                     strokeWidth = 2.dp,
                 )
             } else {
-                Switch(checked = checked, onCheckedChange = onToggle)
+                ExpressiveSwitch(checked = checked, onCheckedChange = onToggle)
             }
         }
     }
@@ -7869,7 +7870,7 @@ private fun EmailParamRow(
                         )
                     }
                 }
-                Switch(
+                ExpressiveSwitch(
                     checked = param.isChecked == true,
                     onCheckedChange = { onToggle(param, it) },
                 )

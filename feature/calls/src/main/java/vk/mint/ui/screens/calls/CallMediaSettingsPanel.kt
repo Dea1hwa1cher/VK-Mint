@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -177,6 +179,15 @@ internal fun CallMediaSettingsPanel(
                         checked = !isMuted,
                         onCheckedChange = { micOn -> onMuteChange(!micOn) },
                         colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF43A047)),
+                        thumbContent = if (!isMuted) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                )
+                            }
+                        } else null,
                     )
                 }
 
@@ -201,6 +212,15 @@ internal fun CallMediaSettingsPanel(
                         checked = isSpeakerOn,
                         onCheckedChange = { on -> onSpeakerChange(on) },
                         colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF43A047)),
+                        thumbContent = if (isSpeakerOn) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                                )
+                            }
+                        } else null,
                     )
                 }
 

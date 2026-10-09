@@ -965,7 +965,7 @@ private fun PollCreateDialog(
                     Text("Добавить вариант")
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Switch(
+                    ExpressiveSwitch(
                         checked = isAnonymous,
                         onCheckedChange = { isAnonymous = it },
                         enabled = !creating,

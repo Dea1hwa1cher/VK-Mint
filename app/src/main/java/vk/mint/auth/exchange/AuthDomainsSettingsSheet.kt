@@ -33,6 +33,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import vk.mint.ui.components.ExpressiveSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -289,7 +290,7 @@ private fun AuthDomainsSettingsSheet(onDismiss: () -> Unit) {
                         )
                     }
                     Spacer(Modifier.width(12.dp))
-                    Switch(
+                    ExpressiveSwitch(
                         checked = forceRevoke,
                         onCheckedChange = { forceRevoke = it },
                     )

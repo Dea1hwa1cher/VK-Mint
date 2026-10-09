@@ -32,6 +32,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import vk.mint.ui.components.ExpressiveSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -607,7 +608,7 @@ private fun CommentFilterSwitch(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
-        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
+        ExpressiveSwitch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
 }
 

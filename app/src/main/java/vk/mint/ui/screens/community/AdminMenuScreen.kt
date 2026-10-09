@@ -31,6 +31,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import vk.mint.ui.components.ExpressiveSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -471,7 +472,7 @@ private fun MenuItemRow(
             // (owners.editMenuItem / hideMenuItem) в HAR и коде не найден —
             // не притворяемся, что пишем. Гейт can_edit_hidden показывает,
             // что видимость пункта вообще редактируема (но только из веба).
-            Switch(checked = !isHiddenNow, onCheckedChange = null, enabled = false)
+            ExpressiveSwitch(checked = !isHiddenNow, onCheckedChange = null, enabled = false)
         }
     }
 }

@@ -42,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import vk.mint.ui.components.ExpressiveSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -539,7 +540,7 @@ private fun ParamRow(
                         )
                     }
                 }
-                Switch(
+                ExpressiveSwitch(
                     checked = param.isChecked == true,
                     onCheckedChange = { onToggle(param, it) },
                 )
@@ -730,7 +731,7 @@ private fun GroupNotifyRow(
                 strokeWidth = 2.dp,
             )
         } else {
-            Switch(checked = checked, onCheckedChange = { onToggle(group, it) })
+            ExpressiveSwitch(checked = checked, onCheckedChange = { onToggle(group, it) })
         }
     }
 }
@@ -761,6 +762,6 @@ private fun ObsceneFilterRow(checked: Boolean, onToggle: (Boolean) -> Unit) {
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
-        Switch(checked = checked, onCheckedChange = onToggle)
+        ExpressiveSwitch(checked = checked, onCheckedChange = onToggle)
     }
 }

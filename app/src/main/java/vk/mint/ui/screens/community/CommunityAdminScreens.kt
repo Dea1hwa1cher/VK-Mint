@@ -66,6 +66,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import vk.mint.ui.components.ExpressiveSwitch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -3125,7 +3126,7 @@ fun AdminCtaScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.weight(1f),
                         )
-                        Switch(checked = enabled, onCheckedChange = { enabled = it })
+                        ExpressiveSwitch(checked = enabled, onCheckedChange = { enabled = it })
                     }
                     Spacer(modifier = Modifier.height(12.dp))
 

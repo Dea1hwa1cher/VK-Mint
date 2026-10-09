@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import vk.mint.ui.components.ExpressiveSwitch
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -465,7 +466,7 @@ private fun PrivacyParamRow(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Switch(
+                    ExpressiveSwitch(
                         checked = param.isChecked == true,
                         onCheckedChange = { onToggle(param, it) },
                     )
