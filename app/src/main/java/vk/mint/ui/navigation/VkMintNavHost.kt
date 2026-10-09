@@ -57,6 +57,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import vk.mint.ui.anim.LocalAnimScale
+import vk.mint.ui.anim.M3ExpressiveMotion
+import vk.mint.ui.anim.expressiveSpringScaled
 import vk.mint.ui.anim.tweenScaled
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -1155,11 +1157,19 @@ fun VkMintNavHost(
                             visible = bottomBarVisible,
                             enter = androidx.compose.animation.expandVertically(
                                 expandFrom = Alignment.Bottom,
-                                animationSpec = vk.mint.ui.anim.tweenScaled(animScale, 220),
+                                animationSpec = expressiveSpringScaled(
+                                    scale = animScale,
+                                    dampingRatio = M3ExpressiveMotion.DampingExpressive,
+                                    stiffness = M3ExpressiveMotion.StiffnessSpatial,
+                                ),
                             ),
                             exit = androidx.compose.animation.shrinkVertically(
                                 shrinkTowards = Alignment.Bottom,
-                                animationSpec = vk.mint.ui.anim.tweenScaled(animScale, 200),
+                                animationSpec = expressiveSpringScaled(
+                                    scale = animScale,
+                                    dampingRatio = 0.9f,
+                                    stiffness = M3ExpressiveMotion.StiffnessSpatial,
+                                ),
                             ),
                         ) {
                             // #BOTTOM-SCROLL (2026-08-01): если на нижней панели
@@ -1297,29 +1307,33 @@ fun VkMintNavHost(
                 // разделы, а не drill-down навигация, поэтому смена таба должна
                 // быть мгновенной. Fade остаётся только для push/pop детальных
                 // экранов (ChatDetail, PostDetail, Community, UserProfile и т.д.).
+                // #M3E-MOTION: выразительные пружинные переходы Material 3 Expressive (M3E).
+                // animScale=0 → snap() (Reduced Motion / выключенные анимации).
+                // animScale>0 → пружина с чистым затуханием (DampingStandard) и адаптацией жесткости (StiffnessEffects).
+                // Табы — равноправные разделы без мигания (EnterTransition.None).
                 enterTransition = {
                     val from = initialState.destination.route
                     val to = targetState.destination.route
                     if (from in tabRouteSet && to in tabRouteSet) EnterTransition.None
-                    else fadeIn(tweenScaled<Float>(animScale, 220))
+                    else fadeIn(expressiveSpringScaled<Float>(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects))
                 },
                 exitTransition = {
                     val from = initialState.destination.route
                     val to = targetState.destination.route
                     if (from in tabRouteSet && to in tabRouteSet) ExitTransition.None
-                    else fadeOut(tweenScaled<Float>(animScale, 180))
+                    else fadeOut(expressiveSpringScaled<Float>(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects))
                 },
                 popEnterTransition = {
                     val from = initialState.destination.route
                     val to = targetState.destination.route
                     if (from in tabRouteSet && to in tabRouteSet) EnterTransition.None
-                    else fadeIn(tweenScaled<Float>(animScale, 220))
+                    else fadeIn(expressiveSpringScaled<Float>(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects))
                 },
                 popExitTransition = {
                     val from = initialState.destination.route
                     val to = targetState.destination.route
                     if (from in tabRouteSet && to in tabRouteSet) ExitTransition.None
-                    else fadeOut(tweenScaled<Float>(animScale, 180))
+                    else fadeOut(expressiveSpringScaled<Float>(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects))
                 },
             ) {
                 composable(Screen.Feed.route) {

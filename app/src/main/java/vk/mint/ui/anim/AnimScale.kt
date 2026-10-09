@@ -102,3 +102,52 @@ fun <T> springScaled(
     stiffness: Float = Spring.StiffnessMedium,
 ): FiniteAnimationSpec<T> = if (scale <= 0f) snap()
 else spring(dampingRatio = dampingRatio, stiffness = (stiffness / scale.coerceAtLeast(0.15f)))
+
+/**
+ * #M3E-MOTION: Спецификация пружинной физики Material 3 Expressive (https://matraic.github.io/m3e/styles/motion.html).
+ *
+ * M3 Expressive заменяет стандартные сплайны (bezier tween) на пружинную физику:
+ *  - Пространственные переходы (Spatial / Container / Panels): damping 0.8f (выразительный лёгкий отскок/overshoot),
+ *    stiffness 380f..400f (MediumLow) — быстрый, живой тактильный отклик.
+ *  - Эффекты прозрачности (Fade / Alpha): damping 1.0f (DampingRatioNoBouncy, без перехлёста альфы),
+ *    stiffness 450f (MediumLow..Medium) — чистая, мгновенная стабилизация.
+ */
+object M3ExpressiveMotion {
+    const val DampingExpressive: Float = 0.8f
+    const val DampingStandard: Float = Spring.DampingRatioNoBouncy // 1.0f
+    const val StiffnessSpatial: Float = 380f
+    const val StiffnessEffects: Float = 450f
+}
+
+/**
+ * Не-@Composable пружина Material 3 Expressive для переходов NavHost и AnimatedVisibility.
+ * При scale <= 0f возвращает [snap] (Reduced Motion / выключенные анимации).
+ * При scale > 0f возвращает [spring] с адаптацией stiffness под скорость интерфейса.
+ */
+fun <T> expressiveSpringScaled(
+    scale: Float,
+    dampingRatio: Float = M3ExpressiveMotion.DampingStandard,
+    stiffness: Float = M3ExpressiveMotion.StiffnessEffects,
+): FiniteAnimationSpec<T> = if (scale <= 0f) snap()
+else spring(
+    dampingRatio = dampingRatio,
+    stiffness = (stiffness / scale.coerceAtLeast(0.15f)),
+)
+
+/**
+ * @Composable пружина Material 3 Expressive для компонентов внутри composable-иерархии.
+ * Читает [LocalAnimScale].current.
+ */
+@Composable
+fun <T> expressiveSpring(
+    dampingRatio: Float = M3ExpressiveMotion.DampingStandard,
+    stiffness: Float = M3ExpressiveMotion.StiffnessEffects,
+): FiniteAnimationSpec<T> {
+    val scale = LocalAnimScale.current
+    return if (scale <= 0f) snap()
+    else spring(
+        dampingRatio = dampingRatio,
+        stiffness = (stiffness / scale.coerceAtLeast(0.15f)),
+    )
+}
+

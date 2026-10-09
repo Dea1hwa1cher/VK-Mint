@@ -238,6 +238,8 @@ import vk.mint.feature.photos.InlinePhotoItem
 import vk.mint.feature.photos.PhotosInlineRenderer
 import vk.mint.ui.anim.LocalAnimScale
 import vk.mint.ui.anim.LocalStickerPhotoScale
+import vk.mint.ui.anim.M3ExpressiveMotion
+import vk.mint.ui.anim.expressiveSpringScaled
 import vk.mint.ui.anim.springScaled
 import vk.mint.ui.anim.tweenScaled
 import vk.mint.ui.theme.UiScale
@@ -12313,10 +12315,10 @@ private fun PendingFilesBar(
 ) {
     androidx.compose.animation.AnimatedVisibility(
         visible = files.isNotEmpty(),
-        enter = androidx.compose.animation.fadeIn(vk.mint.ui.anim.tweenScaled<Float>(LocalAnimScale.current, 300)) +
-            androidx.compose.animation.expandVertically(vk.mint.ui.anim.tweenScaled<androidx.compose.ui.unit.IntSize>(LocalAnimScale.current, 300)),
-        exit = androidx.compose.animation.fadeOut(vk.mint.ui.anim.tweenScaled<Float>(LocalAnimScale.current, 300)) +
-            androidx.compose.animation.shrinkVertically(vk.mint.ui.anim.tweenScaled<androidx.compose.ui.unit.IntSize>(LocalAnimScale.current, 300)),
+        enter = androidx.compose.animation.fadeIn(expressiveSpringScaled(LocalAnimScale.current, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects)) +
+            androidx.compose.animation.expandVertically(expressiveSpringScaled(LocalAnimScale.current, M3ExpressiveMotion.DampingExpressive, M3ExpressiveMotion.StiffnessSpatial)),
+        exit = androidx.compose.animation.fadeOut(expressiveSpringScaled(LocalAnimScale.current, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects)) +
+            androidx.compose.animation.shrinkVertically(expressiveSpringScaled(LocalAnimScale.current, 0.9f, M3ExpressiveMotion.StiffnessSpatial)),
         modifier = modifier,
     ) {
         Surface(

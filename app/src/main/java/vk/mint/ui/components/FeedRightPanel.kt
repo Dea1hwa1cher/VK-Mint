@@ -48,6 +48,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import vk.mint.ui.anim.LocalAnimScale
+import vk.mint.ui.anim.M3ExpressiveMotion
+import vk.mint.ui.anim.expressiveSpringScaled
 import vk.mint.ui.anim.tweenScaled
 import vk.mint.ui.navigation.Screen
 import vk.mint.util.AppLog
@@ -209,8 +211,8 @@ fun FeedRightPanel(
         // панель выше по z, клики по ней не доходят до Scrim. ──
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(tweenScaled(animScale, 300)),
-            exit = fadeOut(tweenScaled(animScale, 300)),
+            enter = fadeIn(expressiveSpringScaled(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects)),
+            exit = fadeOut(expressiveSpringScaled(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects)),
         ) {
             // Scrim: тап вне панели закрывает её (индикация клика отключена —
             // ripple на полупрозрачной подложке выглядит как артефакт).
@@ -226,8 +228,8 @@ fun FeedRightPanel(
         }
         AnimatedVisibility(
             visible = visible,
-            enter = slideInHorizontally(tweenScaled<androidx.compose.ui.unit.IntOffset>(animScale, 300)) { it },
-            exit = slideOutHorizontally(tweenScaled<androidx.compose.ui.unit.IntOffset>(animScale, 300)) { it },
+            enter = slideInHorizontally(expressiveSpringScaled(animScale, M3ExpressiveMotion.DampingExpressive, M3ExpressiveMotion.StiffnessSpatial)) { it },
+            exit = slideOutHorizontally(expressiveSpringScaled(animScale, 0.9f, M3ExpressiveMotion.StiffnessSpatial)) { it },
         ) {
             // Ширина/скругление — как в прежней версии 19-A (визуальная
             // преемственность, поменялось только СОДЕРЖИМОЕ меню).

@@ -38,7 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import vk.mint.ui.anim.LocalAnimScale
-import vk.mint.ui.anim.tweenScaled
+import vk.mint.ui.anim.M3ExpressiveMotion
+import vk.mint.ui.anim.expressiveSpringScaled
 
 /**
  * Fix #234 (multi-photo preview): переиспользуемый горизонтальный бар
@@ -90,10 +91,10 @@ fun PendingPhotosBar(
 ) {
     AnimatedVisibility(
         visible = photos.isNotEmpty(),
-        enter = fadeIn(tweenScaled<Float>(LocalAnimScale.current, 300)) +
-            expandVertically(tweenScaled<androidx.compose.ui.unit.IntSize>(LocalAnimScale.current, 300)),
-        exit = fadeOut(tweenScaled<Float>(LocalAnimScale.current, 300)) +
-            shrinkVertically(tweenScaled<androidx.compose.ui.unit.IntSize>(LocalAnimScale.current, 300)),
+        enter = fadeIn(expressiveSpringScaled(LocalAnimScale.current, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects)) +
+            expandVertically(expressiveSpringScaled(LocalAnimScale.current, M3ExpressiveMotion.DampingExpressive, M3ExpressiveMotion.StiffnessSpatial)),
+        exit = fadeOut(expressiveSpringScaled(LocalAnimScale.current, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects)) +
+            shrinkVertically(expressiveSpringScaled(LocalAnimScale.current, 0.9f, M3ExpressiveMotion.StiffnessSpatial)),
         modifier = modifier,
     ) {
         Surface(
