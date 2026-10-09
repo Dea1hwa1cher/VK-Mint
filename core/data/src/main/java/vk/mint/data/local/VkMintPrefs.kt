@@ -419,6 +419,9 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             netProxyPort       = p[Keys.NET_PROXY_PORT]        ?: 8080,
             proxyListData      = p[Keys.PROXY_LIST_DATA]       ?: "",
             proxyActiveId      = p[Keys.PROXY_ACTIVE_ID]       ?: "",
+            netCompressionEnabled       = p[Keys.NET_COMPRESSION_ENABLED]       ?: true,
+            netTrafficCompressedBytes   = p[Keys.NET_TRAFFIC_COMPRESSED_BYTES]   ?: 0L,
+            netTrafficUncompressedBytes = p[Keys.NET_TRAFFIC_UNCOMPRESSED_BYTES] ?: 0L,
 
             // Locker
             // Fix #DEFAULTS-OFF (2026-08-04): lockerOnBackground default true → false.
@@ -1261,6 +1264,21 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setNetProxyPort(v: Int)                  = put(Keys.NET_PROXY_PORT, v)
     suspend fun setProxyListData(v: String)              = put(Keys.PROXY_LIST_DATA, v)
     suspend fun setProxyActiveId(v: String)              = put(Keys.PROXY_ACTIVE_ID, v)
+    suspend fun setNetCompressionEnabled(v: Boolean)     = put(Keys.NET_COMPRESSION_ENABLED, v)
+    suspend fun recordTrafficStats(compressed: Long, uncompressed: Long) {
+        ds.edit { p ->
+            val curComp = p[Keys.NET_TRAFFIC_COMPRESSED_BYTES] ?: 0L
+            val curUncomp = p[Keys.NET_TRAFFIC_UNCOMPRESSED_BYTES] ?: 0L
+            p[Keys.NET_TRAFFIC_COMPRESSED_BYTES] = curComp + compressed
+            p[Keys.NET_TRAFFIC_UNCOMPRESSED_BYTES] = curUncomp + uncompressed
+        }
+    }
+    suspend fun resetTrafficStats() {
+        ds.edit { p ->
+            p[Keys.NET_TRAFFIC_COMPRESSED_BYTES] = 0L
+            p[Keys.NET_TRAFFIC_UNCOMPRESSED_BYTES] = 0L
+        }
+    }
 
     suspend fun setLockerEnabled(v: Boolean)             = put(Keys.LOCKER_ENABLED, v)
     suspend fun setLockerPinHash(v: String)              = put(Keys.LOCKER_PIN_HASH, v)
@@ -1734,6 +1752,12 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val proxyListData: String = "",
         /** ID активного прокси из списка (или пустая строка при прямом подключении). */
         val proxyActiveId: String = "",
+        /** Нативное сжатие трафика (Zstandard RFC 8878 / GZIP / Deflate). */
+        val netCompressionEnabled: Boolean = true,
+        /** Суммарный объём сжатого трафика в байтах (фактически загружено из сети). */
+        val netTrafficCompressedBytes: Long = 0L,
+        /** Суммарный объём разжатого трафика в байтах (объём данных до сжатия). */
+        val netTrafficUncompressedBytes: Long = 0L,
         // Locker
         val lockerEnabled: Boolean,
         val lockerPinHash: String,
@@ -2163,6 +2187,9 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val NET_PROXY_PORT    = intPreferencesKey("net_proxy_port")
         val PROXY_LIST_DATA   = stringPreferencesKey("proxy_list_data")
         val PROXY_ACTIVE_ID   = stringPreferencesKey("proxy_active_id")
+        val NET_COMPRESSION_ENABLED       = booleanPreferencesKey("net_compression_enabled")
+        val NET_TRAFFIC_COMPRESSED_BYTES   = longPreferencesKey("net_traffic_compressed_bytes")
+        val NET_TRAFFIC_UNCOMPRESSED_BYTES = longPreferencesKey("net_traffic_uncompressed_bytes")
         // Locker
         val LOCKER_ENABLED      = booleanPreferencesKey("locker_enabled")
         val LOCKER_PIN_HASH     = stringPreferencesKey("locker_pin_hash")

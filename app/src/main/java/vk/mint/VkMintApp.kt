@@ -1026,6 +1026,23 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
         vk.mint.auth.exchange.AuthDomainsConfig.update(initialSnap)
         proxyRepository = vk.mint.data.local.ProxyRepository(prefs)
         runBlocking { proxyRepository.init() }
+
+        // #TRAFFIC-COMPRESSION: Инициализация трекера статистики сжатия трафика (ZSTD / GZIP)
+        vk.mint.network.TrafficStatsTracker.seed(
+            initialSnap.netTrafficCompressedBytes,
+            initialSnap.netTrafficUncompressedBytes
+        )
+        vk.mint.network.TrafficStatsTracker.onStatsPersist = { compDelta, uncompDelta ->
+            appScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                prefs.recordTrafficStats(compDelta, uncompDelta)
+            }
+        }
+        vk.mint.network.TrafficStatsTracker.onReset = {
+            appScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                prefs.resetTrafficStats()
+            }
+        }
+
         val builder = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(45, TimeUnit.SECONDS)   // LongPoll wait=25 + запас на latency/Doze
@@ -1147,6 +1164,13 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
             // #29: 3 сетевые настройки теперь реально работают (раньше были UI-only).
             .addInterceptor(NetworkInterceptors.AwayBypassInterceptor(prefs))
             .addInterceptor(NetworkInterceptors.AdBlockInterceptor(prefs))
+            // #TRAFFIC-COMPRESSION: Нативное сжатие трафика (RFC 8878 Zstandard / GZIP / Deflate)
+            .addInterceptor(
+                vk.mint.network.TrafficCompressionInterceptor(
+                    isCompressionEnabled = { prefsSnapshot?.netCompressionEnabled ?: true },
+                    statsTracker = vk.mint.network.TrafficStatsTracker,
+                )
+            )
             // Fix #176: StaleConnectionInterceptor — добавляет Connection: close
             // в течение 10 сек после switch'а сети. Должен быть ДО NetworkRetry
             // чтобы retry'и тоже шли с Connection: close (не переиспользовали

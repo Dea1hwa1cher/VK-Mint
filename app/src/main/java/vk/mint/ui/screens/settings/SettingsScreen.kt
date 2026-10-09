@@ -3056,6 +3056,7 @@ private fun NetworkTab(
     val context = LocalContext.current
     val proxies by app.proxyRepository.proxiesFlow.collectAsState()
     val activeProxy by app.proxyRepository.activeProxyFlow.collectAsState()
+    val trafficStats by vk.mint.network.TrafficStatsTracker.statsFlow.collectAsState()
 
     var showAddEditDialog by remember { mutableStateOf(false) }
     var editingProxy by remember { mutableStateOf<ProxyConfig?>(null) }
@@ -3084,6 +3085,143 @@ private fun NetworkTab(
                 subtitle = "Маршрутировать запросы через мобильный web-шлюз m.vk.ru вместо api.vk.com. Применяется сразу. Экспериментально.",
                 checked = s.netUseWebApiGateway,
             ) { scope.launch { app.prefs.setNetUseWebApiGateway(it) } }
+        }
+
+        // #TRAFFIC-COMPRESSION: Нативное сжатие трафика (RFC 8878 Zstandard / GZIP)
+        item { SectionHeader("Сжатие трафика") }
+        item {
+            ToggleRow(
+                title = "Нативное сжатие трафика (Zstandard / GZIP)",
+                subtitle = "Запрашивать и декодировать ответы VK API с алгоритмами ZSTD и GZIP через нативную библиотеку RFC 8878. Снижает объём мобильного трафика на 35–65%.",
+                checked = s.netCompressionEnabled,
+            ) { scope.launch { app.prefs.setNetCompressionEnabled(it) } }
+        }
+
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                ),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Outlined.Speed,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Статистика сжатия",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        if (trafficStats.compressedBytes > 0L || trafficStats.uncompressedBytes > 0L) {
+                            TextButton(
+                                onClick = {
+                                    vk.mint.network.TrafficStatsTracker.reset()
+                                    Toast.makeText(context, "Статистика сжатия сброшена", Toast.LENGTH_SHORT).show()
+                                },
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("Сброс", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    val savedFormatted = vk.mint.network.TrafficStatsTracker.formatBytes(trafficStats.savedBytes)
+                    val percentFormatted = String.format(java.util.Locale.US, "%.1f", trafficStats.savedPercent)
+                    val compressedFormatted = vk.mint.network.TrafficStatsTracker.formatBytes(trafficStats.compressedBytes)
+                    val uncompressedFormatted = vk.mint.network.TrafficStatsTracker.formatBytes(trafficStats.uncompressedBytes)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        Column {
+                            Text(
+                                text = "Сэкономлено:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = "$savedFormatted ($percentFormatted%)",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        thickness = 0.5.dp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = "Получено из сети (сжато):",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = compressedFormatted,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = "Разжатый объём (без сжатия):",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = uncompressedFormatted,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
         }
 
         // #PROXY-MANAGER: Полнофункциональный менеджер прокси (HTTP / SOCKS5, аутентификация, пинг)

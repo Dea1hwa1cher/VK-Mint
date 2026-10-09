@@ -47,6 +47,8 @@ webrtc = "1.3.10"
 # META-INF/versions, байткод Java 8. minSdk=24 < 33, где java.security ещё
 # не знает Ed25519 — без BC реализация была бы невозможна.
 bouncyCastle = "1.78.1"
+# #TRAFFIC-COMPRESSION: Native Zstandard (ZSTD) library для OkHttp transparent decompressor.
+zstdJni = "1.5.7-3"
 
 # O1 #PERF-BASELINE (Task 77): Baseline Profile — плагин генерации + macrobenchmark.
 # 1.4.1 — stable на 2025-01, совместим с AGP 9.x.
@@ -166,6 +168,9 @@ webrtc = { group = "io.getstream", name = "stream-webrtc-android", version.ref =
 # Волна 46 #UPDATER-SIGNING: BouncyCastle (легковесный API) — ed25519-проверка
 # подписи манифеста обновлений в UpdaterSigning.kt.
 bcprov = { group = "org.bouncycastle", name = "bcprov-jdk15to18", version.ref = "bouncyCastle" }
+
+# #TRAFFIC-COMPRESSION: Native Zstandard (ZSTD) library
+zstd-jni = { group = "com.github.luben", name = "zstd-jni", version.ref = "zstdJni" }
 
 # O1 #PERF-BASELINE (Task 77): macrobenchmark + UI-тесты для Baseline Profile.
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
