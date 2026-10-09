@@ -1,8 +1,14 @@
 // File: ui/screens/music/MusicScreen.kt
 package vk.mint.ui.screens.music
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import vk.mint.ui.anim.expressiveSpring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1142,7 +1148,14 @@ fun MusicScreen(
     } // end Column
 
         // ─── FAB «наверх» ────────────────────────────────────────────
-        if (showScrollToTopFab && selectedTab == 0 && !searchActive) {
+        AnimatedVisibility(
+            visible = showScrollToTopFab && selectedTab == 0 && !searchActive,
+            enter = fadeIn(expressiveSpring()) + scaleIn(expressiveSpring()),
+            exit = fadeOut(expressiveSpring()) + scaleOut(expressiveSpring()),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 80.dp),
+        ) {
             FloatingActionButton(
                 onClick = {
                     scope.launch {
@@ -1151,9 +1164,6 @@ fun MusicScreen(
                 },
                 containerColor = vkSurface,
                 contentColor = vkTextPrimary,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 80.dp),
             ) {
                 Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Наверх")
             }

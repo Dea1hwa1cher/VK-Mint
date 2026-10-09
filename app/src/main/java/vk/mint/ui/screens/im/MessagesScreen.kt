@@ -24,7 +24,13 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import vk.mint.ui.anim.expressiveSpring
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
@@ -2052,12 +2058,16 @@ fun MessagesScreen(
                         listState.firstVisibleItemScrollOffset > 200)
             }
         }
-        if (showScrollToTopFab) {
+        AnimatedVisibility(
+            visible = showScrollToTopFab,
+            enter = fadeIn(expressiveSpring()) + scaleIn(expressiveSpring()),
+            exit = fadeOut(expressiveSpring()) + scaleOut(expressiveSpring()),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 16.dp),
+        ) {
             FloatingActionButton(
                 onClick = { scope.launch { listState.animateScrollToItem(0) } },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 16.dp),
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ) {

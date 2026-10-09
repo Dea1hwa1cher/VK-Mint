@@ -5,6 +5,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -125,6 +130,7 @@ import vk.mint.data.model.Comment
 import vk.mint.data.model.Post
 import vk.mint.data.model.UserProfile
 import vk.mint.data.model.Video
+import vk.mint.ui.anim.expressiveSpring
 import vk.mint.ui.navigation.PostHolder
 import vk.mint.ui.navigation.Screen
 import vk.mint.ui.components.AudioAttachmentList
@@ -2001,11 +2007,15 @@ fun FeedScreen(
         // не дожидаясь пока animateScrollToItem нагенерирует достаточно scroll
         // delta для onPreScroll (animation может выдать delta < 24f при коротком
         // скролле → меню осталось бы скрытым после возврата наверх).
-        if (showScrollToTopFab) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showScrollToTopFab,
+            enter = fadeIn(expressiveSpring()) + scaleIn(expressiveSpring()),
+            exit = fadeOut(expressiveSpring()) + scaleOut(expressiveSpring()),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 16.dp),
+        ) {
             Row(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.Bottom,
             ) {

@@ -1,7 +1,6 @@
 package vk.mint.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -19,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
+import vk.mint.ui.anim.expressiveSpring
 import vk.mint.ui.navigation.LocalBottomBarVisible
 
 /**
@@ -73,8 +73,8 @@ fun ScrollToTopFab(
 
     AnimatedVisibility(
         visible = showFab,
-        enter = fadeIn(tween(150)) + scaleIn(tween(150)),
-        exit = fadeOut(tween(150)) + scaleOut(tween(150)),
+        enter = fadeIn(expressiveSpring()) + scaleIn(expressiveSpring()),
+        exit = fadeOut(expressiveSpring()) + scaleOut(expressiveSpring()),
         modifier = modifier,
     ) {
         FloatingActionButton(
