@@ -254,6 +254,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             // вероятен err=8/15 → локальный source of truth (паттерн pin #276);
             // серверный вызов — best-effort.
             archivedConvsData  = p[Keys.ARCHIVED_CONVS_DATA]       ?: "", // NULL-ЯВНО
+            hiddenConvsData    = p[Keys.HIDDEN_CONVS_DATA]         ?: "",
+            hiddenChatsPinHash = p[Keys.HIDDEN_CHATS_PIN_HASH]     ?: "",
             // Fix #392 #IM-LOCAL-PIN: локальный закреп диалога — JSON-массив peer_id
             // в порядке закрепления (0-й элемент — верх списка), парсится НА УРОВНЕ
             // Snapshot в List<Long> (битый/пустой JSON → пустой список, см.
@@ -701,6 +703,10 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setPinnedConvsData(v: String)            = put(Keys.PINNED_CONVS_DATA, v)
     /** Fix #356 #MSG-ARCHIVE: JSON-массив peer_id архивных диалогов. */
     suspend fun setArchivedConvsData(v: String)          = put(Keys.ARCHIVED_CONVS_DATA, v)
+    /** Скрытые диалоги: JSON-массив peer_id скрытых диалогов. */
+    suspend fun setHiddenConvsData(v: String)            = put(Keys.HIDDEN_CONVS_DATA, v)
+    /** Скрытые диалоги: хэш PIN-кода для скрытых диалогов (SHA-256). */
+    suspend fun setHiddenChatsPinHash(v: String)         = put(Keys.HIDDEN_CHATS_PIN_HASH, v)
     /** Fix #392 #IM-LOCAL-PIN: персист порядка закреплённых диалогов (List<Long> → JSON, атомарный put). */
     suspend fun setImPinnedDialogs(peerIds: List<Long>)  = put(Keys.IM_PINNED_DIALOGS, imPinnedGson.toJson(peerIds))
 
@@ -1610,6 +1616,10 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val pinnedConvsData: String,
         /** Fix #356 #MSG-ARCHIVE: JSON-массив peer_id архивных диалогов (source of truth). */
         val archivedConvsData: String,
+        /** Скрытые диалоги: JSON-массив peer_id скрытых диалогов (source of truth). */
+        val hiddenConvsData: String = "",
+        /** Скрытые диалоги: хэш PIN-кода для скрытых диалогов (SHA-256). */
+        val hiddenChatsPinHash: String = "",
         /** Fix #392 #IM-LOCAL-PIN: peer_id локально закреплённых диалогов в ПОРЯДКЕ ЗАКРЕПЛЕНИЯ (0-й — верх списка; уже распарсен из JSON). Дефолт обязателен: FeedScreen:234 строит dummy-Snapshot named-параметрами (класс бага Fix #276/#356 — без дефолта компиляция падает). */
         val imPinnedDialogs: List<Long> = emptyList(),
         /** #IM-CHANNEL-FIX (56-b-5): peer_id каналов с ЯВНО включёнными уведомлениями (уже распарсен из CSV). Дефолт обязателен: конструкторы Snapshot строятся named-параметрами (класс бага Fix #276/#356). */
@@ -2042,6 +2052,10 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val PINNED_CONVS_DATA     = stringPreferencesKey("pinned_convs_data")
         // Fix #356 #MSG-ARCHIVE: локальное хранилище архивных диалогов (JSON array of peer_id).
         val ARCHIVED_CONVS_DATA   = stringPreferencesKey("archived_convs_data")
+        // Скрытые диалоги: локальное хранилище скрытых диалогов (JSON array of peer_id).
+        val HIDDEN_CONVS_DATA     = stringPreferencesKey("hidden_convs_data")
+        // Скрытые диалоги: SHA-256 хэш PIN-кода для скрытых диалогов.
+        val HIDDEN_CHATS_PIN_HASH = stringPreferencesKey("hidden_chats_pin_hash")
         // Fix #392 #IM-LOCAL-PIN: локальный закреп диалогов (JSON array of peer_id в порядке
         // закрепления; "" = ключ ещё не создавался, "[]" = список сознательно пуст).
         val IM_PINNED_DIALOGS     = stringPreferencesKey("im_pinned_dialogs")

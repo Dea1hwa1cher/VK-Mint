@@ -52,6 +52,13 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.runtime.saveable.rememberSaveable
+import vk.mint.ui.components.PinSetupDialog
+import vk.mint.ui.components.PinVerifyDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -356,7 +363,14 @@ fun MessagesScreen(
     // честный текст в пустом стейте; client-совпадения при этом всё равно видны.
     var searchErrorText by remember { mutableStateOf<String?>(null) }
     val serverSearchActive = searchQuery.trim().length >= 2
-    LaunchedEffect(searchQuery) {
+    // ══ Скрытые диалоги: PIN-защищенный список (HiddenConversationsRepository) ══
+    var localHiddenIds by remember { mutableStateOf<List<Long>>(emptyList()) }
+    var showHiddenChats by rememberSaveable { mutableStateOf(false) }
+    var pendingHidePeerId by remember { mutableStateOf<Long?>(null) }
+    var showPinSetupForHidden by remember { mutableStateOf(false) }
+    var showPinVerifyForHidden by remember { mutableStateOf(false) }
+
+    LaunchedEffect(searchQuery, showHiddenChats, localHiddenIds) {
         val q = searchQuery.trim()
         if (q.length < 2) {
             searchChats = emptyList()
@@ -368,8 +382,10 @@ fun MessagesScreen(
         searchLoading = true
         delay(400) // debounce: отменится при продолжении набора (LaunchedEffect key)
         try {
-            searchChats = app.apiClient.messagesSearchConversations(q, count = 20)
-            searchMessages = app.apiClient.messagesSearch(q, peerId = null, count = 20)
+            val rawConvs = app.apiClient.messagesSearchConversations(q, count = 20)
+            searchChats = if (showHiddenChats) rawConvs else rawConvs.filterNot { it.peer.id in localHiddenIds }
+            val rawMsgs = app.apiClient.messagesSearch(q, peerId = null, count = 20)
+            searchMessages = if (showHiddenChats) rawMsgs else rawMsgs.filterNot { it.peerId in localHiddenIds }
             if (searchChats.isEmpty() && searchMessages.isEmpty()) {
                 val err = app.apiClient.lastApiError
                 if (err != null && err.isNotBlank() && app.apiClient.lastApiErrorCode != 0) {
@@ -568,6 +584,15 @@ fun MessagesScreen(
             }
         } catch (e: Exception) {
             AppLog.w("MessagesScreen", "#MSG-ARCHIVE: failed to load local archived: ${e.message}")
+        }
+        // Скрытые диалоги: грузим локальные скрытые peer_id
+        try {
+            localHiddenIds = app.hiddenConvsRepository.load()
+            if (localHiddenIds.isNotEmpty()) {
+                AppLog.d("MessagesScreen", "#HIDDEN-CHATS: loaded ${localHiddenIds.size} hidden: $localHiddenIds")
+            }
+        } catch (e: Exception) {
+            AppLog.w("MessagesScreen", "#HIDDEN-CHATS: failed to load local hidden: ${e.message}")
         }
         loading = true
         errorText = null
@@ -864,12 +889,16 @@ fun MessagesScreen(
     // Fix #274: + сортировка pinned наверх + локальный reorder.
     // Вычисляется через derivedStateOf для эффективности (пересчёт только при
     // изменении chats, searchQuery, activeTab, folders, foldersEnabled, localPinnedOrder).
-    val filteredChats by remember(chats, searchQuery, activeTab, folders, foldersEnabled, localPinnedOrder, localArchivedIds) {
+    val filteredChats by remember(chats, searchQuery, activeTab, folders, foldersEnabled, localPinnedOrder, localArchivedIds, localHiddenIds, showHiddenChats) {
         derivedStateOf {
             var result = chats
             // Fix #356 #MSG-ARCHIVE: архивные диалоги исключены из основного
             // списка (смотрятся в разделе «Архив» — showArchived ниже).
             result = result.filterNot { it.peer.id in localArchivedIds }
+            // Скрытые диалоги: исключены, если режим скрытых чатов не разблокирован
+            if (!showHiddenChats) {
+                result = result.filterNot { it.peer.id in localHiddenIds }
+            }
             if (foldersEnabled) {
                 // P3.3: динамические табы — 0=Все, 1..N=папки, N+1=Непрочитанные.
                 // #COUNTER-CHANNELS: «Непрочитанные» — только диалоги, без каналов
@@ -1061,27 +1090,32 @@ fun MessagesScreen(
     // totalUnreadSum и unreadCount ИСКЛЮЧАЮТ каналы (isChannel = group &&
     // can_write.allowed=false, #DIALOGS-TAB). Бейджи самих каналов в списке
     // (chat.unreadCount в ChatCard) и бейдж вкладки «Каналы» НЕ тронуты.
-    val dialogsUnreadSum by remember(chats) {
-        derivedStateOf { chats.filter { !it.isChannel }.sumOf { it.unreadCount } }
-    }
-    val totalUnreadSum by remember(chats) {
-        derivedStateOf { chats.filter { !it.isChannel }.sumOf { it.unreadCount } }
-    }
-    val channelUnreadSum by remember(chats) {
+    val unhiddenChatsForBadges by remember(chats, localHiddenIds, showHiddenChats) {
         derivedStateOf {
-            chats.filter { it.isChannel }
+            if (showHiddenChats) chats else chats.filterNot { it.peer.id in localHiddenIds }
+        }
+    }
+    val dialogsUnreadSum by remember(unhiddenChatsForBadges) {
+        derivedStateOf { unhiddenChatsForBadges.filter { !it.isChannel }.sumOf { it.unreadCount } }
+    }
+    val totalUnreadSum by remember(unhiddenChatsForBadges) {
+        derivedStateOf { unhiddenChatsForBadges.filter { !it.isChannel }.sumOf { it.unreadCount } }
+    }
+    val channelUnreadSum by remember(unhiddenChatsForBadges) {
+        derivedStateOf {
+            unhiddenChatsForBadges.filter { it.isChannel }
                 .sumOf { it.unreadCount }
         }
     }
-    val unreadCount by remember(chats) {
-        derivedStateOf { chats.count { it.unreadCount > 0 && !it.isChannel } }
+    val unreadCount by remember(unhiddenChatsForBadges) {
+        derivedStateOf { unhiddenChatsForBadges.count { it.unreadCount > 0 && !it.isChannel } }
     }
     // P3.3: сумма непрочитанных по каждой папке (параллельно списку folders).
     // Нужно для бейджей на чипах папок в FolderTabRow.
-    val folderUnreadSums by remember(chats, folders) {
+    val folderUnreadSums by remember(unhiddenChatsForBadges, folders) {
         derivedStateOf {
             folders.map { folder ->
-                chats.filter { it.peer.id in folder.peerIds }.sumOf { it.unreadCount }
+                unhiddenChatsForBadges.filter { it.peer.id in folder.peerIds }.sumOf { it.unreadCount }
             }
         }
     }
@@ -1093,10 +1127,22 @@ fun MessagesScreen(
     // Fix #260: showSearch в ключе DisposableEffect — иначе configure()
     // вызывается один раз с showSearch=false → titleOverride=null навсегда
     // и TextField поиска не появляется при тапе на иконку.
-    DisposableEffect(searchEnabled, showSearch) {
-        if (searchEnabled) {
-            val token = ScreenTopBar.configure(
-                actions = {
+    DisposableEffect(searchEnabled, showSearch, showHiddenChats) {
+        val token = ScreenTopBar.configure(
+            actions = {
+                if (showHiddenChats) {
+                    IconButton(onClick = {
+                        showHiddenChats = false
+                        Toast.makeText(screenContext, "Скрытые диалоги заблокированы", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(
+                            Icons.Filled.Lock,
+                            contentDescription = "Заблокировать скрытые диалоги",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                if (searchEnabled) {
                     IconButton(onClick = {
                         showSearch = !showSearch
                         if (!showSearch) searchQuery = ""
@@ -1108,47 +1154,83 @@ fun MessagesScreen(
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                },
-                titleOverride = if (showSearch) {
-                    {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            placeholder = { Text("Поиск по чатам…", style = MaterialTheme.typography.bodyMedium) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.extraLarge,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            ),
-                            textStyle = MaterialTheme.typography.bodyMedium,
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Filled.Search,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(Icons.Filled.Close, contentDescription = "Очистить", modifier = Modifier.size(18.dp))
-                                    }
+                }
+            },
+            titleOverride = if (showSearch) {
+                {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Поиск по чатам…", style = MaterialTheme.typography.bodyMedium) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        ),
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Filled.Close, contentDescription = "Очистить", modifier = Modifier.size(18.dp))
                                 }
-                            },
+                            }
+                        },
+                    )
+                }
+            } else {
+                {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .combinedClickable(
+                                onClick = { },
+                                onLongClick = {
+                                    if (showHiddenChats) {
+                                        showHiddenChats = false
+                                        Toast.makeText(screenContext, "Скрытые диалоги заблокированы", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        if (s.hiddenChatsPinHash.isBlank()) {
+                                            showPinSetupForHidden = true
+                                        } else {
+                                            showPinVerifyForHidden = true
+                                        }
+                                    }
+                                },
+                            )
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            text = if (showHiddenChats) "Чаты (скрытые)" else "Чаты",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
                         )
+                        if (showHiddenChats) {
+                            Spacer(Modifier.width(6.dp))
+                            Icon(
+                                Icons.Outlined.Visibility,
+                                contentDescription = "Скрытые диалоги открыты",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     }
-                } else null,
-            )
-            onDispose { ScreenTopBar.clear(token) }
-        } else {
-            ScreenTopBar.clear()
-            onDispose { }
-        }
+                }
+            },
+        )
+        onDispose { ScreenTopBar.clear(token) }
     }
 
     // Fix #78: PullToRefreshBox — pull-to-refresh списка диалогов.
@@ -1278,7 +1360,8 @@ fun MessagesScreen(
                     // (messages.searchConversations) без дублей по peer.id (ключи
                     // items() должны быть уникальны).
                     val q = searchQuery.trim()
-                    val clientMatches = chats.filter { it.peer.title?.contains(q, ignoreCase = true) == true }  // NULL-ЯВНО
+                    val availableChats = if (showHiddenChats) chats else chats.filterNot { it.peer.id in localHiddenIds }
+                    val clientMatches = availableChats.filter { it.peer.title?.contains(q, ignoreCase = true) == true }  // NULL-ЯВНО
                     val clientIds = clientMatches.map { it.peer.id }.toSet()
                     val serverNew = searchChats.filterNot { it.peer.id in clientIds }
                     val searchTotal = clientMatches.size + serverNew.size + searchMessages.size
@@ -1997,6 +2080,25 @@ fun MessagesScreen(
                             onArchiveConversation = { peerId ->
                                 onArchiveConversationLocal(peerId)
                             },
+                            isHidden = chat.peer.id in localHiddenIds,
+                            onToggleHide = { peerId, hide ->
+                                if (hide) {
+                                    if (s.hiddenChatsPinHash.isBlank()) {
+                                        pendingHidePeerId = peerId
+                                        showPinSetupForHidden = true
+                                    } else {
+                                        scope.launch {
+                                            localHiddenIds = app.hiddenConvsRepository.hide(peerId)
+                                            Toast.makeText(screenContext, "Диалог скрыт. Доступ — долгим нажатием на «Чаты»", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                } else {
+                                    scope.launch {
+                                        localHiddenIds = app.hiddenConvsRepository.unhide(peerId)
+                                        Toast.makeText(screenContext, "Диалог возвращён в общий список", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
                             // Fix #274 + Fix #276: drag&drop — swap с соседним pinned чатом.
                             // Вызывается из ChatCard при detectDragGesturesAfterLongPress,
                             // когда drag пересекает порог соседнего элемента.
@@ -2075,6 +2177,46 @@ fun MessagesScreen(
             }
         }
     }  // Box
+
+    if (showPinSetupForHidden) {
+        PinSetupDialog(
+            title = "Задайте PIN скрытых диалогов",
+            subtitle = "4 цифры для доступа к скрытым чатам",
+            onDismiss = {
+                showPinSetupForHidden = false
+                pendingHidePeerId = null
+            },
+            onPinSet = { hash ->
+                showPinSetupForHidden = false
+                scope.launch {
+                    app.prefs.setHiddenChatsPinHash(hash)
+                    val targetPeerId = pendingHidePeerId
+                    pendingHidePeerId = null
+                    if (targetPeerId != null) {
+                        localHiddenIds = app.hiddenConvsRepository.hide(targetPeerId)
+                        Toast.makeText(screenContext, "Диалог скрыт. Доступ — долгим нажатием на «Чаты»", Toast.LENGTH_LONG).show()
+                    } else {
+                        showHiddenChats = true
+                        Toast.makeText(screenContext, "PIN установлен. Скрытые диалоги открыты", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+        )
+    }
+
+    if (showPinVerifyForHidden) {
+        PinVerifyDialog(
+            storedHash = s.hiddenChatsPinHash,
+            title = "Скрытые диалоги",
+            subtitle = "Введите PIN-код для доступа к скрытым чатам",
+            onDismiss = { showPinVerifyForHidden = false },
+            onVerified = {
+                showPinVerifyForHidden = false
+                showHiddenChats = true
+                Toast.makeText(screenContext, "Скрытые диалоги открыты", Toast.LENGTH_SHORT).show()
+            },
+        )
+    }
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -2111,6 +2253,8 @@ private fun ChatCard(
     showArchiveAction: Boolean = true,
     showListActions: Boolean = true,
     onArchiveConversation: (peerId: Long) -> Unit = { _ -> },
+    isHidden: Boolean = false,
+    onToggleHide: (peerId: Long, hide: Boolean) -> Unit = { _, _ -> },
     onDragSwap: (fromIdx: Int, toIdx: Int) -> Unit = { _, _ -> },
     pinnedPeerIdsInOrder: List<Long> = emptyList(),
     pinnedIndex: Int = -1,
@@ -2370,6 +2514,15 @@ private fun ChatCard(
                                         tint = MaterialTheme.colorScheme.primary,
                                     )
                                 }
+                                if (isHidden) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.Outlined.VisibilityOff,
+                                        contentDescription = "Скрытый диалог",
+                                        modifier = Modifier.size(15.dp),
+                                        tint = MaterialTheme.colorScheme.tertiary,
+                                    )
+                                }
                                 if (isMuted) {
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(
@@ -2562,6 +2715,22 @@ private fun ChatCard(
                         onClick = {
                             showContextMenu = false
                             onArchiveConversation(chat.peer.id)
+                        },
+                    )
+                }
+                // Скрыть / Показать диалог (Скрытые диалоги)
+                if (showListActions && !chat.isChannel) {
+                    DropdownMenuItem(
+                        text = { Text(if (isHidden) "Показать диалог" else "Скрыть диалог") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (isHidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            showContextMenu = false
+                            onToggleHide(chat.peer.id, !isHidden)
                         },
                     )
                 }

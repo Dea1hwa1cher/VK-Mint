@@ -277,6 +277,14 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
         private set
 
     /**
+     * Скрытые диалоги: локальное хранилище скрытых peer_id (JSON массив в VkMintPrefs.hiddenConvsData).
+     * Доступ к списку защищён PIN-кодом (hiddenChatsPinHash).
+     */
+    lateinit var hiddenConvsRepository: vk.mint.data.local.HiddenConversationsRepository
+        private set
+
+
+    /**
      * Волна 40 #BOOKMARKS-TRACKS: локальные закладки треков (JSON-массив Track
      * в VkMintPrefs.trackBookmarksData). У fave.* нет аудио-раздела (#FAVE-AUDIO),
      * поэтому «Закладки → Треки» — клиентское хранилище (source of truth для UI).
@@ -1224,6 +1232,8 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
         pinnedConvsRepository = vk.mint.data.local.PinnedConversationsRepository(prefs)
         // Fix #356 #MSG-ARCHIVE: ArchivedConversationsRepository — локальный архив диалогов.
         archivedConvsRepository = vk.mint.data.local.ArchivedConversationsRepository(prefs)
+        // Скрытые диалоги: HiddenConversationsRepository.
+        hiddenConvsRepository = vk.mint.data.local.HiddenConversationsRepository(prefs)
         // Волна 40 #BOOKMARKS-TRACKS: локальные закладки треков (JSON в VkMintPrefs).
         trackBookmarksRepository = vk.mint.data.local.TrackBookmarksRepository(prefs)
 

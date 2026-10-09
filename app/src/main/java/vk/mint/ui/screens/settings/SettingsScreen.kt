@@ -31,6 +31,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -140,8 +141,12 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Shield
 // Fix #391 #IN-APP-UPDATER: иконка вкладки «Обновления» (system update — тренд системных настроек).
 import androidx.compose.material.icons.outlined.SystemUpdate
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.VideoLibrary
+import vk.mint.ui.components.PinPadKey
+import vk.mint.ui.components.PinSetupDialog
+import vk.mint.ui.components.PinVerifyDialog
 // Волна 43 #UPDATER-SOURCE: иконка жёлтого баннера недоверия кастомному источнику обновлений.
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -3240,6 +3245,17 @@ private fun SecurityTab(
     // (раньше выключалось без всякой проверки — любой, взявший телефон,
     // мог снять защиту).
     var showPinVerifyDisable by remember { mutableStateOf(false) }
+    var showHiddenPinSetup by remember { mutableStateOf(false) }
+    var showHiddenPinVerifyChange by remember { mutableStateOf(false) }
+    var showHiddenPinChange by remember { mutableStateOf(false) }
+    var showClearHiddenConfirm by remember { mutableStateOf(false) }
+    val hiddenCount = remember(s.hiddenConvsData) {
+        if (s.hiddenConvsData.isBlank()) 0
+        else runCatching {
+            val list = com.google.gson.Gson().fromJson(s.hiddenConvsData, List::class.java)
+            list?.size ?: 0
+        }.getOrDefault(0)
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -3379,6 +3395,118 @@ private fun SecurityTab(
                 }
             }
         }
+        item { SectionHeader("Скрытые диалоги") }
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                ),
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Скрыто диалогов",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Badge {
+                            Text(hiddenCount.toString())
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Скрытые диалоги не отображаются в списке чатов и поиске. Доступ открывается долгим нажатием на заголовок «Чаты».",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (s.hiddenChatsPinHash.isBlank()) {
+                                showHiddenPinSetup = true
+                            } else {
+                                showHiddenPinVerifyChange = true
+                            }
+                        }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Outlined.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.size(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (s.hiddenChatsPinHash.isBlank()) "Задать PIN скрытых диалогов" else "Сменить PIN скрытых диалогов",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            if (s.hiddenChatsPinHash.isBlank()) "PIN-код не установлен" else "PIN-код установлен",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        if (hiddenCount > 0) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showClearHiddenConfirm = true }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Visibility,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Spacer(Modifier.size(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Раскрыть все скрытые диалоги",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Text(
+                                "Вернуть все скрытые чаты в общий список",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Fix #381 #PIN-DIALOG-OVERLAY: диалоги живут на уровне SecurityTab (не в
@@ -3475,6 +3603,75 @@ private fun SecurityTab(
             onVerified = {
                 showPinVerifyChange = false
                 showPinChange = true
+            },
+        )
+    }
+
+    // Диалоги управления скрытыми диалогами
+    if (showHiddenPinSetup) {
+        PinSetupDialog(
+            title = "Задайте PIN скрытых диалогов",
+            subtitle = "4 цифры для доступа к скрытым чатам",
+            onDismiss = { showHiddenPinSetup = false },
+            onPinSet = { hash ->
+                showHiddenPinSetup = false
+                scope.launch {
+                    app.prefs.setHiddenChatsPinHash(hash)
+                    Toast.makeText(context, "PIN скрытых диалогов установлен", Toast.LENGTH_SHORT).show()
+                }
+            },
+        )
+    }
+    if (showHiddenPinVerifyChange) {
+        PinVerifyDialog(
+            storedHash = s.hiddenChatsPinHash,
+            title = "Сменить PIN скрытых диалогов",
+            subtitle = "Введите текущий PIN скрытых чатов",
+            onDismiss = { showHiddenPinVerifyChange = false },
+            onVerified = {
+                showHiddenPinVerifyChange = false
+                showHiddenPinChange = true
+            },
+        )
+    }
+    if (showHiddenPinChange) {
+        PinSetupDialog(
+            title = "Новый PIN скрытых диалогов",
+            subtitle = "Придумайте новый PIN для скрытых чатов",
+            onDismiss = { showHiddenPinChange = false },
+            onPinSet = { hash ->
+                showHiddenPinChange = false
+                scope.launch {
+                    app.prefs.setHiddenChatsPinHash(hash)
+                    Toast.makeText(context, "PIN скрытых диалогов изменён", Toast.LENGTH_SHORT).show()
+                }
+            },
+        )
+    }
+    if (showClearHiddenConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearHiddenConfirm = false },
+            title = { Text("Раскрыть все диалоги?") },
+            text = {
+                Text("Все скрытые диалоги ($hiddenCount) будут возвращены в общий список мессенджера.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearHiddenConfirm = false
+                        scope.launch {
+                            app.hiddenConvsRepository.clear()
+                            Toast.makeText(context, "Все скрытые диалоги раскрыты", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                ) {
+                    Text("Раскрыть", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearHiddenConfirm = false }) {
+                    Text("Отмена")
+                }
             },
         )
     }
@@ -7968,266 +8165,3 @@ private fun minutesToTime(min: Int): String {
     return "%02d:%02d".format(h, m)
 }
 
-
-// #SETTINGS-FIX: диалог задания PIN-кода при включении блокировки.
-// Fix #380 #LOCKER-MANAGE: используется и для смены уже установленного PIN
-// (SecurityTab «Сменить PIN-код» — после верного текущего PIN, W31-b
-// #PIN-CHANGE-VERIFY).
-//
-// Fix #381 #PIN-PAD-DIALOG: полный редизайн — IME-поля убраны, вместо них
-// детерминированный PIN-пад (те же круглые клавиши, что на экране блокировки
-// LockerActivity). Раньше это были два OutlinedTextField: при авто-переходе
-// 0→1 (введена 4-я цифра) поле ввода заменялось полем подтверждения, и
-// FocusRequester.requestFocus() (Fix #380 #PIN-DIALOG-FOCUS) гонялся с
-// удалением прежнего поля из композиции — на части устройств фокус-запрос
-// проигрывал, клавиатура печатала «в никуда», confirm оставался пустым,
-// «Сохранить» отвечало «PIN-коды не совпадают» и всё сбрасывалось по кругу →
-// у юзера «PIN не устанавливается». Клавиатура системы в диалоге больше не
-// участвует вовсе: каждый тап гарантированно попадает в активное поле.
-// Шаг (0=ввод, 1=подтверждение) теперь ВЫВОДИТСЯ из длины pin, а не хранится
-// отдельным стейтом — рассинхрон «шаг уже 1, а pin ещё не 4 цифры» невозможен
-// по построению.
-@Composable
-private fun PinSetupDialog(
-    onDismiss: () -> Unit,
-    onPinSet: (hash: String) -> Unit,
-) {
-    val context = LocalContext.current
-    var pin by remember { mutableStateOf("") }
-    var confirm by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    val step = if (pin.length < 4) 0 else 1 // 0=ввод, 1=подтверждение (derived)
-    val activeValue = if (step == 0) pin else confirm
-
-    fun onKey(k: String) {
-        if (k == "del") {
-            error = null
-            if (step == 0) {
-                if (pin.isNotEmpty()) pin = pin.dropLast(1)
-            } else {
-                if (confirm.isNotEmpty()) confirm = confirm.dropLast(1)
-            }
-            return
-        }
-        // Цифра: не принимаем 5-ю — авто-проверка сработала на 4-й.
-        if (activeValue.length >= 4) return
-        if (step == 0) {
-            pin = pin + k
-        } else {
-            confirm = confirm + k
-            if (confirm.length == 4) {
-                if (confirm == pin) {
-                    onPinSet(vk.mint.locker.LockerActivity.hashPin(pin))
-                } else {
-                    error = "PIN-коды не совпадают — придумайте новый"
-                    // Единый тактильный паттерн с ошибкой неверного PIN на
-                    // экране блокировки (LockerActivity.vibrate).
-                    vk.mint.locker.LockerActivity.vibrate(context)
-                    pin = ""
-                    confirm = ""
-                }
-            }
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        // W31-b #PIN-ALWAYS-SETUP: «Задайте» вместо «Создайте» — диалог
-        // открывается и при ПОВТОРНОМ включении (overwrite существующего PIN).
-        title = { Text(if (step == 0) "Задайте PIN-код" else "Подтвердите PIN-код") },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    if (step == 0) "4 цифры для блокировки приложения" else "Повторите PIN-код",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(16.dp))
-                // PIN dots — как на экране блокировки LockerActivity.
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    repeat(4) { i ->
-                        val filled = i < activeValue.length
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clip(CircleShape)
-                                .background(if (filled) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                        )
-                    }
-                }
-                val err = error
-                if (err != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-                Spacer(Modifier.height(16.dp))
-                // Пад 3×4: 1-9 / del / 0. Клавиши 64dp — touch-таргет ≥48dp.
-                val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "del", "0", "")
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    keys.chunked(3).forEach { rowKeys ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                        ) {
-                            rowKeys.forEach { k ->
-                                if (k.isEmpty()) {
-                                    // Пустой placeholder — сохранить сетку 3×4.
-                                    Box(modifier = Modifier.size(64.dp))
-                                } else {
-                                    PinPadKey(key = k, onClick = { onKey(k) })
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Отмена") }
-        },
-    )
-}
-
-/** Fix #381 #PIN-PAD-DIALOG: круглая клавиша PIN-пада (стиль KeyButton LockerActivity). */
-@Composable
-private fun PinPadKey(key: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(64.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (key == "del") {
-            Icon(Icons.AutoMirrored.Filled.Backspace, contentDescription = "Удалить")
-        } else {
-            Text(key, fontSize = 22.sp, fontWeight = FontWeight.Medium)
-        }
-    }
-}
-
-// W31-b #PIN-VERIFY: переиспользуемый диалог ввода ТЕКУЩЕГО PIN-кода — один
-// композабл на оба сценария (#PIN-DISABLE-VERIFY выключение и #PIN-CHANGE-VERIFY
-// смена). Одна фаза ввода, авто-проверка на 4-й цифре — без IME и без кнопки
-// «Подтвердить» (тот же детерминированный пад 3×4 волны 27, что у PinSetupDialog;
-// lessons #PIN-PAD-DIALOG/#PIN-DIALOG-OVERLAY учтены: вызывается ТОЛЬКО на уровне
-// SecurityTab, не внутри item{} LazyColumn).
-//
-// Хэш-сверка — ТОЙ ЖЕ функцией, которой экран блокировки хэширует ввод:
-// vk.mint.locker.LockerActivity.hashPin (SHA-256, соль vkmint-salt:) — единый
-// источник алгоритма, локального дубля нет. storedHash передаётся из
-// Snapshot.lockerPinHash — того же поля, что читает MainActivity при запуске
-// LockerActivity.
-//
-// Неверный PIN: inline-ошибка «Неверный PIN-код» + LockerActivity.vibrate (единый
-// тактильный паттерн с экраном блокировки), диалог ОСТАЁТСЯ открытым с пустым
-// вводом — операция НЕ выполняется (локер остаётся включён / PIN не меняется).
-// Консистентно для обоих сценариев.
-@Composable
-private fun PinVerifyDialog(
-    storedHash: String,
-    title: String,
-    subtitle: String,
-    onDismiss: () -> Unit,
-    onVerified: () -> Unit,
-) {
-    val context = LocalContext.current
-    var pin by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    fun onKey(k: String) {
-        if (k == "del") {
-            error = null
-            if (pin.isNotEmpty()) pin = pin.dropLast(1)
-            return
-        }
-        // Цифра: не принимаем 5-ю — авто-проверка сработала на 4-й.
-        if (pin.length >= 4) return
-        pin = pin + k
-        if (pin.length == 4) {
-            val hash = vk.mint.locker.LockerActivity.hashPin(pin)
-            if (hash == storedHash) {
-                onVerified()
-            } else {
-                // #PIN (волна 31-f): крошка неверного ввода — операция НЕ
-                // выполняется (диалог остаётся открытым, локер не меняется).
-                AppLog.w("Settings", "#PIN verify failed: wrong PIN (dialog='$title')")
-                error = "Неверный PIN-код"
-                vk.mint.locker.LockerActivity.vibrate(context)
-                pin = ""
-            }
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(16.dp))
-                // PIN dots — как в PinSetupDialog и на экране блокировки.
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    repeat(4) { i ->
-                        val filled = i < pin.length
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clip(CircleShape)
-                                .background(if (filled) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                        )
-                    }
-                }
-                val err = error
-                if (err != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-                Spacer(Modifier.height(16.dp))
-                // Пад 3×4: 1-9 / del / 0. Клавиши 64dp — touch-таргет ≥48dp.
-                val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "del", "0", "")
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    keys.chunked(3).forEach { rowKeys ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                        ) {
-                            rowKeys.forEach { k ->
-                                if (k.isEmpty()) {
-                                    // Пустой placeholder — сохранить сетку 3×4.
-                                    Box(modifier = Modifier.size(64.dp))
-                                } else {
-                                    PinPadKey(key = k, onClick = { onKey(k) })
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Отмена") }
-        },
-    )
-}
