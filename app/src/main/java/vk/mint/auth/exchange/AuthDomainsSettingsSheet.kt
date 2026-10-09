@@ -266,7 +266,7 @@ private fun AuthDomainsSettingsSheet(onDismiss: () -> Unit) {
             // Force revoke toggle
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
@@ -335,7 +335,7 @@ private fun AuthDomainsSettingsSheet(onDismiss: () -> Unit) {
             // Подсказка про .ru миграцию
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(
@@ -393,7 +393,7 @@ private fun AuthDomainsSettingsSheet(onDismiss: () -> Unit) {
             // Информационный блок
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(

@@ -212,7 +212,7 @@ internal fun CallParticipantsPanel(
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = MaterialTheme.shapes.large,
             color = Color(0xFF20203A),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
