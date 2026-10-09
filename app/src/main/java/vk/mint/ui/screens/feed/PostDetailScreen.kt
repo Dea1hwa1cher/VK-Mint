@@ -123,6 +123,7 @@ import vk.mint.util.toFileSizeString
 import vk.mint.ui.components.PendingPhotosBar
 import vk.mint.ui.components.PendingPhoto
 import vk.mint.ui.components.nextPendingPhotoId
+import vk.mint.ui.theme.titleSmallEmphasized
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -715,8 +716,7 @@ fun PostDetailScreen(
                                     MaterialTheme.colorScheme.onSurface
                                 Text(
                                     text = authorName,
-                                    fontWeight = FontWeight.SemiBold,
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.titleSmallEmphasized,
                                     color = nameColor,
                                 )
                             }

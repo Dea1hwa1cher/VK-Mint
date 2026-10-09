@@ -148,6 +148,8 @@ import vk.mint.ui.navigation.FeedPanelState
 import vk.mint.ui.navigation.ScreenTopBar
 import vk.mint.ui.navigation.ScrollPosition
 import vk.mint.ui.theme.UiScale
+import vk.mint.ui.theme.titleMediumEmphasized
+import vk.mint.ui.theme.titleSmallEmphasized
 import vk.mint.util.AppLog
 import vk.mint.util.createCameraImageUri
 import vk.mint.util.toCountString
@@ -2126,8 +2128,7 @@ private fun FeedFilterBar(
             ) {
                 Text(
                     text = currentFilter.label,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleSmallEmphasized,
                 )
                 Icon(
                     Icons.Filled.KeyboardArrowDown,
@@ -2994,8 +2995,7 @@ private fun LikedPhotosSection(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "Понравившиеся фото",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmallEmphasized,
             )
             if (total > 0) {
                 Spacer(Modifier.width(6.dp))
@@ -3575,8 +3575,7 @@ private fun CommentsBottomSheet(
             // Заголовок
             Text(
                 text = "Комментарии · ${post.comments?.count ?: 0}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
 
