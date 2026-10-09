@@ -417,6 +417,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             netProxyEnabled    = p[Keys.NET_PROXY_ENABLED]     ?: false,
             netProxyHost       = p[Keys.NET_PROXY_HOST]        ?: "",
             netProxyPort       = p[Keys.NET_PROXY_PORT]        ?: 8080,
+            proxyListData      = p[Keys.PROXY_LIST_DATA]       ?: "",
+            proxyActiveId      = p[Keys.PROXY_ACTIVE_ID]       ?: "",
 
             // Locker
             // Fix #DEFAULTS-OFF (2026-08-04): lockerOnBackground default true → false.
@@ -1257,6 +1259,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setNetProxyEnabled(v: Boolean)           = put(Keys.NET_PROXY_ENABLED, v)
     suspend fun setNetProxyHost(v: String)               = put(Keys.NET_PROXY_HOST, v)
     suspend fun setNetProxyPort(v: Int)                  = put(Keys.NET_PROXY_PORT, v)
+    suspend fun setProxyListData(v: String)              = put(Keys.PROXY_LIST_DATA, v)
+    suspend fun setProxyActiveId(v: String)              = put(Keys.PROXY_ACTIVE_ID, v)
 
     suspend fun setLockerEnabled(v: Boolean)             = put(Keys.LOCKER_ENABLED, v)
     suspend fun setLockerPinHash(v: String)              = put(Keys.LOCKER_PIN_HASH, v)
@@ -1726,6 +1730,10 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val netProxyEnabled: Boolean,
         val netProxyHost: String,
         val netProxyPort: Int,
+        /** JSON-сериализованный список серверов ProxyConfig (Proxy Manager). */
+        val proxyListData: String = "",
+        /** ID активного прокси из списка (или пустая строка при прямом подключении). */
+        val proxyActiveId: String = "",
         // Locker
         val lockerEnabled: Boolean,
         val lockerPinHash: String,
@@ -2153,6 +2161,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val NET_PROXY_ENABLED = booleanPreferencesKey("net_proxy_enabled")
         val NET_PROXY_HOST    = stringPreferencesKey("net_proxy_host")
         val NET_PROXY_PORT    = intPreferencesKey("net_proxy_port")
+        val PROXY_LIST_DATA   = stringPreferencesKey("proxy_list_data")
+        val PROXY_ACTIVE_ID   = stringPreferencesKey("proxy_active_id")
         // Locker
         val LOCKER_ENABLED      = booleanPreferencesKey("locker_enabled")
         val LOCKER_PIN_HASH     = stringPreferencesKey("locker_pin_hash")

@@ -117,9 +117,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Speed
+import vk.mint.data.local.ProxyPingResult
+import vk.mint.data.model.ProxyConfig
+import vk.mint.ui.components.AddEditProxyDialog
+import vk.mint.ui.components.DeleteProxyConfirmDialog
+import vk.mint.ui.components.ProxyItemCard
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DownloadDone
@@ -3047,6 +3054,16 @@ private fun NetworkTab(
     scope: CoroutineScope,
 ) {
     val context = LocalContext.current
+    val proxies by app.proxyRepository.proxiesFlow.collectAsState()
+    val activeProxy by app.proxyRepository.activeProxyFlow.collectAsState()
+
+    var showAddEditDialog by remember { mutableStateOf(false) }
+    var editingProxy by remember { mutableStateOf<ProxyConfig?>(null) }
+    var deletingProxy by remember { mutableStateOf<ProxyConfig?>(null) }
+
+    val pingResults = remember { mutableStateMapOf<String, ProxyPingResult>() }
+    val pingingIds = remember { mutableStateMapOf<String, Boolean>() }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -3069,68 +3086,203 @@ private fun NetworkTab(
             ) { scope.launch { app.prefs.setNetUseWebApiGateway(it) } }
         }
 
-        // #SETTINGS-FIX (P1-1, аудит настроек ❌1): секция «Прокси» теперь РЕАЛЬНО применяется —
-        // VkMintApp.onCreate читает netProxyEnabled/Host/Port и ставит builder.proxy(HTTP)
-        // при построении OkHttpClient. Клиент immutable после build → переключение в runtime
-        // невозможно без пересборки всего сетевого стека (LongPoll/Queuev4/auth используют
-        // тот же клиент) — ЧЕСТНАЯ семантика «после перезапуска» (как у SSL pinning выше)
-        // + тост при переключении. Тип — HTTP (Proxy.Type.HTTP); SOCKS-режима в VKA-контуре нет.
-        item { SectionHeader("Прокси") }
+        // #PROXY-MANAGER: Полнофункциональный менеджер прокси (HTTP / SOCKS5, аутентификация, пинг)
+        // Динамический роутинг через ProxySelector и Authenticator + сброс пула соединений (evictAll).
+        // Применяется МГНОВЕННО без перезапуска приложения.
+        item { SectionHeader("Менеджер прокси") }
+
         item {
-            ToggleRow(
-                title = "Прокси-сервер (применяется после перезапуска)",
-                subtitle = "HTTP-прокси для всего трафика приложения (VK API, LongPoll, загрузки). " +
-                    "Переключение вступает в силу при следующем запуске.",
-                checked = s.netProxyEnabled,
-            ) { enabled ->
-                scope.launch { app.prefs.setNetProxyEnabled(enabled) }
-                android.widget.Toast.makeText(
-                    context,
-                    if (enabled) "Прокси включён — применится после перезапуска приложения"
-                    else "Прокси выключен — применится после перезапуска приложения",
-                    android.widget.Toast.LENGTH_SHORT,
-                ).show()
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (activeProxy != null) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                    }
+                ),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (activeProxy != null) "Прокси активен" else "Прямое подключение",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (activeProxy != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = if (activeProxy != null) {
+                                "${activeProxy?.displayTitle} (${activeProxy?.formattedAddress})"
+                            } else {
+                                "Трафик идёт напрямую без проксирования"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = activeProxy != null,
+                        onCheckedChange = { enable ->
+                            scope.launch {
+                                if (enable) {
+                                    val target = proxies.firstOrNull()
+                                    if (target != null) {
+                                        app.proxyRepository.setActiveProxy(target.id)
+                                        Toast.makeText(context, "Активирован: ${target.displayTitle}", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        editingProxy = null
+                                        showAddEditDialog = true
+                                    }
+                                } else {
+                                    app.proxyRepository.setActiveProxy(null)
+                                    Toast.makeText(context, "Переключено на прямое подключение", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+                }
             }
         }
-        if (s.netProxyEnabled) {
-            item {
-                Text(
-                    "Хост",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, top = 4.dp),
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = s.netProxyHost,
-                    onValueChange = { scope.launch { app.prefs.setNetProxyHost(it) } },
-                    singleLine = true,
-                    placeholder = { Text("proxy.example.com") },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                )
-            }
-            item {
-                Text(
-                    "Порт",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, top = 4.dp),
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = s.netProxyPort.toString(),
-                    onValueChange = { v ->
-                        val p = v.toIntOrNull() ?: return@OutlinedTextField
-                        scope.launch { app.prefs.setNetProxyPort(p.coerceIn(1, 65535)) }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        editingProxy = null
+                        showAddEditDialog = true
                     },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Добавить прокси")
+                }
+
+                if (proxies.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            proxies.forEach { proxy ->
+                                scope.launch {
+                                    pingingIds[proxy.id] = true
+                                    val res = app.proxyRepository.testProxy(proxy)
+                                    pingResults[proxy.id] = res
+                                    pingingIds[proxy.id] = false
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Outlined.Speed, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Проверить все")
+                    }
+                }
+            }
+        }
+
+        if (proxies.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                ) {
+                    Text(
+                        text = "Список серверов пуст. Нажмите «Добавить прокси» для настройки HTTP/HTTPS или SOCKS5 сервера.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+            }
+        } else {
+            items(proxies, key = { it.id }) { proxy ->
+                ProxyItemCard(
+                    proxy = proxy,
+                    isActive = activeProxy?.id == proxy.id,
+                    pingResult = pingResults[proxy.id],
+                    isTesting = pingingIds[proxy.id] == true,
+                    onSelect = {
+                        scope.launch {
+                            app.proxyRepository.setActiveProxy(proxy.id)
+                            Toast.makeText(context, "Активен: ${proxy.displayTitle}", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onPing = {
+                        scope.launch {
+                            pingingIds[proxy.id] = true
+                            val res = app.proxyRepository.testProxy(proxy)
+                            pingResults[proxy.id] = res
+                            pingingIds[proxy.id] = false
+                        }
+                    },
+                    onEdit = {
+                        editingProxy = proxy
+                        showAddEditDialog = true
+                    },
+                    onDelete = {
+                        deletingProxy = proxy
+                    },
+                    modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
         }
+    }
+
+    if (showAddEditDialog) {
+        AddEditProxyDialog(
+            initialProxy = editingProxy,
+            onDismissRequest = {
+                showAddEditDialog = false
+                editingProxy = null
+            },
+            onSave = { config ->
+                scope.launch {
+                    if (editingProxy == null) {
+                        app.proxyRepository.addProxy(config)
+                        if (activeProxy == null) {
+                            app.proxyRepository.setActiveProxy(config.id)
+                        }
+                    } else {
+                        app.proxyRepository.updateProxy(config)
+                    }
+                }
+            },
+            onTest = { config ->
+                app.proxyRepository.testProxy(config)
+            },
+        )
+    }
+
+    deletingProxy?.let { proxyToDelete ->
+        DeleteProxyConfirmDialog(
+            proxy = proxyToDelete,
+            onConfirm = {
+                scope.launch {
+                    app.proxyRepository.deleteProxy(proxyToDelete.id)
+                    deletingProxy = null
+                }
+            },
+            onDismiss = {
+                deletingProxy = null
+            },
+        )
     }
 }
 

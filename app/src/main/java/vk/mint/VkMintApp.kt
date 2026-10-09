@@ -283,6 +283,12 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
     lateinit var hiddenConvsRepository: vk.mint.data.local.HiddenConversationsRepository
         private set
 
+    /**
+     * Менеджер прокси-серверов: управление списком серверов и динамический роутинг.
+     */
+    lateinit var proxyRepository: vk.mint.data.local.ProxyRepository
+        private set
+
 
     /**
      * Волна 40 #BOOKMARKS-TRACKS: локальные закладки треков (JSON-массив Track
@@ -1018,6 +1024,8 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
         // любой auth flow (AuthActivity, ExternalBrowserLauncher, WebTokenAuth)
         // попытается прочитать домены. initialSnap уже загружен синхронно выше.
         vk.mint.auth.exchange.AuthDomainsConfig.update(initialSnap)
+        proxyRepository = vk.mint.data.local.ProxyRepository(prefs)
+        runBlocking { proxyRepository.init() }
         val builder = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(45, TimeUnit.SECONDS)   // LongPoll wait=25 + запас на latency/Doze
@@ -1091,34 +1099,11 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
             AppLog.i("VkMintApp", "SSL Pinning disabled (netSslPinning=false)")
         }
 
-        // #SETTINGS-FIX (P1-1, аудит настроек ❌1): применяем HTTP-прокси из настроек
-        // (netProxyEnabled/netProxyHost/netProxyPort — VkMintPrefs, UI: SettingsScreen NetworkTab).
-        // Раньше секция «Прокси» только сохраняла значения — потребителей не было вовсе.
-        // Архитектура: OkHttpClient собирается ОДИН раз при старте процесса (immutable
-        // после build), поэтому прокси применяется ТОЛЬКО при старте — как SSL pinning.
-        // Runtime-переключение в NetworkTab даёт честный тост «применится после перезапуска».
-        // Не конфликтует с интерцепторами: proxy() действует на уровне RouteSelector
-        // (выбор соединения), а AwayBypass/AdBlock/StaleConnection/NetworkRetry/VkCookieJar
-        // работают с запросом/ответом и прокси не видят. DNS-пиннинг calls.okcdn.ru
-        // при прокси обходится естественно: hostname резолвится на стороне прокси (CONNECT).
-        // HTTP-тип (Proxy.Type.HTTP) — SOCKS-режим UI не имеет (нет селектора типа),
-        // рисовать SOCKS без переключателя = ложная надежда (no-stub).
-        if (initialSnap.netProxyEnabled && initialSnap.netProxyHost.isNotBlank()) {
-            runCatching {
-                builder.proxy(
-                    java.net.Proxy(
-                        java.net.Proxy.Type.HTTP,
-                        java.net.InetSocketAddress(initialSnap.netProxyHost, initialSnap.netProxyPort),
-                    ),
-                )
-                AppLog.i("VkMintApp", "Proxy ENABLED (HTTP) — ${initialSnap.netProxyHost}:${initialSnap.netProxyPort}")
-            }.onFailure { e ->
-                // Невалидный порт/хост не должен валить приложение — трафик идёт напрямую.
-                AppLog.w("VkMintApp", "Proxy setup failed — traffic goes direct: ${e.message}")
-            }
-        } else {
-            AppLog.i("VkMintApp", "Proxy disabled (netProxyEnabled=false или пустой хост)")
-        }
+        // #PROXY-MANAGER: Динамическая маршрутизация прокси (HTTP / SOCKS5 + Auth).
+        // ProxySelector и proxyAuthenticator позволяют переключать прокси в рантайме
+        // без перезапуска приложения, с поддержкой SOCKS5 и HTTP-авторизации.
+        builder.proxySelector(proxyRepository.proxySelector)
+        builder.proxyAuthenticator(proxyRepository.proxyAuthenticator)
 
         httpClient = builder
             .addInterceptor { chain ->
