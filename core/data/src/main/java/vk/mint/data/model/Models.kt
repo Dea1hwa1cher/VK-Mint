@@ -104,6 +104,45 @@ data class Post(
     val hasCopyHistory: Boolean get() = !copyHistory.isNullOrEmpty()
     val isOnlyRepost: Boolean get() = hasCopyHistory && text.isBlank() && attachments.isNullOrEmpty()
     fun strippedRepost(): Post = if (hasCopyHistory) copy(copyHistory = null) else this
+
+    /**
+     * Проверка поста (и вложенных репостов/вложений) на наличие стоп-слов из чёрного списка.
+     * Поиск регистронезависимый (case-insensitive substring match).
+     */
+    fun containsAnyWord(words: Set<String>): Boolean {
+        if (words.isEmpty()) return false
+        for (w in words) {
+            val query = w.trim()
+            if (query.isEmpty()) continue
+            if (text.contains(query, ignoreCase = true)) return true
+        }
+        copyHistory?.let { list ->
+            for (repost in list) {
+                if (repost.containsAnyWord(words)) return true
+            }
+        }
+        attachments?.let { atts ->
+            for (att in atts) {
+                for (w in words) {
+                    val query = w.trim()
+                    if (query.isEmpty()) continue
+                    if (att.link?.title?.contains(query, ignoreCase = true) == true ||
+                        att.link?.description?.contains(query, ignoreCase = true) == true ||
+                        att.doc?.title?.contains(query, ignoreCase = true) == true ||
+                        att.poll?.question?.contains(query, ignoreCase = true) == true ||
+                        att.video?.title?.contains(query, ignoreCase = true) == true ||
+                        att.video?.description?.contains(query, ignoreCase = true) == true ||
+                        att.photo?.text?.contains(query, ignoreCase = true) == true ||
+                        att.audio?.title?.contains(query, ignoreCase = true) == true ||
+                        att.audio?.artist?.contains(query, ignoreCase = true) == true
+                    ) {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
 }
 
 data class Attachment(

@@ -1643,6 +1643,8 @@ private fun FeedTab(
     scope: CoroutineScope,
     onOpenHiddenSources: () -> Unit = {},
 ) {
+    var showStopWordsDialog by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1664,6 +1666,55 @@ private fun FeedTab(
             ) { scope.launch { app.prefs.setNewsRepostsHidden(it) } }
         }
         item { ToggleRow("Скрывать промо", s.newsPromoHidden) { scope.launch { app.prefs.setNewsPromoHidden(it) } } }
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .androidx_clickable { showStopWordsDialog = true },
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Block,
+                        contentDescription = null,
+                        tint = if (s.newsStopWordsEnabled && s.newsStopWords.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Чёрный список слов",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            text = when {
+                                s.newsStopWords.isEmpty() -> "Фильтрация отключена (список пуст, нажмите для настройки)"
+                                !s.newsStopWordsEnabled -> "Выключено (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
+                                else -> "Активно (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (s.newsStopWords.isNotEmpty()) {
+                        ExpressiveSwitch(
+                            checked = s.newsStopWordsEnabled,
+                            onCheckedChange = { enabled ->
+                                scope.launch { app.prefs.setNewsStopWordsEnabled(enabled) }
+                            },
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
         // IMP-FEED-2: строка-вход в экран «Скрытые источники» (менеджер мьютов
         // ленты, web: «Редактировать» правого меню) — стиль навигационных строк
         // экрана (иконка+текст+шеврон, как «Чёрный список» в NotificationsTab).
@@ -1798,6 +1849,124 @@ private fun FeedTab(
                 }
             }
         }
+    }
+
+    if (showStopWordsDialog) {
+        StopWordsDialog(
+            currentWords = s.newsStopWords,
+            isEnabled = s.newsStopWordsEnabled,
+            onDismiss = { showStopWordsDialog = false },
+            onSave = { newWords, enabled ->
+                scope.launch {
+                    app.prefs.setNewsStopWords(newWords)
+                    app.prefs.setNewsStopWordsEnabled(enabled)
+                }
+                showStopWordsDialog = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun StopWordsDialog(
+    currentWords: Set<String>,
+    isEnabled: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (Set<String>, Boolean) -> Unit,
+) {
+    var wordsText by remember {
+        mutableStateOf(currentWords.sorted().joinToString("\n"))
+    }
+    var enabled by remember {
+        mutableStateOf(if (currentWords.isEmpty()) true else isEnabled)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Чёрный список слов") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    "Посты с указанными словами или фразами (в тексте, репостах и вложениях) будут скрыты из ленты новостей. Указывайте каждое слово или фразу на новой строке (регистр букв не важен).",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        "Включить фильтрацию",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    ExpressiveSwitch(
+                        checked = enabled,
+                        onCheckedChange = { enabled = it },
+                    )
+                }
+
+                OutlinedTextField(
+                    value = wordsText,
+                    onValueChange = { wordsText = it },
+                    placeholder = { Text("спам\nреклама\nкрипта\n...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 160.dp, max = 280.dp),
+                    label = { Text("Стоп-слова (по одному на строку)") },
+                    supportingText = {
+                        val count = wordsText.lineSequence()
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                            .toSet()
+                            .size
+                        Text("Уникальных слов/фраз: $count")
+                    },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val parsed = wordsText.lineSequence()
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .toSet()
+                    onSave(parsed, if (parsed.isEmpty()) false else enabled)
+                },
+            ) {
+                Text("Сохранить")
+            }
+        },
+        dismissButton = {
+            Row {
+                if (wordsText.isNotBlank()) {
+                    TextButton(onClick = { wordsText = "" }) {
+                        Text("Очистить")
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Отмена")
+                }
+            }
+        },
+    )
+}
+
+private fun wordPlural(count: Int): String {
+    val rem100 = count % 100
+    val rem10 = count % 10
+    return when {
+        rem100 in 11..19 -> "слов"
+        rem10 == 1 -> "слово"
+        rem10 in 2..4 -> "слова"
+        else -> "слов"
     }
 }
 

@@ -85,6 +85,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             newsStripReposts   = p[Keys.NEWS_STRIP_REPOSTS]   ?: false,
             newsRepostsHidden  = p[Keys.NEWS_REPOSTS_HIDDEN]  ?: false,
             newsPromoHidden    = p[Keys.NEWS_PROMO_HIDDEN]    ?: true,
+            newsStopWords      = p[Keys.NEWS_STOP_WORDS]      ?: emptySet(),
+            newsStopWordsEnabled = p[Keys.NEWS_STOP_WORDS_ENABLED] ?: false,
 
             // Interface
             themeDark          = p[Keys.THEME_DARK]            ?: true,
@@ -613,6 +615,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         }
     }
     suspend fun setNewsPromoHidden(v: Boolean)           = put(Keys.NEWS_PROMO_HIDDEN, v)
+    suspend fun setNewsStopWords(v: Set<String>)         = put(Keys.NEWS_STOP_WORDS, v)
+    suspend fun setNewsStopWordsEnabled(v: Boolean)      = put(Keys.NEWS_STOP_WORDS_ENABLED, v)
 
     suspend fun setThemeDark(v: Boolean)                 = put(Keys.THEME_DARK, v)
     suspend fun setThemeAccentIndex(v: Int)              = put(Keys.THEME_ACCENT_INDEX, v)
@@ -1567,6 +1571,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val newsStripReposts: Boolean = false,
         val newsRepostsHidden: Boolean,
         val newsPromoHidden: Boolean,
+        val newsStopWords: Set<String> = emptySet(),
+        val newsStopWordsEnabled: Boolean = false,
         // Interface
         val themeDark: Boolean,
         val themeAccentIndex: Int,
@@ -2025,10 +2031,12 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
 
     private object Keys {
         // News
-        val NEWS_ADS_BLOCKED    = booleanPreferencesKey("news_ads_blocked")
-        val NEWS_STRIP_REPOSTS  = booleanPreferencesKey("news_strip_reposts")
-        val NEWS_REPOSTS_HIDDEN = booleanPreferencesKey("news_reposts_hidden")
-        val NEWS_PROMO_HIDDEN   = booleanPreferencesKey("news_promo_hidden")
+        val NEWS_ADS_BLOCKED       = booleanPreferencesKey("news_ads_blocked")
+        val NEWS_STRIP_REPOSTS     = booleanPreferencesKey("news_strip_reposts")
+        val NEWS_REPOSTS_HIDDEN    = booleanPreferencesKey("news_reposts_hidden")
+        val NEWS_PROMO_HIDDEN      = booleanPreferencesKey("news_promo_hidden")
+        val NEWS_STOP_WORDS        = stringSetPreferencesKey("news_stop_words")
+        val NEWS_STOP_WORDS_ENABLED = booleanPreferencesKey("news_stop_words_enabled")
         // Interface
         val THEME_DARK          = booleanPreferencesKey("theme_dark")
         val THEME_ACCENT_INDEX  = intPreferencesKey("theme_accent_index")

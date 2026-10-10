@@ -248,6 +248,8 @@ fun FeedScreen(
             newsStripReposts = false,
             newsRepostsHidden = false,
             newsPromoHidden = true,
+            newsStopWords = emptySet(),
+            newsStopWordsEnabled = false,
             themeDark = true,
             themeAccentIndex = 0,
             themeDynamic = false,
@@ -1036,6 +1038,11 @@ fun FeedScreen(
         posts = allPosts.mapNotNull { post ->
             if (feedPrefs.newsAdsBlocked && post.isAd) return@mapNotNull null
             if (feedPrefs.newsPromoHidden && (post.postType == "promo" || post.postType == "ad_promo")) return@mapNotNull null
+
+            // Фильтрация по чёрному списку слов (Fenrir containInWords: text, copy_history, attachments)
+            if (feedPrefs.newsStopWordsEnabled && feedPrefs.newsStopWords.isNotEmpty() && post.containsAnyWord(feedPrefs.newsStopWords)) {
+                return@mapNotNull null
+            }
 
             // Если включено полное сокрытие репостов — отбрасываем любые посты с copyHistory.
             if (feedPrefs.newsRepostsHidden && post.hasCopyHistory) {
