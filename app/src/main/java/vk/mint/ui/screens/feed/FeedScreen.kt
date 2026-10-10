@@ -278,6 +278,7 @@ fun FeedScreen(
             privacyHideLastSeen = false,
             msgDnr = true,
             msgDnt = true,
+            msgDontMarkVoiceListened = false,
             msgUndelete = true,
             msgUnedit = true,
             // P0.1: typing indicator default ON (safe, doesn't break anything).

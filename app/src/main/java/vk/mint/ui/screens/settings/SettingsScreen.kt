@@ -1987,6 +1987,13 @@ private fun MessagesTab(
         item { SectionHeader("Приватность сообщений") }
         item { ToggleRow("DNR (не читать)", s.msgDnr) { scope.launch { app.prefs.setMsgDnr(it) } } }
         item { ToggleRow("DNT (не печатать)", s.msgDnt) { scope.launch { app.prefs.setMsgDnt(it) } } }
+        item {
+            ToggleRow(
+                title = "Не помечать голосовые прослушанными",
+                subtitle = "Собеседник не узнает, что аудиозапись была прослушана",
+                checked = s.msgDontMarkVoiceListened,
+            ) { scope.launch { app.prefs.setMsgDontMarkVoiceListened(it) } }
+        }
         // Fix #REMOVE-UNDELETE-UNEDIT (2026-08-04): «Показать удалённые» и
         // «Показать оригинал правок» удалены из настроек по запросу пользователя.
         // Pref (msgUndelete / msgUnedit) и логика MessageMods.apply остаются

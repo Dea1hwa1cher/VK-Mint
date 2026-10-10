@@ -6653,6 +6653,7 @@ private fun MessageBubble(
                                 peerId = message.peerId,
                                 cmid = message.conversationMessageId ?: 0L,
                                 onRequestAsr = onRequestAsr,
+                                isOut = isOut,
                             )
                         }
                     }
@@ -9647,6 +9648,7 @@ private fun VoiceMessageBubble(
     peerId: Long = 0L,
     cmid: Long = 0L,
     onRequestAsr: (peerId: Long, cmid: Long, audioMessageId: String) -> Unit = { _, _, _ -> },
+    isOut: Boolean = false,
 ) {
     // P0.22 #VOICE-COLOR (2026-10): аудио-сообщения ВСЕГДА в цвете VK Modern #0077FF.
     // Раньше: accentColor = MaterialTheme.colorScheme.primary (для входящих) или textColor
@@ -9726,7 +9728,7 @@ private fun VoiceMessageBubble(
                             // Единственный toggle — контроллер сам решает play/pause/switch.
                             // Fix #237: передаём fallbackUrl — если primary упадёт (например,
                             // OGG/Opus не поддерживается), контроллер попробует альтернативный.
-                            controller.toggle(messageId, url, audioMsg.duration.toFloat(), fallbackUrl)
+                            controller.toggle(messageId, url, audioMsg.duration.toFloat(), fallbackUrl, isOut = isOut)
                         }
                     },
                     onLongClick = { sel?.onLongPress?.invoke() },
@@ -12070,6 +12072,8 @@ private class VoicePlaybackController {
     private var progressJob: kotlinx.coroutines.Job? = null
     // Fix #237: альтернативный URL для fallback при ошибке воспроизведения.
     private var currentFallbackUrl: String? = null
+    private var currentIsOut: Boolean = false
+    private val markedListenedIds = mutableSetOf<Long>()
     // #VOICE-PROXIMITY: менеджер датчика приближения (earpiece + screen-off wake lock).
     private val proximityManager by lazy {
         VkMintApp.getOrNull()?.applicationContext?.let { vk.mint.media.VoiceProximityManager(it) }
@@ -12077,6 +12081,19 @@ private class VoicePlaybackController {
     private val scope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main
     )
+
+    private fun triggerMarkListened(messageId: Long, isOut: Boolean) {
+        if (isOut || messageId <= 0L) return
+        if (!markedListenedIds.add(messageId)) return
+        val app = VkMintApp.getOrNull() ?: return
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                app.apiClient.messagesMarkAsListened(messageId)
+            } catch (e: Exception) {
+                AppLog.w("VoicePlaybackController", "messagesMarkAsListened failed for msg $messageId: ${e.message}")
+            }
+        }
+    }
 
     /** ID сообщения, которое сейчас загружено/играет (или null). */
     var currentMessageId: Long? by mutableStateOf(null)
@@ -12101,13 +12118,16 @@ private class VoicePlaybackController {
     /**
      * Toggle play/pause/switch для сообщения [messageId] по URL [url].
      * Fix #237: [fallbackUrl] — альтернативный URL (OGG↔MP3).
+     * [isOut] — true если сообщение исходящее (не помечается как прослушанное).
      */
     fun toggle(
         messageId: Long,
         url: String,
         fallbackDurationSec: Float,
         fallbackUrl: String? = null,
+        isOut: Boolean = false,
     ) {
+        currentIsOut = isOut
         // Тот же messageId → toggle play/pause.
         if (currentMessageId == messageId) {
             val p = player
@@ -12122,6 +12142,7 @@ private class VoicePlaybackController {
                     isPlaying = true
                     startProgressTracking()
                     proximityManager?.start(p)
+                    triggerMarkListened(messageId, currentIsOut)
                 }
                 return
             }
@@ -12186,6 +12207,7 @@ private class VoicePlaybackController {
                             currentPositionMs = 0L
                             stopProgressTracking()
                             proximityManager?.stop()
+                            triggerMarkListened(messageId, currentIsOut)
                         }
                         else -> {}
                     }
@@ -12197,6 +12219,7 @@ private class VoicePlaybackController {
                         currentPositionMs = 0L
                         startProgressTracking()
                         ep.let { p -> proximityManager?.start(p) }
+                        triggerMarkListened(messageId, currentIsOut)
                     } else {
                         stopProgressTracking()
                         proximityManager?.stop()
@@ -12266,6 +12289,7 @@ private class VoicePlaybackController {
         }
         player = null
         currentMessageId = null
+        currentIsOut = false
         isPlaying = false
         progress = 0f
         currentPositionMs = 0L
@@ -12276,6 +12300,7 @@ private class VoicePlaybackController {
     fun dispose() {
         proximityManager?.stop()
         releasePlayer()
+        markedListenedIds.clear()
         scope.cancel()
     }
 }

@@ -195,6 +195,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             // Messages
             msgDnr             = p[Keys.MSG_DNR]                ?: false,
             msgDnt             = p[Keys.MSG_DNT]                ?: false,
+            msgDontMarkVoiceListened = p[Keys.MSG_DONT_MARK_VOICE_LISTENED] ?: false,
             msgUndelete        = p[Keys.MSG_UNDELETE]           ?: true,
             msgUnedit          = p[Keys.MSG_UNEDIT]             ?: true,
             // P0.1: typing indicator in ChatDetailScreen (LongPoll codes 61/62).
@@ -684,6 +685,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
 
     suspend fun setMsgDnr(v: Boolean)                    = put(Keys.MSG_DNR, v)
     suspend fun setMsgDnt(v: Boolean)                    = put(Keys.MSG_DNT, v)
+    /** Не помечать голосовые сообщения прослушанными (default false). */
+    suspend fun setMsgDontMarkVoiceListened(v: Boolean)   = put(Keys.MSG_DONT_MARK_VOICE_LISTENED, v)
     suspend fun setMsgUndelete(v: Boolean)               = put(Keys.MSG_UNDELETE, v)
     suspend fun setMsgUnedit(v: Boolean)                 = put(Keys.MSG_UNEDIT, v)
     /** P0.1: show «N печатает…» in ChatDetailScreen TopAppBar subtitle. */
@@ -1618,6 +1621,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         // Messages
         val msgDnr: Boolean,
         val msgDnt: Boolean,
+        /** Не помечать голосовые сообщения прослушанными (default false = помечать). */
+        val msgDontMarkVoiceListened: Boolean = false,
         val msgUndelete: Boolean,
         val msgUnedit: Boolean,
         /** P0.1: typing indicator in ChatDetailScreen (LongPoll codes 61/62). */
@@ -2087,6 +2092,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         // Messages
         val MSG_DNR          = booleanPreferencesKey("msg_dnr")
         val MSG_DNT          = booleanPreferencesKey("msg_dnt")
+        val MSG_DONT_MARK_VOICE_LISTENED = booleanPreferencesKey("msg_dont_mark_voice_listened")
         val MSG_UNDELETE     = booleanPreferencesKey("msg_undelete")
         val MSG_UNEDIT       = booleanPreferencesKey("msg_unedit")
         val MSG_TYPING_INDICATOR = booleanPreferencesKey("msg_typing_indicator")

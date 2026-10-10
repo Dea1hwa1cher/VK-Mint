@@ -1665,6 +1665,33 @@ class VKApiClient(
         return json != null
     }
 
+    /**
+     * messages.markAsListened — отметить голосовое сообщение как прослушанное.
+     *
+     * Подавляется, если включена настройка «Не помечать голосовые прослушанными»
+     * (msgDontMarkVoiceListened) или общий режим DNR (msgDnr).
+     *
+     * @param messageId ID сообщения с голосовой аудиозаписью.
+     * @param force если true — игнорируем приватность (принудительная отправка).
+     * @return true если запрос успешно выполнен на сервере VK.
+     */
+    suspend fun messagesMarkAsListened(messageId: Long, force: Boolean = false): Boolean {
+        if (isOffline() || messageId <= 0L) return false
+        val snap = prefs.data.first()
+        if (!force && messageMods.shouldSuppressVoiceListened(snap)) {
+            AppLog.d("VKApiClient", "messagesMarkAsListened: suppressed by privacy (msgId=$messageId)")
+            return false
+        }
+        val args = mapOf(
+            "message_ids" to messageId.toString(),
+            "message_id" to messageId.toString(),
+        )
+        val json = call("messages.markAsListened", args) ?: return false
+        val ok = json.has("response")
+        AppLog.d("VKApiClient", "messagesMarkAsListened: msgId=$messageId ok=$ok")
+        return ok
+    }
+
     // ─── #58: недостающие messages.* методы (из архива мессенджера) ─────
 
     /** messages.markAsAnswered — отметить как отвеченное. */

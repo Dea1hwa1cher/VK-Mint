@@ -68,4 +68,14 @@ class MessageMods {
         if (suppress) AppLog.d(tag, "DNT active — typing indicator suppressed")
         return suppress
     }
+
+    /**
+     * Не помечать голосовые сообщения прослушанными.
+     * Подавляет messages.markAsListened если включён msgDontMarkVoiceListened или DNR (msgDnr).
+     */
+    fun shouldSuppressVoiceListened(snapshot: VkMintPrefs.Snapshot): Boolean {
+        val suppress = snapshot.msgDontMarkVoiceListened || snapshot.msgDnr
+        if (suppress) AppLog.d(tag, "Voice listen receipt suppressed (dontMark=${snapshot.msgDontMarkVoiceListened}, dnr=${snapshot.msgDnr})")
+        return suppress
+    }
 }
