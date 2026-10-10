@@ -245,6 +245,7 @@ fun FeedScreen(
     val feedPrefs by app.prefs.data.collectAsState(
         initial = vk.mint.data.local.VkMintPrefs.Snapshot(
             newsAdsBlocked = true,
+            newsStripReposts = false,
             newsRepostsHidden = false,
             newsPromoHidden = true,
             themeDark = true,
@@ -1032,13 +1033,31 @@ fun FeedScreen(
     LaunchedEffect(allPosts, feedPrefs, feedFilterName) {
         // #FEED-FILTER-FIX: PHOTOS → посты с фото-вложениями (клиентский фильтр).
         // LIKES → теперь через likes.getList API (выше), не клиентская фильтрация.
-        posts = allPosts.filter { post ->
-            if (feedPrefs.newsAdsBlocked && post.isAd) return@filter false
-            if (feedPrefs.newsRepostsHidden && !post.copyHistory.isNullOrEmpty()) return@filter false
-            if (feedPrefs.newsPromoHidden && (post.postType == "promo" || post.postType == "ad_promo")) return@filter false
+        posts = allPosts.mapNotNull { post ->
+            if (feedPrefs.newsAdsBlocked && post.isAd) return@mapNotNull null
+            if (feedPrefs.newsPromoHidden && (post.postType == "promo" || post.postType == "ad_promo")) return@mapNotNull null
+
+            // Если включено полное сокрытие репостов — отбрасываем любые посты с copyHistory.
+            if (feedPrefs.newsRepostsHidden && post.hasCopyHistory) {
+                return@mapNotNull null
+            }
+
+            // Если включено вырезание репостов (Fenrir isStrip_news_repost):
+            // - Чистый репост (без текста и без вложений автора) скрывается из ленты целиком.
+            // - Пост с комментарием/вложениями автора сохраняется, но вложенный блок репоста вырезается.
+            val processedPost = if (feedPrefs.newsStripReposts && post.hasCopyHistory) {
+                if (post.isOnlyRepost) {
+                    return@mapNotNull null
+                } else {
+                    post.strippedRepost()
+                }
+            } else {
+                post
+            }
+
             when (feedFilterName) {
-                FeedFilter.PHOTOS.name -> post.attachments?.any { it.type == "photo" } == true
-                else -> true
+                FeedFilter.PHOTOS.name -> if (processedPost.attachments?.any { it.type == "photo" } == true) processedPost else null
+                else -> processedPost
             }
         }
     }

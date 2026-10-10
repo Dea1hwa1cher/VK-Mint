@@ -94,6 +94,16 @@ data class Post(
     val isEdited: Boolean get() = edited != null
     val isArchivedBool: Boolean get() = isArchived == true
     val isDonut: Boolean get() = donut?.isDonut == true
+
+    /**
+     * Помощники для вырезания/фильтрации репостов из ленты новостей.
+     * hasCopyHistory: запись содержит вложенный репост (copy_history).
+     * isOnlyRepost: чистый репост без авторского комментария и без вложений автора.
+     * strippedRepost: копия поста без вложенного блока copy_history (сохраняет текст и вложения автора).
+     */
+    val hasCopyHistory: Boolean get() = !copyHistory.isNullOrEmpty()
+    val isOnlyRepost: Boolean get() = hasCopyHistory && text.isBlank() && attachments.isNullOrEmpty()
+    fun strippedRepost(): Post = if (hasCopyHistory) copy(copyHistory = null) else this
 }
 
 data class Attachment(

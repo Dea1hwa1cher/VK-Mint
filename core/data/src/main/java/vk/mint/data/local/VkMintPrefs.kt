@@ -82,6 +82,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         Snapshot(
             // News
             newsAdsBlocked     = p[Keys.NEWS_ADS_BLOCKED]     ?: true,
+            newsStripReposts   = p[Keys.NEWS_STRIP_REPOSTS]   ?: false,
             newsRepostsHidden  = p[Keys.NEWS_REPOSTS_HIDDEN]  ?: false,
             newsPromoHidden    = p[Keys.NEWS_PROMO_HIDDEN]    ?: true,
 
@@ -599,7 +600,18 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     }
 
     suspend fun setNewsAdsBlocked(v: Boolean)            = put(Keys.NEWS_ADS_BLOCKED, v)
-    suspend fun setNewsRepostsHidden(v: Boolean)         = put(Keys.NEWS_REPOSTS_HIDDEN, v)
+    suspend fun setNewsStripReposts(v: Boolean) {
+        ds.edit { p ->
+            p[Keys.NEWS_STRIP_REPOSTS] = v
+            if (v) p[Keys.NEWS_REPOSTS_HIDDEN] = false
+        }
+    }
+    suspend fun setNewsRepostsHidden(v: Boolean) {
+        ds.edit { p ->
+            p[Keys.NEWS_REPOSTS_HIDDEN] = v
+            if (v) p[Keys.NEWS_STRIP_REPOSTS] = false
+        }
+    }
     suspend fun setNewsPromoHidden(v: Boolean)           = put(Keys.NEWS_PROMO_HIDDEN, v)
 
     suspend fun setThemeDark(v: Boolean)                 = put(Keys.THEME_DARK, v)
@@ -1552,6 +1564,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     data class Snapshot(
         // News
         val newsAdsBlocked: Boolean,
+        val newsStripReposts: Boolean = false,
         val newsRepostsHidden: Boolean,
         val newsPromoHidden: Boolean,
         // Interface
@@ -2013,6 +2026,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     private object Keys {
         // News
         val NEWS_ADS_BLOCKED    = booleanPreferencesKey("news_ads_blocked")
+        val NEWS_STRIP_REPOSTS  = booleanPreferencesKey("news_strip_reposts")
         val NEWS_REPOSTS_HIDDEN = booleanPreferencesKey("news_reposts_hidden")
         val NEWS_PROMO_HIDDEN   = booleanPreferencesKey("news_promo_hidden")
         // Interface

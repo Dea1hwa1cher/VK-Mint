@@ -1649,7 +1649,20 @@ private fun FeedTab(
     ) {
         item { SectionHeader("Фильтрация контента") }
         item { ToggleRow("Блокировка рекламы", s.newsAdsBlocked) { scope.launch { app.prefs.setNewsAdsBlocked(it) } } }
-        item { ToggleRow("Скрывать репосты", s.newsRepostsHidden) { scope.launch { app.prefs.setNewsRepostsHidden(it) } } }
+        item {
+            ToggleRow(
+                title = "Вырезать репосты",
+                subtitle = "Удалять блок чужого репоста, оставляя текст и вложения автора. Чистые репосты без текста скрываются из ленты.",
+                checked = s.newsStripReposts,
+            ) { scope.launch { app.prefs.setNewsStripReposts(it) } }
+        }
+        item {
+            ToggleRow(
+                title = "Скрывать репосты целиком",
+                subtitle = "Полностью скрывать любые записи, содержащие репосты.",
+                checked = s.newsRepostsHidden,
+            ) { scope.launch { app.prefs.setNewsRepostsHidden(it) } }
+        }
         item { ToggleRow("Скрывать промо", s.newsPromoHidden) { scope.launch { app.prefs.setNewsPromoHidden(it) } } }
         // IMP-FEED-2: строка-вход в экран «Скрытые источники» (менеджер мьютов
         // ленты, web: «Редактировать» правого меню) — стиль навигационных строк
