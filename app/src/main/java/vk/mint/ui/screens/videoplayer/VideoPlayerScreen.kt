@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -3837,7 +3838,7 @@ private fun VideoCommentItem(
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .clip(CircleShape)
+                .clip(avatarShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
@@ -4076,7 +4077,7 @@ private fun VideoShareSheet(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(CircleShape)
+                                    .clip(avatarShape)
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center,
                             ) {

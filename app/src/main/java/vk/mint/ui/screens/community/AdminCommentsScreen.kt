@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -629,7 +629,7 @@ private fun AdminCommentCard(
                     model = photo,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(34.dp).clip(CircleShape),
+                    modifier = Modifier.size(34.dp).clip(avatarShape),
                 )
                 Spacer(Modifier.width(8.dp))
             }

@@ -34,6 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -939,14 +940,14 @@ fun StoryViewerScreen(
                     contentDescription = null,
                     modifier = Modifier
                         .size(36.dp)
-                        .clip(CircleShape),
+                        .clip(avatarShape),
                     contentScale = ContentScale.Crop,
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .size(36.dp)
-                        .clip(CircleShape)
+                        .clip(avatarShape)
                         .background(Color.Gray),
                     contentAlignment = Alignment.Center,
                 ) {

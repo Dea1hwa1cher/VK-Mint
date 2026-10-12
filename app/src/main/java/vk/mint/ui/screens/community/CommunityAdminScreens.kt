@@ -23,7 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -1308,7 +1308,7 @@ fun AdminPeopleScreen(
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .clip(CircleShape),
+                                            .clip(avatarShape),
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
@@ -1375,7 +1375,7 @@ fun AdminPeopleScreen(
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .clip(CircleShape),
+                                            .clip(avatarShape),
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
@@ -1482,7 +1482,7 @@ fun AdminPeopleScreen(
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier
                                                 .size(36.dp)
-                                                .clip(CircleShape),
+                                                .clip(avatarShape),
                                         )
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Text(
@@ -1531,7 +1531,7 @@ fun AdminPeopleScreen(
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .clip(CircleShape),
+                                            .clip(avatarShape),
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
@@ -2075,7 +2075,7 @@ fun AdminInvitesScreen(
                                                 contentScale = ContentScale.Crop,
                                                 modifier = Modifier
                                                     .size(44.dp)
-                                                    .clip(CircleShape),
+                                                    .clip(avatarShape),
                                             )
                                             Spacer(modifier = Modifier.width(12.dp))
                                             Column(modifier = Modifier.weight(1f)) {
@@ -2148,7 +2148,7 @@ fun AdminInvitesScreen(
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .clip(CircleShape),
+                                            .clip(avatarShape),
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
