@@ -824,6 +824,16 @@ fun ChatDetailScreen(
     val voiceShowDownloadButton by app.prefs.data
         .map { it.voiceShowDownloadButton }
         .collectAsState(initial = true)
+    // Фильтр стоп-слов (чёрный список слов).
+    val activeStopWords by app.prefs.data
+        .map { if (it.newsStopWordsEnabled) it.newsStopWords else emptySet() }
+        .collectAsState(
+            initial = if (app.prefsSnapshot?.newsStopWordsEnabled == true) {
+                app.prefsSnapshot?.newsStopWords.orEmpty()
+            } else {
+                emptySet()
+            }
+        )
 
     // Fix #228: масштаб стикер-фото (0..40, % увеличения от оригинала).
     // Провайдится через LocalStickerPhotoScale в MessageBubble → применяется
@@ -4967,7 +4977,7 @@ fun ChatDetailScreen(
                 // P1.1: pre-compute chat list items (messages + date separators + unread divider).
                 val chatListItems by remember(
                     messages, groupingEnabled, dateSeparatorsEnabled, unreadDividerEnabled,
-                    channelHistoryMode,
+                    channelHistoryMode, activeStopWords,
                 ) {
                     derivedStateOf {
                         // #CHANNEL-POST-CARD: в канальном history-режиме лента — это
@@ -4975,9 +4985,8 @@ fun ChatDetailScreen(
                         // unread-divider не показываем (обычные чаты не затрагиваются:
                         // channelHistoryMode=false у них). Посты со стоп-словами фильтруются.
                         val chan = channelHistoryMode
-                        val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
-                        val effectiveMessages = if (chan && stopWords.isNotEmpty()) {
-                            messages.filterNot { it.containsAnyWord(stopWords) }
+                        val effectiveMessages = if (chan && activeStopWords.isNotEmpty()) {
+                            messages.filterNot { it.containsAnyWord(activeStopWords) }
                         } else {
                             messages
                         }
@@ -6235,7 +6244,9 @@ private fun MessageBubble(
     val isOut = message.isOut
     val app = vk.mint.VkMintApp.get()
     val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
-    val isFiltered = !isOut && stopWords.isNotEmpty() && message.containsAnyWord(stopWords)
+    val isFiltered = remember(message.id, message.text, isOut, stopWords) {
+        !isOut && stopWords.isNotEmpty() && message.containsAnyWord(stopWords)
+    }
     var revealFiltered by rememberSaveable(message.id) { mutableStateOf(false) }
     val prefs = app.prefsSnapshot
     val customBubbleColors = prefs?.msgCustomBubbleColors == true

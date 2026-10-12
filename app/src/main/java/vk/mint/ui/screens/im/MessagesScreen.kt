@@ -2309,7 +2309,9 @@ private fun ChatCard(
     val lastMessage = chat.lastMessage
     val app = vk.mint.VkMintApp.get()
     val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
-    val isStopWord = stopWords.isNotEmpty() && lastMessage != null && lastMessage.containsAnyWord(stopWords)
+    val isStopWord = remember(lastMessage?.id, lastMessage?.text, lastMessage?.isOut, stopWords) {
+        stopWords.isNotEmpty() && lastMessage != null && !lastMessage.isOut && lastMessage.containsAnyWord(stopWords)
+    }
     val preview = if (isStopWord) {
         "Сообщение скрыто фильтром"
     } else if (lastMessage == null) {
