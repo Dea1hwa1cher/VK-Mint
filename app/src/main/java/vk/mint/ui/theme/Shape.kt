@@ -6,8 +6,6 @@ import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import vk.mint.data.model.AvatarShape
@@ -46,7 +44,6 @@ object AvatarShapes {
 }
 
 val LocalAvatarShape = compositionLocalOf<Shape> { CircleShape }
-val LocalAvatarShapeType = compositionLocalOf { AvatarShape.CIRCLE }
 
 /**
  * Хелпер для получения текущей формы аватарок в Composable-дереве.
@@ -55,9 +52,3 @@ val avatarShape: Shape
     @Composable
     @ReadOnlyComposable
     get() = LocalAvatarShape.current
-
-/**
- * Modifier-хелпер: обрезка элемента по текущей глобальной форме аватарок.
- */
-@Composable
-fun Modifier.clipAvatar(): Modifier = this.clip(LocalAvatarShape.current)

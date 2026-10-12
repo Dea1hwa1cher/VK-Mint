@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
 import vk.mint.data.model.Attachment
-import vk.mint.data.model.Message
 import vk.mint.util.AppLog
 
 /**
@@ -83,29 +82,5 @@ object VoiceDownloadHelper {
     fun download(context: Context, doc: Attachment.Doc, messageId: Long = 0L): Boolean {
         val am = doc.audioMsg ?: return false
         return download(context, am, messageId)
-    }
-
-    /**
-     * Скачать голосовое сообщение из [Attachment].
-     */
-    fun download(context: Context, attachment: Attachment, messageId: Long = 0L): Boolean {
-        val am = attachment.audioMessage ?: attachment.doc?.audioMsg ?: return false
-        return download(context, am, messageId)
-    }
-
-    /**
-     * Скачать голосовое сообщение из сообщения чата [Message].
-     */
-    fun downloadFromMessage(context: Context, message: Message): Boolean {
-        val am = message.attachments?.firstOrNull {
-            (it.type == "audio_message" && it.audioMessage != null) ||
-            (it.type == "doc" && it.doc?.isVoiceMessage == true)
-        }?.let { it.audioMessage ?: it.doc?.audioMsg }
-
-        if (am == null) {
-            Toast.makeText(context, "Голосовое сообщение не найдено", Toast.LENGTH_SHORT).show()
-            return false
-        }
-        return download(context, am, message.id)
     }
 }

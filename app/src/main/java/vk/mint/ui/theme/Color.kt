@@ -66,8 +66,7 @@ data class BubbleColorPreset(
 )
 
 object BubbleColorPresets {
-    val PRESETS: List<BubbleColorPreset> get() = presets
-    val presets: List<BubbleColorPreset> = listOf(
+    val PRESETS: List<BubbleColorPreset> = listOf(
         BubbleColorPreset(
             name = "VK Classic",
             outBgHex = "#4A76A8",

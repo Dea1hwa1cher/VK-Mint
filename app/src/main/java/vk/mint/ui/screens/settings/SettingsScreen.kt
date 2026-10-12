@@ -109,7 +109,6 @@ import vk.mint.data.model.SettingsSection as BffSettingsSection
 import vk.mint.ui.components.ExpressiveSegmentedButtonRow
 import vk.mint.ui.components.ExpressiveSwitch
 import vk.mint.ui.theme.AvatarShapes
-import vk.mint.ui.theme.BubbleColorPreset
 import vk.mint.ui.theme.BubbleColorPresets
 import vk.mint.ui.theme.VkMintColors
 import vk.mint.util.AppLog
@@ -2442,7 +2441,6 @@ private fun LocalAliasesSettingsCard(
     if (editTarget != null) {
         val (targetUid, targetAlias) = editTarget!!
         EditUserAliasDialog(
-            userId = targetUid,
             defaultName = "id$targetUid",
             currentAlias = targetAlias,
             onDismiss = { editTarget = null },

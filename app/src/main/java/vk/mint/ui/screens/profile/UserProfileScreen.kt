@@ -892,7 +892,6 @@ fun UserProfileScreen(
 
         if (showAliasDialog) {
             EditUserAliasDialog(
-                userId = p.id,
                 defaultName = p.fullName,
                 currentAlias = vk.mint.data.local.UserAliasResolver.getAlias(p.id),
                 onDismiss = { showAliasDialog = false },

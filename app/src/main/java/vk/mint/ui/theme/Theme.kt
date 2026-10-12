@@ -270,7 +270,6 @@ fun VkMintTheme(
         LocalDensity provides scaledDensity,
         LocalUiScale provides uiScaleValue,
         LocalAvatarShape provides currentAvatarShape,
-        LocalAvatarShapeType provides avatarShape,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

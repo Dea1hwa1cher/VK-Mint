@@ -2238,7 +2238,6 @@ fun MessagesScreen(
     if (aliasDialogTarget != null) {
         val (targetPeerId, targetName) = aliasDialogTarget!!
         EditUserAliasDialog(
-            userId = targetPeerId,
             defaultName = targetName,
             currentAlias = vk.mint.data.local.UserAliasResolver.getAlias(targetPeerId),
             onDismiss = { aliasDialogTarget = null },

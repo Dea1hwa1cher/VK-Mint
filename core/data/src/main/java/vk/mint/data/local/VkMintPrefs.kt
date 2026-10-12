@@ -642,7 +642,6 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setThemeMonetHybrid(v: Boolean)          = put(Keys.THEME_MONET_HYBRID, v)
     /** Форма аватарок (круг, скруглённый квадрат, квадрат). */
     suspend fun setAvatarShape(v: AvatarShape)           = put(Keys.AVATAR_SHAPE, v.value)
-    suspend fun setAvatarShape(v: String)                = put(Keys.AVATAR_SHAPE, v)
     suspend fun setFontScale(v: Int)                     = put(Keys.FONT_SCALE, v)
     /** Fix #UISCALE: масштаб всего интерфейса (кнопки/панели/текст), 0.75..1.3. */
     suspend fun setUiScale(v: Float)                     = put(Keys.UI_SCALE, v)

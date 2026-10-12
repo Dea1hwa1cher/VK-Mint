@@ -5402,7 +5402,6 @@ fun ChatDetailScreen(
 
     if (showAliasDialog && peerId in 1..1_999_999_999L) {
         EditUserAliasDialog(
-            userId = peerId,
             defaultName = currentTitle,
             currentAlias = vk.mint.data.local.UserAliasResolver.getAlias(peerId),
             onDismiss = { showAliasDialog = false },

@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 /**
  * Диалог установки/редактирования локального псевдонима пользователя.
  *
- * @param userId ID пользователя VK
  * @param defaultName Исходное имя пользователя
  * @param currentAlias Текущий псевдоним (если уже был установлен)
  * @param onDismiss Закрыть диалог
@@ -32,7 +31,6 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun EditUserAliasDialog(
-    userId: Long,
     defaultName: String,
     currentAlias: String?,
     onDismiss: () -> Unit,

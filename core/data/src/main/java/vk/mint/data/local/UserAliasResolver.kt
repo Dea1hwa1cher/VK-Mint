@@ -33,7 +33,4 @@ object UserAliasResolver {
 
     /** Проверить, установлен ли псевдоним для данного userId. */
     fun hasAlias(userId: Long): Boolean = cache.containsKey(userId)
-
-    /** Полная копия текущей карты псевдонимов. */
-    fun allAliases(): Map<Long, String> = HashMap(cache)
 }
