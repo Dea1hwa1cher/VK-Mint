@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -31,6 +33,7 @@ import vk.mint.data.model.Attachment
 import vk.mint.data.model.PhotoSizes
 import vk.mint.data.model.Track
 import vk.mint.data.model.Video
+import vk.mint.media.VoiceDownloadHelper
 
 /**
  * #COMMENT-ATTACH-EVERYWHERE (волна 22): ОБЩИЙ компактный рендер вложений комментария.
@@ -123,7 +126,7 @@ fun CommentAttachmentsView(
                     if (doc != null) {
                         val voice = doc.audioMsg
                         if (voice != null) {
-                            CommentVoiceChip(durationSec = voice.duration)
+                            CommentVoiceChip(audioMsg = voice)
                         } else {
                             CommentDocChip(title = doc.title, ext = doc.ext, sizeBytes = doc.size)
                         }
@@ -132,7 +135,7 @@ fun CommentAttachmentsView(
                 "audio_message" -> {
                     // NULL-ЯВНО: Gson-цепочка.
                     val am = att.audioMessage
-                    if (am != null) CommentVoiceChip(durationSec = am.duration)
+                    if (am != null) CommentVoiceChip(audioMsg = am)
                 }
                 "link" -> {
                     // NULL-ЯВНО: Gson-цепочка.
@@ -281,13 +284,24 @@ private fun CommentDocChip(title: String, ext: String, sizeBytes: Long) {
     }
 }
 
-/** Чип голосового сообщения: длительность (воспроизведение — вне волны 22). */
+/** Чип голосового сообщения: длительность + скачивание .ogg по тапу. */
 @Composable
-private fun CommentVoiceChip(durationSec: Int) {
+private fun CommentVoiceChip(
+    audioMsg: Attachment.Doc.AudioMsg? = null,
+    durationSec: Int = audioMsg?.duration ?: 0,
+) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .then(
+                if (audioMsg != null) {
+                    Modifier.clickable {
+                        VoiceDownloadHelper.download(context, audioMsg)
+                    }
+                } else Modifier
+            )
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -303,6 +317,14 @@ private fun CommentVoiceChip(durationSec: Int) {
             style = MaterialTheme.typography.labelMedium,
             fontSize = 12.sp,
         )
+        if (audioMsg != null) {
+            Icon(
+                Icons.Outlined.Download,
+                contentDescription = "Скачать .ogg",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(14.dp),
+            )
+        }
     }
 }
 

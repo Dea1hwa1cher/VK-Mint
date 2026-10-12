@@ -244,6 +244,7 @@ import vk.mint.ui.anim.springScaled
 import vk.mint.ui.anim.tweenScaled
 import vk.mint.ui.theme.UiScale
 import vk.mint.media.VoiceRecorder
+import vk.mint.media.VoiceDownloadHelper
 import vk.mint.realtime.LongPollEvent
 import vk.mint.ui.components.ForwardDialog
 import vk.mint.ui.components.AttachmentPickerSheet
@@ -813,6 +814,10 @@ fun ChatDetailScreen(
     // P2.6: read receipts (✓/✓✓) — статус прочтения исходящих.
     val readReceiptsEnabled by app.prefs.data
         .map { it.msgReadReceipts }
+        .collectAsState(initial = true)
+    // Скачивание голосовых сообщений как .ogg — видимость кнопки в плеере.
+    val voiceShowDownloadButton by app.prefs.data
+        .map { it.voiceShowDownloadButton }
         .collectAsState(initial = true)
 
     // Fix #228: масштаб стикер-фото (0..40, % увеличения от оригинала).
@@ -5274,6 +5279,7 @@ fun ChatDetailScreen(
                                     // Fix #206: клик по плашке ответа + подсветка цели.
                                     onReplyBadgeClick = onReplyBadgeClick,
                                     highlighted = highlightedMsgId == msg.id,
+                                    voiceShowDownloadButton = voiceShowDownloadButton,
                                 )
                                 }
                             }
@@ -6164,6 +6170,8 @@ private fun MessageBubble(
     onReplyBadgeClick: (Message) -> Unit = {},
     // Fix #206: подсветка целевого сообщения (статичная, без анимации).
     highlighted: Boolean = false,
+    // Скачивание голосовых сообщений как .ogg — видимость кнопки в плеере.
+    voiceShowDownloadButton: Boolean = true,
 ) {
     val context = LocalContext.current
     // Fix #224: масштаб скорости анимаций (для swipe-reply spring).
@@ -6654,6 +6662,7 @@ private fun MessageBubble(
                                 cmid = message.conversationMessageId ?: 0L,
                                 onRequestAsr = onRequestAsr,
                                 isOut = isOut,
+                                voiceShowDownloadButton = voiceShowDownloadButton,
                             )
                         }
                     }
@@ -7157,6 +7166,24 @@ private fun MessageBubble(
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText("msg", message.text))
                             onDismissContextMenu()
+                        },
+                    )
+                }
+                // Скачивание голосовых сообщений как файл .ogg
+                val voiceMsgs = message.attachments?.mapNotNull {
+                    if (it.type == "audio_message" && it.audioMessage != null) it.audioMessage
+                    else if (it.type == "doc" && it.doc?.isVoiceMessage == true) it.doc?.audioMsg
+                    else null
+                } ?: emptyList()
+                if (voiceMsgs.isNotEmpty()) {
+                    DropdownMenuItem(
+                        text = { Text(if (voiceMsgs.size > 1) "Скачать голосовые (.ogg)" else "Скачать как .ogg") },
+                        leadingIcon = { Icon(Icons.Outlined.Download, contentDescription = null) },
+                        onClick = {
+                            onDismissContextMenu()
+                            for (vm in voiceMsgs) {
+                                VoiceDownloadHelper.download(context, vm, message.id)
+                            }
                         },
                     )
                 }
@@ -8954,6 +8981,7 @@ private fun ForwardedMessageBlock(
                 (it.type == "audio_message" && it.audioMessage != null) ||
                 (it.type == "doc" && it.doc?.isVoiceMessage == true)
             }
+            val fwdCtx = LocalContext.current
             for (vAtt in voiceAttachments) {
                 val am = vAtt.audioMessage ?: vAtt.doc?.audioMsg ?: continue
                 Row(
@@ -8962,6 +8990,7 @@ private fun ForwardedMessageBlock(
                         .padding(vertical = 2.dp)
                         .clip(MaterialTheme.shapes.extraSmall)
                         .background(textColor.copy(alpha = 0.06f))
+                        .clickable { VoiceDownloadHelper.download(fwdCtx, am) }
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -8984,6 +9013,13 @@ private fun ForwardedMessageBlock(
                         text = "$min:${"%02d".format(sec)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = textColor.copy(alpha = 0.7f),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        Icons.Outlined.Download,
+                        contentDescription = "Скачать .ogg",
+                        tint = textColor.copy(alpha = 0.7f),
+                        modifier = Modifier.size(16.dp),
                     )
                 }
             }
@@ -9649,7 +9685,10 @@ private fun VoiceMessageBubble(
     cmid: Long = 0L,
     onRequestAsr: (peerId: Long, cmid: Long, audioMessageId: String) -> Unit = { _, _, _ -> },
     isOut: Boolean = false,
+    // Скачивание голосовых сообщений как .ogg — видимость кнопки в плеере.
+    voiceShowDownloadButton: Boolean = true,
 ) {
+    val context = LocalContext.current
     // P0.22 #VOICE-COLOR (2026-10): аудио-сообщения ВСЕГДА в цвете VK Modern #0077FF.
     // Раньше: accentColor = MaterialTheme.colorScheme.primary (для входящих) или textColor
     // (для исходящих — белый/чёрный). Пользователь захотел единый VK-акцент для всех голосовых.
@@ -9824,6 +9863,24 @@ private fun VoiceMessageBubble(
                 color = voiceColor,
                 fontSize = 11.sp,
             )
+
+            // Скачивание голосового сообщения как .ogg
+            if (voiceShowDownloadButton) {
+                Spacer(modifier = Modifier.width(4.dp))
+                IconButton(
+                    onClick = {
+                        VoiceDownloadHelper.download(context, audioMsg, messageId)
+                    },
+                    modifier = Modifier.size(24.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Download,
+                        contentDescription = "Скачать .ogg",
+                        tint = voiceColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
 
             // P0.22 #VOICE-TRANSCRIPT: кнопка-шеврон для показа расшифровки ASR.
             // VK web: AttachVoice__asrButton (chevron_up/down_outline_20).

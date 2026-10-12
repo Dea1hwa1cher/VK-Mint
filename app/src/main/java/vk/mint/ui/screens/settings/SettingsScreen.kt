@@ -2136,6 +2136,13 @@ private fun MessagesTab(
         item { SectionHeader("Голосовые сообщения") }
         item {
             ToggleRow(
+                title = "Кнопка скачивания аудио (.ogg)",
+                subtitle = "Показывать иконку быстрой загрузки в плеере голосового сообщения",
+                checked = s.voiceShowDownloadButton,
+            ) { scope.launch { app.prefs.setVoiceShowDownloadButton(it) } }
+        }
+        item {
+            ToggleRow(
                 title = "Отключить датчик приближения",
                 subtitle = "Не выключать экран и не переключать звук на разговорный динамик при поднесении телефона к уху",
                 checked = s.voiceDisableProximity,

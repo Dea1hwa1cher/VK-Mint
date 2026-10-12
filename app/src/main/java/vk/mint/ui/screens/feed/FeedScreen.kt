@@ -253,6 +253,7 @@ fun FeedScreen(
             newsStopWords = emptySet(),
             newsStopWordsEnabled = false,
             commentsSortOrder = "asc",
+            voiceShowDownloadButton = true,
             themeDark = true,
             themeAccentIndex = 0,
             themeDynamic = false,

@@ -262,6 +262,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             hiddenConvsData    = p[Keys.HIDDEN_CONVS_DATA]         ?: "",
             hiddenChatsPinHash = p[Keys.HIDDEN_CHATS_PIN_HASH]     ?: "",
             voiceDisableProximity = p[Keys.VOICE_DISABLE_PROXIMITY] ?: false,
+            voiceShowDownloadButton = p[Keys.VOICE_SHOW_DOWNLOAD_BUTTON] ?: true,
             // Fix #392 #IM-LOCAL-PIN: локальный закреп диалога — JSON-массив peer_id
             // в порядке закрепления (0-й элемент — верх списка), парсится НА УРОВНЕ
             // Snapshot в List<Long> (битый/пустой JSON → пустой список, см.
@@ -738,6 +739,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setHiddenChatsPinHash(v: String)         = put(Keys.HIDDEN_CHATS_PIN_HASH, v)
     /** Отключение датчика приближения для аудио/голосовых сообщений. */
     suspend fun setVoiceDisableProximity(v: Boolean)     = put(Keys.VOICE_DISABLE_PROXIMITY, v)
+    /** Показывать кнопку скачивания .ogg в плеере голосового сообщения. */
+    suspend fun setVoiceShowDownloadButton(v: Boolean)   = put(Keys.VOICE_SHOW_DOWNLOAD_BUTTON, v)
     /** Fix #392 #IM-LOCAL-PIN: персист порядка закреплённых диалогов (List<Long> → JSON, атомарный put). */
     suspend fun setImPinnedDialogs(peerIds: List<Long>)  = put(Keys.IM_PINNED_DIALOGS, imPinnedGson.toJson(peerIds))
 
@@ -1679,6 +1682,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val hiddenChatsPinHash: String = "",
         /** Отключение датчика приближения для аудио/голосовых сообщений (default false = датчик активен). */
         val voiceDisableProximity: Boolean = false,
+        /** Показывать кнопку скачивания .ogg в плеере голосового сообщения (default true). */
+        val voiceShowDownloadButton: Boolean = true,
         /** Fix #392 #IM-LOCAL-PIN: peer_id локально закреплённых диалогов в ПОРЯДКЕ ЗАКРЕПЛЕНИЯ (0-й — верх списка; уже распарсен из JSON). Дефолт обязателен: FeedScreen:234 строит dummy-Snapshot named-параметрами (класс бага Fix #276/#356 — без дефолта компиляция падает). */
         val imPinnedDialogs: List<Long> = emptyList(),
         /** #IM-CHANNEL-FIX (56-b-5): peer_id каналов с ЯВНО включёнными уведомлениями (уже распарсен из CSV). Дефолт обязателен: конструкторы Snapshot строятся named-параметрами (класс бага Fix #276/#356). */
@@ -2134,6 +2139,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val HIDDEN_CHATS_PIN_HASH = stringPreferencesKey("hidden_chats_pin_hash")
         // Отключение датчика приближения для аудио/голосовых сообщений (default false).
         val VOICE_DISABLE_PROXIMITY = booleanPreferencesKey("voice_disable_proximity")
+        // Показывать кнопку скачивания .ogg в плеере голосового сообщения (default true).
+        val VOICE_SHOW_DOWNLOAD_BUTTON = booleanPreferencesKey("voice_show_download_button")
         // Fix #392 #IM-LOCAL-PIN: локальный закреп диалогов (JSON array of peer_id в порядке
         // закрепления; "" = ключ ещё не создавался, "[]" = список сознательно пуст).
         val IM_PINNED_DIALOGS     = stringPreferencesKey("im_pinned_dialogs")
