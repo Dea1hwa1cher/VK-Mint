@@ -244,6 +244,7 @@ import vk.mint.ui.anim.M3ExpressiveMotion
 import vk.mint.ui.anim.expressiveSpringScaled
 import vk.mint.ui.anim.springScaled
 import vk.mint.ui.anim.tweenScaled
+import vk.mint.ui.theme.BubbleColorPresets
 import vk.mint.ui.theme.UiScale
 import vk.mint.media.VoiceRecorder
 import vk.mint.media.VoiceDownloadHelper
@@ -6233,18 +6234,29 @@ private fun MessageBubble(
     val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
     val isFiltered = !isOut && stopWords.isNotEmpty() && message.containsAnyWord(stopWords)
     var revealFiltered by rememberSaveable(message.id) { mutableStateOf(false) }
+    val prefs = app.prefsSnapshot
+    val customBubbleColors = prefs?.msgCustomBubbleColors == true
+    val customOutBg = if (customBubbleColors) BubbleColorPresets.parseHexColorOrNull(prefs.msgBubbleOutBgHex) else null
+    val customOutText = if (customBubbleColors) BubbleColorPresets.parseHexColorOrNull(prefs.msgBubbleOutTextHex) else null
+    val customInBg = if (customBubbleColors) BubbleColorPresets.parseHexColorOrNull(prefs.msgBubbleInBgHex) else null
+    val customInText = if (customBubbleColors) BubbleColorPresets.parseHexColorOrNull(prefs.msgBubbleInTextHex) else null
+
     val bubbleColor = if (isOut) {
-        MaterialTheme.colorScheme.primaryContainer
+        customOutBg ?: MaterialTheme.colorScheme.primaryContainer
     } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        customInBg ?: MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
     }
     // P3.7: в bubble-less режиме текст всегда onSurface (нет яркого bubble-фона).
     val textColor = if (bubbleless) {
         MaterialTheme.colorScheme.onSurface
     } else if (isOut) {
-        MaterialTheme.colorScheme.onPrimaryContainer
+        customOutText
+            ?: if (customOutBg != null) BubbleColorPresets.contrastTextColor(customOutBg)
+            else MaterialTheme.colorScheme.onPrimaryContainer
     } else {
-        MaterialTheme.colorScheme.onSurface
+        customInText
+            ?: if (customInBg != null) BubbleColorPresets.contrastTextColor(customInBg)
+            else MaterialTheme.colorScheme.onSurface
     }
     val time = message.date.toMsgTime()
     var lastClickTime by remember { mutableStateOf(0L) }
@@ -6553,7 +6565,7 @@ private fun MessageBubble(
                         Text(
                             text = "Показать",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isOut && !bubbleless) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                            color = if (isOut && !bubbleless) textColor else MaterialTheme.colorScheme.primary,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                             modifier = Modifier.clickable { revealFiltered = true },
                         )
@@ -6591,7 +6603,7 @@ private fun MessageBubble(
                         } ?: if (reply.hasForwarded) "Пересланное сообщение" else "Пустое сообщение"
                     }
                     val replyStripeColor = if (isOut) {
-                        MaterialTheme.colorScheme.primary
+                        if (customOutBg != null) textColor else MaterialTheme.colorScheme.primary
                     } else {
                         getTelegramSenderColor(reply.fromId)
                     }
@@ -6601,7 +6613,7 @@ private fun MessageBubble(
                             .padding(bottom = 6.dp)
                             .clip(MaterialTheme.shapes.small)
                             .background(
-                                (if (isOut) MaterialTheme.colorScheme.primary else replyStripeColor).copy(alpha = 0.10f)
+                                replyStripeColor.copy(alpha = 0.10f)
                             )
                             .combinedClickable(
                                 onClick = {
@@ -6679,7 +6691,7 @@ private fun MessageBubble(
                     // linkColor: на исходящем цветном bubble — onPrimary (видно),
                     // на входящем/bubbleless — primary (accent).
                     val linkColor = if (isOut && !bubbleless) {
-                        MaterialTheme.colorScheme.onPrimary
+                        if (customOutBg != null) textColor else MaterialTheme.colorScheme.onPrimary
                     } else {
                         MaterialTheme.colorScheme.primary
                     }
@@ -7103,7 +7115,9 @@ private fun MessageBubble(
                             imageVector = if (message.isRead) Icons.Filled.DoneAll else Icons.Filled.Done,
                             contentDescription = if (message.isRead) "Прочитано" else "Отправлено",
                             modifier = Modifier.size(14.dp),
-                            tint = if (message.isRead) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.65f),
+                            tint = if (message.isRead) {
+                                if (customOutBg != null) textColor else MaterialTheme.colorScheme.primary
+                            } else textColor.copy(alpha = 0.65f),
                         )
                     }
                     // #ARCH-CONTAINERS 3.7-1: reactions в :core:data — захват ДО проверки.

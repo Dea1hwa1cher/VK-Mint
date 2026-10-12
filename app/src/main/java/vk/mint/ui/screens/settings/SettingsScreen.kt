@@ -2,6 +2,7 @@ package vk.mint.ui.screens.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -30,6 +32,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -103,6 +106,8 @@ import vk.mint.data.model.SettingsParam
 import vk.mint.data.model.SettingsSection as BffSettingsSection
 import vk.mint.ui.components.ExpressiveSegmentedButtonRow
 import vk.mint.ui.components.ExpressiveSwitch
+import vk.mint.ui.theme.BubbleColorPreset
+import vk.mint.ui.theme.BubbleColorPresets
 import vk.mint.ui.theme.VkMintColors
 import vk.mint.util.AppLog
 import vk.mint.util.isValidIpv4
@@ -121,6 +126,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Speed
 import vk.mint.data.local.ProxyPingResult
@@ -2161,6 +2167,14 @@ private fun MessagesTab(
             subtitle = "Плоские сообщения без карточек (как в VK web)",
             checked = s.msgBubbleless,
         ) { scope.launch { app.prefs.setMsgBubbleless(it) } } }
+        // Произвольная палитра баблов сообщений (HEX-цвета)
+        item {
+            BubblePaletteSettingsCard(
+                s = s,
+                app = app,
+                scope = scope,
+            )
+        }
         // P3.4: channel mode — отдельный UX для каналов (скрытие composer).
         item { ToggleRow(
             title = "Режим каналов",
@@ -2444,6 +2458,407 @@ private fun LocalAliasesSettingsCard(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun BubblePaletteSettingsCard(
+    s: VkMintPrefs.Snapshot,
+    app: VkMintApp,
+    scope: CoroutineScope,
+) {
+    var outBgInput by remember(s.msgBubbleOutBgHex) { mutableStateOf(s.msgBubbleOutBgHex) }
+    var outTextInput by remember(s.msgBubbleOutTextHex) { mutableStateOf(s.msgBubbleOutTextHex) }
+    var inBgInput by remember(s.msgBubbleInBgHex) { mutableStateOf(s.msgBubbleInBgHex) }
+    var inTextInput by remember(s.msgBubbleInTextHex) { mutableStateOf(s.msgBubbleInTextHex) }
+
+    val parsedOutBg = BubbleColorPresets.parseHexColorOrNull(s.msgBubbleOutBgHex)
+    val outBgColor = parsedOutBg ?: MaterialTheme.colorScheme.primaryContainer
+    val parsedOutText = BubbleColorPresets.parseHexColorOrNull(s.msgBubbleOutTextHex)
+    val outTextColor = parsedOutText
+        ?: if (parsedOutBg != null) BubbleColorPresets.contrastTextColor(parsedOutBg)
+        else MaterialTheme.colorScheme.onPrimaryContainer
+
+    val parsedInBg = BubbleColorPresets.parseHexColorOrNull(s.msgBubbleInBgHex)
+    val inBgColor = parsedInBg ?: MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    val parsedInText = BubbleColorPresets.parseHexColorOrNull(s.msgBubbleInTextHex)
+    val inTextColor = parsedInText
+        ?: if (parsedInBg != null) BubbleColorPresets.contrastTextColor(parsedInBg)
+        else MaterialTheme.colorScheme.onSurface
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Палитра баблов сообщений",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "Настройка произвольных HEX-цветов (#RRGGBB) для диалогов",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                ExpressiveSwitch(
+                    checked = s.msgCustomBubbleColors,
+                    onCheckedChange = { enabled ->
+                        scope.launch { app.prefs.setMsgCustomBubbleColors(enabled) }
+                    },
+                )
+            }
+
+            if (s.msgCustomBubbleColors) {
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Интерактивный предпросмотр (Live Preview)
+                Text(
+                    text = "Предпросмотр сообщений",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    // Входящее сообщение
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .widthIn(max = 260.dp)
+                                .clip(
+                                    RoundedCornerShape(
+                                        topStart = 16.dp,
+                                        topEnd = 16.dp,
+                                        bottomEnd = 16.dp,
+                                        bottomStart = 4.dp,
+                                    )
+                                )
+                                .background(inBgColor)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Привет! Как тебе эта цветовая схема сообщений?",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = inTextColor,
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "12:34",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = inTextColor.copy(alpha = 0.7f),
+                                    fontSize = 10.sp,
+                                    modifier = Modifier.align(Alignment.End),
+                                )
+                            }
+                        }
+                    }
+
+                    // Исходящее сообщение
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .widthIn(max = 260.dp)
+                                .clip(
+                                    RoundedCornerShape(
+                                        topStart = 16.dp,
+                                        topEnd = 16.dp,
+                                        bottomStart = 16.dp,
+                                        bottomEnd = 4.dp,
+                                    )
+                                )
+                                .background(outBgColor)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Выглядит шикарно и очень контрастно! ✨",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = outTextColor,
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Row(
+                                    modifier = Modifier.align(Alignment.End),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "12:35",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = outTextColor.copy(alpha = 0.7f),
+                                        fontSize = 10.sp,
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Icon(
+                                        imageVector = Icons.Filled.DoneAll,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(13.dp),
+                                        tint = outTextColor,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Готовые пресеты
+                Text(
+                    text = "Готовые пресеты",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    BubbleColorPresets.PRESETS.forEach { preset ->
+                        val isSelected = s.msgBubbleOutBgHex.equals(preset.outBgHex, ignoreCase = true) &&
+                                s.msgBubbleInBgHex.equals(preset.inBgHex, ignoreCase = true)
+                        val pOutBg = BubbleColorPresets.parseHexColorOrNull(preset.outBgHex) ?: Color.Gray
+                        val pInBg = BubbleColorPresets.parseHexColorOrNull(preset.inBgHex) ?: Color.LightGray
+
+                        Card(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable {
+                                    outBgInput = preset.outBgHex
+                                    outTextInput = preset.outTextHex
+                                    inBgInput = preset.inBgHex
+                                    inTextInput = preset.inTextHex
+                                    scope.launch {
+                                        app.prefs.setMsgBubbleOutBgHex(preset.outBgHex)
+                                        app.prefs.setMsgBubbleOutTextHex(preset.outTextHex)
+                                        app.prefs.setMsgBubbleInBgHex(preset.inBgHex)
+                                        app.prefs.setMsgBubbleInTextHex(preset.inTextHex)
+                                    }
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            ),
+                            border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+                            else null,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clip(CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                                ) {
+                                    Row(modifier = Modifier.fillMaxSize()) {
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxSize()
+                                                .background(pInBg)
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxSize()
+                                                .background(pOutBg)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = preset.name,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Исходящие сообщения (мои)
+                Text(
+                    text = "Исходящие сообщения (мои)",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = outBgInput,
+                        onValueChange = { raw ->
+                            val clean = raw.filter { it == '#' || it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }.take(9)
+                            outBgInput = clean
+                            if (clean.isBlank()) {
+                                scope.launch { app.prefs.setMsgBubbleOutBgHex("") }
+                            } else if (BubbleColorPresets.isValidHex(clean)) {
+                                scope.launch { app.prefs.setMsgBubbleOutBgHex(BubbleColorPresets.normalizeHex(clean)) }
+                            }
+                        },
+                        label = { Text("Фон (#HEX)") },
+                        placeholder = { Text("#0077FF") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(outBgColor)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
+                            )
+                        },
+                    )
+                    OutlinedTextField(
+                        value = outTextInput,
+                        onValueChange = { raw ->
+                            val clean = raw.filter { it == '#' || it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }.take(9)
+                            outTextInput = clean
+                            if (clean.isBlank()) {
+                                scope.launch { app.prefs.setMsgBubbleOutTextHex("") }
+                            } else if (BubbleColorPresets.isValidHex(clean)) {
+                                scope.launch { app.prefs.setMsgBubbleOutTextHex(BubbleColorPresets.normalizeHex(clean)) }
+                            }
+                        },
+                        label = { Text("Текст (авто)") },
+                        placeholder = { Text("Авто-контраст") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(outTextColor)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
+                            )
+                        },
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Входящие сообщения (собеседник)
+                Text(
+                    text = "Входящие сообщения (собеседник)",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = inBgInput,
+                        onValueChange = { raw ->
+                            val clean = raw.filter { it == '#' || it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }.take(9)
+                            inBgInput = clean
+                            if (clean.isBlank()) {
+                                scope.launch { app.prefs.setMsgBubbleInBgHex("") }
+                            } else if (BubbleColorPresets.isValidHex(clean)) {
+                                scope.launch { app.prefs.setMsgBubbleInBgHex(BubbleColorPresets.normalizeHex(clean)) }
+                            }
+                        },
+                        label = { Text("Фон (#HEX)") },
+                        placeholder = { Text("#E5E5EA") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(inBgColor)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
+                            )
+                        },
+                    )
+                    OutlinedTextField(
+                        value = inTextInput,
+                        onValueChange = { raw ->
+                            val clean = raw.filter { it == '#' || it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }.take(9)
+                            inTextInput = clean
+                            if (clean.isBlank()) {
+                                scope.launch { app.prefs.setMsgBubbleInTextHex("") }
+                            } else if (BubbleColorPresets.isValidHex(clean)) {
+                                scope.launch { app.prefs.setMsgBubbleInTextHex(BubbleColorPresets.normalizeHex(clean)) }
+                            }
+                        },
+                        label = { Text("Текст (авто)") },
+                        placeholder = { Text("Авто-контраст") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(inTextColor)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
+                            )
+                        },
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(
+                        onClick = {
+                            outBgInput = ""
+                            outTextInput = ""
+                            inBgInput = ""
+                            inTextInput = ""
+                            scope.launch {
+                                app.prefs.setMsgBubbleOutBgHex("")
+                                app.prefs.setMsgBubbleOutTextHex("")
+                                app.prefs.setMsgBubbleInBgHex("")
+                                app.prefs.setMsgBubbleInTextHex("")
+                            }
+                        },
+                    ) {
+                        Text("Сбросить к теме")
+                    }
+                }
+            }
+        }
     }
 }
 

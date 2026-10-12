@@ -284,7 +284,12 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             channelNotifEnabledIds = parseChannelNotifIds(p[Keys.CHANNEL_NOTIF_ENABLED] ?: ""),
             // P3.7: bubble-less дизайн — flat layout сообщений (без Card/bubble).
             // Аналог m.vk.ru: ConvoMessageWithoutBubble. Default false (opt-in, экспериментально).
-            msgBubbleless      = p[Keys.MSG_BUBBLELESS]           ?: false,
+            msgBubbleless          = p[Keys.MSG_BUBBLELESS]           ?: false,
+            msgCustomBubbleColors  = p[Keys.MSG_CUSTOM_BUBBLE_COLORS] ?: false,
+            msgBubbleOutBgHex      = p[Keys.MSG_BUBBLE_OUT_BG_HEX]    ?: "",
+            msgBubbleOutTextHex    = p[Keys.MSG_BUBBLE_OUT_TEXT_HEX]  ?: "",
+            msgBubbleInBgHex       = p[Keys.MSG_BUBBLE_IN_BG_HEX]     ?: "",
+            msgBubbleInTextHex     = p[Keys.MSG_BUBBLE_IN_TEXT_HEX]   ?: "",
             // P4.2: LongPoll backfill — восстановление пропущенных между сессиями
             // событий через messages.getLongPollHistory(pts, ts). Fix #339: default true —
             // без backfill'а накопленные за время Doze сообщения теряются и юзер не видит
@@ -891,6 +896,12 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setCallsNoiseCancelDefault(v: String)    = put(Keys.CALLS_NOISE_CANCEL_DEFAULT, v)
     /** P3.7: bubble-less дизайн — flat layout сообщений. */
     suspend fun setMsgBubbleless(v: Boolean)              = put(Keys.MSG_BUBBLELESS, v)
+    /** Кастомная палитра баблов сообщений (произвольные HEX-цвета). */
+    suspend fun setMsgCustomBubbleColors(v: Boolean)      = put(Keys.MSG_CUSTOM_BUBBLE_COLORS, v)
+    suspend fun setMsgBubbleOutBgHex(v: String)          = put(Keys.MSG_BUBBLE_OUT_BG_HEX, v)
+    suspend fun setMsgBubbleOutTextHex(v: String)        = put(Keys.MSG_BUBBLE_OUT_TEXT_HEX, v)
+    suspend fun setMsgBubbleInBgHex(v: String)           = put(Keys.MSG_BUBBLE_IN_BG_HEX, v)
+    suspend fun setMsgBubbleInTextHex(v: String)         = put(Keys.MSG_BUBBLE_IN_TEXT_HEX, v)
     /** P4.2: LongPoll backfill — восстановление пропущенных между сессиями событий. */
     suspend fun setMsgLpBackfill(v: Boolean)              = put(Keys.MSG_LP_BACKFILL, v)
     /** P4.1: LongPoll v14 — lp_version=14, mode=1226 (расширенные поля). */
@@ -1740,6 +1751,12 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val channelNotifEnabledIds: Set<Long> = emptySet(),
         /** P3.7: bubble-less дизайн — flat layout (без Card/bubble), default false. */
         val msgBubbleless: Boolean,
+        /** Кастомная палитра баблов сообщений (произвольные HEX-цвета). */
+        val msgCustomBubbleColors: Boolean = false,
+        val msgBubbleOutBgHex: String = "",
+        val msgBubbleOutTextHex: String = "",
+        val msgBubbleInBgHex: String = "",
+        val msgBubbleInTextHex: String = "",
         /** P4.2: LongPoll backfill — восстановление пропущенных между сессиями событий (default false). */
         val msgLpBackfill: Boolean,
         /** P4.1: LongPoll v14 — lp_version=14, mode=1226 (default false, opt-in). */
@@ -2212,6 +2229,11 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val CALLS_CAMERA_DEFAULT  = stringPreferencesKey("calls_camera_default")
         val CALLS_NOISE_CANCEL_DEFAULT = stringPreferencesKey("calls_noise_cancel_default")
         val MSG_BUBBLELESS        = booleanPreferencesKey("msg_bubbleless")
+        val MSG_CUSTOM_BUBBLE_COLORS = booleanPreferencesKey("msg_custom_bubble_colors")
+        val MSG_BUBBLE_OUT_BG_HEX    = stringPreferencesKey("msg_bubble_out_bg_hex")
+        val MSG_BUBBLE_OUT_TEXT_HEX  = stringPreferencesKey("msg_bubble_out_text_hex")
+        val MSG_BUBBLE_IN_BG_HEX     = stringPreferencesKey("msg_bubble_in_bg_hex")
+        val MSG_BUBBLE_IN_TEXT_HEX   = stringPreferencesKey("msg_bubble_in_text_hex")
         // P4.2: LongPoll backfill — persistence ts/pts между сессиями
         val MSG_LP_BACKFILL        = booleanPreferencesKey("msg_lp_backfill")
         // P4.1: LongPoll v14 — lp_version=14, mode=1226

@@ -1,6 +1,7 @@
 package vk.mint.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 // VK Mint 2.0 color palette — B&W minimalist base + VK accents + 10 accent colors.
 //
@@ -51,4 +52,144 @@ object VkMintColors {
         "Black", "Red", "Blue", "Green", "Orange",
         "Purple", "Cyan", "Brown", "Lime", "Pink",
     )
+}
+
+/**
+ * Пресет палитры сообщений (HEX-цвета исходящих и входящих баблов).
+ */
+data class BubbleColorPreset(
+    val name: String,
+    val outBgHex: String,
+    val outTextHex: String,
+    val inBgHex: String,
+    val inTextHex: String,
+)
+
+object BubbleColorPresets {
+    val PRESETS: List<BubbleColorPreset> get() = presets
+    val presets: List<BubbleColorPreset> = listOf(
+        BubbleColorPreset(
+            name = "VK Classic",
+            outBgHex = "#4A76A8",
+            outTextHex = "#FFFFFF",
+            inBgHex = "#2E3642",
+            inTextHex = "#ECEFF4",
+        ),
+        BubbleColorPreset(
+            name = "VK Modern",
+            outBgHex = "#0077FF",
+            outTextHex = "#FFFFFF",
+            inBgHex = "#26292E",
+            inTextHex = "#FFFFFF",
+        ),
+        BubbleColorPreset(
+            name = "Telegram Dark",
+            outBgHex = "#2B5278",
+            outTextHex = "#FFFFFF",
+            inBgHex = "#182533",
+            inTextHex = "#F5F5F5",
+        ),
+        BubbleColorPreset(
+            name = "Telegram Light",
+            outBgHex = "#EEFFDE",
+            outTextHex = "#1C242B",
+            inBgHex = "#FFFFFF",
+            inTextHex = "#1C242B",
+        ),
+        BubbleColorPreset(
+            name = "Tokyo Night",
+            outBgHex = "#7AA2F7",
+            outTextHex = "#1A1B26",
+            inBgHex = "#24283B",
+            inTextHex = "#C0CAF5",
+        ),
+        BubbleColorPreset(
+            name = "Nord",
+            outBgHex = "#88C0D0",
+            outTextHex = "#2E3440",
+            inBgHex = "#3B4252",
+            inTextHex = "#ECEFF4",
+        ),
+        BubbleColorPreset(
+            name = "Catppuccin Mocha",
+            outBgHex = "#89B4FA",
+            outTextHex = "#11111B",
+            inBgHex = "#313244",
+            inTextHex = "#CDD6F4",
+        ),
+        BubbleColorPreset(
+            name = "Emerald Mint",
+            outBgHex = "#00B074",
+            outTextHex = "#FFFFFF",
+            inBgHex = "#202A25",
+            inTextHex = "#E0F2E9",
+        ),
+        BubbleColorPreset(
+            name = "Sunset Orange",
+            outBgHex = "#FF6B4A",
+            outTextHex = "#FFFFFF",
+            inBgHex = "#2E2421",
+            inTextHex = "#FFEBE5",
+        ),
+        BubbleColorPreset(
+            name = "Monochrome",
+            outBgHex = "#383838",
+            outTextHex = "#FFFFFF",
+            inBgHex = "#1E1E1E",
+            inTextHex = "#E0E0E0",
+        ),
+    )
+
+    /**
+     * Безопасный парсинг HEX-строки цвета (#RRGGBB, #AARRGGBB, #RGB).
+     * Возвращает null при невалидном формате или пустой строке.
+     */
+    fun parseHexColorOrNull(hex: String?): Color? {
+        if (hex.isNullOrBlank()) return null
+        val clean = hex.trim().removePrefix("#")
+        return try {
+            when (clean.length) {
+                6 -> Color(clean.toLong(16) or 0xFF000000L)
+                8 -> Color(clean.toLong(16))
+                3 -> {
+                    val r = clean[0].toString().repeat(2)
+                    val g = clean[1].toString().repeat(2)
+                    val b = clean[2].toString().repeat(2)
+                    Color("$r$g$b".toLong(16) or 0xFF000000L)
+                }
+                else -> null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Расчёт контрастного цвета текста на основе относительной яркости (luminance) фона.
+     */
+    fun contrastTextColor(
+        bgColor: Color,
+        defaultDark: Color = Color(0xFF1E1E1E),
+        defaultLight: Color = Color.White,
+    ): Color {
+        return if (bgColor.luminance() > 0.45f) defaultDark else defaultLight
+    }
+
+    /**
+     * Нормализация строки HEX (добавление решётки при необходимости).
+     */
+    fun normalizeHex(hex: String): String {
+        val trimmed = hex.trim()
+        if (trimmed.isEmpty()) return ""
+        return if (trimmed.startsWith("#")) trimmed.uppercase() else "#${trimmed.uppercase()}"
+    }
+
+    /**
+     * Проверка валидности введённого HEX-кода.
+     */
+    fun isValidHex(hex: String): Boolean {
+        val clean = hex.trim().removePrefix("#")
+        return (clean.length == 3 || clean.length == 6 || clean.length == 8) &&
+                clean.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
+    }
 }
