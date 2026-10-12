@@ -238,6 +238,7 @@ import vk.mint.feature.photos.InlinePhotoItem
 import vk.mint.feature.photos.PhotosInlineRenderer
 import vk.mint.ui.anim.LocalAnimScale
 import vk.mint.ui.anim.LocalStickerPhotoScale
+import vk.mint.ui.components.EditUserAliasDialog
 import vk.mint.ui.anim.M3ExpressiveMotion
 import vk.mint.ui.anim.expressiveSpringScaled
 import vk.mint.ui.anim.springScaled
@@ -768,6 +769,7 @@ fun ChatDetailScreen(
     val isGroupChat = peerId >= 2_000_000_000L
     val localChatId = if (isGroupChat) peerId - 2000000000L else 0L
     var showChatMenu by remember { mutableStateOf(false) }
+    var showAliasDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showMembersDialog by remember { mutableStateOf(false) }
     var chatMembers by remember { mutableStateOf<List<vk.mint.api.VKApiClient.ChatMember>>(emptyList()) }
@@ -3816,9 +3818,12 @@ fun ChatDetailScreen(
                         }
                         // Имя + статус собеседника в стиле Telegram
                         Column {
+                            val displayTitle = if (peerId in 1..1_999_999_999L) {
+                                vk.mint.data.local.UserAliasResolver.resolveName(peerId, currentTitle)
+                            } else currentTitle
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = currentTitle,
+                                    text = displayTitle,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.titleMedium,
@@ -3839,8 +3844,10 @@ fun ChatDetailScreen(
                             val typingIds = typingUsers.keys.toList()
                             val typingNames = typingIds.mapNotNull { uid ->
                                 val profile = chatProfiles[uid]
-                                if (profile == null) null
-                                else profile.fullName.takeIf { it.isNotBlank() }
+                                if (profile == null) {
+                                    val alias = vk.mint.data.local.UserAliasResolver.getAlias(uid)
+                                    alias?.takeIf { it.isNotBlank() }
+                                } else profile.displayName.takeIf { it.isNotBlank() }
                             }
                             val statusText = when {
                                 isChannel && channelSubscribers >= 0 -> subscribersLabel(channelSubscribers)
@@ -3944,6 +3951,17 @@ fun ChatDetailScreen(
                                     DropdownMenuItem(
                                         text = { Text("Выйти из чата") },
                                         onClick = { leaveChat() },
+                                    )
+                                }
+                                if (peerId in 1..1_999_999_999L) {
+                                    val hasAlias = vk.mint.data.local.UserAliasResolver.hasAlias(peerId)
+                                    DropdownMenuItem(
+                                        text = { Text(if (hasAlias) "Изменить псевдоним" else "Установить псевдоним") },
+                                        leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
+                                        onClick = {
+                                            showChatMenu = false
+                                            showAliasDialog = true
+                                        },
                                     )
                                 }
                                 // #59: общие действия для всех диалогов
@@ -5356,6 +5374,21 @@ fun ChatDetailScreen(
     }
     }  // closes else (loading/error/lazy)
 
+    if (showAliasDialog && peerId in 1..1_999_999_999L) {
+        EditUserAliasDialog(
+            userId = peerId,
+            defaultName = currentTitle,
+            currentAlias = vk.mint.data.local.UserAliasResolver.getAlias(peerId),
+            onDismiss = { showAliasDialog = false },
+            onSave = { newAlias ->
+                showAliasDialog = false
+                scope.launch {
+                    app.prefs.setUserAlias(peerId, newAlias)
+                }
+            },
+        )
+    }
+
     // Sprint 3 #14: Rename dialog для группового чата.
     if (showRenameDialog) {
         androidx.compose.material3.AlertDialog(
@@ -5795,8 +5828,10 @@ fun ChatDetailScreen(
     if (preview != null) {
         val previewAuthor = chatProfiles[preview.fromId]
         val previewAuthorName = previewAuthor?.let {
-            "${it.firstName} ${it.lastName}".trim().ifBlank { null }
-        } ?: "Сообщение"
+            it.displayName.ifBlank { null }
+        } ?: if (preview.fromId in 1..1_999_999_999L) {
+            vk.mint.data.local.UserAliasResolver.getAlias(preview.fromId) ?: "Сообщение"
+        } else "Сообщение"
         val previewBody = preview.text.ifBlank {
             preview.attachments?.firstOrNull()?.let { att ->
                 when {
@@ -6328,7 +6363,9 @@ private fun MessageBubble(
         if (!isOut && message.fromId != 0L && !isGrouped) {
             val senderProfile = profiles[message.fromId]
             val senderPhoto = senderProfile?.photo100 ?: senderProfile?.photo200
-            val senderName = senderProfile?.let { "${it.firstName} ${it.lastName}".trim() } ?: ""
+            val senderName = senderProfile?.displayName?.trim() ?: if (message.fromId in 1..1_999_999_999L) {
+                vk.mint.data.local.UserAliasResolver.getAlias(message.fromId) ?: ""
+            } else ""
             val senderColor = getTelegramSenderColor(message.fromId)
             Row(
                 modifier = Modifier.padding(start = 8.dp, bottom = 3.dp),
@@ -6487,8 +6524,10 @@ private fun MessageBubble(
                     // Имя автора ответа (если есть в загруженных профилях).
                     val replyAuthor = profiles[reply.fromId]
                     val replyAuthorName = replyAuthor?.let {
-                        "${it.firstName} ${it.lastName}".trim().ifBlank { null }
-                    }
+                        it.displayName.ifBlank { null }
+                    } ?: if (reply.fromId in 1..1_999_999_999L) {
+                        vk.mint.data.local.UserAliasResolver.getAlias(reply.fromId)
+                    } else null
                     // Preview-текст: если text пустой (ответ на стикер/фото/голосовое),
                     // показываем человекочитаемую подпись вложения.
                     val replyPreviewText = reply.text.take(60).ifBlank {
@@ -7278,7 +7317,9 @@ private fun WallAttachmentCard(
     val sel = LocalAttachmentSelection.current
     val authorName = if (post.fromId > 0) {
         val p = profiles[post.fromId]
-        p?.let { "${it.firstName} ${it.lastName}" } ?: "id${post.fromId}"
+        p?.displayName ?: if (post.fromId in 1..1_999_999_999L) {
+            vk.mint.data.local.UserAliasResolver.getAlias(post.fromId) ?: "id${post.fromId}"
+        } else "id${post.fromId}"
     } else {
         val g = groups[-post.fromId]
         g?.name ?: "Сообщество"
@@ -7873,9 +7914,11 @@ private fun ChannelCommentsDialog(
         if (fromId > 0) {
             val p = profiles[fromId]
             if (p != null) {
-                val n = (p.firstName + " " + p.lastName).trim()
+                val n = p.displayName.trim()
                 return if (n.isBlank()) "Пользователь" else n
             }
+            val alias = vk.mint.data.local.UserAliasResolver.getAlias(fromId)
+            if (!alias.isNullOrBlank()) return alias
         } else if (fromId < 0) {
             val g = groups[-fromId]
             if (g != null) return g.name
@@ -8768,9 +8811,10 @@ private fun ForwardedMessageBlock(
     // Имя автора: если fromId > 0 — профиль пользователя, иначе — сообщество.
     val authorName = if (fwd.fromId > 0) {
         val p = profiles[fwd.fromId]
-        p?.let { "${it.firstName} ${it.lastName}".trim() }
-            ?.takeIf { it.isNotBlank() }
-            ?: "id${fwd.fromId}"
+        p?.displayName?.takeIf { it.isNotBlank() }
+            ?: if (fwd.fromId in 1..1_999_999_999L) {
+                vk.mint.data.local.UserAliasResolver.getAlias(fwd.fromId) ?: "id${fwd.fromId}"
+            } else "id${fwd.fromId}"
     } else if (fwd.fromId < 0) {
         val g = groups[-fwd.fromId]
         g?.name?.takeIf { it.isNotBlank() } ?: "Сообщество"

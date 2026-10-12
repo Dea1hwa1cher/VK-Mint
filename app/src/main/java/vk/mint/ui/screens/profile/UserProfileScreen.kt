@@ -27,8 +27,10 @@ import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Call
 // П-7-AB: Flag — пункт «Пожаловаться» в «⋯»-меню записи чужой стены.
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.PersonAdd
+import vk.mint.ui.components.EditUserAliasDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -184,6 +186,7 @@ fun UserProfileScreen(
 
     // Этап П-2 (PROFILE-P2-3b): состояние действий чужого профиля.
     var profileMenuExpanded by remember { mutableStateOf(false) }
+    var showAliasDialog by remember { mutableStateOf(false) }
     // Начальные значения выставляются из профиля (is_subscribed / is_favorite).
     var subscribed by remember { mutableStateOf(false) }
     var isBookmarked by remember { mutableStateOf(false) }
@@ -414,7 +417,7 @@ fun UserProfileScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = p.fullName,
+                        text = p.displayName,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -429,7 +432,7 @@ fun UserProfileScreen(
                     // (иконка как в FriendsScreen:457; null → не рендерится).
                     if (!isSelf && onCallClick != null) {
                         IconButton(
-                            onClick = { onCallClick(p.id, p.fullName, p.photo200 ?: p.photo100) },
+                            onClick = { onCallClick(p.id, p.displayName, p.photo200 ?: p.photo100) },
                         ) {
                             Icon(
                                 Icons.Filled.Call,
@@ -447,6 +450,15 @@ fun UserProfileScreen(
                                 expanded = profileMenuExpanded,
                                 onDismissRequest = { profileMenuExpanded = false },
                             ) {
+                                val hasAlias = vk.mint.data.local.UserAliasResolver.hasAlias(p.id)
+                                DropdownMenuItem(
+                                    text = { Text(if (hasAlias) "Изменить псевдоним" else "Установить псевдоним") },
+                                    leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
+                                    onClick = {
+                                        profileMenuExpanded = false
+                                        showAliasDialog = true
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = { Text("Пожаловаться") },
                                     onClick = {
@@ -870,6 +882,21 @@ fun UserProfileScreen(
                 dismissButton = {
                     TextButton(onClick = { reportingPost.value = null }, enabled = !reportInFlight) {
                         Text("Отмена")
+                    }
+                },
+            )
+        }
+
+        if (showAliasDialog) {
+            EditUserAliasDialog(
+                userId = p.id,
+                defaultName = p.fullName,
+                currentAlias = vk.mint.data.local.UserAliasResolver.getAlias(p.id),
+                onDismiss = { showAliasDialog = false },
+                onSave = { newAlias ->
+                    showAliasDialog = false
+                    scope.launch {
+                        app.prefs.setUserAlias(p.id, newAlias)
                     }
                 },
             )

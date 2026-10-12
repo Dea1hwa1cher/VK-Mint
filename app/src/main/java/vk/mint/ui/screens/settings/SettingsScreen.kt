@@ -163,6 +163,9 @@ import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import vk.mint.ui.components.EditUserAliasDialog
+import vk.mint.ui.components.AddUserAliasByIdDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -2157,6 +2160,25 @@ private fun MessagesTab(
             checked = s.openLinksInInternalBrowser,
         ) { scope.launch { app.prefs.setOpenLinksInInternalBrowser(it) } } }
 
+        item { SectionHeader("Локальные псевдонимы") }
+        item {
+            LocalAliasesSettingsCard(
+                aliases = s.userAliases,
+                onAddAlias = { uid, alias ->
+                    scope.launch { app.prefs.setUserAlias(uid, alias) }
+                },
+                onEditAlias = { uid, alias ->
+                    scope.launch { app.prefs.setUserAlias(uid, alias) }
+                },
+                onDeleteAlias = { uid ->
+                    scope.launch { app.prefs.removeUserAlias(uid) }
+                },
+                onClearAll = {
+                    scope.launch { app.prefs.clearUserAliases() }
+                },
+            )
+        }
+
         item { SectionHeader("LongPoll и transport (экспериментально)") }
         // P4.2: LongPoll backfill — восстановление пропущенных между сессиями.
         item { ToggleRow(
@@ -2182,6 +2204,172 @@ private fun MessagesTab(
         // - "WebSocket для каналов" (msgWsChannels) — ChannelWebSocketClient
         //   существует но не инстанциируется, методы STUB с TODO.
         // Pref и setter остаются в VkMintPrefs (не трогаем — обратная совместимость).
+    }
+}
+
+@Composable
+private fun LocalAliasesSettingsCard(
+    aliases: Map<Long, String>,
+    onAddAlias: (Long, String) -> Unit,
+    onEditAlias: (Long, String) -> Unit,
+    onDeleteAlias: (Long) -> Unit,
+    onClearAll: () -> Unit,
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    var editTarget by remember { mutableStateOf<Pair<Long, String>?>(null) }
+    var showClearConfirm by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Персональные псевдонимы",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = if (aliases.isEmpty()) "Нет сохранённых псевдонимов"
+                        else "Сохранено псевдонимов: ${aliases.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = { showAddDialog = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Добавить псевдоним",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            if (aliases.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    aliases.entries.sortedBy { it.value.lowercase() }.forEach { (uid, alias) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.small)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = alias,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                                Text(
+                                    text = "id$uid",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { editTarget = uid to alias },
+                                    modifier = Modifier.size(36.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Edit,
+                                        contentDescription = "Редактировать",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { onDeleteAlias(uid) },
+                                    modifier = Modifier.size(36.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Delete,
+                                        contentDescription = "Удалить",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                TextButton(
+                    onClick = { showClearConfirm = true },
+                    modifier = Modifier.align(Alignment.End),
+                ) {
+                    Text("Сбросить все", color = MaterialTheme.colorScheme.error)
+                }
+            } else {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Вы можете назначить псевдоним собеседнику из контекстного меню в списке чатов или в его профиле.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        AddUserAliasByIdDialog(
+            onDismiss = { showAddDialog = false },
+            onSave = { uid, alias ->
+                onAddAlias(uid, alias)
+            },
+        )
+    }
+
+    if (editTarget != null) {
+        val (targetUid, targetAlias) = editTarget!!
+        EditUserAliasDialog(
+            userId = targetUid,
+            defaultName = "id$targetUid",
+            currentAlias = targetAlias,
+            onDismiss = { editTarget = null },
+            onSave = { newAlias ->
+                editTarget = null
+                onEditAlias(targetUid, newAlias)
+            },
+        )
+    }
+
+    if (showClearConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirm = false },
+            title = { Text("Сбросить все псевдонимы?") },
+            text = { Text("Все ${aliases.size} локальных псевдонимов будут удалены. Имена пользователей вернутся к стандартным из VK.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearConfirm = false
+                        onClearAll()
+                    }
+                ) {
+                    Text("Сбросить", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirm = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
     }
 }
 

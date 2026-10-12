@@ -1249,6 +1249,10 @@ data class Friend(
     @SerializedName("online_mobile")   val onlineMobile: Int? = null,
 ) {
     val fullName: String get() = "$firstName $lastName"
+    /** Имя друга с учётом локального псевдонима (если задан). */
+    val displayName: String get() = vk.mint.data.local.UserAliasResolver.resolveName(id, fullName)
+    /** Локальный псевдоним друга или null, если не задан. */
+    val localAlias: String? get() = vk.mint.data.local.UserAliasResolver.getAlias(id)
     val isOnline: Boolean get() = online == 1
     val sexLabel: String get() = when (sex) { 1 -> "жен"; 2 -> "муж"; else -> "" }
 }

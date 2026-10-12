@@ -263,6 +263,9 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             hiddenChatsPinHash = p[Keys.HIDDEN_CHATS_PIN_HASH]     ?: "",
             voiceDisableProximity = p[Keys.VOICE_DISABLE_PROXIMITY] ?: false,
             voiceShowDownloadButton = p[Keys.VOICE_SHOW_DOWNLOAD_BUTTON] ?: true,
+            userAliases = parseUserAliases(p[Keys.LOCAL_USER_ALIASES] ?: "").also {
+                UserAliasResolver.update(it)
+            },
             // Fix #392 #IM-LOCAL-PIN: локальный закреп диалога — JSON-массив peer_id
             // в порядке закрепления (0-й элемент — верх списка), парсится НА УРОВНЕ
             // Snapshot в List<Long> (битый/пустой JSON → пустой список, см.
@@ -1551,6 +1554,46 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         }
     }
 
+    private val userAliasesGson = Gson()
+
+    /** Безопасный парс JSON-объекта локальных псевдонимов ({"123": "Мама"} → Map<Long, String>). */
+    private fun parseUserAliases(raw: String): Map<Long, String> {
+        if (raw.isBlank() || raw == "{}" || raw == "null") return emptyMap()
+        return try {
+            val type = object : TypeToken<Map<String, String>>() {}.type
+            val parsed: Map<String, String>? = userAliasesGson.fromJson(raw, type)
+            if (parsed == null) emptyMap() else {
+                parsed.mapNotNull { (k, v) ->
+                    val id = k.toLongOrNull()
+                    if (id != null && v.isNotBlank()) id to v.trim() else null
+                }.toMap()
+            }
+        } catch (e: Exception) {
+            AppLog.w("VkMintPrefs", "Failed to parse local_user_aliases: ${e.message}")
+            emptyMap()
+        }
+    }
+
+    /** Установить локальный псевдоним пользователя (userId -> alias). Пустая строка удаляет псевдоним. */
+    suspend fun setUserAlias(userId: Long, alias: String) {
+        ds.edit { p ->
+            val current = parseUserAliases(p[Keys.LOCAL_USER_ALIASES] ?: "").toMutableMap()
+            if (alias.isBlank()) {
+                current.remove(userId)
+            } else {
+                current[userId] = alias.trim()
+            }
+            val json = userAliasesGson.toJson(current.mapKeys { it.key.toString() })
+            p[Keys.LOCAL_USER_ALIASES] = json
+        }
+    }
+
+    /** Удалить локальный псевдоним пользователя. */
+    suspend fun removeUserAlias(userId: Long) = setUserAlias(userId, "")
+
+    /** Очистить все локальные псевдонимы. */
+    suspend fun clearUserAliases() = put(Keys.LOCAL_USER_ALIASES, "{}")
+
     /**
      * Fix #392 #IM-LOCAL-PIN: одноразовая миграция legacy pinned_convs_data
      * (Fix #274/#276, волна 24) → im_pinned_dialogs. Вызывается MessagesScreen'ом
@@ -1684,6 +1727,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val voiceDisableProximity: Boolean = false,
         /** Показывать кнопку скачивания .ogg в плеере голосового сообщения (default true). */
         val voiceShowDownloadButton: Boolean = true,
+        /** Локальные псевдонимы пользователей (userId -> alias). */
+        val userAliases: Map<Long, String> = emptyMap(),
         /** Fix #392 #IM-LOCAL-PIN: peer_id локально закреплённых диалогов в ПОРЯДКЕ ЗАКРЕПЛЕНИЯ (0-й — верх списка; уже распарсен из JSON). Дефолт обязателен: FeedScreen:234 строит dummy-Snapshot named-параметрами (класс бага Fix #276/#356 — без дефолта компиляция падает). */
         val imPinnedDialogs: List<Long> = emptyList(),
         /** #IM-CHANNEL-FIX (56-b-5): peer_id каналов с ЯВНО включёнными уведомлениями (уже распарсен из CSV). Дефолт обязателен: конструкторы Snapshot строятся named-параметрами (класс бага Fix #276/#356). */
@@ -2141,6 +2186,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val VOICE_DISABLE_PROXIMITY = booleanPreferencesKey("voice_disable_proximity")
         // Показывать кнопку скачивания .ogg в плеере голосового сообщения (default true).
         val VOICE_SHOW_DOWNLOAD_BUTTON = booleanPreferencesKey("voice_show_download_button")
+        // Локальные псевдонимы пользователей (JSON-объект userId -> alias).
+        val LOCAL_USER_ALIASES    = stringPreferencesKey("local_user_aliases")
         // Fix #392 #IM-LOCAL-PIN: локальный закреп диалогов (JSON array of peer_id в порядке
         // закрепления; "" = ключ ещё не создавался, "[]" = список сознательно пуст).
         val IM_PINNED_DIALOGS     = stringPreferencesKey("im_pinned_dialogs")

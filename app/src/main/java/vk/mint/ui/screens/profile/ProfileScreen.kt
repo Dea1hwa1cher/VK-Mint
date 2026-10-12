@@ -2017,10 +2017,10 @@ fun ProfileHeader(
                 )
             }
         }
-        Spacer(Modifier.height(12.dp))
+        val alias = profile.localAlias
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = profile.fullName,
+                text = profile.displayName,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -2028,6 +2028,14 @@ fun ProfileHeader(
                 Spacer(Modifier.width(6.dp))
                 Text("\u2713", color = MaterialTheme.colorScheme.primary, fontSize = 20.sp)
             }
+        }
+        if (!alias.isNullOrBlank()) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = profile.fullName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         // П-1: статус кликабелен на своём профиле (правка через status.set);
         // пустой статус → подсказка «Установить статус» (как в вебе VK).

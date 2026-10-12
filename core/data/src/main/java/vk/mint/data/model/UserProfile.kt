@@ -96,6 +96,10 @@ data class UserProfile(
     @SerializedName("is_esia_verified") val isEsiaVerified: Int? = null,
 ) {
     val fullName: String get() = "$firstName $lastName"
+    /** Имя пользователя с учётом локального псевдонима (если задан). */
+    val displayName: String get() = vk.mint.data.local.UserAliasResolver.resolveName(id, fullName)
+    /** Локальный псевдоним пользователя или null, если не задан. */
+    val localAlias: String? get() = vk.mint.data.local.UserAliasResolver.getAlias(id)
     val isOnline: Boolean get() = online == 1
 
     data class LastSeen(

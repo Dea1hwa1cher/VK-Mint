@@ -200,7 +200,7 @@ fun FriendsScreen(
     }
 
     val filtered = friends.filter { f ->
-        (query.isBlank() || f.fullName.contains(query, ignoreCase = true)) &&
+        (query.isBlank() || f.fullName.contains(query, ignoreCase = true) || f.displayName.contains(query, ignoreCase = true)) &&
             (!filterOnline || f.isOnline)
     }
 
@@ -454,10 +454,11 @@ private fun FriendRow(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
+        val alias = friend.localAlias
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = friend.fullName,
+                    text = friend.displayName,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -467,6 +468,15 @@ private fun FriendRow(
                     Spacer(Modifier.width(4.dp))
                     Text("\u2713", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
                 }
+            }
+            if (!alias.isNullOrBlank()) {
+                Text(
+                    text = friend.fullName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             val sub = buildString {
                 if (friend.isOnline) append("в сети")
@@ -488,7 +498,7 @@ private fun FriendRow(
         // #ARCH-CONTAINERS (Этап 1.4): рисуем только при живом CallStarter.
         if (onCallClick != null) {
             IconButton(
-                onClick = { onCallClick(friend.id, friend.fullName, friend.photo100 ?: friend.photo200) },
+                onClick = { onCallClick(friend.id, friend.displayName, friend.photo100 ?: friend.photo200) },
                 modifier = Modifier.size(40.dp),
             ) {
                 Icon(Icons.Filled.Call, contentDescription = "Позвонить", modifier = Modifier.size(20.dp))
@@ -574,14 +584,24 @@ private fun RequestRow(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
+        val alias = request.localAlias
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = request.fullName,
+                text = request.displayName,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (!alias.isNullOrBlank()) {
+                Text(
+                    text = request.fullName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             if (request.verified == 1) {
                 Text("\u2713 подтверждён", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
             }

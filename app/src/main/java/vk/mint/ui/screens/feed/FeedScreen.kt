@@ -254,6 +254,7 @@ fun FeedScreen(
             newsStopWordsEnabled = false,
             commentsSortOrder = "asc",
             voiceShowDownloadButton = true,
+            userAliases = emptyMap(),
             themeDark = true,
             themeAccentIndex = 0,
             themeDynamic = false,

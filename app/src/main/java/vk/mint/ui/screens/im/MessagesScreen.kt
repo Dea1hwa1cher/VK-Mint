@@ -52,11 +52,13 @@ import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.runtime.saveable.rememberSaveable
+import vk.mint.ui.components.EditUserAliasDialog
 import vk.mint.ui.components.PinSetupDialog
 import vk.mint.ui.components.PinVerifyDialog
 import androidx.compose.material3.AlertDialog
@@ -369,6 +371,7 @@ fun MessagesScreen(
     var pendingHidePeerId by remember { mutableStateOf<Long?>(null) }
     var showPinSetupForHidden by remember { mutableStateOf(false) }
     var showPinVerifyForHidden by remember { mutableStateOf(false) }
+    var aliasDialogTarget by remember { mutableStateOf<Pair<Long, String>?>(null) }
 
     LaunchedEffect(searchQuery, showHiddenChats, localHiddenIds) {
         val q = searchQuery.trim()
@@ -930,7 +933,12 @@ fun MessagesScreen(
             if (searchQuery.isNotBlank()) {
                 val q = searchQuery.trim()
                 result = result.filter { chat ->
-                    chat.peer.title?.contains(q, ignoreCase = true) == true
+                    val resolvedTitle = if (chat.peer.id in 1..1_999_999_999L) {
+                        vk.mint.data.local.UserAliasResolver.resolveName(chat.peer.id, chat.peer.title ?: "")
+                    } else {
+                        chat.peer.title ?: ""
+                    }
+                    resolvedTitle.contains(q, ignoreCase = true) || chat.peer.title?.contains(q, ignoreCase = true) == true
                 }
             }
             // Fix #392 #IM-LOCAL-PIN: закреплённые наверху — ТОЛЬКО на вкладке 0
@@ -1361,7 +1369,14 @@ fun MessagesScreen(
                     // items() должны быть уникальны).
                     val q = searchQuery.trim()
                     val availableChats = if (showHiddenChats) chats else chats.filterNot { it.peer.id in localHiddenIds }
-                    val clientMatches = availableChats.filter { it.peer.title?.contains(q, ignoreCase = true) == true }  // NULL-ЯВНО
+                    val clientMatches = availableChats.filter { chat ->
+                        val resolved = if (chat.peer.id in 1..1_999_999_999L) {
+                            vk.mint.data.local.UserAliasResolver.resolveName(chat.peer.id, chat.peer.title ?: "")
+                        } else {
+                            chat.peer.title ?: ""
+                        }
+                        resolved.contains(q, ignoreCase = true) || chat.peer.title?.contains(q, ignoreCase = true) == true
+                    }
                     val clientIds = clientMatches.map { it.peer.id }.toSet()
                     val serverNew = searchChats.filterNot { it.peer.id in clientIds }
                     val searchTotal = clientMatches.size + serverNew.size + searchMessages.size
@@ -2131,6 +2146,7 @@ fun MessagesScreen(
                             // (передаём в ChatCard для расчёта порогов swap).
                             pinnedPeerIdsInOrder = pinnedPeerIdsInOrder,
                             pinnedIndex = pinnedIndex,
+                            onSetAlias = { peerId, defaultName -> aliasDialogTarget = peerId to defaultName },
                         )
                         Box(modifier = Modifier.fillMaxWidth().height(1.dp).padding(horizontal = 16.dp)
                             .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)))
@@ -2217,6 +2233,22 @@ fun MessagesScreen(
             },
         )
     }
+
+    if (aliasDialogTarget != null) {
+        val (targetPeerId, targetName) = aliasDialogTarget!!
+        EditUserAliasDialog(
+            userId = targetPeerId,
+            defaultName = targetName,
+            currentAlias = vk.mint.data.local.UserAliasResolver.getAlias(targetPeerId),
+            onDismiss = { aliasDialogTarget = null },
+            onSave = { newAlias ->
+                aliasDialogTarget = null
+                scope.launch {
+                    app.prefs.setUserAlias(targetPeerId, newAlias)
+                }
+            },
+        )
+    }
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -2258,8 +2290,12 @@ private fun ChatCard(
     onDragSwap: (fromIdx: Int, toIdx: Int) -> Unit = { _, _ -> },
     pinnedPeerIdsInOrder: List<Long> = emptyList(),
     pinnedIndex: Int = -1,
+    onSetAlias: ((peerId: Long, defaultName: String) -> Unit)? = null,
 ) {
-    val title = chat.peer.title ?: "Диалог ${chat.peer.localId}"
+    val rawTitle = chat.peer.title ?: "Диалог ${chat.peer.localId}"
+    val title = if (chat.peer.id in 1..1_999_999_999L) {
+        vk.mint.data.local.UserAliasResolver.resolveName(chat.peer.id, rawTitle)
+    } else rawTitle
     val photo = chat.peer.photo
     val lastMsgId = chat.lastMessage?.id ?: 0L
     val hasUnread = chat.unreadCount > 0
@@ -2731,6 +2767,23 @@ private fun ChatCard(
                         onClick = {
                             showContextMenu = false
                             onToggleHide(chat.peer.id, !isHidden)
+                        },
+                    )
+                }
+                // Локальный псевдоним (только для личных диалогов с пользователями)
+                if (showListActions && chat.peer.id in 1..1_999_999_999L && onSetAlias != null) {
+                    val hasAlias = vk.mint.data.local.UserAliasResolver.hasAlias(chat.peer.id)
+                    DropdownMenuItem(
+                        text = { Text(if (hasAlias) "Изменить псевдоним" else "Установить псевдоним") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Outlined.Edit,
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            showContextMenu = false
+                            onSetAlias(chat.peer.id, rawTitle)
                         },
                     )
                 }
