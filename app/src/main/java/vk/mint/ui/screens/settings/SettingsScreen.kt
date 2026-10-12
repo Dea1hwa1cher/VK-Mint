@@ -73,6 +73,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.graphics.Color
@@ -2482,21 +2483,42 @@ private fun BubblePaletteSettingsCard(
     app: VkMintApp,
     scope: CoroutineScope,
 ) {
-    var outBgInput by remember(s.msgBubbleOutBgHex) { mutableStateOf(s.msgBubbleOutBgHex) }
-    var outTextInput by remember(s.msgBubbleOutTextHex) { mutableStateOf(s.msgBubbleOutTextHex) }
-    var inBgInput by remember(s.msgBubbleInBgHex) { mutableStateOf(s.msgBubbleInBgHex) }
-    var inTextInput by remember(s.msgBubbleInTextHex) { mutableStateOf(s.msgBubbleInTextHex) }
+    var outBgInput by remember { mutableStateOf(s.msgBubbleOutBgHex) }
+    var outTextInput by remember { mutableStateOf(s.msgBubbleOutTextHex) }
+    var inBgInput by remember { mutableStateOf(s.msgBubbleInBgHex) }
+    var inTextInput by remember { mutableStateOf(s.msgBubbleInTextHex) }
 
-    val parsedOutBg = BubbleColorPresets.parseHexColorOrNull(s.msgBubbleOutBgHex)
+    LaunchedEffect(s.msgBubbleOutBgHex) {
+        if (BubbleColorPresets.normalizeHex(outBgInput) != BubbleColorPresets.normalizeHex(s.msgBubbleOutBgHex)) {
+            outBgInput = s.msgBubbleOutBgHex
+        }
+    }
+    LaunchedEffect(s.msgBubbleOutTextHex) {
+        if (BubbleColorPresets.normalizeHex(outTextInput) != BubbleColorPresets.normalizeHex(s.msgBubbleOutTextHex)) {
+            outTextInput = s.msgBubbleOutTextHex
+        }
+    }
+    LaunchedEffect(s.msgBubbleInBgHex) {
+        if (BubbleColorPresets.normalizeHex(inBgInput) != BubbleColorPresets.normalizeHex(s.msgBubbleInBgHex)) {
+            inBgInput = s.msgBubbleInBgHex
+        }
+    }
+    LaunchedEffect(s.msgBubbleInTextHex) {
+        if (BubbleColorPresets.normalizeHex(inTextInput) != BubbleColorPresets.normalizeHex(s.msgBubbleInTextHex)) {
+            inTextInput = s.msgBubbleInTextHex
+        }
+    }
+
+    val parsedOutBg = BubbleColorPresets.parseHexColorOrNull(outBgInput)
     val outBgColor = parsedOutBg ?: MaterialTheme.colorScheme.primaryContainer
-    val parsedOutText = BubbleColorPresets.parseHexColorOrNull(s.msgBubbleOutTextHex)
+    val parsedOutText = BubbleColorPresets.parseHexColorOrNull(outTextInput)
     val outTextColor = parsedOutText
         ?: if (parsedOutBg != null) BubbleColorPresets.contrastTextColor(parsedOutBg)
         else MaterialTheme.colorScheme.onPrimaryContainer
 
-    val parsedInBg = BubbleColorPresets.parseHexColorOrNull(s.msgBubbleInBgHex)
+    val parsedInBg = BubbleColorPresets.parseHexColorOrNull(inBgInput)
     val inBgColor = parsedInBg ?: MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-    val parsedInText = BubbleColorPresets.parseHexColorOrNull(s.msgBubbleInTextHex)
+    val parsedInText = BubbleColorPresets.parseHexColorOrNull(inTextInput)
     val inTextColor = parsedInText
         ?: if (parsedInBg != null) BubbleColorPresets.contrastTextColor(parsedInBg)
         else MaterialTheme.colorScheme.onSurface
@@ -2739,14 +2761,20 @@ private fun BubblePaletteSettingsCard(
                             outBgInput = clean
                             if (clean.isBlank()) {
                                 scope.launch { app.prefs.setMsgBubbleOutBgHex("") }
-                            } else if (BubbleColorPresets.isValidHex(clean)) {
+                            } else if (clean.removePrefix("#").length >= 6 && BubbleColorPresets.isValidHex(clean)) {
                                 scope.launch { app.prefs.setMsgBubbleOutBgHex(BubbleColorPresets.normalizeHex(clean)) }
                             }
                         },
                         label = { Text("Фон (#HEX)") },
                         placeholder = { Text("#0077FF") },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && BubbleColorPresets.isValidHex(outBgInput)) {
+                                    scope.launch { app.prefs.setMsgBubbleOutBgHex(BubbleColorPresets.normalizeHex(outBgInput)) }
+                                }
+                            },
                         leadingIcon = {
                             Box(
                                 modifier = Modifier
@@ -2764,14 +2792,20 @@ private fun BubblePaletteSettingsCard(
                             outTextInput = clean
                             if (clean.isBlank()) {
                                 scope.launch { app.prefs.setMsgBubbleOutTextHex("") }
-                            } else if (BubbleColorPresets.isValidHex(clean)) {
+                            } else if (clean.removePrefix("#").length >= 6 && BubbleColorPresets.isValidHex(clean)) {
                                 scope.launch { app.prefs.setMsgBubbleOutTextHex(BubbleColorPresets.normalizeHex(clean)) }
                             }
                         },
                         label = { Text("Текст (авто)") },
                         placeholder = { Text("Авто-контраст") },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && BubbleColorPresets.isValidHex(outTextInput)) {
+                                    scope.launch { app.prefs.setMsgBubbleOutTextHex(BubbleColorPresets.normalizeHex(outTextInput)) }
+                                }
+                            },
                         leadingIcon = {
                             Box(
                                 modifier = Modifier
@@ -2804,14 +2838,20 @@ private fun BubblePaletteSettingsCard(
                             inBgInput = clean
                             if (clean.isBlank()) {
                                 scope.launch { app.prefs.setMsgBubbleInBgHex("") }
-                            } else if (BubbleColorPresets.isValidHex(clean)) {
+                            } else if (clean.removePrefix("#").length >= 6 && BubbleColorPresets.isValidHex(clean)) {
                                 scope.launch { app.prefs.setMsgBubbleInBgHex(BubbleColorPresets.normalizeHex(clean)) }
                             }
                         },
                         label = { Text("Фон (#HEX)") },
                         placeholder = { Text("#E5E5EA") },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && BubbleColorPresets.isValidHex(inBgInput)) {
+                                    scope.launch { app.prefs.setMsgBubbleInBgHex(BubbleColorPresets.normalizeHex(inBgInput)) }
+                                }
+                            },
                         leadingIcon = {
                             Box(
                                 modifier = Modifier
@@ -2830,13 +2870,21 @@ private fun BubblePaletteSettingsCard(
                             if (clean.isBlank()) {
                                 scope.launch { app.prefs.setMsgBubbleInTextHex("") }
                             } else if (BubbleColorPresets.isValidHex(clean)) {
-                                scope.launch { app.prefs.setMsgBubbleInTextHex(BubbleColorPresets.normalizeHex(clean)) }
+                                if (clean.removePrefix("#").length >= 6) {
+                                    scope.launch { app.prefs.setMsgBubbleInTextHex(BubbleColorPresets.normalizeHex(clean)) }
+                                }
                             }
                         },
                         label = { Text("Текст (авто)") },
                         placeholder = { Text("Авто-контраст") },
                         singleLine = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && BubbleColorPresets.isValidHex(inTextInput)) {
+                                    scope.launch { app.prefs.setMsgBubbleInTextHex(BubbleColorPresets.normalizeHex(inTextInput)) }
+                                }
+                            },
                         leadingIcon = {
                             Box(
                                 modifier = Modifier
