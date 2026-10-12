@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
@@ -429,12 +430,12 @@ private fun FriendRow(
                 AsyncImage(
                     model = friend.photo100,
                     contentDescription = friend.fullName,
-                    modifier = Modifier.size(48.dp).clip(CircleShape),
+                    modifier = Modifier.size(48.dp).clip(avatarShape),
                     contentScale = ContentScale.Crop,
                 )
             } else {
                 Box(
-                    modifier = Modifier.size(48.dp).clip(CircleShape)
+                    modifier = Modifier.size(48.dp).clip(avatarShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -567,12 +568,12 @@ private fun RequestRow(
             AsyncImage(
                 model = request.photo100,
                 contentDescription = request.fullName,
-                modifier = Modifier.size(48.dp).clip(CircleShape),
+                modifier = Modifier.size(48.dp).clip(avatarShape),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Box(
-                modifier = Modifier.size(48.dp).clip(CircleShape)
+                modifier = Modifier.size(48.dp).clip(avatarShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {

@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -576,7 +577,7 @@ private fun AvatarOrPlaceholder(
     url: String?,
     label: String,
     size: Int = 48,
-    shape: androidx.compose.ui.graphics.Shape = CircleShape,
+    shape: androidx.compose.ui.graphics.Shape = avatarShape,
 ) {
     if (url != null) {
         AsyncImage(

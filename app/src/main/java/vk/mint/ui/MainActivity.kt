@@ -908,6 +908,7 @@ class MainActivity : ComponentActivity() {
                 accentIndex = snap?.themeAccentIndex ?: 0,
                 fontScale = snap?.fontScale ?: 100,
                 uiScale = snap?.uiScale ?: vk.mint.data.local.VkMintPrefs.UI_SCALE_DEFAULT,
+                avatarShape = snap?.avatarShape ?: vk.mint.data.model.AvatarShape.CIRCLE,
             ) {
                 // LaunchedEffect'ы ниже срабатывают только когда snap уже загружен.
                 // На этапе snap==null они пропускаются (return) — boot/LongPoll/auth

@@ -127,6 +127,7 @@ import vk.mint.util.toFileSizeString
 import vk.mint.ui.components.PendingPhotosBar
 import vk.mint.ui.components.PendingPhoto
 import vk.mint.ui.components.nextPendingPhotoId
+import vk.mint.ui.theme.avatarShape
 import vk.mint.ui.theme.titleSmallEmphasized
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -735,7 +736,7 @@ fun PostDetailScreen(
                                     model = authorAvatarUrl,
                                     modifier = Modifier
                                         .size(40.dp)
-                                        .clip(CircleShape),
+                                        .clip(avatarShape),
                                     contentDescription = "Аватар",
                                 )
                                 Spacer(modifier = Modifier.size(8.dp))
@@ -1152,7 +1153,7 @@ fun PostDetailScreen(
                             model = replyAuthorAvatar,
                             modifier = Modifier
                                 .size(24.dp)
-                                .clip(CircleShape),
+                                .clip(avatarShape),
                             contentDescription = null,
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -1786,7 +1787,7 @@ private fun CommentItem(
             model = authorAvatar,
             modifier = Modifier
                 .size(32.dp)
-                .clip(CircleShape),
+                .clip(avatarShape),
             contentDescription = "Аватар",
         )
         Column(
@@ -2133,7 +2134,7 @@ private fun ReplyItem(
         Box(
             modifier = Modifier
                 .size(28.dp)
-                .clip(CircleShape)
+                .clip(avatarShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {

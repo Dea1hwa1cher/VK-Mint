@@ -156,6 +156,7 @@ import vk.mint.ui.navigation.FeedPanelState
 import vk.mint.ui.navigation.ScreenTopBar
 import vk.mint.ui.navigation.ScrollPosition
 import vk.mint.ui.theme.UiScale
+import vk.mint.ui.theme.avatarShape
 import vk.mint.ui.theme.titleMediumEmphasized
 import vk.mint.ui.theme.titleSmallEmphasized
 import vk.mint.util.AppLog
@@ -2318,7 +2319,7 @@ private fun PostCard(
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
                         .size(40.dp)
-                        .clip(CircleShape)
+                        .clip(avatarShape)
                         .clickable { onAuthorClick(post) },
                 ) {
                     if (authorPhoto != null) {
@@ -2772,12 +2773,12 @@ private fun PostCard(
                                 AsyncImage(
                                     model = origPhoto,
                                     contentDescription = origName,
-                                    modifier = Modifier.size(24.dp).clip(CircleShape),
+                                    modifier = Modifier.size(24.dp).clip(avatarShape),
                                     contentScale = ContentScale.Crop,
                                 )
                             } else {
                                 Box(
-                                    modifier = Modifier.size(24.dp).clip(CircleShape)
+                                    modifier = Modifier.size(24.dp).clip(avatarShape)
                                         .background(MaterialTheme.colorScheme.outlineVariant),
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -3142,12 +3143,12 @@ private fun CommentCard(
                 AsyncImage(
                     model = photo,
                     contentDescription = null,
-                    modifier = Modifier.size(36.dp).clip(CircleShape),
+                    modifier = Modifier.size(36.dp).clip(avatarShape),
                     contentScale = ContentScale.Crop,
                 )
             } else {
                 Box(
-                    modifier = Modifier.size(36.dp).clip(CircleShape)
+                    modifier = Modifier.size(36.dp).clip(avatarShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -3808,14 +3809,14 @@ private fun CommentsBottomSheet(
                             contentDescription = null,
                             modifier = Modifier
                                 .size(24.dp)
-                                .clip(CircleShape),
+                                .clip(avatarShape),
                             contentScale = ContentScale.Crop,
                         )
                     } else {
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
-                                .clip(CircleShape)
+                                .clip(avatarShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -4099,12 +4100,12 @@ private fun CommentRow(
             AsyncImage(
                 model = photo,
                 contentDescription = null,
-                modifier = Modifier.size(32.dp).clip(CircleShape),
+                modifier = Modifier.size(32.dp).clip(avatarShape),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Box(
-                modifier = Modifier.size(32.dp).clip(CircleShape)
+                modifier = Modifier.size(32.dp).clip(avatarShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {

@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -804,12 +805,12 @@ fun CommunityScreen(
                     AsyncImage(
                         model = g.photo200 ?: g.photo100,
                         contentDescription = g.name,
-                        modifier = Modifier.size(56.dp).clip(CircleShape),
+                        modifier = Modifier.size(56.dp).clip(avatarShape),
                         contentScale = ContentScale.Crop,
                     )
                 } else {
                     Box(
-                        modifier = Modifier.size(56.dp).clip(CircleShape)
+                        modifier = Modifier.size(56.dp).clip(avatarShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -1102,7 +1103,7 @@ fun CommunityScreen(
                                 contentDescription = "Аватар сообщества",
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .clip(CircleShape),
+                                    .clip(avatarShape),
                                 contentScale = ContentScale.Crop,
                             )
                             Spacer(modifier = Modifier.width(10.dp))
@@ -1773,12 +1774,12 @@ private fun CommunityPostCard(
                     AsyncImage(
                         model = authorPhoto,
                         contentDescription = null,
-                        modifier = Modifier.size(36.dp).clip(CircleShape),
+                        modifier = Modifier.size(36.dp).clip(avatarShape),
                         contentScale = ContentScale.Crop,
                     )
                 } else {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(CircleShape)
+                        modifier = Modifier.size(36.dp).clip(avatarShape)
                             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center,
                     ) {

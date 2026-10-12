@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import vk.mint.data.model.AvatarShape
 
 private val LocalVkMintAccent = compositionLocalOf { VkMintColors.Black }
 
@@ -103,6 +104,7 @@ fun VkMintTheme(
     accentIndex: Int = 0,
     fontScale: Int = 100,
     uiScale: Float = 0.85f,
+    avatarShape: AvatarShape = AvatarShape.CIRCLE,
     content: @Composable () -> Unit,
 ) {
     val accent = VkMintColors.accents.getOrElse(accentIndex) { VkMintColors.Black }
@@ -261,11 +263,14 @@ fun VkMintTheme(
     // Fix #UISCALE: прокидываем коэффициент масштаба в LocalUiScale, чтобы
     // key-панели/кнопки могли явно масштабировать dp-размеры через UiScale.scaled().
     val uiScaleValue = uiScale.coerceIn(0.75f, 1.3f)
+    val currentAvatarShape = AvatarShapes.forShape(avatarShape)
 
     CompositionLocalProvider(
         LocalVkMintAccent provides accent,
         LocalDensity provides scaledDensity,
         LocalUiScale provides uiScaleValue,
+        LocalAvatarShape provides currentAvatarShape,
+        LocalAvatarShapeType provides avatarShape,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

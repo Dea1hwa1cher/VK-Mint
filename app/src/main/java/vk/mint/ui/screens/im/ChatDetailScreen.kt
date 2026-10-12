@@ -244,6 +244,7 @@ import vk.mint.ui.anim.M3ExpressiveMotion
 import vk.mint.ui.anim.expressiveSpringScaled
 import vk.mint.ui.anim.springScaled
 import vk.mint.ui.anim.tweenScaled
+import vk.mint.ui.theme.avatarShape
 import vk.mint.ui.theme.BubbleColorPresets
 import vk.mint.ui.theme.UiScale
 import vk.mint.media.VoiceRecorder
@@ -3791,7 +3792,7 @@ fun ChatDetailScreen(
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(CircleShape),
+                                    .clip(avatarShape),
                                 contentScale = ContentScale.Crop,
                             )
                             Spacer(modifier = Modifier.width(10.dp))
@@ -3799,7 +3800,7 @@ fun ChatDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(CircleShape)
+                                    .clip(avatarShape)
                                     .background(
                                         if (isSelfChat) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.primaryContainer
@@ -5462,7 +5463,7 @@ fun ChatDetailScreen(
                                             contentDescription = null,
                                             modifier = Modifier
                                                 .size(32.dp)
-                                                .clip(CircleShape),
+                                                .clip(avatarShape),
                                             contentScale = ContentScale.Crop,
                                         )
                                         Spacer(modifier = Modifier.width(10.dp))
@@ -6403,7 +6404,7 @@ private fun MessageBubble(
                 Box(
                     modifier = Modifier
                         .size(28.dp)
-                        .clip(CircleShape)
+                        .clip(avatarShape)
                         .background(if (senderPhoto == null) senderColor else MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -6411,7 +6412,7 @@ private fun MessageBubble(
                         AsyncImage(
                             model = senderPhoto,
                             contentDescription = senderName,
-                            modifier = Modifier.size(28.dp).clip(CircleShape),
+                            modifier = Modifier.size(28.dp).clip(avatarShape),
                         )
                     } else {
                         Text(
@@ -8043,7 +8044,7 @@ items(comments, key = { it.id }) { c ->
                                         Box(
                                             modifier = Modifier
                                                 .size(28.dp)
-                                                .clip(CircleShape)
+                                                .clip(avatarShape)
                                                 .background(MaterialTheme.colorScheme.surfaceVariant),
                                             contentAlignment = Alignment.Center,
                                         ) {
@@ -10660,7 +10661,7 @@ private fun ChannelInfoPanelContent(
             AsyncImage(
                 model = ava,
                 contentDescription = channelTitle,
-                modifier = Modifier.size(72.dp).clip(CircleShape),
+                modifier = Modifier.size(72.dp).clip(avatarShape),
                 contentScale = ContentScale.Crop,
             )
             Spacer(Modifier.height(10.dp))

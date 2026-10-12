@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
@@ -1995,12 +1996,12 @@ fun ProfileHeader(
                 AsyncImage(
                     model = profile.photo200,
                     contentDescription = profile.fullName,
-                    modifier = Modifier.size(120.dp).clip(CircleShape),
+                    modifier = Modifier.size(120.dp).clip(avatarShape),
                     contentScale = ContentScale.Crop,
                 )
             } else {
                 Box(
-                    modifier = Modifier.size(120.dp).clip(CircleShape)
+                    modifier = Modifier.size(120.dp).clip(avatarShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -2322,12 +2323,12 @@ fun WallPostCard(
                     AsyncImage(
                         model = authorPhoto,
                         contentDescription = null,
-                        modifier = Modifier.size(36.dp).clip(CircleShape),
+                        modifier = Modifier.size(36.dp).clip(avatarShape),
                         contentScale = ContentScale.Crop,
                     )
                 } else {
                     Box(
-                        modifier = Modifier.size(36.dp).clip(CircleShape)
+                        modifier = Modifier.size(36.dp).clip(avatarShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -3407,12 +3408,12 @@ private fun ProfileSuggestionCard(
                 AsyncImage(
                     model = avatarUrl,
                     contentDescription = friend.fullName,
-                    modifier = Modifier.size(72.dp).clip(CircleShape),
+                    modifier = Modifier.size(72.dp).clip(avatarShape),
                     contentScale = ContentScale.Crop,
                 )
             } else {
                 Box(
-                    modifier = Modifier.size(72.dp).clip(CircleShape)
+                    modifier = Modifier.size(72.dp).clip(avatarShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {

@@ -1,8 +1,16 @@
 package vk.mint.ui.theme
 
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import vk.mint.data.model.AvatarShape
 
 /**
  * VK Mint 2.0 / Material Design 3 Expressive (M3E) Shape scale.
@@ -21,3 +29,35 @@ val VkMintShapes = Shapes(
     large = RoundedCornerShape(24.dp),
     extraLarge = RoundedCornerShape(28.dp),
 )
+
+/**
+ * Варианты формы аватарок (круг, скруглённый квадрат, квадрат).
+ */
+object AvatarShapes {
+    val Circle: Shape = CircleShape
+    val RoundedSquare: Shape = RoundedCornerShape(percent = 28)
+    val Square: Shape = RoundedCornerShape(percent = 4)
+
+    fun forShape(shape: AvatarShape): Shape = when (shape) {
+        AvatarShape.CIRCLE -> Circle
+        AvatarShape.ROUNDED_SQUARE -> RoundedSquare
+        AvatarShape.SQUARE -> Square
+    }
+}
+
+val LocalAvatarShape = compositionLocalOf<Shape> { CircleShape }
+val LocalAvatarShapeType = compositionLocalOf { AvatarShape.CIRCLE }
+
+/**
+ * Хелпер для получения текущей формы аватарок в Composable-дереве.
+ */
+val avatarShape: Shape
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalAvatarShape.current
+
+/**
+ * Modifier-хелпер: обрезка элемента по текущей глобальной форме аватарок.
+ */
+@Composable
+fun Modifier.clipAvatar(): Modifier = this.clip(LocalAvatarShape.current)

@@ -220,6 +220,7 @@ class AuthActivity : ComponentActivity() {
                 accentIndex = snap?.themeAccentIndex ?: 0,
                 fontScale = snap?.fontScale ?: 100,
                 uiScale = snap?.uiScale ?: vk.mint.data.local.VkMintPrefs.UI_SCALE_DEFAULT,
+                avatarShape = snap?.avatarShape ?: vk.mint.data.model.AvatarShape.CIRCLE,
             ) {
                 // Fix #107: silent re-login режим — запускается MainActivity при
                 // tokenInvalidationTick, если в storage есть remixsid.

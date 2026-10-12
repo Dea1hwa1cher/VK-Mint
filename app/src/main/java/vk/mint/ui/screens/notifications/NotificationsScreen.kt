@@ -125,6 +125,7 @@ import vk.mint.ui.components.ErrorView
 import vk.mint.ui.components.ScrollToTopFab
 import vk.mint.ui.navigation.ScreenTopBar
 import vk.mint.ui.theme.UiScale
+import vk.mint.ui.theme.avatarShape
 import vk.mint.util.AppLog
 import vk.mint.util.toRelativeTime
 
@@ -1439,7 +1440,7 @@ private fun NotificationCard(
             modifier = Modifier
                 .padding(top = 2.dp)
                 .size(40.dp)
-                .clip(CircleShape)
+                .clip(avatarShape)
                 .background(if (avatarUrl != null) MaterialTheme.colorScheme.surfaceVariant else typeIcon.bgTint),
             contentAlignment = Alignment.Center,
         ) {
@@ -1447,7 +1448,7 @@ private fun NotificationCard(
                 AsyncImage(
                     model = avatarUrl,
                     contentDescription = singleProfile.name,
-                    modifier = Modifier.size(40.dp).clip(CircleShape),
+                    modifier = Modifier.size(40.dp).clip(avatarShape),
                 )
             } else {
                 Icon(
@@ -1768,7 +1769,7 @@ private fun NotificationCard(
                                 modifier = Modifier
                                     .offset(x = (index * 12).dp)
                                     .size(20.dp)
-                                    .clip(CircleShape)
+                                    .clip(avatarShape)
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -1776,7 +1777,7 @@ private fun NotificationCard(
                                     AsyncImage(
                                         model = profile.photo100,
                                         contentDescription = profile.name,
-                                        modifier = Modifier.size(20.dp).clip(CircleShape),
+                                        modifier = Modifier.size(20.dp).clip(avatarShape),
                                     )
                                 } else {
                                     Text(
@@ -2080,8 +2081,8 @@ private fun NotificationSkeletonCard() {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape)
-                .drawBehind { drawCircle(shimmerColor) },
+                .clip(avatarShape)
+                .background(shimmerColor),
         )
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {

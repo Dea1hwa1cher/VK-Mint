@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.RectangleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -2469,7 +2470,7 @@ private fun ChatCard(
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(54.dp)
-                                    .clip(CircleShape),
+                                    .clip(avatarShape),
                                 contentScale = ContentScale.Crop,
                             )
                         } else {
@@ -2477,7 +2478,7 @@ private fun ChatCard(
                             Box(
                                 modifier = Modifier
                                     .size(54.dp)
-                                    .clip(CircleShape)
+                                    .clip(avatarShape)
                                     .background(
                                         if (isSelfChat) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.primaryContainer
@@ -2921,12 +2922,12 @@ private fun ChannelRecommendationCard(
                     AsyncImage(
                         model = photo,
                         contentDescription = null,
-                        modifier = Modifier.size(44.dp).clip(CircleShape),
+                        modifier = Modifier.size(44.dp).clip(avatarShape),
                         contentScale = ContentScale.Crop,
                     )
                 } else {
                     Box(
-                        modifier = Modifier.size(44.dp).clip(CircleShape)
+                        modifier = Modifier.size(44.dp).clip(avatarShape)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {

@@ -14,6 +14,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import vk.mint.data.model.AvatarShape
 import vk.mint.util.AppLog
 
 /**
@@ -101,6 +102,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             //   а surface/background/surfaceVariant = из обоев (dynamic).
             //   Без этого Monet полностью перекрашивает accent-роли под обои.
             themeMonetHybrid   = p[Keys.THEME_MONET_HYBRID]     ?: true,
+            avatarShape        = AvatarShape.fromValue(p[Keys.AVATAR_SHAPE]),
             fontScale          = p[Keys.FONT_SCALE]            ?: 100,
             // Fix #UISCALE (2026-10-02): масштаб всего интерфейса (кнопки/панели/
             // текст). Базовый дефолт 0.85 (−15%) — интерфейс «мельче» при стандартной
@@ -638,6 +640,9 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setThemeDynamic(v: Boolean)              = put(Keys.THEME_DYNAMIC, v)
     /** #MONET-HYBRID: гибридный режим Material You (dynamic surface + accent primary). */
     suspend fun setThemeMonetHybrid(v: Boolean)          = put(Keys.THEME_MONET_HYBRID, v)
+    /** Форма аватарок (круг, скруглённый квадрат, квадрат). */
+    suspend fun setAvatarShape(v: AvatarShape)           = put(Keys.AVATAR_SHAPE, v.value)
+    suspend fun setAvatarShape(v: String)                = put(Keys.AVATAR_SHAPE, v)
     suspend fun setFontScale(v: Int)                     = put(Keys.FONT_SCALE, v)
     /** Fix #UISCALE: масштаб всего интерфейса (кнопки/панели/текст), 0.75..1.3. */
     suspend fun setUiScale(v: Float)                     = put(Keys.UI_SCALE, v)
@@ -1650,6 +1655,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val themeDynamic: Boolean,
         /** #MONET-HYBRID: при true и включённом Material You — accent перекрывает primary/secondary/tertiary. */
         val themeMonetHybrid: Boolean,
+        /** Форма аватарок (круг, скруглённый квадрат, квадрат). */
+        val avatarShape: AvatarShape = AvatarShape.CIRCLE,
         val fontScale: Int,
         /** Fix #UISCALE: масштаб всего интерфейса (0.75..1.3, дефолт 0.85 = −15%). */
         val uiScale: Float,
@@ -2130,6 +2137,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val THEME_ACCENT_INDEX  = intPreferencesKey("theme_accent_index")
         val THEME_DYNAMIC       = booleanPreferencesKey("theme_dynamic")
         val THEME_MONET_HYBRID  = booleanPreferencesKey("theme_monet_hybrid")
+        val AVATAR_SHAPE        = stringPreferencesKey("avatar_shape")
         val FONT_SCALE          = intPreferencesKey("font_scale")
         // Fix #UISCALE: масштаб всего интерфейса (float, дефолт 0.85 = −15%).
         val UI_SCALE             = floatPreferencesKey("ui_scale")

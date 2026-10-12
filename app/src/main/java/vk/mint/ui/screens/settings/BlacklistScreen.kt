@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import vk.mint.ui.theme.avatarShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Block
@@ -484,12 +485,12 @@ private fun BannedListRow(user: BannedUser, onRemove: () -> Unit) {
             AsyncImage(
                 model = photo,
                 contentDescription = null,
-                modifier = Modifier.size(40.dp).clip(CircleShape),
+                modifier = Modifier.size(40.dp).clip(avatarShape),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape),
+                modifier = Modifier.size(40.dp).clip(avatarShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -662,14 +663,14 @@ private fun AddToBlacklistDialog(
                                         contentDescription = null,
                                         modifier = Modifier
                                             .size(40.dp)
-                                            .clip(CircleShape),
+                                            .clip(avatarShape),
                                         contentScale = ContentScale.Crop,
                                     )
                                 } else {
                                     Box(
                                         modifier = Modifier
                                             .size(40.dp)
-                                            .clip(CircleShape),
+                                            .clip(avatarShape),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(

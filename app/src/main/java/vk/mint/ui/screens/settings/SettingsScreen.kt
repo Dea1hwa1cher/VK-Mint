@@ -102,10 +102,12 @@ import vk.mint.data.model.CommentSortOrder
 import vk.mint.data.model.Track
 // #SETTINGS-FIX (P2-5): BFF-модель настроек для EmailNotifyCard. Имя SettingsSection
 // уже занято контрактом vk.mint.contracts.SettingsSection (импорт выше) — алиас.
+import vk.mint.data.model.AvatarShape
 import vk.mint.data.model.SettingsParam
 import vk.mint.data.model.SettingsSection as BffSettingsSection
 import vk.mint.ui.components.ExpressiveSegmentedButtonRow
 import vk.mint.ui.components.ExpressiveSwitch
+import vk.mint.ui.theme.AvatarShapes
 import vk.mint.ui.theme.BubbleColorPreset
 import vk.mint.ui.theme.BubbleColorPresets
 import vk.mint.ui.theme.VkMintColors
@@ -1595,6 +1597,12 @@ private fun InterfaceTab(
             )
         }
         item { AccentPicker(s.themeAccentIndex) { idx -> scope.launch { app.prefs.setThemeAccentIndex(idx) } } }
+        item {
+            AvatarShapePickerCard(
+                currentShape = s.avatarShape,
+                onSelectShape = { shape -> scope.launch { app.prefs.setAvatarShape(shape) } },
+            )
+        }
 
         item { SectionHeader("Текст и анимации") }
         item {
@@ -2173,6 +2181,13 @@ private fun MessagesTab(
                 s = s,
                 app = app,
                 scope = scope,
+            )
+        }
+        // Форма аватарок (круг, скруглённый квадрат, квадрат)
+        item {
+            AvatarShapePickerCard(
+                currentShape = s.avatarShape,
+                onSelectShape = { shape -> scope.launch { app.prefs.setAvatarShape(shape) } },
             )
         }
         // P3.4: channel mode — отдельный UX для каналов (скрытие composer).
@@ -2857,6 +2872,105 @@ private fun BubblePaletteSettingsCard(
                         Text("Сбросить к теме")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AvatarShapePickerCard(
+    currentShape: AvatarShape,
+    onSelectShape: (AvatarShape) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(
+                "Форма аватарок",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "Форма отображения фото в профилях, чатах, комментариях и ленте",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+
+            // Интерактивное превью форм
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AvatarShape.entries.forEach { shape ->
+                    val isSelected = shape == currentShape
+                    val shapeObj = AvatarShapes.forShape(shape)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .androidx_clickable { onSelectShape(shape) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .then(
+                                    if (isSelected) {
+                                        Modifier.border(
+                                            width = 2.5.dp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = shapeObj,
+                                        )
+                                    } else {
+                                        Modifier.border(
+                                            width = 1.dp,
+                                            color = MaterialTheme.colorScheme.outlineVariant,
+                                            shape = shapeObj,
+                                        )
+                                    }
+                                )
+                                .padding(3.dp)
+                                .clip(shapeObj)
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceContainerHighest
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(30.dp),
+                                tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = shape.title,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            ExpressiveSegmentedButtonRow(
+                items = AvatarShape.entries,
+                selectedItem = currentShape,
+                onItemSelected = onSelectShape,
+            ) { shape ->
+                Text(shape.title)
             }
         }
     }
