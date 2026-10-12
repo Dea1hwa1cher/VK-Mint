@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -127,6 +128,7 @@ import vk.mint.VkMintApp
 import vk.mint.api.VKApiClient
 import vk.mint.data.model.Attachment
 import vk.mint.data.model.Comment
+import vk.mint.data.model.CommentSortOrder
 import vk.mint.data.model.Post
 import vk.mint.data.model.UserProfile
 import vk.mint.data.model.Video
@@ -250,6 +252,7 @@ fun FeedScreen(
             newsPromoHidden = true,
             newsStopWords = emptySet(),
             newsStopWordsEnabled = false,
+            commentsSortOrder = "asc",
             themeDark = true,
             themeAccentIndex = 0,
             themeDynamic = false,
@@ -3483,6 +3486,9 @@ private fun CommentsBottomSheet(
     var sending by remember { mutableStateOf(false) }
     var uploading by remember { mutableStateOf(false) }
     var localComments by remember { mutableStateOf<List<Comment>>(emptyList()) }
+    val defaultSortOrder = app.prefsSnapshot?.commentsSortOrder ?: "asc"
+    var sortOrder by rememberSaveable { mutableStateOf(defaultSortOrder) }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
     // Волна 22: комментарий, на который отвечаем (reply-режим); null = обычный комментарий.
     var replyingToComment by remember { mutableStateOf<Comment?>(null) }
     var attachedFileName by remember { mutableStateOf<String?>(null) }
@@ -3587,10 +3593,10 @@ private fun CommentsBottomSheet(
     // список никогда не обновлялся с сервера.
     // suspend + Boolean-результат: отправке нужно ЗНАТЬ, пришёл ли серверный
     // список, чтобы решить, чистить ли оптимистичные (см. KDoc шита).
-    suspend fun loadComments(): Boolean {
+    suspend fun loadComments(sort: String = sortOrder): Boolean {
         loading = true
         try {
-            val result = app.apiClient.wallGetComments(post.ownerId, post.id, count = 50)
+            val result = app.apiClient.wallGetComments(post.ownerId, post.id, count = 50, sort = sort)
             comments = result.comments
             profiles = result.profiles
             return true
@@ -3610,12 +3616,86 @@ private fun CommentsBottomSheet(
         sheetState = sheetState,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Заголовок
-            Text(
-                text = "Комментарии · ${post.comments?.count ?: 0}",
-                style = MaterialTheme.typography.titleMediumEmphasized,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+            // Заголовок и переключатель порядка комментариев
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Комментарии · ${post.comments?.count ?: 0}",
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                )
+
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { sortMenuExpanded = true }
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = "Порядок комментариев",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            text = CommentSortOrder.fromValue(sortOrder).title,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false },
+                    ) {
+                        CommentSortOrder.entries.forEach { order ->
+                            val isSelected = sortOrder == order.value
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = order.title,
+                                        fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    )
+                                },
+                                trailingIcon = if (isSelected) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                } else null,
+                                onClick = {
+                                    sortMenuExpanded = false
+                                    if (sortOrder != order.value) {
+                                        sortOrder = order.value
+                                        scope.launch {
+                                            app.prefs.setCommentsSortOrder(order.value)
+                                            loadComments(order.value)
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
 
             // Список комментариев
             if (loading) {

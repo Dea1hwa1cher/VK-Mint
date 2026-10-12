@@ -87,6 +87,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             newsPromoHidden    = p[Keys.NEWS_PROMO_HIDDEN]    ?: true,
             newsStopWords      = p[Keys.NEWS_STOP_WORDS]      ?: emptySet(),
             newsStopWordsEnabled = p[Keys.NEWS_STOP_WORDS_ENABLED] ?: false,
+            commentsSortOrder  = p[Keys.COMMENTS_SORT_ORDER]  ?: "asc",
 
             // Interface
             themeDark          = p[Keys.THEME_DARK]            ?: true,
@@ -619,6 +620,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setNewsPromoHidden(v: Boolean)           = put(Keys.NEWS_PROMO_HIDDEN, v)
     suspend fun setNewsStopWords(v: Set<String>)         = put(Keys.NEWS_STOP_WORDS, v)
     suspend fun setNewsStopWordsEnabled(v: Boolean)      = put(Keys.NEWS_STOP_WORDS_ENABLED, v)
+    /** Порядок сортировки комментариев ("asc" / "desc" / "smart"). Default "asc". */
+    suspend fun setCommentsSortOrder(v: String)          = put(Keys.COMMENTS_SORT_ORDER, v)
 
     suspend fun setThemeDark(v: Boolean)                 = put(Keys.THEME_DARK, v)
     suspend fun setThemeAccentIndex(v: Int)              = put(Keys.THEME_ACCENT_INDEX, v)
@@ -1579,6 +1582,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val newsPromoHidden: Boolean,
         val newsStopWords: Set<String> = emptySet(),
         val newsStopWordsEnabled: Boolean = false,
+        /** Порядок сортировки комментариев ("asc" / "desc" / "smart"). Default "asc". */
+        val commentsSortOrder: String = "asc",
         // Interface
         val themeDark: Boolean,
         val themeAccentIndex: Int,
@@ -2047,6 +2052,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val NEWS_PROMO_HIDDEN      = booleanPreferencesKey("news_promo_hidden")
         val NEWS_STOP_WORDS        = stringSetPreferencesKey("news_stop_words")
         val NEWS_STOP_WORDS_ENABLED = booleanPreferencesKey("news_stop_words_enabled")
+        val COMMENTS_SORT_ORDER    = stringPreferencesKey("comments_sort_order")
         // Interface
         val THEME_DARK          = booleanPreferencesKey("theme_dark")
         val THEME_ACCENT_INDEX  = intPreferencesKey("theme_accent_index")

@@ -36,7 +36,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.outlined.Reply
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.EmojiEmotions
@@ -97,6 +100,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import vk.mint.VkMintApp
 import vk.mint.data.model.Comment
+import vk.mint.data.model.CommentSortOrder
 import vk.mint.data.model.Post
 import vk.mint.data.model.Track
 import vk.mint.data.model.UserProfile
@@ -180,6 +184,10 @@ fun PostDetailScreen(
     var comments by remember { mutableStateOf<List<Comment>>(emptyList()) }
     var profiles by remember { mutableStateOf(emptyMap<Long, UserProfile>()) }
     var loadingComments by remember { mutableStateOf(true) }
+    val defaultSortOrder = prefsSnap?.commentsSortOrder ?: "asc"
+    var sortOrder by rememberSaveable { mutableStateOf<String?>(null) }
+    val activeSortOrder = sortOrder ?: defaultSortOrder
+    var sortMenuExpanded by remember { mutableStateOf(false) }
     var inputText by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var localComments by remember { mutableStateOf<List<Comment>>(emptyList()) }
@@ -333,6 +341,25 @@ fun PostDetailScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     var loadingMore by remember { mutableStateOf(false) }
     var endReached by remember { mutableStateOf(false) }
+
+    fun reloadComments(sort: String = activeSortOrder) {
+        val currentPost = post ?: return
+        scope.launch {
+            loadingComments = true
+            endReached = false
+            try {
+                val result = app.apiClient.wallGetComments(currentPost.ownerId, currentPost.id, count = 50, sort = sort)
+                comments = result.comments
+                profiles = result.profiles
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.e("PostDetail", "reload comments error", e)
+            } finally {
+                loadingComments = false
+            }
+        }
+    }
     // #POST-DETAIL-SCROLL: rememberSaveable + LazyListState.Saver — позиция
     // скролла переживает навигацию к Community и возврат. По образцу FeedScreen
     // (Fix #51-B). Дополнительно PostDetailScrollHolder — backup-механизм
@@ -392,7 +419,7 @@ fun PostDetailScreen(
         scope.launch {
             loadingComments = true
             try {
-                val result = app.apiClient.wallGetComments(p.ownerId, p.id, count = 50)
+                val result = app.apiClient.wallGetComments(p.ownerId, p.id, count = 50, sort = activeSortOrder)
                 comments = result.comments
                 profiles = result.profiles
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -493,6 +520,7 @@ fun PostDetailScreen(
                         val result = app.apiClient.wallGetComments(
                             post.ownerId, post.id,
                             count = 30, offset = offset,
+                            sort = activeSortOrder,
                         )
                         if (result.comments.isEmpty()) {
                             endReached = true
@@ -593,9 +621,10 @@ fun PostDetailScreen(
         scope.launch {
             isRefreshing = true
             try {
-                val result = app.apiClient.wallGetComments(post.ownerId, post.id, count = 50)
+                val result = app.apiClient.wallGetComments(post.ownerId, post.id, count = 50, sort = activeSortOrder)
                 comments = result.comments
                 profiles = result.profiles
+                endReached = false
             } catch (e: Exception) {
                 AppLog.e("PostDetail", "refresh error", e)
             } finally {
@@ -860,11 +889,84 @@ fun PostDetailScreen(
 
                     // --- Комментарии ---
                     item {
-                        Text(
-                            text = "Комментарии (${post.comments?.count ?: 0})",
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                text = "Комментарии (${post.comments?.count ?: 0})",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+
+                            // Переключатель порядка комментариев
+                            Box {
+                                Row(
+                                    modifier = Modifier
+                                        .clip(MaterialTheme.shapes.small)
+                                        .clickable { sortMenuExpanded = true }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                                        contentDescription = "Порядок комментариев",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Text(
+                                        text = CommentSortOrder.fromValue(activeSortOrder).title,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Filled.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                }
+
+                                DropdownMenu(
+                                    expanded = sortMenuExpanded,
+                                    onDismissRequest = { sortMenuExpanded = false },
+                                ) {
+                                    CommentSortOrder.entries.forEach { order ->
+                                        val isSelected = activeSortOrder == order.value
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = order.title,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            },
+                                            trailingIcon = if (isSelected) {
+                                                {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.Check,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(18.dp),
+                                                    )
+                                                }
+                                            } else null,
+                                            onClick = {
+                                                sortMenuExpanded = false
+                                                if (activeSortOrder != order.value) {
+                                                    sortOrder = order.value
+                                                    scope.launch { app.prefs.setCommentsSortOrder(order.value) }
+                                                    reloadComments(order.value)
+                                                }
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // Список комментариев.

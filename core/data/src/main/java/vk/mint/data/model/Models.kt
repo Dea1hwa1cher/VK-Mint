@@ -1040,6 +1040,23 @@ data class Comment(
 }
 
 /**
+ * Порядок сортировки комментариев к записям (параметр sort в wall.getComments).
+ */
+enum class CommentSortOrder(val value: String, val title: String) {
+    OLD("asc", "Сначала старые"),
+    NEW("desc", "Сначала новые"),
+    SMART("smart", "Сначала интересные");
+
+    companion object {
+        fun fromValue(v: String?): CommentSortOrder = when (v?.lowercase()) {
+            "desc" -> NEW
+            "smart" -> SMART
+            else -> OLD
+        }
+    }
+}
+
+/**
  * #30h: Фото как самостоятельная сущность (photos.getById, photos.getAll).
  * Используется для просмотра альбомов и отдельных фото.
  */

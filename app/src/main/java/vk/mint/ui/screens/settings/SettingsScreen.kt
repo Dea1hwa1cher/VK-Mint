@@ -95,6 +95,7 @@ import vk.mint.data.local.AudioFormat
 import vk.mint.data.local.AudioQuality
 import vk.mint.data.model.DownloadState
 import vk.mint.data.model.DownloadStatus
+import vk.mint.data.model.CommentSortOrder
 import vk.mint.data.model.Track
 // #SETTINGS-FIX (P2-5): BFF-модель настроек для EmailNotifyCard. Имя SettingsSection
 // уже занято контрактом vk.mint.contracts.SettingsSection (импорт выше) — алиас.
@@ -1780,6 +1781,11 @@ private fun FeedTab(
             FeedCarouselToggleRow(s = s, app = app, scope = scope)
         }
 
+        item { SectionHeader("Комментарии") }
+        item {
+            CommentSortOrderCard(s = s, app = app, scope = scope)
+        }
+
         item { SectionHeader("Истории") }
         // #STORY-TOGGLE: показ раздела «Истории» в ленте. Default: true.
         item {
@@ -1872,6 +1878,53 @@ private fun FeedTab(
                 showStopWordsDialog = false
             },
         )
+    }
+}
+
+/**
+ * Выбор порядка комментариев к записям по умолчанию (asc / desc / smart).
+ */
+@Composable
+private fun CommentSortOrderCard(
+    s: VkMintPrefs.Snapshot,
+    app: VkMintApp,
+    scope: CoroutineScope,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(
+                "Порядок комментариев по умолчанию",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                "Порядок отображения комментариев к записям в ленте и на экране поста",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            CommentSortOrder.entries.forEach { order ->
+                val selected = s.commentsSortOrder == order.value
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable { scope.launch { app.prefs.setCommentsSortOrder(order.value) } }
+                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    RadioButton(
+                        selected = selected,
+                        onClick = { scope.launch { app.prefs.setCommentsSortOrder(order.value) } },
+                    )
+                    Text(
+                        order.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
     }
 }
 
