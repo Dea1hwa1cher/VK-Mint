@@ -247,9 +247,11 @@ fun PostDetailScreen(
     }
     // Fix #234: multi-photo picker (до 100 фото при обходе лимита 10 вложений).
     val commentMultiPhotoLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(
-            maxItems = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10,
-        ),
+        contract = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) {
+            ActivityResultContracts.PickMultipleVisualMedia()
+        } else {
+            ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10)
+        },
     ) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10

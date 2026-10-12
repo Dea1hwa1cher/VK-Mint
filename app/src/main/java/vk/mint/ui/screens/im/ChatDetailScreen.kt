@@ -1436,9 +1436,11 @@ fun ChatDetailScreen(
     // Fix #234 (multi-photo preview): multi-photo picker (до 100 фото при обходе лимита 10 вложений).
     // НЕ отправляем сразу, добавляем все URI в pendingPhotos для предпросмотра.
     val multiPhotoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(
-            maxItems = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10,
-        ),
+        contract = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) {
+            ActivityResultContracts.PickMultipleVisualMedia()
+        } else {
+            ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10)
+        },
     ) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10

@@ -220,9 +220,11 @@ fun CreatePostDialog(
 
     // #ATTACH-UNIFY: мульти-фото с устройства (до 100 при включённом обходе лимита, Fix #234).
     val multiPhotoLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(
-            maxItems = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10,
-        ),
+        contract = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) {
+            ActivityResultContracts.PickMultipleVisualMedia()
+        } else {
+            ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10)
+        },
     ) { uris ->
         if (uris.isNotEmpty()) {
             val limit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
