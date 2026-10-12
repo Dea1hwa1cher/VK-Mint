@@ -143,8 +143,21 @@ fun StoryViewerScreen(
     // комментарий, и отдельного stories.reply-метода в проекте нет).
     onReplyToAuthor: (Long, String, String?) -> Unit = { _, _, _ -> },  // peerId, title, photo
 ) {
-    val groups = StoryHolder.groups
-    val startIndex = StoryHolder.startGroupIndex
+    val app = VkMintApp.get()
+    val blockAds = app.prefsSnapshot?.storiesBlockAds ?: true
+    val rawGroups = StoryHolder.groups
+    val groups = remember(rawGroups, blockAds) {
+        if (blockAds) {
+            rawGroups.mapNotNull { g ->
+                if (g.isAd) null
+                else {
+                    val nonAdStories = g.stories.filter { !it.isAdStory }
+                    if (nonAdStories.isEmpty()) null else g.copy(stories = nonAdStories)
+                }
+            }
+        } else rawGroups
+    }
+    val startIndex = StoryHolder.startGroupIndex.coerceIn(0, (groups.size - 1).coerceAtLeast(0))
 
     if (groups.isEmpty()) {
         LaunchedEffect(Unit) { onBack() }
@@ -414,7 +427,6 @@ fun StoryViewerScreen(
 
     val context = LocalContext.current
     // Fix #100: читаем настройку autoCacheStories (default false, #AUTOCACHE-STORIES-OFF) — gate auto-cache.
-    val app = vk.mint.VkMintApp.get()
     val prefsSnap by app.prefs.data.collectAsState(initial = null)
     val autoCacheStories = prefsSnap?.autoCacheStories ?: false
     // P0.18 #STORY-SWIPE-HINTS: стрелки-подсказки свайпа. Default: true (из prefs).

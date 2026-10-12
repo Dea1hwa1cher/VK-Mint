@@ -1623,10 +1623,34 @@ data class Story(
     @SerializedName("can_reply")       val canReply: Boolean = false,
     @SerializedName("can_comment")     val canComment: Boolean = false,
     val stickers: List<StorySticker> = emptyList(),
+    @SerializedName("is_ads")          val isAds: Boolean = false,
+    @SerializedName("is_ad")           val isAd: Boolean = false,
+    @SerializedName("is_promoted")     val isPromoted: Boolean = false,
+    @SerializedName("track_code")      val trackCode: String? = null,
 ) {
     val isSeenBool: Boolean get() = isSeen == 1
     val thumbUrl: String? get() = PhotoSizes.bestStoryUrl(photo?.sizes)
         ?: PhotoSizes.bestStoryUrl(video?.preview?.sizes)
+
+    /**
+     * Проверка, является ли история рекламной или промо-историей.
+     */
+    val isAdStory: Boolean get() {
+        if (isAds || isAd || isPromoted) return true
+        if (type.equals("promo", ignoreCase = true) ||
+            type.equals("ad", ignoreCase = true) ||
+            type.equals("ads", ignoreCase = true)) return true
+        if (trackCode?.contains("ad_", ignoreCase = true) == true ||
+            trackCode?.contains("promo", ignoreCase = true) == true) return true
+        val linkUrl = link?.url.orEmpty()
+        if (linkUrl.contains("ad.mail.ru", ignoreCase = true) ||
+            linkUrl.contains("target.my.com", ignoreCase = true) ||
+            linkUrl.contains("ad.vk.com", ignoreCase = true) ||
+            linkUrl.contains("vk.com/ads", ignoreCase = true)) {
+            return true
+        }
+        return false
+    }
 
     data class StoryPhoto(
         @SerializedName("sizes")    val sizes: List<Size>? = null,
@@ -1702,9 +1726,22 @@ data class StoryGroup(
     val photo100: String? = null,
     val isSeen: Boolean = false,
     val stories: List<Story> = emptyList(),
+    val type: String? = null,
+    val isAdGroup: Boolean = false,
 ) {
     val lastStoryThumb: String? get() = stories.lastOrNull { !it.isSeenBool }?.thumbUrl
         ?: stories.lastOrNull()?.thumbUrl
+
+    /**
+     * Проверка, является ли группа историй рекламной (тип promo/ad или все истории рекламные).
+     */
+    val isAd: Boolean get() = isAdGroup ||
+            type.equals("promo", ignoreCase = true) ||
+            type.equals("ad", ignoreCase = true) ||
+            type.equals("ads", ignoreCase = true) ||
+            type.equals("community_ads", ignoreCase = true) ||
+            type.equals("app_group_ads", ignoreCase = true) ||
+            (stories.isNotEmpty() && stories.all { it.isAdStory })
 }
 
 // ═══════════════════════════════════════════════════════════════════

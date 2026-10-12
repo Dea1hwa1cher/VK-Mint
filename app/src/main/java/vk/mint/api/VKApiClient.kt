@@ -15382,11 +15382,29 @@ class VKApiClient(
             // 2. items[] — это STORY GROUPS (не отдельные истории!).
             //    Каждая группа: { id (hash), name, type, has_unseen, stories: [...] }.
             val itemsArr = resp.getAsJsonArray("items") ?: return emptyList()
+            val snap = try { prefs.data.first() } catch (_: Exception) { null }
+            val blockAds = snap?.storiesBlockAds ?: true
             val result = mutableListOf<vk.mint.data.model.StoryGroup>()
             for (el in itemsArr) {
                 if (!el.isJsonObject) continue
                 val grp = el.asJsonObject
                 val groupName = safeString(grp.get("name"))
+                val groupType = safeString(grp.get("type"))
+                val groupIsAd = safeBool(grp.get("is_ads")) || safeInt(grp.get("is_ads")) == 1 ||
+                    safeBool(grp.get("is_ad")) || safeInt(grp.get("is_ad")) == 1 ||
+                    safeBool(grp.get("is_promoted")) || safeInt(grp.get("is_promoted")) == 1 ||
+                    grp.has("ad") || grp.has("ads") || grp.has("ad_data") || grp.has("promo_data") ||
+                    groupType.equals("promo", ignoreCase = true) ||
+                    groupType.equals("ad", ignoreCase = true) ||
+                    groupType.equals("ads", ignoreCase = true) ||
+                    groupType.equals("community_ads", ignoreCase = true) ||
+                    groupType.equals("app_group_ads", ignoreCase = true)
+
+                if (blockAds && groupIsAd) {
+                    AppLog.d("VKApiClient", "storiesGet: skipped ad story group type=$groupType name=$groupName")
+                    continue
+                }
+
                 val hasUnseen = safeBool(grp.get("has_unseen"))
                 val storiesArr = grp.getAsJsonArray("stories") ?: continue
 
@@ -15395,6 +15413,10 @@ class VKApiClient(
                 for (sel in storiesArr) {
                     if (!sel.isJsonObject) continue
                     val story = parseStory(sel.asJsonObject) ?: continue
+                    if (blockAds && story.isAdStory) {
+                        AppLog.d("VKApiClient", "storiesGet: skipped ad story id=${story.id}")
+                        continue
+                    }
                     if (firstOwnerId == 0L) firstOwnerId = story.ownerId
                     stories.add(story)
                 }
@@ -15413,6 +15435,8 @@ class VKApiClient(
                         photo100 = photo,
                         isSeen = !hasUnseen,
                         stories = stories,
+                        type = groupType,
+                        isAdGroup = groupIsAd,
                     )
                 )
             }
@@ -15525,6 +15549,12 @@ class VKApiClient(
         // Кликабельные стикеры (clickable_stickers).
         val stickers = parseStoryStickers(o)
 
+        val isAds = safeBool(o.get("is_ads")) || safeInt(o.get("is_ads")) == 1
+        val isAd = safeBool(o.get("is_ad")) || safeInt(o.get("is_ad")) == 1
+        val isPromoted = safeBool(o.get("is_promoted")) || safeInt(o.get("is_promoted")) == 1
+        val trackCode = safeString(o.get("track_code"))
+        val hasAdContainers = o.has("ad") || o.has("ads") || o.has("ad_data") || o.has("promo_data")
+
         return vk.mint.data.model.Story(
             id = id,
             ownerId = ownerId,
@@ -15543,6 +15573,10 @@ class VKApiClient(
             canReply = canReply,
             canComment = canComment,
             stickers = stickers,
+            isAds = isAds || hasAdContainers,
+            isAd = isAd,
+            isPromoted = isPromoted,
+            trackCode = trackCode,
         )
     }
 

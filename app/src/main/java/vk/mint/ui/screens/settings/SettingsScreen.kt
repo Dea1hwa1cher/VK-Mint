@@ -1789,6 +1789,14 @@ private fun FeedTab(
                 checked = s.storiesShown,
             ) { scope.launch { app.prefs.setStoriesShown(it) } }
         }
+        // Блокировка рекламы в историях (Stories AdBlock)
+        item {
+            ToggleRow(
+                title = "Блокировка рекламы в историях",
+                subtitle = "Скрывать рекламные и промо-истории в ленте и просмотрщике",
+                checked = s.storiesBlockAds,
+            ) { scope.launch { app.prefs.setStoriesBlockAds(it) } }
+        }
         // P0.18 #STORY-SWIPE-HINTS: стрелки-подсказки свайпа в StoryViewer.
         // Default: true. Показываются при первом открытии историй, исчезают
         // после первого свайпа. Пользователь может выключить если мешают.

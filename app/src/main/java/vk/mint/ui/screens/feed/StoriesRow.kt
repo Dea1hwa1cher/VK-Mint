@@ -105,7 +105,20 @@ fun StoriesRow(
         }
     }
 
-    if (loading && storyGroups.isEmpty()) {
+    val blockAds = app.prefsSnapshot?.storiesBlockAds ?: true
+    val displayGroups = remember(storyGroups, blockAds) {
+        if (blockAds) {
+            storyGroups.mapNotNull { g ->
+                if (g.isAd) null
+                else {
+                    val nonAdStories = g.stories.filter { !it.isAdStory }
+                    if (nonAdStories.isEmpty()) null else g.copy(stories = nonAdStories)
+                }
+            }
+        } else storyGroups
+    }
+
+    if (loading && displayGroups.isEmpty()) {
         // Скелетон — серые кружки.
         Box(
             modifier = modifier
@@ -174,7 +187,7 @@ fun StoriesRow(
             }
         }
         // Истории от пользователей/сообществ.
-        items(storyGroups, key = { it.ownerId }) { group ->
+        items(displayGroups, key = { it.ownerId }) { group ->
             val ringColor = if (!group.isSeen) {
                 // Градиент ВК — голубой → фиолетовый.
                 Brush.linearGradient(
@@ -191,12 +204,12 @@ fun StoriesRow(
                     ),
                 )
             }
-            val groupIndex = storyGroups.indexOf(group)
+            val groupIndex = displayGroups.indexOf(group)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .width(55.dp)
-                    .clickable { onStoryClick(storyGroups, groupIndex) },
+                    .clickable { onStoryClick(displayGroups, groupIndex) },
             ) {
                 Box(
                     modifier = Modifier

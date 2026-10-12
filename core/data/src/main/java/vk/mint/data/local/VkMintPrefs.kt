@@ -403,6 +403,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             storyCacheLimitMb  = p[Keys.STORY_CACHE_LIMIT_MB]  ?: 200,
             storiesShown       = p[Keys.STORIES_SHOWN]         ?: true,
             storiesSwipeHints  = p[Keys.STORIES_SWIPE_HINTS]   ?: true,
+            storiesBlockAds    = p[Keys.STORIES_BLOCK_ADS]     ?: true,
 
             // Audio auto-cache (Fix #110)
             // Fix #AUTOCACHE-AUDIO-OFF (2026-08-05): default = false.
@@ -1269,6 +1270,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setStoriesShown(v: Boolean)              = put(Keys.STORIES_SHOWN, v)
     // P0.18: стрелки-подсказки свайпа.
     suspend fun setStoriesSwipeHints(v: Boolean)         = put(Keys.STORIES_SWIPE_HINTS, v)
+    /** Блокировка рекламы в историях (default true). */
+    suspend fun setStoriesBlockAds(v: Boolean)           = put(Keys.STORIES_BLOCK_ADS, v)
 
     // Fix #110: Audio auto-cache setting
     suspend fun setAutoCacheAudio(v: Boolean)            = put(Keys.AUTO_CACHE_AUDIO, v)
@@ -1761,6 +1764,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         // P0.18 #STORY-SWIPE-HINTS: показ стрелок-подсказок свайпа в StoryViewer.
         // Default: true. Исчезают после первого свайпа. Выключается в настройках.
         val storiesSwipeHints: Boolean,
+        /** Блокировка рекламы в историях (default true). */
+        val storiesBlockAds: Boolean = true,
         // Audio auto-cache (Fix #110)
         val autoCacheAudio: Boolean,
         // Network
@@ -2203,6 +2208,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val STORIES_SHOWN        = booleanPreferencesKey("stories_shown")
         // P0.18: стрелки-подсказки свайпа в StoryViewer (default true, выключается в настройках).
         val STORIES_SWIPE_HINTS = booleanPreferencesKey("stories_swipe_hints")
+        val STORIES_BLOCK_ADS   = booleanPreferencesKey("stories_block_ads")
         // Audio auto-cache (Fix #110)
         val AUTO_CACHE_AUDIO     = booleanPreferencesKey("auto_cache_audio")
         // Network

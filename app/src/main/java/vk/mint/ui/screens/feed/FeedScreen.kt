@@ -377,6 +377,7 @@ fun FeedScreen(
             // тоже должен передавать initial-значение, иначе компилятор
             // падает: «No value passed for parameter 'storiesShown'».
             storiesShown = true,
+            storiesBlockAds = true,
             // Fix #110: autoCacheAudio добавлен в Snapshot — FeedScreen
             // тоже должен передавать initial-значение, иначе компилятор
             // падает: «No value passed for parameter 'autoCacheAudio'».

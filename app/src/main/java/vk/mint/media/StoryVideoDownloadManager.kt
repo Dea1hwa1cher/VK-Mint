@@ -177,6 +177,11 @@ object StoryVideoDownloadManager {
     ) {
         ensureInitialized()
 
+        if (story.isAdStory) {
+            AppLog.d(TAG, "enqueueDownload: skipped ad story #${story.id}")
+            return
+        }
+
         val storyVideo = story.video
         if (storyVideo == null) {
             AppLog.w(TAG, "enqueueDownload: story #${story.id} has no video")
