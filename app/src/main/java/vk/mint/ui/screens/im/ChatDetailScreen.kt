@@ -1427,16 +1427,19 @@ fun ChatDetailScreen(
         // Fix #235: оборачиваем Uri в PendingPhoto(id, uri) — уникальный id для
         // стабильного ключа LazyRow (раньше ключ дублировался → crash).
         uri ?: return@rememberLauncherForActivityResult
-        pendingPhotos = (pendingPhotos + PendingPhoto(nextPendingPhotoId(), uri)).take(10)
+        val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+        pendingPhotos = (pendingPhotos + PendingPhoto(nextPendingPhotoId(), uri)).take(maxLimit)
     }
-    // Fix #234 (multi-photo preview): multi-photo picker — до 10 фото за раз.
+    // Fix #234 (multi-photo preview): multi-photo picker (до 100 фото при обходе лимита 10 вложений).
     // НЕ отправляем сразу, добавляем все URI в pendingPhotos для предпросмотра.
     val multiPhotoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10),
+        contract = ActivityResultContracts.PickMultipleVisualMedia(
+            maxItems = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10,
+        ),
     ) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
-        // Ограничиваем суммарно 10 фото (даже если уже были выбраны ранее).
-        val combined = (pendingPhotos + uris.map { PendingPhoto(nextPendingPhotoId(), it) }).take(10)
+        val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+        val combined = (pendingPhotos + uris.map { PendingPhoto(nextPendingPhotoId(), it) }).take(maxLimit)
         pendingPhotos = combined
     }
     // Fix #235 (multi-file): выбор НЕСКОЛЬКИХ файлов за раз (до 10).
@@ -1527,8 +1530,8 @@ fun ChatDetailScreen(
             }
         }
         if (newFiles.isNotEmpty()) {
-            // Суммарно не больше 10 (VK messages.send лимит). Лишние (старые) — оставляем.
-            pendingFiles = (pendingFiles + newFiles).take(10)
+            val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+            pendingFiles = (pendingFiles + newFiles).take(maxLimit)
             AppLog.i("ChatDetailScreen", "filePicker: added ${newFiles.size} files, total pending=${pendingFiles.size}")
         }
     }
@@ -1615,7 +1618,8 @@ fun ChatDetailScreen(
         //       батчем (до 10 фото в одном сообщении).
         // Раньше cameraLauncher звал uploadAndSendPhoto напрямую — фото уходило
         // сразу, без превью и без отмены. Лог: "camera photo uploadAndSendPhoto sent".
-        pendingPhotos = (pendingPhotos + PendingPhoto(nextPendingPhotoId(), uri)).take(10)
+        val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+        pendingPhotos = (pendingPhotos + PendingPhoto(nextPendingPhotoId(), uri)).take(maxLimit)
         AppLog.i("ChatDetailScreen", "camera photo added to pendingPhotos (preview) — ${pendingPhotos.size} pending")
     }
     // P5.3: permission launcher для камеры (переиспользуем общий паттерн).
@@ -2689,7 +2693,8 @@ fun ChatDetailScreen(
                     // 120s покрывает large video upload + retry. После FIX-A
                     // (§44 silentRefreshViaRemixsid multi-strategy) cascade не должен
                     // возникать — это belt-and-suspenders.
-                    app.suppressAuthRelaunchFor(120_000L)
+                    val suppressMs = (photos.size * 15_000L).coerceAtLeast(120_000L)
+                    app.suppressAuthRelaunchFor(suppressMs)
                     val attachments = mutableListOf<String>()
                     var authFailed = false
                     for (p in photos) {
@@ -2783,7 +2788,8 @@ fun ChatDetailScreen(
                     val tickBefore = app.tokenInvalidationTicks.value
                     app.suppressNextAuthRelaunch = true
                     // §44 #ATTACH-SUPPRESS-WINDOW: 60s → 120s (см. фото-батч выше).
-                    app.suppressAuthRelaunchFor(120_000L)
+                    val suppressMs = (pfiles.size * 15_000L).coerceAtLeast(120_000L)
+                    app.suppressAuthRelaunchFor(suppressMs)
                     val attachments = mutableListOf<String>()
                     var authFailed = false
                     for (pf in pfiles) {

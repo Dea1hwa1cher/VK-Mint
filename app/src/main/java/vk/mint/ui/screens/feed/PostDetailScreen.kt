@@ -241,14 +241,18 @@ fun PostDetailScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         uri ?: return@rememberLauncherForActivityResult
-        pendingCommentPhotos = (pendingCommentPhotos + PendingPhoto(nextPendingPhotoId(), uri)).take(10)
+        val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+        pendingCommentPhotos = (pendingCommentPhotos + PendingPhoto(nextPendingPhotoId(), uri)).take(maxLimit)
     }
-    // Fix #234: multi-photo picker — до 10 фото за раз для комментария.
+    // Fix #234: multi-photo picker (до 100 фото при обходе лимита 10 вложений).
     val commentMultiPhotoLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10),
+        contract = ActivityResultContracts.PickMultipleVisualMedia(
+            maxItems = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10,
+        ),
     ) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
-        val combined = (pendingCommentPhotos + uris.map { PendingPhoto(nextPendingPhotoId(), it) }).take(10)
+        val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+        val combined = (pendingCommentPhotos + uris.map { PendingPhoto(nextPendingPhotoId(), it) }).take(maxLimit)
         pendingCommentPhotos = combined
     }
     // Fix #237 (multi-file): выбор НЕСКОЛЬКИХ файлов за раз (до 10), как в чате.
@@ -302,8 +306,8 @@ fun PostDetailScreen(
             }
         }
         if (newFiles.isNotEmpty()) {
-            // VK wall.createComment принимает до 10 attachments. Лимит — 10 суммарно.
-            pendingCommentFiles = (pendingCommentFiles + newFiles).take(10)
+            val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+            pendingCommentFiles = (pendingCommentFiles + newFiles).take(maxLimit)
             AppLog.i("PostDetail", "comment filePicker: added ${newFiles.size} files, total=${pendingCommentFiles.size}")
         }
     }
@@ -319,7 +323,8 @@ fun PostDetailScreen(
         val uri = cameraImageUri
         cameraImageUri = null
         if (!ok || uri == null) return@rememberLauncherForActivityResult
-        pendingCommentPhotos = (pendingCommentPhotos + PendingPhoto(nextPendingPhotoId(), uri)).take(10)
+        val maxLimit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+        pendingCommentPhotos = (pendingCommentPhotos + PendingPhoto(nextPendingPhotoId(), uri)).take(maxLimit)
         AppLog.i("PostDetail", "camera photo added to pendingCommentPhotos (preview)")
     }
     val cameraPermissionLauncher = rememberLauncherForActivityResult(

@@ -5679,6 +5679,30 @@ class VKApiClient(
             "message" to message,
         )
         if (!attachments.isNullOrBlank()) {
+            val items = attachments.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val bypass = runCatching { prefs.data.first().bypassAttachmentLimit }.getOrDefault(true)
+            if (bypass && items.size > 10) {
+                // #BYPASS-ATTACHMENT-LIMIT: обход лимита в 10 вложений — автоматическая отправка цепочкой комментариев
+                val chunks = items.chunked(10)
+                var firstCommentId = -1L
+                for ((index, chunk) in chunks.withIndex()) {
+                    val chunkMsg = if (index == 0) message else ""
+                    val chunkReply = if (index == 0) replyToComment else firstCommentId
+                    val subId = wallCreateComment(
+                        ownerId = ownerId,
+                        postId = postId,
+                        message = chunkMsg,
+                        attachments = chunk.joinToString(","),
+                        replyToComment = chunkReply,
+                    )
+                    if (index == 0) firstCommentId = subId
+                    if (subId <= 0 && index == 0) return -1L
+                    if (index < chunks.size - 1) {
+                        kotlinx.coroutines.delay(200L)
+                    }
+                }
+                return firstCommentId
+            }
             args["attachments"] = attachments
         }
         // Fix #209: ответ на комментарий (threaded reply).
@@ -5715,6 +5739,30 @@ class VKApiClient(
             "random_id" to rid.toString(),
         )
         if (attachment.isNotBlank()) {
+            val items = attachment.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val bypass = runCatching { prefs.data.first().bypassAttachmentLimit }.getOrDefault(true)
+            if (bypass && items.size > 10) {
+                // #BYPASS-ATTACHMENT-LIMIT: обход лимита в 10 вложений — автоматическая отправка цепочкой
+                val chunks = items.chunked(10)
+                var firstMsgId = -1L
+                for ((index, chunk) in chunks.withIndex()) {
+                    val chunkMsg = if (index == 0) message else ""
+                    val chunkReply = if (index == 0) replyCmid else null
+                    val subId = messagesSend(
+                        peerId = peerId,
+                        message = chunkMsg,
+                        randomId = if (index == 0 && randomId != 0L) randomId else 0L,
+                        attachment = chunk.joinToString(","),
+                        replyCmid = chunkReply,
+                    )
+                    if (index == 0) firstMsgId = subId
+                    if (subId <= 0 && index == 0) return -1L
+                    if (index < chunks.size - 1) {
+                        kotlinx.coroutines.delay(200L)
+                    }
+                }
+                return firstMsgId
+            }
             args["attachment"] = attachment
         }
         // Fix #203c: VK API 5.221+ ПОЛНОСТЬЮ deprecated параметр `reply_to` —
@@ -7107,21 +7155,48 @@ class VKApiClient(
         signed: Boolean = false,
     ): Long {
         if (isOffline()) return -1L
-        val args = mutableMapOf(
-            "message" to message,
-            "attachments" to attachments,
-        )
-        if (ownerId != null && ownerId != 0L) args["owner_id"] = ownerId.toString()
-        if (friendsOnly) args["friends_only"] = "1"
-        if (publishDate != null && publishDate > 0) args["publish_date"] = publishDate.toString()
-        // W36 #COMMUNITY-COMPOSER: от имени сообщества / подпись автора.
-        if (fromGroup) args["from_group"] = "1"
-        if (signed) args["signed"] = "1"
-        val json = call("wall.post", args) ?: return -1L
-        // #SHARE-18B: мульти-формат ответа (items / post_id / post.id) —
-        // как в wallPost; иного поведения не меняет, только чинит
-        // документированный формат {"response":{"post_id":N}}.
-        return parseWallPostId(json, "wallPostWithAttachments")
+        val items = attachments.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        val bypass = runCatching { prefs.data.first().bypassAttachmentLimit }.getOrDefault(true)
+        if (!bypass || items.size <= 10) {
+            val args = mutableMapOf(
+                "message" to message,
+                "attachments" to attachments,
+            )
+            if (ownerId != null && ownerId != 0L) args["owner_id"] = ownerId.toString()
+            if (friendsOnly) args["friends_only"] = "1"
+            if (publishDate != null && publishDate > 0) args["publish_date"] = publishDate.toString()
+            if (fromGroup) args["from_group"] = "1"
+            if (signed) args["signed"] = "1"
+            val json = call("wall.post", args) ?: return -1L
+            return parseWallPostId(json, "wallPostWithAttachments")
+        } else {
+            // #BYPASS-ATTACHMENT-LIMIT: обход лимита в 10 вложений — автоматическая публикация серией записей
+            val chunks = items.chunked(10)
+            var firstPostId = -1L
+            for ((index, chunk) in chunks.withIndex()) {
+                val chunkAttachments = chunk.joinToString(",")
+                val chunkMessage = if (index == 0) message else ""
+                val args = mutableMapOf(
+                    "message" to chunkMessage,
+                    "attachments" to chunkAttachments,
+                )
+                if (ownerId != null && ownerId != 0L) args["owner_id"] = ownerId.toString()
+                if (friendsOnly) args["friends_only"] = "1"
+                if (publishDate != null && publishDate > 0) {
+                    args["publish_date"] = (publishDate + index).toString()
+                }
+                if (fromGroup) args["from_group"] = "1"
+                if (signed) args["signed"] = "1"
+                val json = call("wall.post", args) ?: return if (index > 0) firstPostId else -1L
+                val postId = parseWallPostId(json, "wallPostWithAttachments_chunk$index")
+                if (index == 0) firstPostId = postId
+                if (postId <= 0 && index == 0) return -1L
+                if (index < chunks.size - 1) {
+                    kotlinx.coroutines.delay(300L)
+                }
+            }
+            return firstPostId
+        }
     }
 
     /**
@@ -10294,19 +10369,50 @@ class VKApiClient(
     /** Отправить сообщение с attachment (doc, photo, wall, etc.). */
     suspend fun sendWithAttachment(peerId: Long, attachment: String, message: String = ""): Long {
         if (isOffline()) return -1L
-        val args = mutableMapOf(
-            "peer_id" to peerId.toString(),
-            "attachment" to attachment,
-            "random_id" to randomIdCounter.incrementAndGet().toString(),
-        )
-        if (message.isNotBlank()) args["message"] = message
-        val json = call("messages.send", args) ?: return -1L
-        return try {
-            json.getAsJsonObject("response")?.getAsJsonArray("items")
-                ?.firstOrNull()?.asJsonObject?.get("message_id")?.asLong
-                ?: json.getAsJsonObject("response")?.get("message_id")?.asLong
-                ?: -1L
-        } catch (_: Exception) { -1L }
+        val items = attachment.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        val bypass = runCatching { prefs.data.first().bypassAttachmentLimit }.getOrDefault(true)
+        if (!bypass || items.size <= 10) {
+            val args = mutableMapOf(
+                "peer_id" to peerId.toString(),
+                "attachment" to attachment,
+                "random_id" to randomIdCounter.incrementAndGet().toString(),
+            )
+            if (message.isNotBlank()) args["message"] = message
+            val json = call("messages.send", args) ?: return -1L
+            return try {
+                json.getAsJsonObject("response")?.getAsJsonArray("items")
+                    ?.firstOrNull()?.asJsonObject?.get("message_id")?.asLong
+                    ?: json.getAsJsonObject("response")?.get("message_id")?.asLong
+                    ?: -1L
+            } catch (_: Exception) { -1L }
+        } else {
+            // #BYPASS-ATTACHMENT-LIMIT: обход лимита в 10 вложений — автоматическая отправка цепочкой сообщений
+            val chunks = items.chunked(10)
+            var firstMessageId = -1L
+            for ((index, chunk) in chunks.withIndex()) {
+                val chunkAttachment = chunk.joinToString(",")
+                val chunkMessage = if (index == 0) message else ""
+                val args = mutableMapOf(
+                    "peer_id" to peerId.toString(),
+                    "attachment" to chunkAttachment,
+                    "random_id" to randomIdCounter.incrementAndGet().toString(),
+                )
+                if (chunkMessage.isNotBlank()) args["message"] = chunkMessage
+                val json = call("messages.send", args) ?: return if (index > 0) firstMessageId else -1L
+                val msgId = try {
+                    json.getAsJsonObject("response")?.getAsJsonArray("items")
+                        ?.firstOrNull()?.asJsonObject?.get("message_id")?.asLong
+                        ?: json.getAsJsonObject("response")?.get("message_id")?.asLong
+                        ?: -1L
+                } catch (_: Exception) { -1L }
+                if (index == 0) firstMessageId = msgId
+                if (msgId <= 0 && index == 0) return -1L
+                if (index < chunks.size - 1) {
+                    kotlinx.coroutines.delay(200L)
+                }
+            }
+            return firstMessageId
+        }
     }
 
     /**

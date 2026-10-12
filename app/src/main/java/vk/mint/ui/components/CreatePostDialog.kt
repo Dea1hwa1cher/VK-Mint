@@ -218,12 +218,15 @@ fun CreatePostDialog(
         Toast.makeText(ctx, message, Toast.LENGTH_SHORT).show()
     }
 
-    // #ATTACH-UNIFY: мульти-фото с устройства — до 10 за раз (паттерн чата, Fix #234).
+    // #ATTACH-UNIFY: мульти-фото с устройства (до 100 при включённом обходе лимита, Fix #234).
     val multiPhotoLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 10),
+        contract = ActivityResultContracts.PickMultipleVisualMedia(
+            maxItems = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10,
+        ),
     ) { uris ->
         if (uris.isNotEmpty()) {
-            pendingPhotos = (pendingPhotos + uris).take(10)
+            val limit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+            pendingPhotos = (pendingPhotos + uris).take(limit)
         }
     }
     // #ATTACH-UNIFY: видео с устройства (PickVisualMedia.VideoOnly).
@@ -232,8 +235,7 @@ fun CreatePostDialog(
     ) { uri ->
         if (uri != null) pendingVideoUri = uri
     }
-    // #ATTACH-UNIFY: файлы с устройства — до 10 (OpenMultipleDocuments, паттерн
-    // комментария PostDetail Fix #237: URI → temp-файл → upload при публикации).
+    // #ATTACH-UNIFY: файлы с устройства (до 100 при включённом обходе лимита).
     val multiFileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris ->
@@ -270,19 +272,21 @@ fun CreatePostDialog(
             }
         }
         if (newFiles.isNotEmpty()) {
-            pendingFiles = (pendingFiles + newFiles).take(10)
+            val limit = if (app.prefsSnapshot?.bypassAttachmentLimit ?: true) 100 else 10
+            pendingFiles = (pendingFiles + newFiles).take(limit)
         }
     }
 
     // #ATTACH-UNIFY: самостоятельная публикация с внутренними вложениями.
     suspend fun postWithAttachments(message: String, onlyFriends: Boolean) {
-        // Лимит VK: до 10 вложений на пост — честный отказ, не молчаливое усечение.
+        // Лимит VK: до 10 вложений на пост (при выключенном обходе лимита — честный отказ).
         val totalCount = pendingPhotos.size + pendingFiles.size + vkAttachments.size +
             (if (pendingVideoUri != null) 1 else 0) +
             (if (videoLinkAttachment != null) 1 else 0) +
             (if (pollAttachment != null) 1 else 0) +
             (if (selectedPhotoUri != null) 1 else 0)
-        if (totalCount > 10) {
+        val bypass = app.prefsSnapshot?.bypassAttachmentLimit ?: true
+        if (!bypass && totalCount > 10) {
             toastLocal("VK: не более 10 вложений на пост")
             return
         }
@@ -371,7 +375,7 @@ fun CreatePostDialog(
                 )
                 if (postId > 0) {
                     AppLog.i("CreatePostDialog", "group post created: id=$postId, groupId=$gid, fromGroup=$effFromGroup")
-                    toastLocal("Опубликовано")
+                    toastLocal(if (attachments.size > 10) "Опубликовано (серия записей: ${attachments.size} вложений)" else "Опубликовано")
                 } else {
                     AppLog.w("CreatePostDialog", "wallPostWithAttachments(group) failed")
                     toastLocal("Не удалось опубликовать пост")
@@ -392,7 +396,7 @@ fun CreatePostDialog(
             )
             if (postId > 0) {
                 AppLog.i("CreatePostDialog", "post created: id=$postId, attachments=${attachments.size}")
-                toastLocal("Опубликовано")
+                toastLocal(if (attachments.size > 10) "Опубликовано (серия записей: ${attachments.size} вложений)" else "Опубликовано")
             } else {
                 AppLog.w("CreatePostDialog", "wallPostWithAttachments failed")
                 toastLocal("Не удалось опубликовать пост")

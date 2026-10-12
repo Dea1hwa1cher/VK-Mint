@@ -263,6 +263,7 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             hiddenChatsPinHash = p[Keys.HIDDEN_CHATS_PIN_HASH]     ?: "",
             voiceDisableProximity = p[Keys.VOICE_DISABLE_PROXIMITY] ?: false,
             voiceShowDownloadButton = p[Keys.VOICE_SHOW_DOWNLOAD_BUTTON] ?: true,
+            bypassAttachmentLimit = p[Keys.BYPASS_ATTACHMENT_LIMIT] ?: true,
             userAliases = parseUserAliases(p[Keys.LOCAL_USER_ALIASES] ?: "").also {
                 UserAliasResolver.update(it)
             },
@@ -744,6 +745,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setVoiceDisableProximity(v: Boolean)     = put(Keys.VOICE_DISABLE_PROXIMITY, v)
     /** Показывать кнопку скачивания .ogg в плеере голосового сообщения. */
     suspend fun setVoiceShowDownloadButton(v: Boolean)   = put(Keys.VOICE_SHOW_DOWNLOAD_BUTTON, v)
+    /** Обход лимита в 10 вложений к посту/сообщению (серия постов/цепочка сообщений). */
+    suspend fun setBypassAttachmentLimit(v: Boolean)     = put(Keys.BYPASS_ATTACHMENT_LIMIT, v)
     /** Fix #392 #IM-LOCAL-PIN: персист порядка закреплённых диалогов (List<Long> → JSON, атомарный put). */
     suspend fun setImPinnedDialogs(peerIds: List<Long>)  = put(Keys.IM_PINNED_DIALOGS, imPinnedGson.toJson(peerIds))
 
@@ -1727,6 +1730,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val voiceDisableProximity: Boolean = false,
         /** Показывать кнопку скачивания .ogg в плеере голосового сообщения (default true). */
         val voiceShowDownloadButton: Boolean = true,
+        /** Обход лимита в 10 вложений к посту/сообщению (серия постов/цепочка сообщений, default true). */
+        val bypassAttachmentLimit: Boolean = true,
         /** Локальные псевдонимы пользователей (userId -> alias). */
         val userAliases: Map<Long, String> = emptyMap(),
         /** Fix #392 #IM-LOCAL-PIN: peer_id локально закреплённых диалогов в ПОРЯДКЕ ЗАКРЕПЛЕНИЯ (0-й — верх списка; уже распарсен из JSON). Дефолт обязателен: FeedScreen:234 строит dummy-Snapshot named-параметрами (класс бага Fix #276/#356 — без дефолта компиляция падает). */
@@ -2186,6 +2191,8 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val VOICE_DISABLE_PROXIMITY = booleanPreferencesKey("voice_disable_proximity")
         // Показывать кнопку скачивания .ogg в плеере голосового сообщения (default true).
         val VOICE_SHOW_DOWNLOAD_BUTTON = booleanPreferencesKey("voice_show_download_button")
+        // Обход лимита в 10 вложений к посту/сообщению (серия постов/цепочка сообщений).
+        val BYPASS_ATTACHMENT_LIMIT = booleanPreferencesKey("bypass_attachment_limit")
         // Локальные псевдонимы пользователей (JSON-объект userId -> alias).
         val LOCAL_USER_ALIASES    = stringPreferencesKey("local_user_aliases")
         // Fix #392 #IM-LOCAL-PIN: локальный закреп диалогов (JSON array of peer_id в порядке

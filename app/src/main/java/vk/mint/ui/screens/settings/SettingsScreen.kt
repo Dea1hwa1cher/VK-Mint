@@ -2133,6 +2133,13 @@ private fun MessagesTab(
         item { ToggleRow("Выбор нескольких сообщений", s.msgMultiSelect) { scope.launch { app.prefs.setMsgMultiSelect(it) } } }
         // P3.5: multi-file upload — до 10 фото за раз.
         item { ToggleRow("Множественный выбор фото", s.msgMultiFile) { scope.launch { app.prefs.setMsgMultiFile(it) } } }
+        item {
+            ToggleRow(
+                title = "Обход лимита 10 вложений",
+                subtitle = "Автоматическая отправка цепочкой при выборе более 10 вложений к сообщению или посту",
+                checked = s.bypassAttachmentLimit,
+            ) { scope.launch { app.prefs.setBypassAttachmentLimit(it) } }
+        }
         // P3.6: dual send/mic button — state machine (EDIT/LOADING/LIMIT/MIC/SUBMIT).
         item { ToggleRow("Умная кнопка отправки", s.msgDualButton) { scope.launch { app.prefs.setMsgDualButton(it) } } }
 
