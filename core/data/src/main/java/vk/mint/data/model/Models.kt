@@ -111,11 +111,7 @@ data class Post(
      */
     fun containsAnyWord(words: Set<String>): Boolean {
         if (words.isEmpty()) return false
-        for (w in words) {
-            val query = w.trim()
-            if (query.isEmpty()) continue
-            if (text.contains(query, ignoreCase = true)) return true
-        }
+        if (text.matchesAnyStopWord(words)) return true
         copyHistory?.let { list ->
             for (repost in list) {
                 if (repost.containsAnyWord(words)) return true
@@ -128,6 +124,18 @@ data class Post(
         }
         return false
     }
+}
+
+/**
+ * Регистронезависимая проверка строки на вхождение хотя бы одного стоп-слова из [words].
+ */
+private fun CharSequence?.matchesAnyStopWord(words: Set<String>): Boolean {
+    if (this.isNullOrEmpty() || words.isEmpty()) return false
+    for (w in words) {
+        val query = w.trim()
+        if (query.isNotEmpty() && this.contains(query, ignoreCase = true)) return true
+    }
+    return false
 }
 
 data class Attachment(
@@ -230,27 +238,22 @@ data class Attachment(
      */
     fun containsAnyWord(words: Set<String>): Boolean {
         if (words.isEmpty()) return false
-        for (w in words) {
-            val query = w.trim()
-            if (query.isEmpty()) continue
-            if (link?.title?.contains(query, ignoreCase = true) == true ||
-                link?.description?.contains(query, ignoreCase = true) == true ||
-                doc?.title?.contains(query, ignoreCase = true) == true ||
-                poll?.question?.contains(query, ignoreCase = true) == true ||
-                video?.title?.contains(query, ignoreCase = true) == true ||
-                video?.description?.contains(query, ignoreCase = true) == true ||
-                photo?.text?.contains(query, ignoreCase = true) == true ||
-                audio?.title?.contains(query, ignoreCase = true) == true ||
-                audio?.artist?.contains(query, ignoreCase = true) == true ||
-                audioPlaylist?.title?.contains(query, ignoreCase = true) == true ||
-                audioPlaylist?.description?.contains(query, ignoreCase = true) == true ||
-                audioMessage?.transcript?.contains(query, ignoreCase = true) == true
-            ) {
-                return true
-            }
+        if (link?.title.matchesAnyStopWord(words) ||
+            link?.description.matchesAnyStopWord(words) ||
+            doc?.title.matchesAnyStopWord(words) ||
+            poll?.question.matchesAnyStopWord(words) ||
+            video?.title.matchesAnyStopWord(words) ||
+            video?.description.matchesAnyStopWord(words) ||
+            photo?.text.matchesAnyStopWord(words) ||
+            audio?.title.matchesAnyStopWord(words) ||
+            audio?.artist.matchesAnyStopWord(words) ||
+            audioPlaylist?.title.matchesAnyStopWord(words) ||
+            audioPlaylist?.description.matchesAnyStopWord(words) ||
+            audioMessage?.transcript.matchesAnyStopWord(words)
+        ) {
+            return true
         }
-        if (wall?.containsAnyWord(words) == true) return true
-        return false
+        return wall?.containsAnyWord(words) == true
     }
 }
 
@@ -989,12 +992,11 @@ data class Message(
      */
     fun containsAnyWord(words: Set<String>): Boolean {
         if (words.isEmpty()) return false
-        for (w in words) {
-            val query = w.trim()
-            if (query.isEmpty()) continue
-            if (text.contains(query, ignoreCase = true)) return true
-            if (originalText?.contains(query, ignoreCase = true) == true) return true
-            if (actionText?.contains(query, ignoreCase = true) == true) return true
+        if (text.matchesAnyStopWord(words) ||
+            originalText.matchesAnyStopWord(words) ||
+            actionText.matchesAnyStopWord(words)
+        ) {
+            return true
         }
         if (replyMessage?.containsAnyWord(words) == true) return true
         fwdMessages?.let { list ->
@@ -1084,11 +1086,7 @@ data class Comment(
      */
     fun containsAnyWord(words: Set<String>): Boolean {
         if (words.isEmpty()) return false
-        for (w in words) {
-            val query = w.trim()
-            if (query.isEmpty()) continue
-            if (text.contains(query, ignoreCase = true)) return true
-        }
+        if (text.matchesAnyStopWord(words)) return true
         attachments?.let { atts ->
             for (att in atts) {
                 if (att.containsAnyWord(words)) return true

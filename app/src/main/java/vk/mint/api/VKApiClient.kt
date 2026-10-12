@@ -7157,46 +7157,39 @@ class VKApiClient(
         if (isOffline()) return -1L
         val items = attachments.split(",").map { it.trim() }.filter { it.isNotEmpty() }
         val bypass = runCatching { prefs.data.first().bypassAttachmentLimit }.getOrDefault(true)
-        if (!bypass || items.size <= 10) {
-            val args = mutableMapOf(
-                "message" to message,
-                "attachments" to attachments,
-            )
-            if (ownerId != null && ownerId != 0L) args["owner_id"] = ownerId.toString()
-            if (friendsOnly) args["friends_only"] = "1"
-            if (publishDate != null && publishDate > 0) args["publish_date"] = publishDate.toString()
-            if (fromGroup) args["from_group"] = "1"
-            if (signed) args["signed"] = "1"
-            val json = call("wall.post", args) ?: return -1L
-            return parseWallPostId(json, "wallPostWithAttachments")
-        } else {
+        if (bypass && items.size > 10) {
             // #BYPASS-ATTACHMENT-LIMIT: обход лимита в 10 вложений — автоматическая публикация серией записей
             val chunks = items.chunked(10)
             var firstPostId = -1L
             for ((index, chunk) in chunks.withIndex()) {
-                val chunkAttachments = chunk.joinToString(",")
-                val chunkMessage = if (index == 0) message else ""
-                val args = mutableMapOf(
-                    "message" to chunkMessage,
-                    "attachments" to chunkAttachments,
+                val postId = wallPostWithAttachments(
+                    message = if (index == 0) message else "",
+                    attachments = chunk.joinToString(","),
+                    ownerId = ownerId,
+                    friendsOnly = friendsOnly,
+                    publishDate = if (publishDate != null && publishDate > 0) publishDate + index else publishDate,
+                    fromGroup = fromGroup,
+                    signed = signed,
                 )
-                if (ownerId != null && ownerId != 0L) args["owner_id"] = ownerId.toString()
-                if (friendsOnly) args["friends_only"] = "1"
-                if (publishDate != null && publishDate > 0) {
-                    args["publish_date"] = (publishDate + index).toString()
-                }
-                if (fromGroup) args["from_group"] = "1"
-                if (signed) args["signed"] = "1"
-                val json = call("wall.post", args) ?: return if (index > 0) firstPostId else -1L
-                val postId = parseWallPostId(json, "wallPostWithAttachments_chunk$index")
                 if (index == 0) firstPostId = postId
-                if (postId <= 0 && index == 0) return -1L
+                if (postId <= 0) return if (index > 0) firstPostId else -1L
                 if (index < chunks.size - 1) {
                     kotlinx.coroutines.delay(300L)
                 }
             }
             return firstPostId
         }
+        val args = mutableMapOf(
+            "message" to message,
+            "attachments" to attachments,
+        )
+        if (ownerId != null && ownerId != 0L) args["owner_id"] = ownerId.toString()
+        if (friendsOnly) args["friends_only"] = "1"
+        if (publishDate != null && publishDate > 0) args["publish_date"] = publishDate.toString()
+        if (fromGroup) args["from_group"] = "1"
+        if (signed) args["signed"] = "1"
+        val json = call("wall.post", args) ?: return -1L
+        return parseWallPostId(json, "wallPostWithAttachments")
     }
 
     /**
@@ -10367,53 +10360,8 @@ class VKApiClient(
     }
 
     /** Отправить сообщение с attachment (doc, photo, wall, etc.). */
-    suspend fun sendWithAttachment(peerId: Long, attachment: String, message: String = ""): Long {
-        if (isOffline()) return -1L
-        val items = attachment.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        val bypass = runCatching { prefs.data.first().bypassAttachmentLimit }.getOrDefault(true)
-        if (!bypass || items.size <= 10) {
-            val args = mutableMapOf(
-                "peer_id" to peerId.toString(),
-                "attachment" to attachment,
-                "random_id" to randomIdCounter.incrementAndGet().toString(),
-            )
-            if (message.isNotBlank()) args["message"] = message
-            val json = call("messages.send", args) ?: return -1L
-            return try {
-                json.getAsJsonObject("response")?.getAsJsonArray("items")
-                    ?.firstOrNull()?.asJsonObject?.get("message_id")?.asLong
-                    ?: json.getAsJsonObject("response")?.get("message_id")?.asLong
-                    ?: -1L
-            } catch (_: Exception) { -1L }
-        } else {
-            // #BYPASS-ATTACHMENT-LIMIT: обход лимита в 10 вложений — автоматическая отправка цепочкой сообщений
-            val chunks = items.chunked(10)
-            var firstMessageId = -1L
-            for ((index, chunk) in chunks.withIndex()) {
-                val chunkAttachment = chunk.joinToString(",")
-                val chunkMessage = if (index == 0) message else ""
-                val args = mutableMapOf(
-                    "peer_id" to peerId.toString(),
-                    "attachment" to chunkAttachment,
-                    "random_id" to randomIdCounter.incrementAndGet().toString(),
-                )
-                if (chunkMessage.isNotBlank()) args["message"] = chunkMessage
-                val json = call("messages.send", args) ?: return if (index > 0) firstMessageId else -1L
-                val msgId = try {
-                    json.getAsJsonObject("response")?.getAsJsonArray("items")
-                        ?.firstOrNull()?.asJsonObject?.get("message_id")?.asLong
-                        ?: json.getAsJsonObject("response")?.get("message_id")?.asLong
-                        ?: -1L
-                } catch (_: Exception) { -1L }
-                if (index == 0) firstMessageId = msgId
-                if (msgId <= 0 && index == 0) return -1L
-                if (index < chunks.size - 1) {
-                    kotlinx.coroutines.delay(200L)
-                }
-            }
-            return firstMessageId
-        }
-    }
+    suspend fun sendWithAttachment(peerId: Long, attachment: String, message: String = ""): Long =
+        messagesSend(peerId = peerId, message = message, attachment = attachment)
 
     /**
      * Fix #234 (multi-photo preview): загрузить ФОТО для комментария к посту.

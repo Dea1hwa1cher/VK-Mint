@@ -1661,8 +1661,6 @@ private fun FeedTab(
     scope: CoroutineScope,
     onOpenHiddenSources: () -> Unit = {},
 ) {
-    var showStopWordsDialog by remember { mutableStateOf(false) }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1684,55 +1682,7 @@ private fun FeedTab(
             ) { scope.launch { app.prefs.setNewsRepostsHidden(it) } }
         }
         item { ToggleRow("Скрывать промо", s.newsPromoHidden) { scope.launch { app.prefs.setNewsPromoHidden(it) } } }
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .androidx_clickable { showStopWordsDialog = true },
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Block,
-                        contentDescription = null,
-                        tint = if (s.newsStopWordsEnabled && s.newsStopWords.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Чёрный список слов",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            text = when {
-                                s.newsStopWords.isEmpty() -> "Фильтрация отключена (список пуст, нажмите для настройки)"
-                                !s.newsStopWordsEnabled -> "Выключено (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
-                                else -> "Активно (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (s.newsStopWords.isNotEmpty()) {
-                        ExpressiveSwitch(
-                            checked = s.newsStopWordsEnabled,
-                            onCheckedChange = { enabled ->
-                                scope.launch { app.prefs.setNewsStopWordsEnabled(enabled) }
-                            },
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
+        item { StopWordsSettingsCard(s = s, app = app, scope = scope) }
         // IMP-FEED-2: строка-вход в экран «Скрытые источники» (менеджер мьютов
         // ленты, web: «Редактировать» правого меню) — стиль навигационных строк
         // экрана (иконка+текст+шеврон, как «Чёрный список» в NotificationsTab).
@@ -1878,6 +1828,63 @@ private fun FeedTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StopWordsSettingsCard(
+    s: VkMintPrefs.Snapshot,
+    app: VkMintApp,
+    scope: CoroutineScope,
+) {
+    var showStopWordsDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .androidx_clickable { showStopWordsDialog = true },
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Block,
+                contentDescription = null,
+                tint = if (s.newsStopWordsEnabled && s.newsStopWords.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Чёрный список слов",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = when {
+                        s.newsStopWords.isEmpty() -> "Фильтрация отключена (список пуст, нажмите для настройки)"
+                        !s.newsStopWordsEnabled -> "Выключено (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
+                        else -> "Активно (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (s.newsStopWords.isNotEmpty()) {
+                ExpressiveSwitch(
+                    checked = s.newsStopWordsEnabled,
+                    onCheckedChange = { enabled ->
+                        scope.launch { app.prefs.setNewsStopWordsEnabled(enabled) }
+                    },
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -2058,62 +2065,12 @@ private fun MessagesTab(
     app: VkMintApp,
     scope: CoroutineScope,
 ) {
-    var showStopWordsDialog by remember { mutableStateOf(false) }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item { SectionHeader("Фильтрация контента") }
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .androidx_clickable { showStopWordsDialog = true },
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Block,
-                        contentDescription = null,
-                        tint = if (s.newsStopWordsEnabled && s.newsStopWords.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Чёрный список слов",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            text = when {
-                                s.newsStopWords.isEmpty() -> "Фильтрация отключена (список пуст, нажмите для настройки)"
-                                !s.newsStopWordsEnabled -> "Выключено (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
-                                else -> "Активно (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (s.newsStopWords.isNotEmpty()) {
-                        ExpressiveSwitch(
-                            checked = s.newsStopWordsEnabled,
-                            onCheckedChange = { enabled ->
-                                scope.launch { app.prefs.setNewsStopWordsEnabled(enabled) }
-                            },
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
+        item { StopWordsSettingsCard(s = s, app = app, scope = scope) }
 
         item { SectionHeader("Приватность сообщений") }
         item { ToggleRow("DNR (не читать)", s.msgDnr) { scope.launch { app.prefs.setMsgDnr(it) } } }
@@ -2292,21 +2249,6 @@ private fun MessagesTab(
         //   setter сохраняется но VKApiClient не проверяет флаг.
         // - "WebSocket для каналов" (msgWsChannels) — ChannelWebSocketClient
         //   существует но не инстанциируется, методы STUB с TODO.
-    }
-
-    if (showStopWordsDialog) {
-        StopWordsDialog(
-            currentWords = s.newsStopWords,
-            isEnabled = s.newsStopWordsEnabled,
-            onDismiss = { showStopWordsDialog = false },
-            onSave = { newWords, enabled ->
-                scope.launch {
-                    app.prefs.setNewsStopWords(newWords)
-                    app.prefs.setNewsStopWordsEnabled(enabled)
-                }
-                showStopWordsDialog = false
-            },
-        )
     }
 }
 
@@ -2752,67 +2694,23 @@ private fun BubblePaletteSettingsCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutlinedTextField(
+                    BubbleHexField(
                         value = outBgInput,
-                        onValueChange = { raw ->
-                            val clean = raw.filter { it == '#' || it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }.take(9)
-                            outBgInput = clean
-                            if (clean.isBlank()) {
-                                scope.launch { app.prefs.setMsgBubbleOutBgHex("") }
-                            } else if (clean.removePrefix("#").length >= 6 && BubbleColorPresets.isValidHex(clean)) {
-                                scope.launch { app.prefs.setMsgBubbleOutBgHex(BubbleColorPresets.normalizeHex(clean)) }
-                            }
-                        },
-                        label = { Text("Фон (#HEX)") },
-                        placeholder = { Text("#0077FF") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { focusState ->
-                                if (!focusState.isFocused && BubbleColorPresets.isValidHex(outBgInput)) {
-                                    scope.launch { app.prefs.setMsgBubbleOutBgHex(BubbleColorPresets.normalizeHex(outBgInput)) }
-                                }
-                            },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(outBgColor)
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
-                            )
-                        },
+                        onValueChange = { outBgInput = it },
+                        onPersist = { hex -> scope.launch { app.prefs.setMsgBubbleOutBgHex(hex) } },
+                        label = "Фон (#HEX)",
+                        placeholder = "#0077FF",
+                        swatchColor = outBgColor,
+                        modifier = Modifier.weight(1f),
                     )
-                    OutlinedTextField(
+                    BubbleHexField(
                         value = outTextInput,
-                        onValueChange = { raw ->
-                            val clean = raw.filter { it == '#' || it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }.take(9)
-                            outTextInput = clean
-                            if (clean.isBlank()) {
-                                scope.launch { app.prefs.setMsgBubbleOutTextHex("") }
-                            } else if (clean.removePrefix("#").length >= 6 && BubbleColorPresets.isValidHex(clean)) {
-                                scope.launch { app.prefs.setMsgBubbleOutTextHex(BubbleColorPresets.normalizeHex(clean)) }
-                            }
-                        },
-                        label = { Text("Текст (авто)") },
-                        placeholder = { Text("Авто-контраст") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { focusState ->
-                                if (!focusState.isFocused && BubbleColorPresets.isValidHex(outTextInput)) {
-                                    scope.launch { app.prefs.setMsgBubbleOutTextHex(BubbleColorPresets.normalizeHex(outTextInput)) }
-                                }
-                            },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(outTextColor)
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
-                            )
-                        },
+                        onValueChange = { outTextInput = it },
+                        onPersist = { hex -> scope.launch { app.prefs.setMsgBubbleOutTextHex(hex) } },
+                        label = "Текст (авто)",
+                        placeholder = "Авто-контраст",
+                        swatchColor = outTextColor,
+                        modifier = Modifier.weight(1f),
                     )
                 }
 
@@ -2829,69 +2727,23 @@ private fun BubblePaletteSettingsCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutlinedTextField(
+                    BubbleHexField(
                         value = inBgInput,
-                        onValueChange = { raw ->
-                            val clean = raw.filter { it == '#' || it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }.take(9)
-                            inBgInput = clean
-                            if (clean.isBlank()) {
-                                scope.launch { app.prefs.setMsgBubbleInBgHex("") }
-                            } else if (clean.removePrefix("#").length >= 6 && BubbleColorPresets.isValidHex(clean)) {
-                                scope.launch { app.prefs.setMsgBubbleInBgHex(BubbleColorPresets.normalizeHex(clean)) }
-                            }
-                        },
-                        label = { Text("Фон (#HEX)") },
-                        placeholder = { Text("#E5E5EA") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { focusState ->
-                                if (!focusState.isFocused && BubbleColorPresets.isValidHex(inBgInput)) {
-                                    scope.launch { app.prefs.setMsgBubbleInBgHex(BubbleColorPresets.normalizeHex(inBgInput)) }
-                                }
-                            },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(inBgColor)
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
-                            )
-                        },
+                        onValueChange = { inBgInput = it },
+                        onPersist = { hex -> scope.launch { app.prefs.setMsgBubbleInBgHex(hex) } },
+                        label = "Фон (#HEX)",
+                        placeholder = "#E5E5EA",
+                        swatchColor = inBgColor,
+                        modifier = Modifier.weight(1f),
                     )
-                    OutlinedTextField(
+                    BubbleHexField(
                         value = inTextInput,
-                        onValueChange = { raw ->
-                            val clean = raw.filter { it == '#' || it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }.take(9)
-                            inTextInput = clean
-                            if (clean.isBlank()) {
-                                scope.launch { app.prefs.setMsgBubbleInTextHex("") }
-                            } else if (BubbleColorPresets.isValidHex(clean)) {
-                                if (clean.removePrefix("#").length >= 6) {
-                                    scope.launch { app.prefs.setMsgBubbleInTextHex(BubbleColorPresets.normalizeHex(clean)) }
-                                }
-                            }
-                        },
-                        label = { Text("Текст (авто)") },
-                        placeholder = { Text("Авто-контраст") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { focusState ->
-                                if (!focusState.isFocused && BubbleColorPresets.isValidHex(inTextInput)) {
-                                    scope.launch { app.prefs.setMsgBubbleInTextHex(BubbleColorPresets.normalizeHex(inTextInput)) }
-                                }
-                            },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(inTextColor)
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
-                            )
-                        },
+                        onValueChange = { inTextInput = it },
+                        onPersist = { hex -> scope.launch { app.prefs.setMsgBubbleInTextHex(hex) } },
+                        label = "Текст (авто)",
+                        placeholder = "Авто-контраст",
+                        swatchColor = inTextColor,
+                        modifier = Modifier.weight(1f),
                     )
                 }
 
@@ -2921,6 +2773,47 @@ private fun BubblePaletteSettingsCard(
             }
         }
     }
+}
+
+@Composable
+private fun BubbleHexField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onPersist: (String) -> Unit,
+    label: String,
+    placeholder: String,
+    swatchColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { raw ->
+            val clean = raw.filter { it == '#' || it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }.take(9)
+            onValueChange(clean)
+            if (clean.isBlank()) {
+                onPersist("")
+            } else if (clean.removePrefix("#").length >= 6 && BubbleColorPresets.isValidHex(clean)) {
+                onPersist(BubbleColorPresets.normalizeHex(clean))
+            }
+        },
+        label = { Text(label) },
+        placeholder = { Text(placeholder) },
+        singleLine = true,
+        modifier = modifier.onFocusChanged { focusState ->
+            if (!focusState.isFocused && BubbleColorPresets.isValidHex(value)) {
+                onPersist(BubbleColorPresets.normalizeHex(value))
+            }
+        },
+        leadingIcon = {
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(swatchColor)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)),
+            )
+        },
+    )
 }
 
 @Composable
