@@ -3706,7 +3706,10 @@ private fun CommentsBottomSheet(
                     CircularProgressIndicator()
                 }
             } else {
-                val allComments = (comments + localComments).distinctBy { it.id }
+                val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
+                val allComments = (comments + localComments)
+                    .distinctBy { it.id }
+                    .filterNot { stopWords.isNotEmpty() && it.containsAnyWord(stopWords) }
                 if (allComments.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                         Text(

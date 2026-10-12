@@ -2306,7 +2306,12 @@ private fun ChatCard(
     // Fix #282: preview последнего сообщения — «Вы: » префикс для исходящих,
     // label типа вложения когда текст пуст, action-текст для service-сообщений.
     val lastMessage = chat.lastMessage
-    val preview = if (lastMessage == null) {
+    val app = vk.mint.VkMintApp.get()
+    val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
+    val isStopWord = stopWords.isNotEmpty() && lastMessage != null && lastMessage.containsAnyWord(stopWords)
+    val preview = if (isStopWord) {
+        "Сообщение скрыто фильтром"
+    } else if (lastMessage == null) {
         "…"
     } else if (lastMessage.isAction) {
         // Service-сообщение (chat_create, user_joined, …) — actionText содержит

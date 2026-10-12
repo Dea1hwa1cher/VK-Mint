@@ -78,6 +78,7 @@ import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Done
@@ -4968,10 +4969,16 @@ fun ChatDetailScreen(
                         // #CHANNEL-POST-CARD: в канальном history-режиме лента — это
                         // посты-карточки, а не чат, поэтому дата-разделители и
                         // unread-divider не показываем (обычные чаты не затрагиваются:
-                        // channelHistoryMode=false у них).
+                        // channelHistoryMode=false у них). Посты со стоп-словами фильтруются.
                         val chan = channelHistoryMode
+                        val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
+                        val effectiveMessages = if (chan && stopWords.isNotEmpty()) {
+                            messages.filterNot { it.containsAnyWord(stopWords) }
+                        } else {
+                            messages
+                        }
                         buildChatListItems(
-                            messages = messages,
+                            messages = effectiveMessages,
                             groupingEnabled = groupingEnabled,
                             dateSeparatorsEnabled = dateSeparatorsEnabled && !chan,
                             unreadDividerEnabled = unreadDividerEnabled && !chan,
@@ -6222,6 +6229,10 @@ private fun MessageBubble(
     // Poll/Voice) читают LocalAttachmentSelection сами.
     val sel = LocalAttachmentSelection.current
     val isOut = message.isOut
+    val app = vk.mint.VkMintApp.get()
+    val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
+    val isFiltered = !isOut && stopWords.isNotEmpty() && message.containsAnyWord(stopWords)
+    var revealFiltered by rememberSaveable(message.id) { mutableStateOf(false) }
     val bubbleColor = if (isOut) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -6521,6 +6532,33 @@ private fun MessageBubble(
             // P0.28: в selection mode добавляем padding справа сверху чтобы контент
             // (текст/вложения) не наползал на кружок выбора (28dp).
             Column(modifier = Modifier.padding(end = if (selectionMode) 32.dp else 0.dp)) {
+                if (isFiltered && !revealFiltered) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Block,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = textColor.copy(alpha = 0.7f),
+                        )
+                        Text(
+                            text = "Сообщение скрыто фильтром",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor.copy(alpha = 0.7f),
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        )
+                        Text(
+                            text = "Показать",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isOut && !bubbleless) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                            modifier = Modifier.clickable { revealFiltered = true },
+                        )
+                    }
+                } else {
                 // #60: Reply — ответ на сообщение (reply_message)
                 // Fix #206: плашка кликабельна → скролл к исходному сообщению
                 // (+подсветка), либо preview-диалог если цель вне загруженной истории.
@@ -7045,6 +7083,7 @@ private fun MessageBubble(
                         color = textColor.copy(alpha = 0.7f),
                         modifier = Modifier.padding(vertical = 4.dp),
                     )
+                }
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Row(

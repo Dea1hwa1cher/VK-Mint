@@ -460,8 +460,11 @@ fun PostDetailScreen(
         if (loadingComments && comments.isEmpty() && localComments.isEmpty()) return@LaunchedEffect
 
         // Та же дедупликация что и в LazyColumn (см. allComments выше).
+        val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
         val seenIds = HashSet<Long>()
-        val allComments = (localComments + comments).filter { seenIds.add(it.id) }
+        val allComments = (localComments + comments)
+            .filter { seenIds.add(it.id) }
+            .filterNot { stopWords.isNotEmpty() && it.containsAnyWord(stopWords) }
 
         // 1. Ищем среди top-level.
         val topLevelIdx = allComments.indexOfFirst { it.id == targetCommentId }
@@ -974,8 +977,22 @@ fun PostDetailScreen(
                         }
                     }
 
+                    // Fix #231: дедупликация по ID и фильтрация по стоп-словам.
+                    // wall.getComments может вернуть один и тот же комментарий дважды (thread-ответ
+                    // дублирует родителя, или пагинация вернула пересекающиеся окна).
+                    // localComments (оптимистично добавленные) тоже могут совпасть
+                    // с freshly-fetched comments после reload. Без дедупликации
+                    // LazyColumn крашит: "Key N was already used".
+                    // NB: plain Kotlin (без remember) — мы внутри LazyListScope,
+                    // это не @Composable-контекст, remember тут нельзя.
+                    val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
+                    val seenIds = HashSet<Long>()
+                    val allComments = (localComments + comments)
+                        .filter { seenIds.add(it.id) }
+                        .filterNot { stopWords.isNotEmpty() && it.containsAnyWord(stopWords) }
+
                     // Список комментариев.
-                    if (comments.isEmpty() && localComments.isEmpty() && !loadingComments) {
+                    if (allComments.isEmpty() && !loadingComments) {
                         item {
                             Text(
                                 "Пост ещё не прокомментирован.",
@@ -985,16 +1002,6 @@ fun PostDetailScreen(
                         }
                     }
 
-                    // Fix #231: дедупликация по ID. wall.getComments может вернуть
-                    // один и тот же комментарий дважды (thread-ответ дублирует
-                    // родителя, или пагинация вернула пересекающиеся окна).
-                    // localComments (оптимистично добавленные) тоже могут совпасть
-                    // с freshly-fetched comments после reload. Без дедупликации
-                    // LazyColumn крашит: "Key N was already used".
-                    // NB: plain Kotlin (без remember) — мы внутри LazyListScope,
-                    // это не @Composable-контекст, remember тут нельзя.
-                    val seenIds = HashSet<Long>()
-                    val allComments = (localComments + comments).filter { seenIds.add(it.id) }
                     // Fix #237: индекс по id — чтобы в CommentItem показать
                     // цитату-родителя (кого комментируют), а не просто «→ Имя».
                     val commentsById: Map<Long, Comment> = allComments.associateBy { it.id }

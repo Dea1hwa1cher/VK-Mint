@@ -123,22 +123,7 @@ data class Post(
         }
         attachments?.let { atts ->
             for (att in atts) {
-                for (w in words) {
-                    val query = w.trim()
-                    if (query.isEmpty()) continue
-                    if (att.link?.title?.contains(query, ignoreCase = true) == true ||
-                        att.link?.description?.contains(query, ignoreCase = true) == true ||
-                        att.doc?.title?.contains(query, ignoreCase = true) == true ||
-                        att.poll?.question?.contains(query, ignoreCase = true) == true ||
-                        att.video?.title?.contains(query, ignoreCase = true) == true ||
-                        att.video?.description?.contains(query, ignoreCase = true) == true ||
-                        att.photo?.text?.contains(query, ignoreCase = true) == true ||
-                        att.audio?.title?.contains(query, ignoreCase = true) == true ||
-                        att.audio?.artist?.contains(query, ignoreCase = true) == true
-                    ) {
-                        return true
-                    }
-                }
+                if (att.containsAnyWord(words)) return true
             }
         }
         return false
@@ -238,6 +223,34 @@ data class Attachment(
         )
 
         val isVoiceMessage: Boolean get() = audioMsg != null
+    }
+
+    /**
+     * Проверка вложения на наличие стоп-слов (ссылка, опрос, видео, аудио, документ, фото, плейлист, репост-стена).
+     */
+    fun containsAnyWord(words: Set<String>): Boolean {
+        if (words.isEmpty()) return false
+        for (w in words) {
+            val query = w.trim()
+            if (query.isEmpty()) continue
+            if (link?.title?.contains(query, ignoreCase = true) == true ||
+                link?.description?.contains(query, ignoreCase = true) == true ||
+                doc?.title?.contains(query, ignoreCase = true) == true ||
+                poll?.question?.contains(query, ignoreCase = true) == true ||
+                video?.title?.contains(query, ignoreCase = true) == true ||
+                video?.description?.contains(query, ignoreCase = true) == true ||
+                photo?.text?.contains(query, ignoreCase = true) == true ||
+                audio?.title?.contains(query, ignoreCase = true) == true ||
+                audio?.artist?.contains(query, ignoreCase = true) == true ||
+                audioPlaylist?.title?.contains(query, ignoreCase = true) == true ||
+                audioPlaylist?.description?.contains(query, ignoreCase = true) == true ||
+                audioMessage?.transcript?.contains(query, ignoreCase = true) == true
+            ) {
+                return true
+            }
+        }
+        if (wall?.containsAnyWord(words) == true) return true
+        return false
     }
 }
 
@@ -969,6 +982,33 @@ data class Message(
     val isAction: Boolean get() = action != null
     val hasReply: Boolean get() = replyMessage != null
     val hasForwarded: Boolean get() = !fwdMessages.isNullOrEmpty()
+
+    /**
+     * Проверка сообщения (текст, правки, системный текст, reply, пересланные, вложения)
+     * на наличие стоп-слов из чёрного списка.
+     */
+    fun containsAnyWord(words: Set<String>): Boolean {
+        if (words.isEmpty()) return false
+        for (w in words) {
+            val query = w.trim()
+            if (query.isEmpty()) continue
+            if (text.contains(query, ignoreCase = true)) return true
+            if (originalText?.contains(query, ignoreCase = true) == true) return true
+            if (actionText?.contains(query, ignoreCase = true) == true) return true
+        }
+        if (replyMessage?.containsAnyWord(words) == true) return true
+        fwdMessages?.let { list ->
+            for (fwd in list) {
+                if (fwd.containsAnyWord(words)) return true
+            }
+        }
+        attachments?.let { atts ->
+            for (att in atts) {
+                if (att.containsAnyWord(words)) return true
+            }
+        }
+        return false
+    }
 }
 
 /**
@@ -1037,6 +1077,30 @@ data class Comment(
         @SerializedName("can_post") val canPost: Boolean = false,
         @SerializedName("show_reply_button") val showReplyButton: Boolean = true,
     )
+
+    /**
+     * Проверка комментария (текст, вложения, вложенная ветка ответов)
+     * на наличие стоп-слов из чёрного списка.
+     */
+    fun containsAnyWord(words: Set<String>): Boolean {
+        if (words.isEmpty()) return false
+        for (w in words) {
+            val query = w.trim()
+            if (query.isEmpty()) continue
+            if (text.contains(query, ignoreCase = true)) return true
+        }
+        attachments?.let { atts ->
+            for (att in atts) {
+                if (att.containsAnyWord(words)) return true
+            }
+        }
+        thread?.items?.let { items ->
+            for (child in items) {
+                if (child.containsAnyWord(words)) return true
+            }
+        }
+        return false
+    }
 }
 
 /**

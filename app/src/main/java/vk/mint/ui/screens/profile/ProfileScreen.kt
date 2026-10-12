@@ -1460,18 +1460,20 @@ fun ProfileScreen(
             if (wallLoading) {
                 item { TabProgressRow() }
             }
+            val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
+            val filteredPosts = if (stopWords.isEmpty()) posts else posts.filterNot { it.containsAnyWord(stopWords) }
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 ) {
                     Text(
-                        text = "Записи (${posts.size})",
+                        text = "Записи (${filteredPosts.size})",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium,
                     )
                 }
             }
-            items(posts, key = { "${it.ownerId}_${it.id}" }) { post ->
+            items(filteredPosts, key = { "${it.ownerId}_${it.id}" }) { post ->
                 // П-6a: ключ поста для optimistic-карт лайка/действий.
                 val postKey = "${post.ownerId}_${post.id}"
                 WallPostCard(
@@ -1518,7 +1520,7 @@ fun ProfileScreen(
                         .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 )
             }
-            if (posts.isEmpty() && !wallLoading) {
+            if (filteredPosts.isEmpty() && !wallLoading) {
                 item {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(24.dp),

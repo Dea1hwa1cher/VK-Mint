@@ -1956,7 +1956,7 @@ private fun StopWordsDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    "Посты с указанными словами или фразами (в тексте, репостах и вложениях) будут скрыты из ленты новостей. Указывайте каждое слово или фразу на новой строке (регистр букв не важен).",
+                    "Контент с указанными словами или фразами (в ленте новостей, на стенах, в комментариях и сообщениях) будет отфильтрован. Указывайте каждое слово или фразу на новой строке (регистр букв не важен).",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -2044,10 +2044,63 @@ private fun MessagesTab(
     app: VkMintApp,
     scope: CoroutineScope,
 ) {
+    var showStopWordsDialog by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        item { SectionHeader("Фильтрация контента") }
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .androidx_clickable { showStopWordsDialog = true },
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Block,
+                        contentDescription = null,
+                        tint = if (s.newsStopWordsEnabled && s.newsStopWords.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Чёрный список слов",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            text = when {
+                                s.newsStopWords.isEmpty() -> "Фильтрация отключена (список пуст, нажмите для настройки)"
+                                !s.newsStopWordsEnabled -> "Выключено (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
+                                else -> "Активно (${s.newsStopWords.size} ${wordPlural(s.newsStopWords.size)} в списке)"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (s.newsStopWords.isNotEmpty()) {
+                        ExpressiveSwitch(
+                            checked = s.newsStopWordsEnabled,
+                            onCheckedChange = { enabled ->
+                                scope.launch { app.prefs.setNewsStopWordsEnabled(enabled) }
+                            },
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+
         item { SectionHeader("Приватность сообщений") }
         item { ToggleRow("DNR (не читать)", s.msgDnr) { scope.launch { app.prefs.setMsgDnr(it) } } }
         item { ToggleRow("DNT (не печатать)", s.msgDnt) { scope.launch { app.prefs.setMsgDnt(it) } } }
@@ -2210,7 +2263,21 @@ private fun MessagesTab(
         //   setter сохраняется но VKApiClient не проверяет флаг.
         // - "WebSocket для каналов" (msgWsChannels) — ChannelWebSocketClient
         //   существует но не инстанциируется, методы STUB с TODO.
-        // Pref и setter остаются в VkMintPrefs (не трогаем — обратная совместимость).
+    }
+
+    if (showStopWordsDialog) {
+        StopWordsDialog(
+            currentWords = s.newsStopWords,
+            isEnabled = s.newsStopWordsEnabled,
+            onDismiss = { showStopWordsDialog = false },
+            onSave = { newWords, enabled ->
+                scope.launch {
+                    app.prefs.setNewsStopWords(newWords)
+                    app.prefs.setNewsStopWordsEnabled(enabled)
+                }
+                showStopWordsDialog = false
+            },
+        )
     }
 }
 

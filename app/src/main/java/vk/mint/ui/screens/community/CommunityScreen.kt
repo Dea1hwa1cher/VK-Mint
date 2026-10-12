@@ -1114,12 +1114,15 @@ fun CommunityScreen(
                         }
                     }
                 }
+                val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
+                val filteredPosts = posts.filter { it.id != softDeletedPost?.id }
+                    .filterNot { stopWords.isNotEmpty() && it.containsAnyWord(stopWords) }
                 item {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     ) {
                         Text(
-                            text = "Записи (${posts.size})",
+                            text = "Записи (${filteredPosts.size})",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Medium,
                         )
@@ -1134,7 +1137,7 @@ fun CommunityScreen(
                 )
             }
         }
-        items(posts.filter { it.id != softDeletedPost?.id }, key = { "${it.ownerId}_${it.id}" }) { post ->
+        items(filteredPosts, key = { "${it.ownerId}_${it.id}" }) { post ->
             val postKey = "${post.ownerId}_${post.id}"
             CommunityPostCard(
                 post = post,
@@ -1204,7 +1207,7 @@ fun CommunityScreen(
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     }
                 }
-                endReached && posts.isNotEmpty() -> {
+                endReached && filteredPosts.isNotEmpty() -> {
                     Text(
                         text = "Это все записи",
                         style = MaterialTheme.typography.bodySmall,
@@ -1214,7 +1217,7 @@ fun CommunityScreen(
                 }
             }
         }
-        if (posts.isEmpty()) {
+        if (filteredPosts.isEmpty()) {
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(24.dp),
