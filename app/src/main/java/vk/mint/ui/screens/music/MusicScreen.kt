@@ -2901,14 +2901,7 @@ private fun SectionHeader(
 
 private fun formatTrackDuration(seconds: Int): String {
     if (seconds <= 0) return ""
-    val hours = seconds / 3600
-    val mins = (seconds % 3600) / 60
-    val secs = seconds % 60
-    return if (hours > 0) {
-        "%d:%02d:%02d".format(hours, mins, secs)
-    } else {
-        "%02d:%02d".format(mins, secs)
-    }
+    return seconds.toDurationString()
 }
 
 @Composable

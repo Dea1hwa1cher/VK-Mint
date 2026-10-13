@@ -33,6 +33,8 @@ import vk.mint.data.model.Attachment
 import vk.mint.data.model.PhotoSizes
 import vk.mint.data.model.Track
 import vk.mint.data.model.Video
+import vk.mint.util.toDurationString
+import vk.mint.util.toFileSizeString
 import vk.mint.media.VoiceDownloadHelper
 
 /**
@@ -172,13 +174,7 @@ internal fun stickerCdnUrl(stickerId: Int, size: Int = 256): String =
     "https://vk.ru/sticker/1-" + stickerId + "-" + size
 
 /** Формат длительности секунды → «m:ss» (аудио/видео/голосовые в комментариях). */
-internal fun formatCommentDuration(totalSec: Int): String {
-    val safe = if (totalSec > 0) totalSec else 0
-    val m = safe / 60
-    val s = safe % 60
-    val ss = if (s < 10) "0" + s else "" + s
-    return "" + m + ":" + ss
-}
+internal fun formatCommentDuration(totalSec: Int): String = totalSec.toDurationString()
 
 /** Компактная сетка фото комментария (1 — крупно, 2 — в ряд, 3+ — 3 колонки). */
 @Composable
@@ -373,13 +369,4 @@ private fun CommentLinkCard(title: String?, url: String, description: String?) {
 }
 
 /** Человекочитаемый размер файла для чипа документа (Б/КБ/МБ/ГБ). */
-internal fun formatBytesComment(bytes: Long): String {
-    val safe = if (bytes > 0) bytes else 0L
-    val kb = safe / 1024
-    if (kb < 1) return "" + safe + " Б"
-    val mb = kb / 1024
-    if (mb < 1) return "" + kb + " КБ"
-    val gb = mb / 1024
-    if (gb < 1) return "" + mb + " МБ"
-    return "" + gb + " ГБ"
-}
+internal fun formatBytesComment(bytes: Long): String = bytes.toFileSizeString()

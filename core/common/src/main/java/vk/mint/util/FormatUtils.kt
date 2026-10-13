@@ -16,12 +16,13 @@ import java.util.Locale
 
 // ─── Длительность ─────────────────────────────────────────────
 
-/** Форматирование длительности трека: 195 → "3:15" */
+/** Форматирование длительности трека/видео: 195 → "3:15", 3665 → "1:01:05" */
 fun Int.toDurationString(): String {
     val nonNeg = this.coerceAtLeast(0)
-    val m = nonNeg / 60
+    val h = nonNeg / 3600
+    val m = (nonNeg % 3600) / 60
     val s = nonNeg % 60
-    return "%d:%02d".format(m, s)
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
 
 /** Форматирование длительности из миллисекунд: 195000 → "3:15" */
@@ -124,6 +125,14 @@ fun Long.toDayKey(): Int {
     return year * 1000 + day
 }
 
+// ─── Даты ──────────────────────────────────────────────────────
+
+/** Форматирование даты: 1720000000L -> "12 июл 2024" (epoch секунды) */
+fun Long.toDateString(): String {
+    if (this == 0L) return ""
+    return SimpleDateFormat("d MMM yyyy", RU_LOCALE).format(Date(this * 1000))
+}
+
 // ─── Счётчики ─────────────────────────────────────────────────
 
 /** Форматирование счётчика: 999 → "999", 1500 → "1.5K", 2300000 → "2.3M" */
@@ -135,9 +144,10 @@ fun Int.toCountString(): String = when {
 
 // ─── Размеры файлов ──────────────────────────────────────────
 
-/** Форматирование размера файла: 1024 -> "1 КБ", 1048576 -> "1 МБ" */
+/** Форматирование размера файла: 1024 -> "1 КБ", 1048576 -> "1 МБ", 1073741824 -> "1 ГБ" */
 fun Long.toFileSizeString(): String {
     if (this < 1024) return "$this Б"
     if (this < 1024 * 1024) return DecimalFormat("#.#").format(this / 1024.0) + " КБ"
-    return DecimalFormat("#.#").format(this / (1024.0 * 1024.0)) + " МБ"
+    if (this < 1024L * 1024 * 1024) return DecimalFormat("#.#").format(this / (1024.0 * 1024.0)) + " МБ"
+    return DecimalFormat("#.#").format(this / (1024.0 * 1024.0 * 1024.0)) + " ГБ"
 }

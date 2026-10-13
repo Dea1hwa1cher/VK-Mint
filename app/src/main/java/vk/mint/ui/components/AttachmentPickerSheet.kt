@@ -67,6 +67,7 @@ import vk.mint.data.model.Track
 import vk.mint.data.model.Video
 import vk.mint.util.AppLog
 import vk.mint.util.toDurationString
+import vk.mint.util.toFileSizeString
 
 /**
  * #ATTACH-UNIFY: табы пикера библиотеки VK. Раньше таб кодировался Int
@@ -749,8 +750,4 @@ private fun DocRow(doc: DocFile, onClick: () -> Unit) {
 }
 
 /** Человекочитаемый размер файла (локальный хелпер таба «Документы»). */
-private fun formatDocSizeShort(size: Long): String = when {
-    size < 1024 -> "$size Б"
-    size < 1024 * 1024 -> "${size / 1024} КБ"
-    else -> String.format("%.1f МБ", size / 1024.0 / 1024.0)
-}
+private fun formatDocSizeShort(size: Long): String = size.toFileSizeString()

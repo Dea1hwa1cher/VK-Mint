@@ -1,61 +1,22 @@
 package vk.mint.data.local
 
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import vk.mint.util.AppLog
 
 /**
  * Fix #276: PinnedConversationsRepository — локальное хранилище закреплённых
  * диалогов (peer_id список в порядке закрепления; 0-й элемент — верхний).
  *
- * WHY LOCAL: VK API `messages.markAsImportantConversation` требует
- * special-scope user token (право `messages`, выдаётся в исключительных
- * случаях по запросу на devsupport@corp.vk.com) ИЛИ community token.
- * Наш web-token (`vk1.a.*` из web-сессии) не подходит → API возвращает
- * err=8 "method available only for group messages" (см. лог Fix #274/#276).
- *
- * Поэтому закрепление хранится ЛОКАЛЬНО в [VkMintPrefs.pinnedConvsData]
- * (source of truth для UI). API-вызов делается best-effort в фоне —
- * если когда-нибудь VK разрешит нашему токену, сервер тоже подхватит.
- *
- * Потокобезопасность: load-modify-save секции (pin/unpin/reorder) защищены
- * Mutex (P3.3 fix — был TOCTOU: concurrent pin(X)+pin(Y) терял один peerId);
- * load/save/setOrder атомарны сами по себе (DataStore put + flow.first).
- *
- * Структура JSON: `[2000000062, 152094335, -123456]` (массив Long).
+ * Наследует общий [JsonIdListRepository] для потокобезопасного персистенса JSON.
  */
-class PinnedConversationsRepository(private val prefs: VkMintPrefs) {
+class PinnedConversationsRepository(
+    private val prefs: VkMintPrefs,
+) : JsonIdListRepository("PinnedConvsRepo") {
 
-    private val gson = Gson()
-    private val type = object : TypeToken<List<Long>>() {}.type
+    override suspend fun getRawData(): String = prefs.data.first().pinnedConvsData
 
-    // P3.3: сериализует load→modify→save секции, чтобы параллельные
-    // pin/unpin/reorder не затирали изменения друг друга.
-    private val mutex = Mutex()
-
-    /**
-     * Загрузить список закреплённых peer_id (в порядке закрепления).
-     * Пустая строка → пустой список. При ошибке парсинга — пустой список.
-     */
-    suspend fun load(): List<Long> {
-        val raw = prefs.data.first().pinnedConvsData
-        if (raw.isBlank()) return emptyList()
-        return try {
-            gson.fromJson<List<Long>>(raw, type) ?: emptyList()
-        } catch (e: Exception) {
-            AppLog.w("PinnedConvsRepo", "Failed to parse pinnedConvsData: ${e.message}")
-            emptyList()
-        }
-    }
-
-    /** Сохранить полный список закреплённых peer_id (атомарно). */
-    suspend fun save(peerIds: List<Long>) {
-        val json = gson.toJson(peerIds)
+    override suspend fun setRawData(json: String) {
         prefs.setPinnedConvsData(json)
-        AppLog.d("PinnedConvsRepo", "Saved ${peerIds.size} pinned: $peerIds")
     }
 
     /**
@@ -63,21 +24,10 @@ class PinnedConversationsRepository(private val prefs: VkMintPrefs) {
      * наверх закреплённого блока — как в нативном VK).
      * Если уже закреплён — сначала убирает из старой позиции, потом в начало.
      */
-    suspend fun pin(peerId: Long): List<Long> = mutex.withLock {
-        val current = load().toMutableList()
-        current.remove(peerId)
-        val updated = listOf(peerId) + current
-        save(updated)
-        updated
-    }
+    suspend fun pin(peerId: Long): List<Long> = addFirst(peerId)
 
     /** Открепить диалог. Убирает peer_id из списка. No-op если не был закреплён. */
-    suspend fun unpin(peerId: Long): List<Long> = mutex.withLock {
-        val current = load().toMutableList()
-        current.remove(peerId)
-        save(current)
-        current
-    }
+    suspend fun unpin(peerId: Long): List<Long> = remove(peerId)
 
     /**
      * Переставить закреплённый диалог с [fromIndex] на [toIndex] (drag&drop).
@@ -104,5 +54,5 @@ class PinnedConversationsRepository(private val prefs: VkMintPrefs) {
     }
 
     /** Проверить, закреплён ли диалог (без загрузки всего списка в UI). */
-    suspend fun isPinned(peerId: Long): Boolean = load().contains(peerId)
+    suspend fun isPinned(peerId: Long): Boolean = contains(peerId)
 }

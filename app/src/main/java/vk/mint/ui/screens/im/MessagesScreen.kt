@@ -140,6 +140,7 @@ import vk.mint.realtime.LongPollEvent
 import vk.mint.ui.navigation.ScreenTopBar
 import vk.mint.util.AppLog
 import vk.mint.util.toChatDate
+import vk.mint.util.toCountString
 import vk.mint.util.toMsgTime
 import vk.mint.ui.components.SkeletonChatList
 import vk.mint.ui.components.ErrorView
@@ -2984,15 +2985,7 @@ private fun ChannelRecommendationCard(
 
 // #CHANNEL-REC: компактный формат подписчиков (как в вебе): 40 600 → «40,6K»,
 // 1 200 → «1,2K», 999 → «999», 1 200 000 → «1,2M».
-private fun formatChannelRecCount(n: Int): String {
-    if (n < 1000) return n.toString()
-    if (n < 1_000_000) {
-        val k = n / 1000.0
-        return if (k >= 100) "${k.toInt()}K" else String.format("%.1fK", k)
-    }
-    val m = n / 1_000_000.0
-    return if (m >= 100) "${m.toInt()}M" else String.format("%.1fM", m)
-}
+private fun formatChannelRecCount(n: Int): String = n.toCountString()
 
 /**
  * P3.3: FolderTabRow — скролляемый ряд динамических табов для папок диалогов.

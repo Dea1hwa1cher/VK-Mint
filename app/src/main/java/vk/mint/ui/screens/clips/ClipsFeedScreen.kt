@@ -83,6 +83,7 @@ import vk.mint.media.ClipVideoDownloadManager
 import vk.mint.media.VideoPlayerConfig
 import vk.mint.util.AppLog
 import vk.mint.util.VkUserAgent
+import vk.mint.util.toCountString
 
 private const val TAG = "ClipsFeedScreen"
 
@@ -853,15 +854,7 @@ private fun ActionButton(
 }
 
 /** Форматирование числа: 1234 → "1.2K", 1500000 → "1.5M". */
-private fun formatCount(n: Int): String {
-    if (n < 1000) return n.toString()
-    if (n < 1_000_000) {
-        val k = n / 1000.0
-        return if (k >= 100) "${k.toInt()}K" else String.format("%.1fK", k)
-    }
-    val m = n / 1_000_000.0
-    return if (m >= 100) "${m.toInt()}M" else String.format("%.1fM", m)
-}
+private fun formatCount(n: Int): String = n.toCountString()
 
 /**
  * Фабрика ViewModel для ClipsFeedScreen.

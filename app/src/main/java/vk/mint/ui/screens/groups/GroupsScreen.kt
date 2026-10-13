@@ -60,6 +60,7 @@ import vk.mint.ui.components.ErrorView
 import vk.mint.ui.components.ScrollToTopFab
 import vk.mint.ui.navigation.ScreenTopBar
 import vk.mint.util.AppLog
+import vk.mint.util.toCountString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -423,8 +424,4 @@ private fun GroupRow(group: Group, onGroupClick: (Long) -> Unit = {}) {
     }
 }
 
-private fun formatMembers(n: Int): String = when {
-    n >= 1_000_000 -> "%.1fM".format(n / 1_000_000.0).replace(",0", "")
-    n >= 1_000 -> "%.1fK".format(n / 1_000.0).replace(",0", "")
-    else -> n.toString()
-} + " уч."
+private fun formatMembers(n: Int): String = "${n.toCountString()} уч."

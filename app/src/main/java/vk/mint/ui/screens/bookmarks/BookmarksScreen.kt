@@ -77,10 +77,8 @@ import vk.mint.ui.components.ScrollToTopFab
 import vk.mint.ui.components.VkSubnavigationBar
 import vk.mint.ui.components.VkSubnavigationButton
 import vk.mint.util.AppLog
+import vk.mint.util.toDateString
 import vk.mint.util.toDurationString
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Закладки (fave.get) + локальные закладки треков.
@@ -700,7 +698,4 @@ private fun typeLabel(type: String): String = when (type) {
     else -> type
 }
 
-private fun formatDate(epochSec: Long): String {
-    if (epochSec == 0L) return ""
-    return SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("ru")).format(Date(epochSec * 1000))
-}
+private fun formatDate(epochSec: Long): String = epochSec.toDateString()

@@ -88,9 +88,9 @@ import vk.mint.media.VideoDownloadManager
 import vk.mint.ui.components.ScrollToTopFab
 import vk.mint.ui.navigation.ScreenTopBar
 import vk.mint.util.AppLog
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import vk.mint.util.toCountString
+import vk.mint.util.toDateString
+import vk.mint.util.toDurationString
 
 /**
  * Экран списка видео — нативный интерфейс VK Video mobile.
@@ -1248,26 +1248,8 @@ private fun VKVideoDownloadButton(
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-private fun formatVideoDuration(seconds: Int): String {
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    val s = seconds % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
-}
+private fun formatVideoDuration(seconds: Int): String = seconds.toDurationString()
 
-private fun formatViews(views: Int): String {
-    return when {
-        views >= 1_000_000 -> "%.1fM".format(views / 1_000_000.0)
-        views >= 1_000 -> "%.1fK".format(views / 1_000.0)
-        else -> views.toString()
-    }
-}
+private fun formatViews(views: Int): String = views.toCountString()
 
-private fun formatDate(epochSeconds: Long): String {
-    return try {
-        val sdf = SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("ru"))
-        sdf.format(Date(epochSeconds * 1000))
-    } catch (e: Exception) {
-        ""
-    }
-}
+private fun formatDate(epochSeconds: Long): String = epochSeconds.toDateString()

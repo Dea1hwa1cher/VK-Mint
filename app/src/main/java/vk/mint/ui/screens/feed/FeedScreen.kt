@@ -178,6 +178,7 @@ import vk.mint.ui.theme.vkSubhead
 import vk.mint.util.AppLog
 import vk.mint.util.createCameraImageUri
 import vk.mint.util.toCountString
+import vk.mint.util.toFileSizeString
 import vk.mint.util.toRelativeTime
 import java.io.File
 import kotlin.math.roundToInt
@@ -3354,11 +3355,7 @@ private fun extractDomain(url: String): String {
     } catch (_: Exception) { url }
 }
 
-private fun formatDocSize(size: Long): String = when {
-    size < 1024 -> "${size} Б"
-    size < 1024 * 1024 -> "${size / 1024} КБ"
-    else -> String.format("%.1f МБ", size / 1024.0 / 1024.0)
-}
+private fun formatDocSize(size: Long): String = size.toFileSizeString()
 
 
 
