@@ -411,7 +411,7 @@ fun MusicScreen(
                     Text(
                         if (selectedTab == 1) "Поиск в загруженном" else "Поиск в библиотеке",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF8F858F),
+                        color = vkTextSecondary,
                     )
                 },
                 modifier = Modifier
@@ -423,7 +423,7 @@ fun MusicScreen(
                     Icon(
                         Icons.Outlined.Search,
                         contentDescription = null,
-                        tint = Color(0xFFB0A4AF),
+                        tint = vkTextSecondary,
                         modifier = Modifier.size(20.dp),
                     )
                 },
@@ -437,7 +437,7 @@ fun MusicScreen(
                                 Icons.Outlined.Close,
                                 contentDescription = "Очистить",
                                 modifier = Modifier.size(18.dp),
-                                tint = Color(0xFFB0A4AF),
+                                tint = vkTextSecondary,
                             )
                         }
                     }
@@ -446,11 +446,11 @@ fun MusicScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color.Transparent,
                     focusedBorderColor = Color.Transparent,
-                    unfocusedContainerColor = Color(0xFF1E1B20),
-                    focusedContainerColor = Color(0xFF1E1B20),
-                    cursorColor = Color(0xFFF2DAEE),
+                    unfocusedContainerColor = vkCard,
+                    focusedContainerColor = vkCard,
+                    cursorColor = vkAccent,
                 ),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = vkTextPrimary),
             )
         }
 
@@ -853,20 +853,20 @@ fun MusicScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFB3261E).copy(alpha = 0.92f))
+                    .background(MaterialTheme.colorScheme.errorContainer)
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = Icons.Filled.MusicNote,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = errorMessage,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                     fontSize = 13.sp,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
@@ -876,7 +876,7 @@ fun MusicScreen(
                     Icon(
                         imageVector = Icons.Filled.SkipNext,
                         contentDescription = "Следующий",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
                     )
                 }
             }
@@ -1297,14 +1297,14 @@ private fun MusicTabsBar(
         Box(
             modifier = Modifier
                 .clip(CircleShape)
-                .background(if (isLibrary) Color(0xFF382F37) else Color.Transparent)
+                .background(if (isLibrary) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
                 .clickable { onTabSelected(0) }
                 .padding(horizontal = 22.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "Библиотека",
-                color = if (isLibrary) Color(0xFFF2DAEE) else textColor,
+                color = if (isLibrary) MaterialTheme.colorScheme.onSecondaryContainer else textColor,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -1314,14 +1314,14 @@ private fun MusicTabsBar(
         Box(
             modifier = Modifier
                 .clip(CircleShape)
-                .background(if (isDownloaded) Color(0xFF382F37) else Color.Transparent)
+                .background(if (isDownloaded) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
                 .clickable { onTabSelected(1) }
                 .padding(horizontal = 22.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "Загружено",
-                color = if (isDownloaded) Color(0xFFF2DAEE) else textColor,
+                color = if (isDownloaded) MaterialTheme.colorScheme.onSecondaryContainer else textColor,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -1342,7 +1342,7 @@ enum class TrackSortOrder(val title: String) {
 @Composable
 internal fun DualNotesPlaceholder(
     modifier: Modifier = Modifier,
-    tint: Color = Color.White.copy(alpha = 0.85f),
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
 ) {
     Canvas(modifier = modifier.size(22.dp)) {
         val w = size.width
@@ -1476,7 +1476,7 @@ private fun MusicMyTracksTab(
             ) {
                 Text(
                     text = "Мои треки",
-                    color = Color.White,
+                    color = textColor,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -1487,7 +1487,7 @@ private fun MusicMyTracksTab(
                         hasMore -> "${tracks.size}…"
                         else -> "${tracks.size}"
                     },
-                    color = Color(0xFF9E96A0),
+                    color = secondaryColor,
                     fontSize = 14.sp,
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -1514,13 +1514,13 @@ private fun MusicMyTracksTab(
                         Icon(
                             imageVector = Icons.Filled.GraphicEq,
                             contentDescription = null,
-                            tint = Color(0xFFF2DAEE),
+                            tint = accentColor,
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "К треку",
-                            color = Color(0xFFF2DAEE),
+                            color = accentColor,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                         )
@@ -1539,14 +1539,14 @@ private fun MusicMyTracksTab(
                     ) {
                         Text(
                             text = sortOrder.title,
-                            color = Color(0xFF9E96A0),
+                            color = secondaryColor,
                             fontSize = 13.sp,
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Icon(
                             imageVector = Icons.Filled.KeyboardArrowDown,
                             contentDescription = "Сортировка",
-                            tint = Color(0xFF9E96A0),
+                            tint = secondaryColor,
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -1554,14 +1554,14 @@ private fun MusicMyTracksTab(
                     DropdownMenu(
                         expanded = sortMenuExpanded,
                         onDismissRequest = { sortMenuExpanded = false },
-                        modifier = Modifier.background(Color(0xFF282329)),
+                        modifier = Modifier.background(cardColor),
                     ) {
                         TrackSortOrder.entries.forEach { order ->
                             DropdownMenuItem(
                                 text = {
                                     Text(
                                         text = order.title,
-                                        color = if (sortOrder == order) Color(0xFFF2DAEE) else Color.White,
+                                        color = if (sortOrder == order) accentColor else textColor,
                                         fontWeight = if (sortOrder == order) FontWeight.Bold else FontWeight.Normal,
                                     )
                                 },
@@ -1589,20 +1589,20 @@ private fun MusicMyTracksTab(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(MaterialTheme.shapes.medium)
-                        .background(Color(0xFF282329)),
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Shuffle,
                         contentDescription = "Перемешать",
-                        tint = Color(0xFFF2DAEE),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(22.dp),
                     )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = "Перемешать",
-                    color = Color.White,
+                    color = textColor,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Normal,
                 )
@@ -2107,7 +2107,7 @@ private fun MyMusicMenuList(
                                     Icon(
                                         Icons.Filled.Delete,
                                         contentDescription = "Удалить",
-                                        tint = Color(0xFFE53935),
+                                        tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(20.dp),
                                     )
                                 }
@@ -2122,7 +2122,7 @@ private fun MyMusicMenuList(
                         downloadedTracks.forEach { TrackDownloadManager.removeDownload(it.trackId) }
                         showDownloaded = false
                     }) {
-                        Text("Удалить все", color = Color(0xFFE53935))
+                        Text("Удалить все", color = MaterialTheme.colorScheme.error)
                     }
                 }
                 TextButton(onClick = { showDownloaded = false }) {
@@ -2139,12 +2139,12 @@ private fun MyMusicMenuList(
     if (showRecentDialog) {
         AlertDialog(
             onDismissRequest = { showRecentDialog = false },
-            containerColor = Color(0xFF282329),
+            containerColor = cardColor,
             shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     text = "Недавнее",
-                    color = Color.White,
+                    color = textColor,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -2152,13 +2152,13 @@ private fun MyMusicMenuList(
             text = {
                 Text(
                     text = "История недавно воспроизведённых треков сохраняется автоматически во время прослушивания.",
-                    color = Color(0xFFDDD5DC),
+                    color = secondaryColor,
                     fontSize = 14.sp,
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showRecentDialog = false }) {
-                    Text("Понятно", color = Color(0xFFF2DAEE))
+                    Text("Понятно", color = MaterialTheme.colorScheme.primary)
                 }
             },
         )
@@ -2167,12 +2167,12 @@ private fun MyMusicMenuList(
     if (showTransferDialog) {
         AlertDialog(
             onDismissRequest = { showTransferDialog = false },
-            containerColor = Color(0xFF282329),
+            containerColor = cardColor,
             shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     text = "Перенос из других сервисов",
-                    color = Color.White,
+                    color = textColor,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -2180,13 +2180,13 @@ private fun MyMusicMenuList(
             text = {
                 Text(
                     text = "Перенос вашей медиатеки из сторонних сервисов (Яндекс Музыка, Spotify, Apple Music) доступен через официальный инструмент в веб-версии VK Музыки.",
-                    color = Color(0xFFDDD5DC),
+                    color = secondaryColor,
                     fontSize = 14.sp,
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showTransferDialog = false }) {
-                    Text("Понятно", color = Color(0xFFF2DAEE))
+                    Text("Понятно", color = MaterialTheme.colorScheme.primary)
                 }
             },
         )
@@ -2195,12 +2195,12 @@ private fun MyMusicMenuList(
     if (showSubscriptionDialog) {
         AlertDialog(
             onDismissRequest = { showSubscriptionDialog = false },
-            containerColor = Color(0xFF282329),
+            containerColor = cardColor,
             shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     text = "Подписка на VK Музыку",
-                    color = Color.White,
+                    color = textColor,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -2208,13 +2208,13 @@ private fun MyMusicMenuList(
             text = {
                 Text(
                     text = "В приложении VK Mint вся музыка доступна без аудиорекламы и без ограничений на фоновое воспроизведение.",
-                    color = Color(0xFFDDD5DC),
+                    color = secondaryColor,
                     fontSize = 14.sp,
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showSubscriptionDialog = false }) {
-                    Text("Отлично", color = Color(0xFFF2DAEE))
+                    Text("Отлично", color = MaterialTheme.colorScheme.primary)
                 }
             },
         )
@@ -2252,20 +2252,20 @@ private fun MyMusicMenuList(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(MaterialTheme.shapes.medium)
-                        .background(Color(0xFF282329)),
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = Color(0xFFF2DAEE),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(22.dp),
                     )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = title,
-                    color = Color.White,
+                    color = textColor,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Normal,
                     modifier = Modifier.weight(1f),
@@ -2817,7 +2817,7 @@ private fun VKTrackRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onPlayClick)
-                .background(if (isCurrent) Color(0xFF382F37).copy(alpha = 0.5f) else Color.Transparent)
+                .background(if (isCurrent) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else Color.Transparent)
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -2826,7 +2826,7 @@ private fun VKTrackRow(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(MaterialTheme.shapes.small)
-                    .background(Color(0xFF1E1B20)),
+                    .background(cardColor),
                 contentAlignment = Alignment.Center,
             ) {
                 val albumThumb = track.albumThumb
@@ -2841,7 +2841,7 @@ private fun VKTrackRow(
                     Icon(
                         imageVector = Icons.Filled.GraphicEq,
                         contentDescription = null,
-                        tint = Color(0xFFF2DAEE),
+                        tint = accentColor,
                         modifier = Modifier.size(22.dp),
                     )
                 } else {
@@ -2855,7 +2855,7 @@ private fun VKTrackRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = track.title,
-                    color = if (isCurrent) Color(0xFFF2DAEE) else Color.White,
+                    color = if (isCurrent) accentColor else textColor,
                     fontSize = 15.sp,
                     fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
                     maxLines = 1,
@@ -2864,7 +2864,7 @@ private fun VKTrackRow(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = track.artist,
-                    color = Color(0xFF9E96A0),
+                    color = secondaryColor,
                     fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -2886,7 +2886,7 @@ private fun VKTrackRow(
 
                 Text(
                     text = track.duration.toDurationString(),
-                    color = Color(0xFF9E96A0),
+                    color = secondaryColor,
                     fontSize = 13.sp,
                 )
 
@@ -2896,7 +2896,7 @@ private fun VKTrackRow(
                     Icon(
                         imageVector = Icons.Filled.MoreVert,
                         contentDescription = "Ещё",
-                        tint = Color(0xFF9E96A0),
+                        tint = secondaryColor,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -2973,27 +2973,27 @@ private fun MusicDownloadedTab(
                     modifier = Modifier
                         .size(64.dp)
                         .clip(MaterialTheme.shapes.large)
-                        .background(Color(0xFF282329)),
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Filled.DownloadDone,
                         contentDescription = null,
-                        tint = Color(0xFFF2DAEE),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(32.dp),
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Нет скачанной музыки",
-                    color = Color.White,
+                    color = textColor,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Треки, сохранённые для офлайн-прослушивания, появятся здесь",
-                    color = Color(0xFF9E96A0),
+                    color = secondaryColor,
                     fontSize = 14.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
@@ -3014,14 +3014,14 @@ private fun MusicDownloadedTab(
                 ) {
                     Text(
                         text = "Скачанная музыка",
-                        color = Color.White,
+                        color = textColor,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "${downloadedList.size}",
-                        color = Color(0xFF9E96A0),
+                        color = secondaryColor,
                         fontSize = 14.sp,
                     )
                     Spacer(modifier = Modifier.weight(1f))
@@ -3036,14 +3036,14 @@ private fun MusicDownloadedTab(
                         ) {
                             Text(
                                 text = sortOrder.title,
-                                color = Color(0xFF9E96A0),
+                                color = secondaryColor,
                                 fontSize = 13.sp,
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                             Icon(
                                 imageVector = Icons.Filled.KeyboardArrowDown,
                                 contentDescription = "Сортировка",
-                                tint = Color(0xFF9E96A0),
+                                tint = secondaryColor,
                                 modifier = Modifier.size(16.dp),
                             )
                         }
@@ -3051,14 +3051,14 @@ private fun MusicDownloadedTab(
                         DropdownMenu(
                             expanded = sortMenuExpanded,
                             onDismissRequest = { sortMenuExpanded = false },
-                            modifier = Modifier.background(Color(0xFF282329)),
+                            modifier = Modifier.background(cardColor),
                         ) {
                             TrackSortOrder.entries.forEach { order ->
                                 DropdownMenuItem(
                                     text = {
                                         Text(
                                             text = order.title,
-                                            color = if (sortOrder == order) Color(0xFFF2DAEE) else Color.White,
+                                            color = if (sortOrder == order) accentColor else textColor,
                                             fontWeight = if (sortOrder == order) FontWeight.Bold else FontWeight.Normal,
                                         )
                                     },
@@ -3086,20 +3086,20 @@ private fun MusicDownloadedTab(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(MaterialTheme.shapes.medium)
-                            .background(Color(0xFF282329)),
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Shuffle,
                             contentDescription = "Перемешать",
-                            tint = Color(0xFFF2DAEE),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.size(22.dp),
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = "Перемешать",
-                        color = Color.White,
+                        color = textColor,
                         fontSize = 15.sp,
                     )
                 }
@@ -3158,7 +3158,7 @@ private fun VKDownloadButton(
                 Icon(
                     imageVector = Icons.Filled.MusicOff,
                     contentDescription = "Недоступен (URL истёк) — тап для повтора",
-                    tint = Color(0xFFEF4444),
+                    tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -3201,7 +3201,7 @@ private fun VKDownloadButton(
                         ) {
                             Text(
                                 text = queuePos.toString(),
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -3237,7 +3237,7 @@ private fun VKDownloadButton(
                     Icon(
                         imageVector = Icons.Filled.Wifi,
                         contentDescription = null,
-                        tint = Color(0xFF22C55E),
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .offset(x = 2.dp, y = 2.dp)

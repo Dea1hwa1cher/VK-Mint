@@ -88,12 +88,12 @@ import vk.mint.media.TrackDownloadManager
 import vk.mint.ui.components.AudioAttachmentList
 import vk.mint.util.AppLog
 
-// #MUSIC-PORT: общие цвета (как в MusicScreen/AudioQueueScreen).
-private val VK_BLACK = androidx.compose.ui.graphics.Color(0xFF0F0F10)
-private val VK_CARD = androidx.compose.ui.graphics.Color(0xFF1C1C1E)
-private val VK_TEXT_PRIMARY = androidx.compose.ui.graphics.Color(0xFFFFFFFF)
-private val VK_TEXT_SECONDARY = androidx.compose.ui.graphics.Color(0xFFA8A8AA)
-private val VK_ACCENT = androidx.compose.ui.graphics.Color(0xFF3D8BFF)
+// #MUSIC-PORT: семантические цвета M3E через MaterialTheme.colorScheme.
+private val VK_BLACK: Color @Composable get() = MaterialTheme.colorScheme.background
+private val VK_CARD: Color @Composable get() = MaterialTheme.colorScheme.surfaceContainer
+private val VK_TEXT_PRIMARY: Color @Composable get() = MaterialTheme.colorScheme.onBackground
+private val VK_TEXT_SECONDARY: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val VK_ACCENT: Color @Composable get() = MaterialTheme.colorScheme.primary
 
 /** #MUSIC-PORT: общая шапка вложенного экрана (стрелка назад + заголовок). */
 @Composable
@@ -246,12 +246,12 @@ fun MusicPlaylistsScreen(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { if (!creating) showCreateDialog = false },
-            containerColor = Color(0xFF282329),
+            containerColor = VK_CARD,
             shape = MaterialTheme.shapes.large,
             title = {
                 Text(
                     text = "Новый плейлист",
-                    color = Color.White,
+                    color = VK_TEXT_PRIMARY,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -261,14 +261,14 @@ fun MusicPlaylistsScreen(
                     OutlinedTextField(
                         value = newPlaylistTitle,
                         onValueChange = { newPlaylistTitle = it },
-                        placeholder = { Text("Название плейлиста", color = Color(0xFF9E96A0)) },
+                        placeholder = { Text("Название плейлиста", color = VK_TEXT_SECONDARY) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFF2DAEE),
-                            unfocusedBorderColor = Color(0xFF9E96A0).copy(alpha = 0.5f),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            cursorColor = Color(0xFFF2DAEE),
+                            focusedBorderColor = VK_ACCENT,
+                            unfocusedBorderColor = VK_TEXT_SECONDARY.copy(alpha = 0.5f),
+                            focusedTextColor = VK_TEXT_PRIMARY,
+                            unfocusedTextColor = VK_TEXT_PRIMARY,
+                            cursorColor = VK_ACCENT,
                         ),
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -276,13 +276,13 @@ fun MusicPlaylistsScreen(
                     OutlinedTextField(
                         value = newPlaylistDesc,
                         onValueChange = { newPlaylistDesc = it },
-                        placeholder = { Text("Описание (необязательно)", color = Color(0xFF9E96A0)) },
+                        placeholder = { Text("Описание (необязательно)", color = VK_TEXT_SECONDARY) },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFF2DAEE),
-                            unfocusedBorderColor = Color(0xFF9E96A0).copy(alpha = 0.5f),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            cursorColor = Color(0xFFF2DAEE),
+                            focusedBorderColor = VK_ACCENT,
+                            unfocusedBorderColor = VK_TEXT_SECONDARY.copy(alpha = 0.5f),
+                            focusedTextColor = VK_TEXT_PRIMARY,
+                            unfocusedTextColor = VK_TEXT_PRIMARY,
+                            cursorColor = VK_ACCENT,
                         ),
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -324,7 +324,7 @@ fun MusicPlaylistsScreen(
                         }
                     },
                 ) {
-                    Text(if (creating) "Создание…" else "Создать", color = Color(0xFFF2DAEE))
+                    Text(if (creating) "Создание…" else "Создать", color = VK_ACCENT)
                 }
             },
             dismissButton = {
@@ -332,7 +332,7 @@ fun MusicPlaylistsScreen(
                     enabled = !creating,
                     onClick = { showCreateDialog = false },
                 ) {
-                    Text("Отмена", color = Color(0xFF9E96A0))
+                    Text("Отмена", color = VK_TEXT_SECONDARY)
                 }
             },
         )
@@ -351,7 +351,7 @@ fun MusicPlaylistsScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Назад",
-                    tint = Color.White,
+                    tint = VK_TEXT_PRIMARY,
                 )
             }
             Box {
@@ -364,7 +364,7 @@ fun MusicPlaylistsScreen(
                 ) {
                     Text(
                         text = selectedFilter.title,
-                        color = Color.White,
+                        color = VK_TEXT_PRIMARY,
                         fontSize = 19.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -372,7 +372,7 @@ fun MusicPlaylistsScreen(
                     Icon(
                         imageVector = Icons.Filled.KeyboardArrowDown,
                         contentDescription = "Фильтр плейлистов",
-                        tint = Color(0xFFF2DAEE),
+                        tint = VK_ACCENT,
                         modifier = Modifier.size(22.dp),
                     )
                 }
@@ -380,14 +380,14 @@ fun MusicPlaylistsScreen(
                 DropdownMenu(
                     expanded = filterMenuExpanded,
                     onDismissRequest = { filterMenuExpanded = false },
-                    modifier = Modifier.background(Color(0xFF282329)),
+                    modifier = Modifier.background(VK_CARD),
                 ) {
                     PlaylistFilter.entries.forEach { filter ->
                         DropdownMenuItem(
                             text = {
                                 Text(
                                     text = filter.title,
-                                    color = if (selectedFilter == filter) Color(0xFFF2DAEE) else Color.White,
+                                    color = if (selectedFilter == filter) VK_ACCENT else VK_TEXT_PRIMARY,
                                     fontWeight = if (selectedFilter == filter) FontWeight.Bold else FontWeight.Normal,
                                 )
                             },
@@ -403,10 +403,10 @@ fun MusicPlaylistsScreen(
 
         when {
             loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFF2DAEE))
+                CircularProgressIndicator(color = VK_ACCENT)
             }
             errorText != null && playlists.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(errorText ?: "", color = Color(0xFF9E96A0), fontSize = 14.sp)
+                Text(errorText ?: "", color = VK_TEXT_SECONDARY, fontSize = 14.sp)
             }
             else -> LazyColumn(Modifier.fillMaxSize(), state = listState) {
                 // ─── Пункт «Создать плейлист» (первый элемент со сквирклом) ───
@@ -422,20 +422,20 @@ fun MusicPlaylistsScreen(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(MaterialTheme.shapes.large)
-                                .background(Color(0xFF382F37)),
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
                                 contentDescription = "Создать плейлист",
-                                tint = Color(0xFFF2DAEE),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.size(28.dp),
                             )
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
                             text = "Создать плейлист",
-                            color = Color.White,
+                            color = VK_TEXT_PRIMARY,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Normal,
                         )
@@ -458,7 +458,7 @@ fun MusicPlaylistsScreen(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
-                                color = Color(0xFFF2DAEE),
+                                color = VK_ACCENT,
                             )
                         }
                     }
@@ -522,8 +522,8 @@ fun PlaylistDetailScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F10))) {
-        // Фоновый мягкий радиальный градиент с оттенком обложки сверху
+    Box(modifier = Modifier.fillMaxSize().background(VK_BLACK)) {
+        // Фоновый мягкий радиальный градиент с оттенком акцента M3E сверху
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -531,9 +531,9 @@ fun PlaylistDetailScreen(
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF38231E).copy(alpha = 0.55f),
-                            Color(0xFF1E1618).copy(alpha = 0.25f),
-                            Color(0xFF0F0F10),
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.18f),
+                            VK_BLACK,
                         ),
                     ),
                 ),
@@ -553,7 +553,7 @@ fun PlaylistDetailScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Назад",
-                        tint = Color.White,
+                        tint = VK_TEXT_PRIMARY,
                         modifier = Modifier.size(24.dp),
                     )
                 }
@@ -563,7 +563,7 @@ fun PlaylistDetailScreen(
                         Icon(
                             imageVector = Icons.Filled.MoreVert,
                             contentDescription = "Опции",
-                            tint = Color.White,
+                            tint = VK_TEXT_PRIMARY,
                             modifier = Modifier.size(24.dp),
                         )
                     }
@@ -571,11 +571,11 @@ fun PlaylistDetailScreen(
                     DropdownMenu(
                         expanded = showTopBarMenu,
                         onDismissRequest = { showTopBarMenu = false },
-                        modifier = Modifier.background(Color(0xFF282329)),
+                        modifier = Modifier.background(VK_CARD),
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Поделиться плейлистом", color = Color.White, fontSize = 14.sp) },
-                            leadingIcon = { Icon(Icons.Filled.Share, null, tint = Color(0xFFF2DAEE)) },
+                            text = { Text("Поделиться плейлистом", color = VK_TEXT_PRIMARY, fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Filled.Share, null, tint = VK_ACCENT) },
                             onClick = {
                                 showTopBarMenu = false
                                 val effectiveOwner = playlist?.ownerId ?: ownerId
@@ -596,8 +596,8 @@ fun PlaylistDetailScreen(
                         )
                         if (isMyPlaylist) {
                             DropdownMenuItem(
-                                text = { Text("Удалить плейлист", color = Color(0xFFFF5252), fontSize = 14.sp) },
-                                leadingIcon = { Icon(Icons.Filled.Delete, null, tint = Color(0xFFFF5252)) },
+                                text = { Text("Удалить плейлист", color = MaterialTheme.colorScheme.error, fontSize = 14.sp) },
+                                leadingIcon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                 onClick = {
                                     showTopBarMenu = false
                                     scope.launch {
@@ -619,13 +619,13 @@ fun PlaylistDetailScreen(
             if (loading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = Color(0xFFF2DAEE))
+                        CircularProgressIndicator(color = VK_ACCENT)
                         loadProgress?.let { (loaded, total) ->
                             if (total > 0) {
                                 Spacer(Modifier.height(10.dp))
                                 Text(
                                     "Загружено $loaded из $total…",
-                                    color = Color(0xFF9E96A0),
+                                    color = VK_TEXT_SECONDARY,
                                     fontSize = 12.sp,
                                 )
                             }
@@ -650,7 +650,7 @@ fun PlaylistDetailScreen(
                                 modifier = Modifier
                                     .size(200.dp)
                                     .clip(MaterialTheme.shapes.medium)
-                                    .background(Color(0xFF282329)),
+                                    .background(VK_CARD),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 val cover = playlist?.coverUrl
@@ -671,7 +671,7 @@ fun PlaylistDetailScreen(
                             // Название плейлиста
                             Text(
                                 text = playlist?.title ?: "Плейлист",
-                                color = Color.White,
+                                color = VK_TEXT_PRIMARY,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 2,
@@ -682,40 +682,39 @@ fun PlaylistDetailScreen(
                             Spacer(Modifier.height(6.dp))
 
                             // Автор плейлиста со стрелочкой `>`
-                            val authorName = playlist?.description?.takeIf { it.isNotBlank() } ?: "emo meowlence"
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                Text(
-                                    text = authorName,
-                                    color = Color(0xFF9E96A0),
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Spacer(Modifier.width(2.dp))
-                                Icon(
-                                    imageVector = Icons.Filled.ChevronRight,
-                                    contentDescription = null,
-                                    tint = Color(0xFF9E96A0),
-                                    modifier = Modifier.size(16.dp),
-                                )
+                            val authorName = playlist?.description?.takeIf { it.isNotBlank() }
+                            if (authorName != null) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    Text(
+                                        text = authorName,
+                                        color = VK_TEXT_SECONDARY,
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Spacer(Modifier.width(2.dp))
+                                    Icon(
+                                        imageVector = Icons.Filled.ChevronRight,
+                                        contentDescription = null,
+                                        tint = VK_TEXT_SECONDARY,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                }
                             }
 
                             // Прослушивания
                             val playsCount = playlist?.plays ?: 0
-                            val playsText = if (playsCount > 0) {
-                                "$playsCount ${formatPlaysWord(playsCount)}"
-                            } else {
-                                "139 прослушиваний"
+                            if (playsCount > 0) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "$playsCount ${formatPlaysWord(playsCount)}",
+                                    color = VK_TEXT_SECONDARY,
+                                    fontSize = 13.sp,
+                                )
                             }
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = playsText,
-                                color = Color(0xFF7D777F),
-                                fontSize = 13.sp,
-                            )
 
                             Spacer(Modifier.height(18.dp))
 
@@ -743,13 +742,13 @@ fun PlaylistDetailScreen(
                                     Icon(
                                         imageVector = Icons.Outlined.DeleteOutline,
                                         contentDescription = "Добавлено",
-                                        tint = Color(0xFFF2DAEE),
+                                        tint = VK_ACCENT,
                                         modifier = Modifier.size(24.dp),
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
                                         text = if (isFollowed) "Добавлено" else "Добавить",
-                                        color = Color(0xFFF2DAEE),
+                                        color = VK_ACCENT,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium,
                                     )
@@ -782,13 +781,13 @@ fun PlaylistDetailScreen(
                                     Icon(
                                         imageVector = Icons.Filled.Download,
                                         contentDescription = "Кешировать",
-                                        tint = Color.White,
+                                        tint = VK_TEXT_PRIMARY,
                                         modifier = Modifier.size(24.dp),
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
                                         text = "Кешировать",
-                                        color = Color.White,
+                                        color = VK_TEXT_PRIMARY,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium,
                                     )
@@ -816,13 +815,13 @@ fun PlaylistDetailScreen(
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                                         contentDescription = "В очередь",
-                                        tint = Color.White,
+                                        tint = VK_TEXT_PRIMARY,
                                         modifier = Modifier.size(24.dp),
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
                                         text = "В очередь",
-                                        color = Color.White,
+                                        color = VK_TEXT_PRIMARY,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium,
                                     )
@@ -844,7 +843,7 @@ fun PlaylistDetailScreen(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(MaterialTheme.shapes.medium)
-                                        .background(Color(0xFF282329))
+                                        .background(MaterialTheme.colorScheme.secondaryContainer)
                                         .clickable {
                                             android.widget.Toast.makeText(app.applicationContext, "Режим плейлиста", android.widget.Toast.LENGTH_SHORT).show()
                                         },
@@ -853,19 +852,19 @@ fun PlaylistDetailScreen(
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                                         contentDescription = null,
-                                        tint = Color.White,
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                         modifier = Modifier.size(22.dp),
                                     )
                                 }
 
-                                // Главная кнопка: «Слушать» (белая плашка со скруглением 24 dp)
+                                // Главная кнопка: «Слушать» (акцентная плашка со скруглением CircleShape)
                                 val isCurrentPlaying = tracks.any { it.id == playerState.currentTrack?.id } && playerState.isPlaying
                                 Row(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(48.dp)
                                         .clip(CircleShape)
-                                        .background(Color.White)
+                                        .background(VK_ACCENT)
                                         .clickable {
                                             if (tracks.isNotEmpty()) {
                                                 if (isCurrentPlaying) {
@@ -881,13 +880,13 @@ fun PlaylistDetailScreen(
                                     Icon(
                                         imageVector = if (isCurrentPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                                         contentDescription = null,
-                                        tint = Color.Black,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.size(20.dp),
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text(
                                         text = if (isCurrentPlaying) "Пауза" else "Слушать",
-                                        color = Color.Black,
+                                        color = MaterialTheme.colorScheme.onPrimary,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.SemiBold,
                                     )
@@ -898,7 +897,7 @@ fun PlaylistDetailScreen(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(MaterialTheme.shapes.medium)
-                                        .background(Color(0xFF282329))
+                                        .background(MaterialTheme.colorScheme.secondaryContainer)
                                         .clickable {
                                             if (tracks.isNotEmpty()) {
                                                 PlayerConnection.playTrackList(tracks, 0)
@@ -909,7 +908,7 @@ fun PlaylistDetailScreen(
                                     Icon(
                                         imageVector = Icons.Filled.MusicNote,
                                         contentDescription = null,
-                                        tint = Color.White,
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                         modifier = Modifier.size(22.dp),
                                     )
                                 }
@@ -919,7 +918,7 @@ fun PlaylistDetailScreen(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(MaterialTheme.shapes.medium)
-                                        .background(Color(0xFF282329))
+                                        .background(MaterialTheme.colorScheme.secondaryContainer)
                                         .clickable {
                                             if (tracks.isNotEmpty()) {
                                                 PlayerConnection.shuffleAll(tracks)
@@ -930,7 +929,7 @@ fun PlaylistDetailScreen(
                                     Icon(
                                         imageVector = Icons.Filled.Shuffle,
                                         contentDescription = "Перемешать",
-                                        tint = Color.White,
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                         modifier = Modifier.size(22.dp),
                                     )
                                 }
@@ -949,7 +948,7 @@ fun PlaylistDetailScreen(
                                     .padding(vertical = 40.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text("Плейлист пуст", color = Color(0xFF9E96A0), fontSize = 14.sp)
+                                Text("Плейлист пуст", color = VK_TEXT_SECONDARY, fontSize = 14.sp)
                             }
                         }
                     } else {
@@ -968,16 +967,16 @@ fun PlaylistDetailScreen(
                                             PlayerConnection.playTrackList(tracks, index)
                                         }
                                     }
-                                    .background(if (isCurrent) Color(0xFF382F37).copy(alpha = 0.45f) else Color.Transparent)
+                                    .background(if (isCurrent) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f) else Color.Transparent)
                                     .padding(horizontal = 16.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                // Квадратная плашка обложки 44x44 dp скругление 10 dp
+                                // Квадратная плашка обложки 44x44 dp скругление 8 dp
                                 Box(
                                     modifier = Modifier
                                         .size(44.dp)
                                         .clip(MaterialTheme.shapes.small)
-                                        .background(Color(0xFF1E1B20)),
+                                        .background(VK_CARD),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     val albumThumb = track.albumThumb
@@ -992,7 +991,7 @@ fun PlaylistDetailScreen(
                                         Icon(
                                             imageVector = Icons.Filled.GraphicEq,
                                             contentDescription = null,
-                                            tint = Color(0xFFF2DAEE),
+                                            tint = VK_ACCENT,
                                             modifier = Modifier.size(22.dp),
                                         )
                                     } else {
@@ -1006,7 +1005,7 @@ fun PlaylistDetailScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = track.title,
-                                        color = if (isCurrent) Color(0xFFF2DAEE) else Color.White,
+                                        color = if (isCurrent) VK_ACCENT else VK_TEXT_PRIMARY,
                                         fontSize = 15.sp,
                                         fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
                                         maxLines = 1,
@@ -1015,7 +1014,7 @@ fun PlaylistDetailScreen(
                                     Spacer(Modifier.height(2.dp))
                                     Text(
                                         text = track.artist,
-                                        color = Color(0xFF9E96A0),
+                                        color = VK_TEXT_SECONDARY,
                                         fontSize = 13.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -1027,7 +1026,7 @@ fun PlaylistDetailScreen(
                                 // Длительность трека справа
                                 Text(
                                     text = track.duration.toDurationString(),
-                                    color = Color(0xFF9E96A0),
+                                    color = VK_TEXT_SECONDARY,
                                     fontSize = 13.sp,
                                 )
 
@@ -1037,7 +1036,7 @@ fun PlaylistDetailScreen(
                                     Icon(
                                         imageVector = Icons.Filled.MoreVert,
                                         contentDescription = "Опции",
-                                        tint = Color(0xFF7D777F),
+                                        tint = VK_TEXT_SECONDARY,
                                         modifier = Modifier.size(20.dp),
                                     )
                                 }
@@ -1053,17 +1052,6 @@ fun PlaylistDetailScreen(
                             val plCreated = playlist?.createTime ?: 0L
                             val plUpdated = playlist?.updateTime ?: 0L
 
-                            val createdDateStr = if (plCreated > 0L) {
-                                formatPlaylistDate(plCreated)
-                            } else {
-                                "30 Июн 2024 в 19:04"
-                            }
-                            val updatedDateStr = if (plUpdated > 0L) {
-                                formatPlaylistDate(plUpdated)
-                            } else {
-                                "30 Июн 2024 в 19:04"
-                            }
-
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1071,36 +1059,40 @@ fun PlaylistDetailScreen(
                             ) {
                                 Text(
                                     text = formatTrackCount(totalTracksCount),
-                                    color = Color(0xFF9E96A0),
+                                    color = VK_TEXT_SECONDARY,
                                     fontSize = 13.sp,
                                 )
                                 Text(
                                     text = "$totalMinutes ${formatMinutesWord(totalMinutes.toInt())}",
-                                    color = Color(0xFF9E96A0),
+                                    color = VK_TEXT_SECONDARY,
                                     fontSize = 13.sp,
                                 )
-                                Text(
-                                    text = if ((playlist?.plays ?: 0) > 0) {
-                                        "${playlist?.plays} ${formatPlaysWord(playlist?.plays ?: 0)}"
-                                    } else {
-                                        "139 прослушиваний"
-                                    },
-                                    color = Color(0xFF9E96A0),
-                                    fontSize = 13.sp,
-                                )
+                                val plPlays = playlist?.plays ?: 0
+                                if (plPlays > 0) {
+                                    Text(
+                                        text = "$plPlays ${formatPlaysWord(plPlays)}",
+                                        color = VK_TEXT_SECONDARY,
+                                        fontSize = 13.sp,
+                                    )
+                                }
 
-                                Spacer(Modifier.height(16.dp))
-
-                                Text(
-                                    text = "создано $createdDateStr",
-                                    color = Color(0xFF7D777F),
-                                    fontSize = 13.sp,
-                                )
-                                Text(
-                                    text = "изменено $updatedDateStr",
-                                    color = Color(0xFF7D777F),
-                                    fontSize = 13.sp,
-                                )
+                                if (plCreated > 0L || plUpdated > 0L) {
+                                    Spacer(Modifier.height(16.dp))
+                                }
+                                if (plCreated > 0L) {
+                                    Text(
+                                        text = "создано ${formatPlaylistDate(plCreated)}",
+                                        color = VK_TEXT_SECONDARY,
+                                        fontSize = 13.sp,
+                                    )
+                                }
+                                if (plUpdated > 0L) {
+                                    Text(
+                                        text = "изменено ${formatPlaylistDate(plUpdated)}",
+                                        color = VK_TEXT_SECONDARY,
+                                        fontSize = 13.sp,
+                                    )
+                                }
                             }
                         }
                     }
@@ -1612,7 +1604,7 @@ private fun PlaylistRow(
             modifier = Modifier
                 .size(56.dp)
                 .clip(MaterialTheme.shapes.small)
-                .background(Color(0xFF282329)),
+                .background(VK_CARD),
             contentAlignment = Alignment.Center,
         ) {
             if (!coverUrl.isNullOrBlank()) {
@@ -1626,7 +1618,7 @@ private fun PlaylistRow(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                     contentDescription = null,
-                    tint = Color(0xFFF2DAEE),
+                    tint = VK_ACCENT,
                     modifier = Modifier.size(26.dp),
                 )
             }
@@ -1635,7 +1627,7 @@ private fun PlaylistRow(
         Column(Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = Color.White,
+                color = VK_TEXT_PRIMARY,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Normal,
                 maxLines = 1,
@@ -1645,7 +1637,7 @@ private fun PlaylistRow(
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    color = Color(0xFF9E96A0),
+                    color = VK_TEXT_SECONDARY,
                     fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
