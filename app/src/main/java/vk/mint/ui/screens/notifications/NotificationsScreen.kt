@@ -1,4 +1,4 @@
-package vk.mint.ui.screens.notifications
+﻿package vk.mint.ui.screens.notifications
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -410,100 +410,6 @@ private fun SectionHeader(text: String, isNew: Boolean) {
     )
 }
 
-// ═══════════════════════════════════════════════════════════
-// #NOTIF-FEED-FILTER (19-B): bottom-sheet «Фильтр»
-// ═══════════════════════════════════════════════════════════
-
-/**
- * #NOTIF-FEED-FILTER (19-B): выбор категории фильтра уведомлений — ленточный
- * визуальный паттерн (аналог FeedScreen #FEED-FILTER, FeedFilterBar): список
- * разделов [NOTIFICATION_FILTERS] с чекмарком на активной. Контейнер —
- * ModalBottomSheet с заголовком «Фильтр» (прямо указано в ТЗ; FeedScreen
- * открывает DropdownMenu — список+чекмарк воспроизведён 1:1, контейнер —
- * bottom-sheet по ТЗ). Прежний самодельный паттерн (FilterList → FlowRow-чипы
- * в subBar) удалён.
- *
- * Поведение как у ленточного DropdownMenu: выбор пункта закрывает список;
- * повторный тап на активную категорию просто закрывает (фильтр не сбрасывается).
- *
- * @param currentFilter текущее значение activeFilter
- * @param onSelect вызван при выборе категории (передаёт type пункта)
- * @param onDismiss закрытие шита (тап мимо / back / после выбора)
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun NotificationFilterSheet(
-    currentFilter: String,
-    onSelect: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding(),
-        ) {
-            // Заголовок «Фильтр» — по ТЗ (паттерн AttachmentPickerSheet «Прикрепить»).
-            Text(
-                text = "Фильтр",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-            HorizontalDivider()
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 480.dp),
-            ) {
-                items(NOTIFICATION_FILTERS, key = { it.type }) { f ->
-                    val selected = currentFilter == f.type
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onSelect(f.type)
-                                onDismiss()
-                            }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            f.icon,
-                            contentDescription = null,
-                            tint = if (selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = f.label,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f),
-                        )
-                        // Чекмарк на активной — как в ленточном FeedFilterBar
-                        // (DropdownMenuItem leadingIcon=Check на текущем разделе).
-                        if (selected) {
-                            Icon(
-                                Icons.Outlined.Check,
-                                contentDescription = "Выбрано",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 // ═══════════════════════════════════════════════════════════
 // #NOTIF-NFDCAT: категорийный сайдбар + переключатель Новые/Просмотренные
