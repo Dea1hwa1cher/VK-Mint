@@ -4419,25 +4419,74 @@ fun ChatDetailScreen(
                             .imePadding(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // VKUI × M3E WriteBar: кнопка смайлов/стикеров слева
-                        IconButton(
-                            onClick = {
-                                keyboardController?.hide()
-                                if (showEmojiStickerPanel) {
-                                    showEmojiStickerPanel = false
+                        // VKUI × M3E WriteBar: кнопка прикрепления вложений слева (VkIcons.Attach28)
+                        Box {
+                            IconButton(
+                                onClick = { showAttachMenu = true },
+                                enabled = !sending && !uploading,
+                            ) {
+                                if (uploading) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                                 } else {
-                                    if (emojiStickerTab == 1 && stickerPacks.isEmpty()) {
-                                        loadStickers()
-                                    }
-                                    showEmojiStickerPanel = true
+                                    Icon(
+                                        imageVector = VkIcons.Attach28,
+                                        contentDescription = "Прикрепить файл",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(24.dp),
+                                    )
                                 }
-                            },
-                            enabled = !sending && !uploading,
-                        ) {
-                            Icon(
-                                imageVector = VkIcons.SmileOutline24,
-                                contentDescription = "Смайлы и стикеры",
-                                tint = if (showEmojiStickerPanel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            }
+                            UnifiedAttachMenu(
+                                expanded = showAttachMenu,
+                                onDismissRequest = { showAttachMenu = false },
+                                onPhoto = {
+                                    val req = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    if (multiFileEnabled) {
+                                        multiPhotoPickerLauncher.launch(req)
+                                    } else {
+                                        photoPickerLauncher.launch(req)
+                                    }
+                                },
+                                onCamera = {
+                                    val permission = Manifest.permission.CAMERA
+                                    if (ContextCompat.checkSelfPermission(ctx, permission) ==
+                                        android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        val uri = createCameraImageUri(ctx)
+                                        if (uri != null) {
+                                            cameraImageUri = uri
+                                            onCameraLaunch(peerId, currentTitle, currentPhoto)
+                                            cameraLauncher.launch(uri)
+                                        }
+                                    } else {
+                                        cameraPermissionLauncher.launch(permission)
+                                    }
+                                },
+                                onVideo = {
+                                    attachmentPickerTab = AttachmentPickerTab.Video
+                                    showAttachmentPicker = true
+                                },
+                                onAudio = {
+                                    attachmentPickerTab = AttachmentPickerTab.Music
+                                    showAttachmentPicker = true
+                                },
+                                onGift = {
+                                    attachmentPickerTab = AttachmentPickerTab.Gifts
+                                    showAttachmentPicker = true
+                                },
+                                onFile = {
+                                    multiFilePickerLauncher.launch(arrayOf("*/*"))
+                                },
+                                showPhotoFromVk = true,
+                                onPhotoFromVk = {
+                                    attachmentPickerTab = AttachmentPickerTab.Photos
+                                    showAttachmentPicker = true
+                                },
+                                showFileFromVk = true,
+                                onFileFromVk = {
+                                    attachmentPickerTab = AttachmentPickerTab.Docs
+                                    showAttachmentPicker = true
+                                },
+                                showGift = peerId > 0 && peerId < 2_000_000_000L,
                             )
                         }
 
@@ -4467,72 +4516,24 @@ fun ChatDetailScreen(
                                 cursorColor = MaterialTheme.colorScheme.primary,
                             ),
                             trailingIcon = {
-                                Box {
-                                    IconButton(
-                                        onClick = { showAttachMenu = true },
-                                        enabled = !sending && !uploading,
-                                    ) {
-                                        if (uploading) {
-                                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                IconButton(
+                                    onClick = {
+                                        keyboardController?.hide()
+                                        if (showEmojiStickerPanel) {
+                                            showEmojiStickerPanel = false
                                         } else {
-                                            Icon(
-                                                imageVector = VkIcons.Attach24,
-                                                contentDescription = "Прикрепить файл",
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
+                                            if (emojiStickerTab == 1 && stickerPacks.isEmpty()) {
+                                                loadStickers()
+                                            }
+                                            showEmojiStickerPanel = true
                                         }
-                                    }
-                                    UnifiedAttachMenu(
-                                        expanded = showAttachMenu,
-                                        onDismissRequest = { showAttachMenu = false },
-                                        onPhoto = {
-                                            val req = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                            if (multiFileEnabled) {
-                                                multiPhotoPickerLauncher.launch(req)
-                                            } else {
-                                                photoPickerLauncher.launch(req)
-                                            }
-                                        },
-                                        onCamera = {
-                                            val permission = Manifest.permission.CAMERA
-                                            if (ContextCompat.checkSelfPermission(ctx, permission) ==
-                                                android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                                val uri = createCameraImageUri(ctx)
-                                                if (uri != null) {
-                                                    cameraImageUri = uri
-                                                    onCameraLaunch(peerId, currentTitle, currentPhoto)
-                                                    cameraLauncher.launch(uri)
-                                                }
-                                            } else {
-                                                cameraPermissionLauncher.launch(permission)
-                                            }
-                                        },
-                                        onVideo = {
-                                            attachmentPickerTab = AttachmentPickerTab.Video
-                                            showAttachmentPicker = true
-                                        },
-                                        onAudio = {
-                                            attachmentPickerTab = AttachmentPickerTab.Music
-                                            showAttachmentPicker = true
-                                        },
-                                        onGift = {
-                                            attachmentPickerTab = AttachmentPickerTab.Gifts
-                                            showAttachmentPicker = true
-                                        },
-                                        onFile = {
-                                            multiFilePickerLauncher.launch(arrayOf("*/*"))
-                                        },
-                                        showPhotoFromVk = true,
-                                        onPhotoFromVk = {
-                                            attachmentPickerTab = AttachmentPickerTab.Photos
-                                            showAttachmentPicker = true
-                                        },
-                                        showFileFromVk = true,
-                                        onFileFromVk = {
-                                            attachmentPickerTab = AttachmentPickerTab.Docs
-                                            showAttachmentPicker = true
-                                        },
-                                        showGift = peerId > 0 && peerId < 2_000_000_000L,
+                                    },
+                                    enabled = !sending && !uploading,
+                                ) {
+                                    Icon(
+                                        imageVector = VkIcons.SmileOutline24,
+                                        contentDescription = "Смайлы и стикеры",
+                                        tint = if (showEmojiStickerPanel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             },

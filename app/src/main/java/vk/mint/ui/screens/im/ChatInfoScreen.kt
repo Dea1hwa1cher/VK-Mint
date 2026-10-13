@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -65,6 +66,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import vk.mint.ui.components.ExpressiveSwitch
+import vk.mint.ui.components.VkSubnavigationBar
+import vk.mint.ui.components.VkSubnavigationButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -472,21 +475,44 @@ fun ChatInfoScreen(
                 // ---- Общие медиа / Участники (7 табов) ----
                 item(key = "media_header") { SectionHeader("Общие медиа") }
                 item(key = "media_tabs") {
-                    PrimaryTabRow(selectedTabIndex = selectedTab) {
-                        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 },
-                            text = { Text(if (isGroupChat) "Участники (${members.size})" else "Участники") })
-                        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 },
-                            text = { Text("Фото") })
-                        Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 },
-                            text = { Text("Видео") })
-                        Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 },
-                            text = { Text("Музыка") })
-                        Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 },
-                            text = { Text("Сервисы") })
-                        Tab(selected = selectedTab == 5, onClick = { selectedTab = 5 },
-                            text = { Text("Файлы") })
-                        Tab(selected = selectedTab == 6, onClick = { selectedTab = 6 },
-                            text = { Text("Ссылки") })
+                    VkSubnavigationBar(
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    ) {
+                        VkSubnavigationButton(
+                            text = if (isGroupChat) "Участники (${members.size})" else "Участники",
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                        )
+                        VkSubnavigationButton(
+                            text = "Фото",
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                        )
+                        VkSubnavigationButton(
+                            text = "Видео",
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                        )
+                        VkSubnavigationButton(
+                            text = "Музыка",
+                            selected = selectedTab == 3,
+                            onClick = { selectedTab = 3 },
+                        )
+                        VkSubnavigationButton(
+                            text = "Сервисы",
+                            selected = selectedTab == 4,
+                            onClick = { selectedTab = 4 },
+                        )
+                        VkSubnavigationButton(
+                            text = "Файлы",
+                            selected = selectedTab == 5,
+                            onClick = { selectedTab = 5 },
+                        )
+                        VkSubnavigationButton(
+                            text = "Ссылки",
+                            selected = selectedTab == 6,
+                            onClick = { selectedTab = 6 },
+                        )
                     }
                 }
                 // Fix #272: рендер участников ВНЕ одного item — раньше 828 MemberRow

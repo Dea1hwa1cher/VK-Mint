@@ -35,7 +35,8 @@ import vk.mint.ui.anim.expressiveSpring
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
@@ -2373,7 +2374,6 @@ private fun ChatCard(
         colors = CardDefaults.cardColors(
             containerColor = when {
                 isDragging -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                isPinned -> MaterialTheme.colorScheme.surfaceContainerLow
                 else -> MaterialTheme.colorScheme.surface
             },
         ),
@@ -2387,48 +2387,6 @@ private fun ChatCard(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Fix #274: drag handle виден только у закреплённых чатов.
-                    if (isPinned && pinnedIndex >= 0) {
-                        Icon(
-                            imageVector = Icons.Filled.DragHandle,
-                            contentDescription = "Перетащить",
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .pointerInput(chat.peer.id) {
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = {
-                                            isDragging = true
-                                            localDragOffsetY = 0f
-                                        },
-                                        onDragEnd = {
-                                            isDragging = false
-                                            localDragOffsetY = 0f
-                                        },
-                                        onDragCancel = {
-                                            isDragging = false
-                                            localDragOffsetY = 0f
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            change.consume()
-                                            localDragOffsetY += dragAmount.y
-                                            val threshold = cardHeightPx * 0.6f
-                                            if (localDragOffsetY <= -threshold && currentPinnedIndex > 0) {
-                                                onDragSwap(currentPinnedIndex, currentPinnedIndex - 1)
-                                                localDragOffsetY += cardHeightPx
-                                            } else if (localDragOffsetY >= threshold &&
-                                                currentPinnedIndex < currentPinnedListSize - 1) {
-                                                onDragSwap(currentPinnedIndex, currentPinnedIndex + 1)
-                                                localDragOffsetY -= cardHeightPx
-                                            }
-                                        },
-                                    )
-                                },
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-
                     // VKUI × M3E Avatar: 56dp с онлайн-индикатором VkOnlineGreen
                     Box(contentAlignment = Alignment.BottomEnd) {
                         if (photo != null) {
@@ -2476,10 +2434,7 @@ private fun ChatCard(
                                 modifier = Modifier
                                     .size(16.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        if (isPinned) MaterialTheme.colorScheme.surfaceContainerLow
-                                        else MaterialTheme.colorScheme.surface
-                                    ),
+                                    .background(MaterialTheme.colorScheme.surface),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Box(
@@ -2635,6 +2590,41 @@ private fun ChatCard(
                         onTogglePin(chat.peer.id, !isPinned)
                     },
                 )
+                }
+                // Перемещение закреплённого диалога выше/ниже в списке
+                if (showListActions && !chat.isChannel && isPinned && pinnedIndex >= 0) {
+                    if (currentPinnedIndex > 0) {
+                        DropdownMenuItem(
+                            text = { Text("Переместить выше") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.ArrowUpward,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                )
+                            },
+                            onClick = {
+                                showContextMenu = false
+                                onDragSwap(currentPinnedIndex, currentPinnedIndex - 1)
+                            },
+                        )
+                    }
+                    if (currentPinnedIndex < currentPinnedListSize - 1) {
+                        DropdownMenuItem(
+                            text = { Text("Переместить ниже") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.ArrowDownward,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                )
+                            },
+                            onClick = {
+                                showContextMenu = false
+                                onDragSwap(currentPinnedIndex, currentPinnedIndex + 1)
+                            },
+                        )
+                    }
                 }
                 // #CHANNELS-PIN (П3): закрепить/открепить канал (channels.pin/
                 // channels.unpin — серверное закрепление в списке каналов).

@@ -1151,6 +1151,35 @@ object VkIcons {
         }.build().also { _attach24 = it }
     private var _attach24: ImageVector? = null
 
+    val Attach28: ImageVector
+        get() = _attach28 ?: ImageVector.Builder(
+            name = "VkIcons.Attach28",
+            defaultWidth = 28.dp,
+            defaultHeight = 28.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(18.5f, 11.2f)
+                lineTo(11.6f, 18.1f)
+                curveTo(9.61f, 20.09f, 6.39f, 20.09f, 4.4f, 18.1f)
+                curveTo(2.41f, 16.11f, 2.41f, 12.89f, 4.4f, 10.9f)
+                lineTo(12.2f, 3.1f)
+                curveTo(13.53f, 1.77f, 15.67f, 1.77f, 17f, 3.1f)
+                curveTo(18.33f, 4.43f, 18.33f, 6.57f, 17f, 7.9f)
+                lineTo(9.5f, 15.4f)
+                curveTo(8.84f, 16.06f, 7.76f, 16.06f, 7.1f, 15.4f)
+                curveTo(6.44f, 14.74f, 6.44f, 13.66f, 7.1f, 13f)
+                lineTo(13.8f, 6.3f)
+            }
+        }.build().also { _attach28 = it }
+    private var _attach28: ImageVector? = null
+
     val SmileOutline24: ImageVector
         get() = _smileOutline24 ?: ImageVector.Builder(
             name = "VkIcons.SmileOutline24",
@@ -1221,6 +1250,8 @@ object VkIcons {
             }
         }.build().also { _voiceOutline24 = it }
     private var _voiceOutline24: ImageVector? = null
+
+    val Voice24: ImageVector get() = VoiceOutline24
 
     val Send24: ImageVector
         get() = _send24 ?: ImageVector.Builder(
