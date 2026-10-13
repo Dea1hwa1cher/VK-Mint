@@ -273,7 +273,7 @@ private fun CommentDocChip(title: String, ext: String, sizeBytes: Long) {
             modifier = Modifier.size(18.dp),
         )
         Text(
-            text = title + "." + ext + " · " + formatBytesComment(sizeBytes),
+            text = title + "." + ext + " · " + sizeBytes.toFileSizeString(),
             style = MaterialTheme.typography.labelMedium,
             maxLines = 1,
         )
@@ -367,6 +367,3 @@ private fun CommentLinkCard(title: String?, url: String, description: String?) {
         }
     }
 }
-
-/** Человекочитаемый размер файла для чипа документа (Б/КБ/МБ/ГБ). */
-internal fun formatBytesComment(bytes: Long): String = bytes.toFileSizeString()

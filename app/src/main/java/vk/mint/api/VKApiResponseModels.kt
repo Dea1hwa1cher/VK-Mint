@@ -136,8 +136,3 @@ data class ClipsFeedResult(
     val groups: Map<Long, VKApiClient.GroupInfo>,
 )
 
-data class VideoLongPollServer(
-    val server: String,
-    val key: String,
-    val ts: String,
-)
