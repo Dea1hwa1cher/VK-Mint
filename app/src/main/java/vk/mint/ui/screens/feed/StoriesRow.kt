@@ -127,13 +127,13 @@ fun StoriesRow(
         ) {
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 items(6) {
                     Box(
                         modifier = Modifier
-                            .size(68.dp)
+                            .size(76.dp)
                             .clip(avatarShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                     )
@@ -153,18 +153,18 @@ fun StoriesRow(
     ) {
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             // Кнопка "Моя история" — акцентная плашка с "+".
             item(key = "my_story") {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(72.dp),
+                    modifier = Modifier.width(82.dp),
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(68.dp)
+                            .size(76.dp)
                             .clip(avatarShape)
                             .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center,
@@ -173,7 +173,7 @@ fun StoriesRow(
                             Icons.Outlined.Add,
                             contentDescription = "Создать историю",
                             tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(28.dp),
+                            modifier = Modifier.size(32.dp),
                         )
                     }
                     Text(
@@ -182,8 +182,8 @@ fun StoriesRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 4.dp),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 5.dp),
                     )
                 }
             }
@@ -209,12 +209,12 @@ fun StoriesRow(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .width(72.dp)
+                        .width(82.dp)
                         .clickable { onStoryClick(displayGroups, groupIndex) },
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(68.dp)
+                            .size(76.dp)
                             .padding(2.dp)
                             .clip(avatarShape)
                             .background(ringColor)
@@ -226,7 +226,7 @@ fun StoriesRow(
                                 model = group.photo100,
                                 contentDescription = group.name ?: "",
                                 modifier = Modifier
-                                    .size(58.dp)
+                                    .size(66.dp)
                                     .clip(avatarShape)
                                     .border(2.dp, MaterialTheme.colorScheme.surface, avatarShape),
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
@@ -234,7 +234,7 @@ fun StoriesRow(
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(58.dp)
+                                    .size(66.dp)
                                     .clip(avatarShape)
                                     .background(MaterialTheme.colorScheme.primaryContainer)
                                     .border(2.dp, MaterialTheme.colorScheme.surface, avatarShape),
@@ -254,8 +254,8 @@ fun StoriesRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 4.dp),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 5.dp),
                     )
                 }
             }

@@ -698,14 +698,18 @@ fun FeedScreen(
         if (post.fromId == 0L || post.fromId == myUserId) return
         val explicitSub: Boolean? = subscribeState[key]
         val current = explicitSub ?: run {
-            if (post.fromId < 0) {
-                val g = groups[-post.fromId] ?: likesGroups[-post.fromId]
-                if (g != null) g.isMember == 1 || g.memberStatus == 1
-                else post.postType !in listOf("suggest", "suggested")
+            if (feedFilter == FeedFilter.RECOMMENDED || feedFilter == FeedFilter.SEARCH || post.postType in listOf("suggest", "suggested")) {
+                if (post.fromId < 0) {
+                    val g = groups[-post.fromId] ?: likesGroups[-post.fromId]
+                    if (g != null) g.isMember == 1 || g.memberStatus == 1
+                    else false
+                } else {
+                    val p = profiles[post.fromId]
+                    if (p != null) p.friendStatus == 3 || p.isSubscribed == 1
+                    else false
+                }
             } else {
-                val p = profiles[post.fromId]
-                if (p != null) p.friendStatus == 3 || p.isSubscribed == 1
-                else post.postType !in listOf("suggest", "suggested")
+                true // В стандартной ленте (ALL/FRIENDS/PHOTOS) пользователь уже подписан на источник
             }
         }
         val target = !current
@@ -1866,6 +1870,7 @@ fun FeedScreen(
                     // IMP-FEED-1: подписка (п.2) + «Пожаловаться» (п.1).
                     myUserId = myUserId,
                     subscriptionState = subscribeState,
+                    isRecommendedFeed = (feedFilter == FeedFilter.RECOMMENDED || feedFilter == FeedFilter.SEARCH),
                     // #FEED-CAROUSEL (19-A): флаг из prefs экрана.
                     carouselEnabled = feedPrefs.feedCarouselEnabled,
                     onSubscribe = { toggleSubscribe(it) },
@@ -2208,6 +2213,7 @@ private fun PostCard(
     // absent = неизвестно → рисуем дефолт «Подписаться» (VK не отдаёт состояние
     // подписки на юзера в newsfeed.get — честный дефолт, см. задачу IMP-FEED-1).
     subscriptionState: Map<String, Boolean> = emptyMap(),
+    isRecommendedFeed: Boolean = false,
     onSubscribe: (Post) -> Unit = {},
     // П-7-AB: «Пожаловаться» (wall.markAsSpam) — диалог и вызов на уровне экрана.
     onReportSpam: (Post) -> Unit = {},
@@ -2348,24 +2354,22 @@ private fun PostCard(
                 }
                 // #FEED-SUBSCRIBE: компактная кнопка подписки в хедере карточки.
                 // В VK кнопка «Подписаться» показывается ТОЛЬКО когда пользователь НЕ подписан на автора
-                // (рекомендованные записи, сторонние авторы). Если подписка есть, кнопка скрывается.
+                // (рекомендованные записи «Для вас», поиск, предложка). В обычной ленте пользователь уже подписан.
                 if (post.fromId != 0L && post.fromId != myUserId) {
                     val explicitSub: Boolean? = subscriptionState[post.fromId.toString()]
                     val isSubscribed: Boolean = explicitSub ?: run {
-                        if (post.fromId < 0) {
-                            val g = groups[-post.fromId]
-                            if (g != null) {
-                                g.isMember == 1 || g.memberStatus == 1
+                        if (isRecommendedFeed || post.postType in listOf("suggest", "suggested")) {
+                            if (post.fromId < 0) {
+                                val g = groups[-post.fromId]
+                                if (g != null) g.isMember == 1 || g.memberStatus == 1
+                                else false
                             } else {
-                                post.postType !in listOf("suggest", "suggested")
+                                val p = profiles[post.fromId]
+                                if (p != null) p.friendStatus == 3 || p.isSubscribed == 1
+                                else false
                             }
                         } else {
-                            val p = profiles[post.fromId]
-                            if (p != null) {
-                                p.friendStatus == 3 || p.isSubscribed == 1
-                            } else {
-                                post.postType !in listOf("suggest", "suggested")
-                            }
+                            true // В обычной ленте (ALL/FRIENDS/PHOTOS) пользователь уже подписан на источник
                         }
                     }
                     if (!isSubscribed) {
