@@ -5988,7 +5988,7 @@ private fun UiScaleRow(value: Float, onChange: (Float) -> Unit) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Масштаб интерфейса", style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "Кнопки, панели и текст. База −15% (85%), растёт с настройкой.",
+                        "Кнопки, панели и текст. Стандарт VKUI — 100%, компактный — 85%.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

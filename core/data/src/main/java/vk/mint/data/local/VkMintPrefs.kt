@@ -2436,10 +2436,10 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     // Fix #189: defaults для Auth Domains Config.
     // Вынесены в companion чтобы быть доступными из AuthDomainsConfig без ссылки на Snapshot.
     companion object {
-        // Fix #UISCALE: базовый масштаб интерфейса по умолчанию — 0.85 (−15%).
-        // Кнопки/панели/текст уменьшаются при стандартной настройке. Рост
-        // предложения задаётся пользователем: 0.75 / 0.85 / 1.0 / 1.15 / 1.3.
-        const val UI_SCALE_DEFAULT = 0.85f
+        // Fix #UISCALE / VKUI v8 Hybrid: базовый масштаб интерфейса по умолчанию — 1.0f (100%).
+        // Нативная типографика VKUI (15sp Paragraph, 16sp Headline 1, 0.sp letterSpacing)
+        // изначально компактна без искусственного сжатия −15%. Варианты: 0.75 / 0.85 / 1.0 / 1.15 / 1.3.
+        const val UI_SCALE_DEFAULT = 1.0f
         const val AUTH_OAUTH_HOST_DEFAULT      = "oauth.vk.com"
         const val AUTH_ID_HOST_DEFAULT         = "id.vk.com"
         const val AUTH_LOGIN_HOST_DEFAULT      = "login.vk.com"

@@ -24,6 +24,37 @@ object VkMintColors {
     val Light   = Color(0xFFEEEEEE)
     val Dark    = Color(0xFF111111)
 
+    // ── Официальные токены VKUI v8 (@vkontakte/vkui-tokens: vkBase / vkBaseDark) ──
+    // Светлая тема (vkBase):
+    val VkLightBackground    = Color(0xFFEBEDF0) // --vkui--color_background (подложка под островами Group)
+    val VkLightContent       = Color(0xFFFFFFFF) // --vkui--color_background_content (карточки/острова)
+    val VkLightSecondary     = Color(0xFFF5F5F5) // --vkui--color_background_secondary (пилюли реакций, кнопки)
+    val VkLightField         = Color(0xFFF2F3F5) // --vkui--color_field_background (поиск, поля ввода)
+    val VkLightTextPrimary   = Color(0xFF000000) // --vkui--color_text_primary
+    val VkLightTextSecondary = Color(0xFF818C99) // --vkui--color_text_secondary / icon_medium (серо-стальной ВК)
+    val VkLightTextSubhead   = Color(0xFF6D7885) // --vkui--color_text_subhead
+    val VkLightIconSecondary = Color(0xFF99A2AD) // --vkui--color_icon_secondary
+    val VkLightSeparator     = Color(0xFFD7D8D9) // --vkui--color_separator_primary
+
+    // Тёмная тема (vkBaseDark):
+    val VkDarkBackground     = Color(0xFF0A0A0A) // --vkui--color_background (глубокий фон под островами)
+    val VkDarkContent        = Color(0xFF19191A) // --vkui--color_background_content / header_background
+    val VkDarkModal          = Color(0xFF1C1D1E) // --vkui--color_background_modal
+    val VkDarkTertiary       = Color(0xFF202021) // --vkui--color_background_tertiary
+    val VkDarkSecondary      = Color(0xFF232324) // --vkui--color_background_secondary / field_background
+    val VkDarkElevated       = Color(0xFF2C2D2E) // повышенный контейнер M3E поверх vkBaseDark
+    val VkDarkTextPrimary    = Color(0xFFE1E3E6) // --vkui--color_text_primary (мягкий белый без гало-эффекта)
+    val VkDarkTextSubhead    = Color(0xFF969A9F) // --vkui--color_text_subhead
+    val VkDarkTextSecondary  = Color(0xFF76787A) // --vkui--color_text_secondary / icon_secondary
+    val VkDarkSeparator      = Color(0xFF363738) // --vkui--color_separator_primary
+    val VkDarkAccentBlue     = Color(0xFF529EF4) // --vkui--color_background_accent / text_accent (vkBaseDark)
+
+    // Семантические статусы VKUI:
+    val VkPositive           = Color(0xFF4BB34B) // --vkui--color_background_positive / icon_positive
+    val VkNegative           = Color(0xFFE64646) // --vkui--color_background_negative (Light)
+    val VkNegativeDark       = Color(0xFFFF5C5C) // --vkui--color_text_negative (Dark)
+    val VkLikeRed            = Color(0xFFFF3347) // --vkui--color_icon_crimson (активный лайк ВК)
+
     // P0.21: VK-фирменные акценты в НАЧАЛЕ списка (indices 0-2).
     // Это первые цвета при переключении акцента в настройках (slider start).
     val VK_MODERN   = Color(0xFF0077FF)  // VK 2022+ «цифровой» синий (основной акцент VK)

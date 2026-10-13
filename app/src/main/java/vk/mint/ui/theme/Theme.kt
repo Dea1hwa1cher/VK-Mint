@@ -55,12 +55,13 @@ private fun deriveM3ETertiary(accent: Color, darkTheme: Boolean): Color {
 }
 
 /**
- * Fix #UISCALE (2026-10-02): масштаб ВСЕГО интерфейса (кнопки/панели/текст).
+ * Fix #UISCALE (2026-10-02) / VKUI v8 Hybrid (2026-10-13):
+ * Масштаб ВСЕГО интерфейса (кнопки/панели/текст).
  *
- * Локальный CompositionLocal-коэффициент. Base-дефолт 0.85 (−15%) при стандартной
- * настройке. Значение поставляется из VkMintTheme (параметр uiScale, источник —
- * VkMintPrefs.uiScale, варианты 0.75/0.85/1.0/1.15/1.3) и растёт вместе с настройкой —
- * интерфейс не «замерзает» на −15%.
+ * Локальный CompositionLocal-коэффициент. По стандарту VKUI v8 базовый дефолт равен `1.0f` (`100%`),
+ * так как типографическая сетка VKUI (`15sp` Paragraph, `16sp` Headline 1, `13sp` Footnote с `0.sp`
+ * трекингом) изначально спроектирована компактной без искусственного сжатия.
+ * Пользователю доступны дискретные пресеты `0.75 / 0.85 / 1.0 / 1.15 / 1.3` в Настройках.
  *
  * Рычаги применения:
  *  - ТЕКСТ (sp): VkMintTheme умножает LocalDensity.fontScale на uiScale (и на
@@ -68,11 +69,6 @@ private fun deriveM3ETertiary(accent: Color, darkTheme: Boolean): Color {
  *  - ПАНЕЛИ/КНОПКИ (dp): явно через helper [UiScale.scaled] (Dp.scaled()), который
  *    умножает размер на LocalUiScale и применяется в ключевых панелях (TopAppBar,
  *    панель ввода чата, лента, уведомления) и в компонентах, где нужен масштаб dp.
- *
- * Почему NOT глобальный Density.density: умножение density умножает ВСЕ dp-литералы
- * (включая внутренние отступы Material-компонентов, border'ы, псевдотачи) и может
- * ломать клик-зоны/выравнивание. Поэтому dp-масштаб сделан явным — безопасный
- * скелет: охвачены ключевые панели, остальное остается номинальных размеров.
  */
 val LocalUiScale = compositionLocalOf { 1f }
 
@@ -92,8 +88,11 @@ object UiScale {
 fun Modifier.scaled(size: Dp): Modifier = this.then(Modifier.requiredSize(size * LocalUiScale.current))
 
 /**
- * VK Mint 2.0 theme — B&W minimalist base, swappable accent color,
- * optional Material You dynamic colors (M3E 2025 compliant).
+ * VK Mint 2.0 theme — гибридная палитра **VKUI v8 (`vkBase` / `vkBaseDark`) × Material 3 Expressive (M3E)**:
+ *  - Официальные фоны подложек и карточек-островов (`#EBEDF0`/`#FFFFFF` в Light, `#0A0A0A`/`#19191A` в Dark).
+ *  - Фирменные серо-голубые вторичные тексты и иконки ВКонтакте (`#818C99` / `#909499`).
+ *  - Непрозрачные (opaque) тональные контейнеры M3E (`primaryContainer`, `secondaryContainer`, `tertiaryContainer`),
+ *    вычисляемые через `lerp` от базовой поверхности `Group` и выбранного акцента.
  */
 @Composable
 fun VkMintTheme(
@@ -102,36 +101,48 @@ fun VkMintTheme(
     monetHybrid: Boolean = false,
     accentIndex: Int = 0,
     fontScale: Int = 100,
-    uiScale: Float = 0.85f,
+    uiScale: Float = 1.0f,
     avatarShape: AvatarShape = AvatarShape.CIRCLE,
     content: @Composable () -> Unit,
 ) {
-    val accent = VkMintColors.accents.getOrElse(accentIndex) { VkMintColors.Black }
+    val rawAccent = VkMintColors.accents.getOrElse(accentIndex) { VkMintColors.VK_MODERN }
+    // В тёмной теме vkBaseDark фирменный синий #0077FF автоматически осветляется до #529EF4
+    // (--vkui--color_background_accent / --vkui--color_text_accent) для соблюдения WCAG AA на фоне #19191A.
+    val accent = if (darkTheme && rawAccent == VkMintColors.VK_MODERN) {
+        VkMintColors.VkDarkAccentBlue
+    } else {
+        rawAccent
+    }
     val white = Color.White
 
-    // #WCAG-CONTRAST: динамический расчет контрастного onAccent.
-    val onAccent = if (accent.luminance() > 0.4f) VkMintColors.Black else white
+    // #WCAG-CONTRAST: для фирменного синего ВК (и в Light #0077FF, и в Dark #529EF4)
+    // текст на акцентных кнопках всегда чисто белый (--vkui--color_text_contrast).
+    val onAccent = when {
+        rawAccent == VkMintColors.VK_MODERN -> white
+        accent.luminance() > 0.42f -> VkMintColors.Black
+        else -> white
+    }
     val secondaryRole = deriveM3ESecondary(accent, darkTheme)
-    val onSecondaryRole = if (secondaryRole.luminance() > 0.4f) VkMintColors.Black else white
+    val onSecondaryRole = if (secondaryRole.luminance() > 0.42f) VkMintColors.Black else white
     val tertiaryRole = deriveM3ETertiary(accent, darkTheme)
-    val onTertiaryRole = if (tertiaryRole.luminance() > 0.4f) VkMintColors.Black else white
+    val onTertiaryRole = if (tertiaryRole.luminance() > 0.42f) VkMintColors.Black else white
 
-    // Непрозрачные (opaque) тональные контейнеры по стандарту M3E 2025:
+    // Непрозрачные (opaque) тональные контейнеры по стандарту M3E 2025 поверх островной поверхности VKUI:
     // исключают просвечивание FAB, активных карточек и таблеток навигации при скролле.
-    val darkSurfaceBase = Color(0xFF1E1E1E)
-    val primaryContainerDark = if (accent == VkMintColors.Black) Color(0xFF2C2C2C) else lerp(darkSurfaceBase, accent, 0.28f)
-    val onPrimaryContainerDark = if (accent == VkMintColors.Black) white else lerp(accent, white, 0.72f)
-    val secondaryContainerDark = if (accent == VkMintColors.Black) Color(0xFF2C2C2C) else lerp(darkSurfaceBase, secondaryRole, 0.26f)
-    val onSecondaryContainerDark = if (accent == VkMintColors.Black) white else lerp(secondaryRole, white, 0.78f)
-    val tertiaryContainerDark = if (accent == VkMintColors.Black) Color(0xFF242424) else lerp(darkSurfaceBase, tertiaryRole, 0.25f)
-    val onTertiaryContainerDark = if (accent == VkMintColors.Black) white else lerp(tertiaryRole, white, 0.75f)
+    val darkSurfaceBase = VkMintColors.VkDarkContent // #19191A (--vkui--color_background_content)
+    val primaryContainerDark = if (rawAccent == VkMintColors.Black) Color(0xFF2C2D2E) else lerp(darkSurfaceBase, accent, 0.26f)
+    val onPrimaryContainerDark = if (rawAccent == VkMintColors.Black) VkMintColors.VkDarkTextPrimary else lerp(accent, white, 0.72f)
+    val secondaryContainerDark = if (rawAccent == VkMintColors.Black) Color(0xFF28292A) else lerp(darkSurfaceBase, secondaryRole, 0.24f)
+    val onSecondaryContainerDark = if (rawAccent == VkMintColors.Black) VkMintColors.VkDarkTextPrimary else lerp(secondaryRole, white, 0.78f)
+    val tertiaryContainerDark = if (rawAccent == VkMintColors.Black) Color(0xFF232324) else lerp(darkSurfaceBase, tertiaryRole, 0.24f)
+    val onTertiaryContainerDark = if (rawAccent == VkMintColors.Black) VkMintColors.VkDarkTextPrimary else lerp(tertiaryRole, white, 0.75f)
 
-    val primaryContainerLight = if (accent == VkMintColors.Black) Color(0xFFE8E8E8) else lerp(white, accent, 0.16f)
-    val onPrimaryContainerLight = if (accent == VkMintColors.Black) VkMintColors.Black else lerp(accent, VkMintColors.Black, 0.55f)
-    val secondaryContainerLight = if (accent == VkMintColors.Black) Color(0xFFE2E7EE) else lerp(white, secondaryRole, 0.18f)
-    val onSecondaryContainerLight = if (accent == VkMintColors.Black) VkMintColors.Black else lerp(secondaryRole, VkMintColors.Black, 0.60f)
-    val tertiaryContainerLight = if (accent == VkMintColors.Black) Color(0xFFF0F0F0) else lerp(white, tertiaryRole, 0.16f)
-    val onTertiaryContainerLight = if (accent == VkMintColors.Black) VkMintColors.Black else lerp(tertiaryRole, VkMintColors.Black, 0.55f)
+    val primaryContainerLight = if (rawAccent == VkMintColors.Black) Color(0xFFE8EAED) else lerp(white, rawAccent, 0.14f)
+    val onPrimaryContainerLight = if (rawAccent == VkMintColors.Black) VkMintColors.Black else lerp(rawAccent, VkMintColors.Black, 0.45f)
+    val secondaryContainerLight = if (rawAccent == VkMintColors.Black) Color(0xFFE5E7EB) else lerp(white, secondaryRole, 0.16f)
+    val onSecondaryContainerLight = if (rawAccent == VkMintColors.Black) VkMintColors.Black else lerp(secondaryRole, VkMintColors.Black, 0.55f)
+    val tertiaryContainerLight = if (rawAccent == VkMintColors.Black) Color(0xFFEBEDF0) else lerp(white, tertiaryRole, 0.15f)
+    val onTertiaryContainerLight = if (rawAccent == VkMintColors.Black) VkMintColors.Black else lerp(tertiaryRole, VkMintColors.Black, 0.50f)
 
     val canUseDynamicColor = dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
@@ -171,28 +182,29 @@ fun VkMintTheme(
             onTertiary = onTertiaryRole,
             tertiaryContainer = tertiaryContainerDark,
             onTertiaryContainer = onTertiaryContainerDark,
-            background = Color(0xFF121212),
-            onBackground = white,
-            surface = darkSurfaceBase,
-            onSurface = white,
-            surfaceVariant = Color(0xFF2A2A2A),
-            onSurfaceVariant = Color(0xFF999999),
-            surfaceDim = Color(0xFF121212),
-            surfaceBright = Color(0xFF38383A),
-            surfaceContainerLowest = Color(0xFF0F0F10),
-            surfaceContainerLow = Color(0xFF1A1A1A),
-            surfaceContainer = Color(0xFF1E1E1E),
-            surfaceContainerHigh = Color(0xFF262626),
-            surfaceContainerHighest = Color(0xFF333333),
-            outline = Color(0xFF444444),
-            outlineVariant = Color(0xFF333333),
-            error = Color(0xFFCF6679),
-            onError = Color(0xFF1E1E1E),
-            errorContainer = Color(0xFF93000A),
+            // Официальная тёмная схема VKUI v8 (vkBaseDark):
+            background = VkMintColors.VkDarkBackground,             // #0A0A0A (--vkui--color_background)
+            onBackground = VkMintColors.VkDarkTextPrimary,          // #E1E3E6 (--vkui--color_text_primary)
+            surface = VkMintColors.VkDarkContent,                   // #19191A (--vkui--color_background_content)
+            onSurface = VkMintColors.VkDarkTextPrimary,             // #E1E3E6 (--vkui--color_text_primary)
+            surfaceVariant = VkMintColors.VkDarkSecondary,          // #232324 (--vkui--color_field_background)
+            onSurfaceVariant = Color(0xFF909499),                   // Серо-стальной вторичный текст/иконки ВК (WCAG AA на #19191A)
+            surfaceDim = VkMintColors.VkDarkBackground,             // #0A0A0A
+            surfaceBright = Color(0xFF363738),
+            surfaceContainerLowest = VkMintColors.VkDarkBackground, // #0A0A0A
+            surfaceContainerLow = VkMintColors.VkDarkModal,         // #1C1D1E (--vkui--color_background_modal)
+            surfaceContainer = VkMintColors.VkDarkTertiary,         // #202021 (--vkui--color_background_tertiary)
+            surfaceContainerHigh = VkMintColors.VkDarkSecondary,    // #232324 (--vkui--color_background_secondary)
+            surfaceContainerHighest = VkMintColors.VkDarkElevated,  // #2C2D2E
+            outline = VkMintColors.VkDarkTextSecondary,             // #76787A (--vkui--color_icon_secondary)
+            outlineVariant = VkMintColors.VkDarkSeparator,          // #363738 (--vkui--color_separator_primary)
+            error = VkMintColors.VkNegativeDark,                    // #FF5C5C (--vkui--color_text_negative)
+            onError = Color(0xFF19191A),
+            errorContainer = Color(0xFF521818),
             onErrorContainer = Color(0xFFFFDAD6),
-            inverseSurface = Color(0xFFE2E2E6),
-            inverseOnSurface = Color(0xFF1B1B1F),
-            inversePrimary = if (accent == VkMintColors.Black) white else accent,
+            inverseSurface = VkMintColors.VkDarkTextPrimary,
+            inverseOnSurface = VkMintColors.VkDarkContent,
+            inversePrimary = if (rawAccent == VkMintColors.Black) white else rawAccent,
         )
         else -> lightColorScheme(
             primary = accent,
@@ -207,27 +219,28 @@ fun VkMintTheme(
             onTertiary = onTertiaryRole,
             tertiaryContainer = tertiaryContainerLight,
             onTertiaryContainer = onTertiaryContainerLight,
-            background = Color(0xFFF2F4F7),
-            onBackground = VkMintColors.Black,
-            surface = white,
-            onSurface = VkMintColors.Black,
-            surfaceVariant = Color(0xFFF0F2F5),
-            onSurfaceVariant = Color(0xFF555555),
-            surfaceDim = Color(0xFFDADCE0),
-            surfaceBright = white,
-            surfaceContainerLowest = white,
-            surfaceContainerLow = Color(0xFFF7F9FB),
-            surfaceContainer = Color(0xFFECEFF3),
-            surfaceContainerHigh = Color(0xFFE6E9EE),
-            surfaceContainerHighest = Color(0xFFE0E3E8),
-            outline = Color(0xFFCCCCCC),
-            outlineVariant = Color(0xFFE0E0E0),
-            error = Color(0xFFBA1A1A),
+            // Официальная светлая схема VKUI v8 (vkBase):
+            background = VkMintColors.VkLightBackground,            // #EBEDF0 (--vkui--color_background)
+            onBackground = VkMintColors.VkLightTextPrimary,         // #000000 (--vkui--color_text_primary)
+            surface = VkMintColors.VkLightContent,                  // #FFFFFF (--vkui--color_background_content)
+            onSurface = VkMintColors.VkLightTextPrimary,            // #000000 (--vkui--color_text_primary)
+            surfaceVariant = VkMintColors.VkLightField,             // #F2F3F5 (--vkui--color_field_background)
+            onSurfaceVariant = VkMintColors.VkLightTextSecondary,   // #818C99 (--vkui--color_text_secondary / icon_medium)
+            surfaceDim = Color(0xFFE1E3E6),
+            surfaceBright = VkMintColors.VkLightContent,            // #FFFFFF
+            surfaceContainerLowest = VkMintColors.VkLightContent,   // #FFFFFF
+            surfaceContainerLow = Color(0xFFF9F9FA),
+            surfaceContainer = VkMintColors.VkLightSecondary,       // #F5F5F5 (--vkui--color_background_secondary)
+            surfaceContainerHigh = VkMintColors.VkLightField,       // #F2F3F5 (--vkui--color_field_background)
+            surfaceContainerHighest = Color(0xFFE5E7EB),
+            outline = VkMintColors.VkLightIconSecondary,            // #99A2AD (--vkui--color_icon_secondary)
+            outlineVariant = VkMintColors.VkLightSeparator,         // #D7D8D9 (--vkui--color_separator_primary)
+            error = VkMintColors.VkNegative,                        // #E64646 (--vkui--color_background_negative)
             onError = white,
-            errorContainer = Color(0xFFFFDAD6),
-            onErrorContainer = Color(0xFF410002),
-            inverseSurface = Color(0xFF2E3133),
-            inverseOnSurface = Color(0xFFF1F0F4),
+            errorContainer = Color(0xFFFFECEC),
+            onErrorContainer = Color(0xFF5C1010),
+            inverseSurface = Color(0xFF232324),
+            inverseOnSurface = Color(0xFFF2F3F5),
             inversePrimary = white,
         )
     }
