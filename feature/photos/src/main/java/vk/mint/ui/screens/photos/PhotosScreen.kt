@@ -777,14 +777,21 @@ private fun PhotoThumb(photo: PhotoItem, onClick: () -> Unit = {}) {
                     isLiked = newLiked
                     likeCount = (likeCount + (if (newLiked) 1 else -1)).coerceAtLeast(0)
                     scope.launch {
-                        val newCount = if (newLiked) {
-                            deps.photosApi.likesAdd("photo", photo.ownerId, photo.id)
-                        } else {
-                            deps.photosApi.likesDelete("photo", photo.ownerId, photo.id)
-                        }
-                        if (newCount >= 0) {
-                            likeCount = newCount
-                        } else {
+                        try {
+                            val newCount = if (newLiked) {
+                                deps.photosApi.likesAdd("photo", photo.ownerId, photo.id)
+                            } else {
+                                deps.photosApi.likesDelete("photo", photo.ownerId, photo.id)
+                            }
+                            if (newCount >= 0) {
+                                likeCount = newCount
+                            } else {
+                                isLiked = !newLiked
+                                likeCount = (likeCount + (if (newLiked) -1 else 1)).coerceAtLeast(0)
+                            }
+                        } catch (e: Exception) {
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            AppLog.w("PhotosScreen", "likes toggle failed for photo ${photo.id}: ${e.message}")
                             isLiked = !newLiked
                             likeCount = (likeCount + (if (newLiked) -1 else 1)).coerceAtLeast(0)
                         }

@@ -1335,34 +1335,6 @@ companion object {
         }
     }
 
-    /**
-     * #CALLS-UPDATE-ICE-SERVERS: обновить TURN/STUN credentials на текущем PC.
-     * Вызов при новом `connection` (WS переподключение / topology→SERVER).
-     * VK web: каждый connection несёт свежие credentials, adapter.js фильтрует —
-     * оставляет 1 TURN UDP, STUN отсекает.
-     */
-    fun updateIceServers(turnUrls: List<String>, stunUrls: List<String>, username: String, credential: String) {
-        val servers = mutableListOf<PeerConnection.IceServer>()
-        stunUrls.forEach { url ->
-            runCatching { servers.add(PeerConnection.IceServer.builder(url).createIceServer()) }
-        }
-        turnUrls.forEach { url ->
-            runCatching {
-                servers.add(
-                    PeerConnection.IceServer.builder(url)
-                        .setUsername(username)
-                        .setPassword(credential)
-                        .createIceServer()
-                )
-            }
-        }
-        if (servers.isEmpty()) return
-        iceServers = servers
-        // VK web: adapter.js фильтрует — оставляет 1 TURN UDP, STUN отсекает.
-        // Здесь просто заменяем конфиг — следующий PC (если пересоздаётся)
-        // подхватит свежие серверы.
-        AppLog.i(TAG, "updateIceServers: ${servers.size} серверов обновлено (turn=${turnUrls.size} stun=${stunUrls.size})")
-    }
 
     /**
      * #CALLS-TOPOLOGY-RESTART (2026-08-30, лог 20:49, тест исходящего): перезапуск

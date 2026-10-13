@@ -1794,33 +1794,6 @@ private fun FeedTab(
                 checked = s.storiesSwipeHints,
             ) { scope.launch { app.prefs.setStoriesSwipeHints(it) } }
         }
-        // Авто-кэш историй и лимит дискового пространства
-        item {
-            ToggleRow(
-                title = "Авто-кэш историй",
-                subtitle = "При включении истории автоматически скачиваются при просмотре — " +
-                    "доступны офлайн до истечения 24ч TTL",
-                checked = s.autoCacheStories,
-            ) { scope.launch { app.prefs.setAutoCacheStories(it) } }
-        }
-        item {
-            val limMb = s.storyCacheLimitMb
-            Text(
-                "Лимит кэша историй: ${limMb} MB",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, top = 4.dp),
-            )
-        }
-        item {
-            Slider(
-                value = s.storyCacheLimitMb.toFloat(),
-                onValueChange = { v -> scope.launch { app.prefs.setStoryCacheLimitMb(v.toInt()) } },
-                valueRange = 50f..2000f,
-                steps = 38,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
         // P0.18 #STORY-HELP: блок-инструкция по жестам в полноэкранном
         // просмотрщике историй. Показывается всегда, не зависит от storiesShown.
         item {
@@ -2082,9 +2055,6 @@ private fun MessagesTab(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { SectionHeader("Фильтрация контента") }
-        item { StopWordsSettingsCard(s = s, app = app, scope = scope) }
-
         item { SectionHeader("Приватность сообщений") }
         item { ToggleRow("DNR (не читать)", s.msgDnr) { scope.launch { app.prefs.setMsgDnr(it) } } }
         item { ToggleRow("DNT (не печатать)", s.msgDnt) { scope.launch { app.prefs.setMsgDnt(it) } } }
@@ -2151,13 +2121,6 @@ private fun MessagesTab(
                 s = s,
                 app = app,
                 scope = scope,
-            )
-        }
-        // Форма аватарок (круг, скруглённый квадрат, квадрат)
-        item {
-            AvatarShapePickerCard(
-                currentShape = s.avatarShape,
-                onSelectShape = { shape -> scope.launch { app.prefs.setAvatarShape(shape) } },
             )
         }
         // P3.4: channel mode — отдельный UX для каналов (скрытие composer).
@@ -2999,13 +2962,6 @@ private fun MusicTab(
                 subtitle = "По умолчанию вкл: на мобайле 320kbps. Выключите для 128kbps (меньше перебоев на слабом интернете).",
                 checked = s.musicHqOnMobile,
             ) { scope.launch { app.prefs.setMusicHqOnMobile(it) } }
-        }
-        item {
-            ToggleRow(
-                title = "Отключить датчик приближения (аудио/голосовые)",
-                subtitle = "Не выключать экран и не переключать звук на разговорный динамик при прослушивании голосовых сообщений",
-                checked = s.voiceDisableProximity,
-            ) { scope.launch { app.prefs.setVoiceDisableProximity(it) } }
         }
 
         item { SectionHeader("Авто-загрузка") }
@@ -8280,21 +8236,6 @@ private fun NotificationsTab(
             )
         }
 
-        item { SectionHeader("Сообщения") }
-        item {
-            // #SETTINGS-FIX (P1-3, аудит настроек ⚠️1): раньше строка называлась
-            // «Звук уведомлений о сообщениях» и ВРАЛА: msgMute — фича-гейт
-            // «Заглушение чатов» (пункт mute/unmute в меню чата, ChatDetailScreen:702,
-            // ChatInfoScreen:161), звук push не трогает. Звук push — «Звук уведомления»
-            // (pushSoundEnabled) ниже по вкладке. Мёртвый второй ключ не создавали —
-            // честная формулировка существующего поведения (дубль MessagesTab).
-            ToggleRow(
-                title = "Заглушение чатов",
-                subtitle = "Пункт mute/unmute в меню чата. Дублирует тумблер вкладки «Сообщения»; " +
-                    "звуком push не управляет (звук — «Звук уведомления» ниже)",
-                checked = s.msgMute,
-            ) { scope.launch { app.prefs.setMsgMute(it) } }
-        }
         // Fix #302 (Task 2-b): 5 per-category sn_* тогглов (BFF-backed).
         items(realNotifyToggles(NOTIFY_MSG_TOGGLES), key = { it.key }) { t ->
             ToggleRowWithLoading(

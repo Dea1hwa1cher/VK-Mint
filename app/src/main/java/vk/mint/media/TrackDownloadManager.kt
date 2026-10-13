@@ -1,4 +1,4 @@
-﻿// File: media/TrackDownloadManager.kt
+// File: media/TrackDownloadManager.kt
 package vk.mint.media
 
 import android.content.Context
@@ -2210,17 +2210,6 @@ object TrackDownloadManager {
         // ExoPlayer играет .m4a идеально (это стандартный формат для музыки).
         // Если MediaExtractor не находит аудио-трек (VK Siren codec) —
         // fallback на raw .ts concat (как раньше).
-        //
-        // #OFFLINE-TAB: читаем выбранный пользователем формат. MP3 пока НЕ
-        // подключён (нужен ffmpeg-kit + Siren-транскодер, P0 #2 из §42) —
-        // логируем предупреждение и сохраняем как M4A. Когда транскодер будет
-        // готов, здесь появится ветка transcodeToMp3() вместо mergeSegmentsToM4a().
-        val prefFormat: vk.mint.data.local.AudioFormat = try {
-            vk.mint.VkMintApp.get().prefs.data.first().audioFormat
-        } catch (e: Exception) {
-            AppLog.w(TAG, "HLS track #$trackId: audioFormat prefs read failed (${e.message}) — defaulting to M4A")
-            vk.mint.data.local.AudioFormat.M4A
-        }
         val targetMp3 = File(downloadDir, "$trackId.mp3")
         val targetM4a = File(downloadDir, "$trackId.m4a")
         val targetTs = File(downloadDir, "$trackId.ts")

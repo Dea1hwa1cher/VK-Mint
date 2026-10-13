@@ -95,12 +95,5 @@ class NetworkMods {
             "targ.mail.ru",
             "ads.vk.com",
         )
-
-        /** Path patterns for ad URLs on VK domains. */
-        @Suppress("unused")
-        val AD_PATHS = listOf(
-            "/ads",
-            "/ads_create",
-        )
     }
 }
