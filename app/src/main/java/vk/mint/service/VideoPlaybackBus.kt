@@ -117,6 +117,11 @@ object VideoPlaybackBus {
     // с нерабочим okcdn URL освобождается, создаётся новый с правильным mp4 URL).
     fun clearLivePlayer(key: String) {
         if (videoKey == key) {
+            val ctx = appContext
+            if (serviceRunning && ctx != null) {
+                ctx.stopService(Intent(ctx, VideoPlaybackService::class.java))
+                serviceRunning = false
+            }
             playerRef?.release()
             playerRef = null
             videoKey = ""

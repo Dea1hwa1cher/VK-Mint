@@ -538,18 +538,21 @@ private fun AddToBlacklistDialog(
     var parseError by remember { mutableStateOf<String?>(null) }
     var preview by remember { mutableStateOf<BlacklistPreview?>(null) }
     var banInProgress by remember { mutableStateOf(false) }
+    var resolveJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     /** Разбор + резолв + превью найденной страницы. */
     fun resolveInput() {
+        resolveJob?.cancel()
         val target = parseBlacklistInput(input)
         if (target == null) {
+            resolving = false
             parseError = "Не удалось распознать ссылку или короткое имя"
             preview = null
             return
         }
         parseError = null
         preview = null
-        scope.launch {
+        resolveJob = scope.launch {
             resolving = true
             try {
                 val ownerId: Long? = when (target) {
@@ -589,6 +592,8 @@ private fun AddToBlacklistDialog(
                         isGroup = isGroup,
                     )
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 AppLog.e("BlacklistScreen", "resolveInput error", e)
                 parseError = "Ошибка поиска: ${e.message ?: "неизвестная"}"
@@ -596,6 +601,19 @@ private fun AddToBlacklistDialog(
                 resolving = false
             }
         }
+    }
+
+    LaunchedEffect(input) {
+        resolveJob?.cancel()
+        val trimmed = input.trim()
+        if (trimmed.isEmpty()) {
+            resolving = false
+            parseError = null
+            preview = null
+            return@LaunchedEffect
+        }
+        kotlinx.coroutines.delay(450L)
+        resolveInput()
     }
 
     AlertDialog(
@@ -612,7 +630,7 @@ private fun AddToBlacklistDialog(
                         parseError = null
                     },
                     singleLine = true,
-                    enabled = !resolving && !banInProgress,
+                    enabled = !banInProgress,
                     placeholder = { Text("Ссылка на страницу или сообщество") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -695,7 +713,7 @@ private fun AddToBlacklistDialog(
             }
         },
         confirmButton = {
-            val ready = preview != null && !banInProgress
+            val canAct = input.isNotBlank() && !resolving && !banInProgress
             Button(
                 onClick = {
                     val p = preview
@@ -715,12 +733,14 @@ private fun AddToBlacklistDialog(
                                 ).show()
                             }
                         }
+                    } else {
+                        resolveInput()
                     }
                 },
-                enabled = ready,
+                enabled = canAct,
                 modifier = Modifier.heightIn(min = 44.dp),
             ) {
-                Text("Заблокировать")
+                Text(if (preview != null) "Заблокировать" else "Найти")
             }
         },
         dismissButton = {

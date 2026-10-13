@@ -67,9 +67,12 @@ companion object {
     }
 
     private var factory: PeerConnectionFactory? = null
+    private var audioDeviceModule: org.webrtc.audio.AudioDeviceModule? = null
     private var peerConnection: PeerConnection? = null
     private var localAudioTrack: AudioTrack? = null
     private var audioSource: AudioSource? = null
+    /** Храним AudioFocusRequest (API 26+) как Any?, чтобы избежать VerifyError на API 24–25. */
+    private var audioFocusRequest: Any? = null
     // #CALLS-MUTE-HARDEN (2026-09-23): стейт mute переживает пересоздание трека —
     // если setMuted вызван до acceptCall/startCall (или трек будет создан заново),
     // createLocalAudioTrack применит его к свежему треку, а не «забудет» mute.
@@ -207,6 +210,7 @@ companion object {
     private var asrChannel: DataChannel? = null
     @Volatile
     private var producerCommandChannel: DataChannel? = null
+    private val activeDataChannels = ArrayList<DataChannel>(4)
     /** #CALLS-ZH2: sequence DC-конверта request-asr ([3][0][seq][bool], Ж0 §2.4). */
     private val dcSequence = java.util.concurrent.atomic.AtomicInteger(0)
 
@@ -316,12 +320,14 @@ companion object {
             // audio device module создаётся ЯВНО и передаётся в factory.
             // Без него createAudioSource даёт нативный крэш libjingle
             // "front() called on an empty vector".
+            this@WebRtcEngine.audioDeviceModule?.release()
             val audioDeviceModule = org.webrtc.audio.JavaAudioDeviceModule.builder(context)
                 // #CALLS-AEC-TOGGLE: true — аппаратные AEC/NS (устройство давит эхо
                 // спикера точнее); false — прежнее поведение (оба выключены).
                 .setUseHardwareAcousticEchoCanceler(echoCancelEnabled)
                 .setUseHardwareNoiseSuppressor(echoCancelEnabled)
                 .createAudioDeviceModule()
+            this@WebRtcEngine.audioDeviceModule = audioDeviceModule
             // #CALLS-VIDEO-RX: сохраняем EglBase в поле (см. комментарий к полю) —
             // контекст нужен и factory (кодеки), и рендереру CallScreen.
             this@WebRtcEngine.eglBase?.release()
@@ -407,6 +413,20 @@ companion object {
         }
     }
 
+    private fun closeDataChannels() {
+        asrChannel?.let { if (!activeDataChannels.contains(it)) activeDataChannels.add(it) }
+        producerCommandChannel?.let { if (!activeDataChannels.contains(it)) activeDataChannels.add(it) }
+        asrChannel = null
+        producerCommandChannel = null
+        val snapshot = ArrayList(activeDataChannels)
+        activeDataChannels.clear()
+        for (ch in snapshot) {
+            runCatching { ch.unregisterObserver() }
+            runCatching { ch.close() }
+            runCatching { ch.dispose() }
+        }
+    }
+
     fun endCall() {
         // инвалидирует возможный DISCONNECTED-таймер
         iceStateGen.incrementAndGet()
@@ -417,16 +437,22 @@ companion object {
                 remoteVideoTrackRef = null
                 onRemoteVideoTrack?.invoke(null)
             }
+            closeDataChannels()
             localAudioTrack?.setEnabled(false)
-            peerConnection?.close()
+            runCatching { peerConnection?.dispose() }
             peerConnection = null
             pcCreated = false
             pendingRemoteSdp = null
+            val track = localAudioTrack
             localAudioTrack = null
+            if (track != null) {
+                runCatching { track.dispose() }
+            }
             audioSource?.dispose()
             audioSource = null
-            // #CALLS-SYMMETRIC: глушим помпу заглушки после close() PC.
+            // #CALLS-SYMMETRIC: глушим помпу заглушки после dispose() PC.
             stopDummyVideo()
+            restoreAudioMode()
             pendingRemoteIce.clear()
             onCallPhaseChanged(CallPhase.ENDED)
             AppLog.i(TAG, "Call ended")
@@ -544,6 +570,7 @@ companion object {
                             .build()
                     )
                     .build()
+                audioFocusRequest = afr
                 am.requestAudioFocus(afr)
             } else {
                 @Suppress("DEPRECATION")
@@ -552,6 +579,32 @@ companion object {
             AppLog.i(TAG, "Communication mode + audio focus set")
         } catch (e: Exception) {
             AppLog.w(TAG, "setCommunicationMode error: ${e.message}")
+        }
+    }
+
+    /** Сбросить MODE_IN_COMMUNICATION, маршрутизацию и освободить audio focus. */
+    private fun restoreAudioMode() {
+        try {
+            val am = context.getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                runCatching { am.clearCommunicationDevice() }
+            }
+            @Suppress("DEPRECATION")
+            am.isSpeakerphoneOn = false
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val afr = audioFocusRequest as? android.media.AudioFocusRequest
+                audioFocusRequest = null
+                if (afr != null) {
+                    am.abandonAudioFocusRequest(afr)
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                am.abandonAudioFocus(null)
+            }
+            am.mode = android.media.AudioManager.MODE_NORMAL
+            AppLog.i(TAG, "Audio mode restored to MODE_NORMAL and audio focus abandoned")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "restoreAudioMode error: ${e.message}")
         }
     }
 
@@ -606,19 +659,27 @@ companion object {
                 remoteVideoTrackRef = null
                 onRemoteVideoTrack?.invoke(null)
             }
+            closeDataChannels()
             localAudioTrack?.setEnabled(false)
-            peerConnection?.close()
+            runCatching { peerConnection?.dispose() }
             peerConnection = null
             pcCreated = false
             pendingRemoteSdp = null
+            val track = localAudioTrack
             localAudioTrack = null
+            if (track != null) {
+                runCatching { track.dispose() }
+            }
             audioSource?.dispose()
             audioSource = null
             // #CALLS-SYMMETRIC: полный teardown — глушим помпу заглушки.
             stopDummyVideo()
+            restoreAudioMode()
             pendingRemoteIce.clear()
             factory?.dispose()
             factory = null
+            audioDeviceModule?.release()
+            audioDeviceModule = null
             // #CALLS-VIDEO-RX: EGL-контекст освобождаем ПОСЛЕ factory (см. поле eglBase).
             eglBase?.release()
             eglBase = null
@@ -637,6 +698,12 @@ companion object {
     private fun ensureInitialized() { if (factory == null) initialize() }
 
     private fun createPeerConnection() {
+        closeDataChannels()
+        val oldPc = peerConnection
+        peerConnection = null
+        if (oldPc != null) {
+            runCatching { oldPc.dispose() }
+        }
         // #CALLS-ICE-STATS-UI: новый звонок — новая статистика (см. комментарий к полям).
         candTypeCounts.clear()
         candTcpCount.set(0)
@@ -844,6 +911,9 @@ companion object {
      * на request-asr протоколом не предусмотрено — Ж0 §2.4).
      */
     private fun attachAsrObserver(ch: DataChannel, label: String) {
+        if (!activeDataChannels.contains(ch)) {
+            activeDataChannels.add(ch)
+        }
         runCatching {
             ch.registerObserver(object : DataChannel.Observer {
                 override fun onBufferedAmountChange(previous: Long) {}
@@ -1109,12 +1179,15 @@ companion object {
         if (!dummyVideoRunning) return
         try {
             val buffer = org.webrtc.JavaI420Buffer.allocate(320, 180)
-            fillPlane(buffer.dataY, 16)   // чёрный в limited-range
-            fillPlane(buffer.dataU, 128)
-            fillPlane(buffer.dataV, 128)
-            dummyVideoSource?.capturerObserver?.onFrameCaptured(
-                org.webrtc.VideoFrame(buffer, 0, System.nanoTime())
-            )
+            val frame = org.webrtc.VideoFrame(buffer, 0, System.nanoTime())
+            try {
+                fillPlane(buffer.dataY, 16)   // чёрный в limited-range
+                fillPlane(buffer.dataU, 128)
+                fillPlane(buffer.dataV, 128)
+                dummyVideoSource?.capturerObserver?.onFrameCaptured(frame)
+            } finally {
+                frame.release()
+            }
         } catch (e: Exception) {
             AppLog.w(TAG, "#CALLS-SYMMETRIC: кадр заглушки не отправлен: ${e.message}")
         }
@@ -1137,7 +1210,12 @@ companion object {
     private fun stopDummyVideo() {
         val wasRunning = dummyVideoRunning
         dummyVideoRunning = false
+        val vt = localVideoTrack
         localVideoTrack = null
+        if (vt != null) {
+            runCatching { vt.dispose() }
+                .onFailure { AppLog.w(TAG, "#CALLS-SYMMETRIC: dispose видеотрека: ${it.message}") }
+        }
         val src = dummyVideoSource
         dummyVideoSource = null
         if (src != null) {

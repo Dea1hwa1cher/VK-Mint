@@ -56,12 +56,23 @@ class NetworkMods {
     fun unwrapAway(url: String): String {
         return try {
             val uri = Uri.parse(url)
-            val target = uri.getQueryParameter("to")
-            if (target.isNullOrBlank()) {
+            val rawTarget = uri.getQueryParameter("to")?.trim()
+            if (rawTarget.isNullOrBlank()) {
                 AppLog.w(tag, "unwrapAway: no 'to' query param in $url")
-                url
+                return url
+            }
+            val target = if (
+                rawTarget.startsWith("http%3A", ignoreCase = true) ||
+                rawTarget.startsWith("https%3A", ignoreCase = true)
+            ) {
+                java.net.URLDecoder.decode(rawTarget, "UTF-8")
             } else {
-                java.net.URLDecoder.decode(target, Charsets.UTF_8)
+                rawTarget
+            }
+            if (target.startsWith("http://", ignoreCase = true) || target.startsWith("https://", ignoreCase = true)) {
+                target
+            } else {
+                url
             }
         } catch (e: Exception) {
             AppLog.e(tag, "unwrapAway failed for $url", e)

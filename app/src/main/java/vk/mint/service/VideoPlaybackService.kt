@@ -48,7 +48,17 @@ import vk.mint.util.AppLog
 class VideoPlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
+    private var attachedPlayer: ExoPlayer? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    private val endedListener = object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) {
+                AppLog.i("VideoPlaybackService", "STATE_ENDED — stopSelf (orphan release в onDestroy)")
+                stopSelf()
+            }
+        }
+    }
 
     /** Кэш шага прокрутки (сек) — обновляется collect'ом prefs.data. */
     @Volatile
@@ -213,14 +223,8 @@ class VideoPlaybackService : MediaSessionService() {
         // (releaseOrphanedPlayer, guard по screenAttached — если экран уже
         // (пере)присоединился, плеер живёт дальше). Без этого после ENDED
         // уведомление/сессия висели до смерти процесса.
-        player.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_ENDED) {
-                    AppLog.i("VideoPlaybackService", "STATE_ENDED — stopSelf (orphan release в onDestroy)")
-                    stopSelf()
-                }
-            }
-        })
+        attachedPlayer = player
+        player.addListener(endedListener)
     }
 
     /**
@@ -367,6 +371,8 @@ class VideoPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         AppLog.i("VideoPlaybackService", "onDestroy")
+        attachedPlayer?.removeListener(endedListener)
+        attachedPlayer = null
         val session = mediaSession
         if (session != null) {
             session.release()

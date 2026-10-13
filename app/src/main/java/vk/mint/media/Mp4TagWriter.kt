@@ -70,10 +70,10 @@ object Mp4TagWriter {
         lyrics: String? = null,
         comment: String? = null,
         coverUrl: String? = null,
-    ): Boolean {
+    ): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (!m4aFile.exists() || m4aFile.length() < 10_000L) {
             AppLog.w(TAG, "writeTags: ${m4aFile.name} not found or too small — skip")
-            return false
+            return@withContext false
         }
 
         // #VK-MUSIC-SAVER-PORT: обложка (covr) — скачиваем из albumThumb если передано.
@@ -83,11 +83,11 @@ object Mp4TagWriter {
         val ilstBytes = buildIlstAtom(track, lyrics, comment, coverBytes)
         if (ilstBytes.isEmpty()) {
             AppLog.w(TAG, "writeTags: ilst empty (no tags to write) — skip")
-            return false
+            return@withContext false
         }
 
         // Вставляем udta→meta→ilst в moov.
-        return try {
+        try {
             insertUdtaIntoMoov(m4aFile, ilstBytes)
         } catch (e: Exception) {
             AppLog.e(TAG, "writeTags: failed to insert udta: ${e.message}")
@@ -143,9 +143,9 @@ object Mp4TagWriter {
         if (lyrics != null && lyrics.length >= MIN_TAG_LEN) {
             out.write(makeTagAtom("©lyr".toFourCc(), lyrics.toByteArray(Charsets.UTF_8), dataType = 1))
         }
-        // cmt — comment (промо)
+        // ©cmt — comment (промо)
         if (comment != null && comment.length >= MIN_TAG_LEN) {
-            out.write(makeTagAtom("cmt".toFourCc(), comment.toByteArray(Charsets.UTF_8), dataType = 1))
+            out.write(makeTagAtom("©cmt".toFourCc(), comment.toByteArray(Charsets.UTF_8), dataType = 1))
         }
         // ©too — encoder
         out.write(makeTagAtom("©too".toFourCc(), "VK Mint ${vk.mint.BuildConfig.VERSION_NAME}".toByteArray(Charsets.UTF_8), dataType = 1))
@@ -176,20 +176,23 @@ object Mp4TagWriter {
      * Скачать обложку альбома по URL. Возвращает байты или null (сеть/ошибка).
      * Лучше не иметь обложки, чем упасть на скачивании тегов.
      */
-    private suspend fun downloadCover(url: String?): ByteArray? {
-        if (url.isNullOrBlank()) return null
-        return try {
-            val req = okhttp3.Request.Builder().url(url).get().build()
-            coverClient.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) return null
-                val bytes = resp.body?.bytes()
-                if (bytes == null || bytes.size > MAX_COVER_BYTES) null else bytes
+    private suspend fun downloadCover(url: String?): ByteArray? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (url.isNullOrBlank()) return@withContext null
+            try {
+                val req = okhttp3.Request.Builder().url(url).get().build()
+                coverClient.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) return@withContext null
+                    val bytes = resp.body?.bytes()
+                    if (bytes == null || bytes.size > MAX_COVER_BYTES) null else bytes
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.w(TAG, "downloadCover failed: ${e.message}")
+                null
             }
-        } catch (e: Exception) {
-            AppLog.w(TAG, "downloadCover failed: ${e.message}")
-            null
         }
-    }
 
     /**
      * #VK-MUSIC-SAVER-PORT: таблица жанров VK (genre_id → строка) — из VKnext.
@@ -273,44 +276,45 @@ object Mp4TagWriter {
      * Стратегия:
      *  1. Парсим top-level boxes, находим moov (запоминаем offset + size).
      *  2. Если внутри moov уже есть udta — заменяем (старый удаляем).
-     *  3. Собираем новый udta: [size]['udta'][meta[hdlr, ilst]].
+     *  3. Собираем новый udta: [size]['udta'][meta[version_flags:4=0, hdlr, ilst]].
      *  4. Читаем весь moov, модифицируем, пересчитываем размер moov.
-     *  5. Перезаписываем файл: ftyp + новый moov + всё остальное.
-     *
-     * Это безопасно — если что-то пойдёт не так, оригинал не трогаем
-     * (работаем через temp-файл, потом atomic rename).
+     *  5. Если после moov идут данные (mdat в faststart), сдвигаем chunk offsets в stco/co64.
+     *  6. Перезаписываем файл: ftyp + новый moov + всё остальное.
      */
     private fun insertUdtaIntoMoov(m4aFile: File, ilstBytes: ByteArray): Boolean {
-        // Собираем udta-атом: udta(meta(hdlr, ilst))
+        // Собираем udta-атом: udta(meta(version_flags=0, hdlr, ilst))
+        // В ISO 14496-12 / QuickTime атом 'meta' является FullBox и ОБЯЗАН содержать
+        // 4 байта version+flags (0x00000000) перед дочерними атомами hdlr и ilst.
         val hdlrBytes = buildHdlrAtom()
         val metaPayload = ByteArrayOutputStream()
+        metaPayload.write(ByteArray(4)) // FullBox version (1B) + flags (3B) = 0
         metaPayload.write(hdlrBytes)
         metaPayload.write(ilstBytes)
         val metaAtom = boxAtom("meta", metaPayload.toByteArray())
         val udtaAtom = boxAtom("udta", metaAtom)
 
         // Читаем весь файл в память (треки обычно 3-10 MB — ОК).
-        // Для больших файлов лучше стримингово, но это P1, не блокер.
         val originalBytes = m4aFile.readBytes()
         val originalSize = originalBytes.size
 
-        // Парсим top-level boxes, ищем moov.
+        // Парсим top-level boxes, ищем moov (с поддержкой size==0 до EOF и size==1 64-bit largesize).
         var offset = 0
         var moovOffset = -1
         var moovSize = 0
+        var moovHeaderSize = 8
         val segments = mutableListOf<Pair<Int, ByteArray>>() // (offset, bytes) остальных atoms
 
         while (offset + 8 <= originalSize) {
-            val size = readUInt32BE(originalBytes, offset)
-            if (size < 8 || offset + size > originalSize) break
-            val name = String(originalBytes, offset + 4, 4, Charsets.US_ASCII)
+            val (boxSize, hdrSize) = readBoxSizeAndHeader(originalBytes, offset, originalSize) ?: break
+            val name = String(originalBytes, offset + 4, 4, Charsets.ISO_8859_1)
             if (name == "moov") {
                 moovOffset = offset
-                moovSize = size
+                moovSize = boxSize
+                moovHeaderSize = hdrSize
             } else {
-                segments.add(offset to originalBytes.copyOfRange(offset, offset + size))
+                segments.add(offset to originalBytes.copyOfRange(offset, offset + boxSize))
             }
-            offset += size
+            offset += boxSize
         }
 
         if (moovOffset < 0) {
@@ -321,11 +325,10 @@ object Mp4TagWriter {
         // Читаем moov, ищем udta внутри (если есть — удаляем).
         val moovBytes = originalBytes.copyOfRange(moovOffset, moovOffset + moovSize)
         val moovContent = ByteArrayOutputStream()
-        var moovInner = 8 // пропускаем size+name (8 байт)
+        var moovInner = moovHeaderSize
         while (moovInner + 8 <= moovBytes.size) {
-            val childSize = readUInt32BE(moovBytes, moovInner)
-            if (childSize < 8 || moovInner + childSize > moovBytes.size) break
-            val childName = String(moovBytes, moovInner + 4, 4, Charsets.US_ASCII)
+            val (childSize, _) = readBoxSizeAndHeader(moovBytes, moovInner, moovBytes.size) ?: break
+            val childName = String(moovBytes, moovInner + 4, 4, Charsets.ISO_8859_1)
             if (childName != "udta") {
                 moovContent.write(moovBytes, moovInner, childSize)
             }
@@ -346,8 +349,22 @@ object Mp4TagWriter {
         }
         val newMoovBytes = newMoov.toByteArray()
 
+        // Если после moov есть сегменты (например, mdat при -movflags +faststart),
+        // изменение размера moov сдвигает абсолютные файловые смещения всех чанков в mdat.
+        // Корректируем таблицы stco / co64 внутри нового moov на величину delta.
+        val delta = newMoovBytes.size - moovSize
+        val hasTrailingSegments = segments.any { (segOffset, _) -> segOffset > moovOffset }
+        if (delta != 0 && hasTrailingSegments) {
+            adjustChunkOffsetsInBox(
+                bytes = newMoovBytes,
+                boxOffset = 0,
+                boxSize = newMoovBytes.size,
+                minFileOffset = (moovOffset + moovSize).toLong(),
+                delta = delta.toLong(),
+            )
+        }
+
         // Собираем новый файл: ftyp + moov + mdat + остальное.
-        // Порядок важен: ftyp первым, moov вторым (для faststart), mdat потом.
         val outFile = File(m4aFile.parentFile, "${m4aFile.name}.tags.tmp")
         try {
             RandomAccessFile(outFile, "rw").use { raf ->
@@ -373,12 +390,96 @@ object Mp4TagWriter {
                 outFile.delete()
             }
             AppLog.i(TAG, "insertUdtaIntoMoov: ${m4aFile.name} tagged " +
-                "(moov ${moovSize}→${newMoovBytes.size} bytes, +${udtaAtom.size} udta)")
+                "(moov ${moovSize}→${newMoovBytes.size} bytes, delta=$delta, +${udtaAtom.size} udta)")
             return true
         } catch (e: Exception) {
             AppLog.e(TAG, "insertUdtaIntoMoov: write failed: ${e.message}")
             outFile.delete()
             return false
+        }
+    }
+
+    private val CONTAINER_BOXES = setOf("moov", "trak", "mdia", "minf", "stbl", "edts", "dinf")
+
+    /**
+     * Рекурсивно обходит контейнеры внутри `moov` (`trak -> mdia -> minf -> stbl`) и сдвигает
+     * абсолютные файловые смещения чанков в атомах `stco` (32-bit) и `co64` (64-bit) на [delta]
+     * для всех чанков, расположенных после старого конца `moov` ([minFileOffset]).
+     */
+    private fun adjustChunkOffsetsInBox(
+        bytes: ByteArray,
+        boxOffset: Int,
+        boxSize: Int,
+        minFileOffset: Long,
+        delta: Long,
+    ) {
+        val limit = boxOffset + boxSize
+        val (totalSize, headerSize) = readBoxSizeAndHeader(bytes, boxOffset, limit) ?: return
+        val name = String(bytes, boxOffset + 4, 4, Charsets.ISO_8859_1)
+        when {
+            name in CONTAINER_BOXES -> {
+                var childOff = boxOffset + headerSize
+                val boxEnd = boxOffset + totalSize
+                while (childOff + 8 <= boxEnd) {
+                    val (childSize, _) = readBoxSizeAndHeader(bytes, childOff, boxEnd) ?: break
+                    adjustChunkOffsetsInBox(bytes, childOff, childSize, minFileOffset, delta)
+                    childOff += childSize
+                }
+            }
+            name == "stco" -> {
+                // FullBox: [header][version+flags:4][entry_count:4][chunk_offset:4 * entry_count]
+                val countPos = boxOffset + headerSize + 4
+                val boxEnd = boxOffset + totalSize
+                if (countPos + 4 > boxEnd) return
+                val entryCount = readUInt32BE(bytes, countPos)
+                val entriesStart = countPos + 4
+                for (i in 0 until entryCount) {
+                    val pos = entriesStart + i * 4
+                    if (pos + 4 > boxEnd) break
+                    val oldOff = readUInt32BE(bytes, pos).toLong() and 0xFFFFFFFFL
+                    if (oldOff >= minFileOffset) {
+                        writeInt32BE(bytes, pos, (oldOff + delta).toInt())
+                    }
+                }
+            }
+            name == "co64" -> {
+                // FullBox: [header][version+flags:4][entry_count:4][chunk_offset:8 * entry_count]
+                val countPos = boxOffset + headerSize + 4
+                val boxEnd = boxOffset + totalSize
+                if (countPos + 4 > boxEnd) return
+                val entryCount = readUInt32BE(bytes, countPos)
+                val entriesStart = countPos + 4
+                for (i in 0 until entryCount) {
+                    val pos = entriesStart + i * 8
+                    if (pos + 8 > boxEnd) break
+                    val oldOff = readInt64BE(bytes, pos)
+                    if (oldOff >= minFileOffset) {
+                        writeInt64BE(bytes, pos, oldOff + delta)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Читает размер MP4-атома и длину заголовка (8 байт для обычного атома или size==0 до конца,
+     * 16 байт для size==1 64-bit largesize). Возвращает Pair(totalSize, headerSize) или null.
+     */
+    private fun readBoxSizeAndHeader(bytes: ByteArray, offset: Int, limit: Int): Pair<Int, Int>? {
+        if (offset + 8 > limit) return null
+        val size32 = readUInt32BE(bytes, offset).toLong() and 0xFFFFFFFFL
+        return when (size32) {
+            0L -> (limit - offset) to 8
+            1L -> {
+                if (offset + 16 > limit) return null
+                val size64 = readInt64BE(bytes, offset + 8)
+                if (size64 < 16L || size64 > (limit - offset).toLong()) return null
+                size64.toInt() to 16
+            }
+            else -> {
+                if (size32 < 8L || size32 > (limit - offset).toLong()) return null
+                size32.toInt() to 8
+            }
         }
     }
 
@@ -410,10 +511,32 @@ object Mp4TagWriter {
             (bytes[offset + 3].toInt() and 0xFF)
     }
 
-    /** Конвертировать 4-символьную строку в 4 байта (fourcc). */
+    private fun readInt64BE(bytes: ByteArray, offset: Int): Long {
+        val hi = readUInt32BE(bytes, offset).toLong() and 0xFFFFFFFFL
+        val lo = readUInt32BE(bytes, offset + 4).toLong() and 0xFFFFFFFFL
+        return (hi shl 32) or lo
+    }
+
+    private fun writeInt32BE(bytes: ByteArray, offset: Int, value: Int) {
+        bytes[offset] = ((value ushr 24) and 0xFF).toByte()
+        bytes[offset + 1] = ((value ushr 16) and 0xFF).toByte()
+        bytes[offset + 2] = ((value ushr 8) and 0xFF).toByte()
+        bytes[offset + 3] = (value and 0xFF).toByte()
+    }
+
+    private fun writeInt64BE(bytes: ByteArray, offset: Int, value: Long) {
+        writeInt32BE(bytes, offset, (value ushr 32).toInt())
+        writeInt32BE(bytes, offset + 4, (value and 0xFFFFFFFFL).toInt())
+    }
+
+    /**
+     * Конвертировать 4-символьную строку в 4 байта (Apple FourCC).
+     * Используем ISO_8859_1, чтобы символ '©' (U+00A9) кодировался одним байтом 0xA9,
+     * а не двумя байтами [0xC2, 0xA9] как в UTF-8 (что обрезало 4-й символ тега).
+     */
     private fun String.toFourCc(): ByteArray {
         val bytes = ByteArray(4)
-        val src = this.toByteArray(Charsets.UTF_8)
+        val src = this.toByteArray(Charsets.ISO_8859_1)
         System.arraycopy(src, 0, bytes, 0, minOf(4, src.size))
         return bytes
     }
