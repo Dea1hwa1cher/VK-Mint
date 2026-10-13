@@ -327,16 +327,6 @@ private fun BottomNavScrollButton(
                     else MaterialTheme.colorScheme.onSurfaceVariant
     val textColor = if (selected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
-    val pillWidth by animateDpAsState(
-        targetValue = if (selected) 56.dp else 28.dp,
-        animationSpec = M3ExpressiveMotion.fastSpatial(),
-        label = "NavPillWidth",
-    )
-    val pillAlpha by animateFloatAsState(
-        targetValue = if (selected) 1f else 0f,
-        animationSpec = M3ExpressiveMotion.fastEffects(),
-        label = "NavPillAlpha",
-    )
     Column(
         modifier = modifier
             .height(UiScale.scaled(64.dp))
@@ -348,16 +338,6 @@ private fun BottomNavScrollButton(
             modifier = Modifier.size(height = 30.dp, width = 56.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (pillAlpha > 0.01f) {
-                Box(
-                    modifier = Modifier
-                        .size(height = 30.dp, width = pillWidth)
-                        .background(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = pillAlpha * 0.65f),
-                            shape = CircleShape,
-                        ),
-                )
-            }
             if (navIcon != null) {
                 if (item.destinationRoute == Screen.Messages.route && unreadCount > 0) {
                     BadgedBox(
@@ -1309,7 +1289,7 @@ fun VkMintNavHost(
                                                 colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
                                                     selectedIconColor = MaterialTheme.colorScheme.primary,
                                                     selectedTextColor = MaterialTheme.colorScheme.primary,
-                                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                                                    indicatorColor = Color.Transparent,
                                                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 ),

@@ -307,17 +307,6 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             // вместо getLongPollServer. Default false (opt-in) — legacy getLongPollServer
             // остаётся fallback'ом. Парсер LP-событий v21 совместим с базовыми кодами v3.
             msgModernSync      = p[Keys.MSG_MODERN_SYNC]          ?: false,
-            // P4.4: execute batching — группировка нескольких API-вызовов в один
-            // HTTP round-trip через execute.VKscript. Default false (opt-in, экспериментально).
-            // Ограничения: photos.saveMessagesPhoto, docs.save и другие из
-            // executeUnsupportedMethods НЕ могут быть batch'ены — только get/send/... .
-            msgExecuteBatch    = p[Keys.MSG_EXECUTE_BATCH]        ?: false,
-            // P4.3: WebSocket transport для каналов — VK переводит каналы на WS
-            // (frontend.vkm_new_channels_ws_engine:1). Default false (opt-in).
-            // ⚠️ Protocol недокументирован, может измениться без notice. Заготовка
-            // [vk.mint.realtime.ChannelWebSocketClient] — stub для будущего использования.
-            // Не активен в основном flow пока VK не форсирует отказ от LongPoll.
-            msgWsChannels      = p[Keys.MSG_WS_CHANNELS]          ?: false,
             // P4.2: последний сохранённый ts (для backfill при следующем старте).
             lpLastTs           = p[Keys.LP_LAST_TS]              ?: 0L,
             // P4.2: последний сохранённый pts (для backfill при следующем старте).
@@ -485,8 +474,6 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
             // мгновенного отображения состояния при повторном входе на вкладку
             // «Уведомления», без ожидания API-ответа. Пустая строка = нет кэша.
             notifyCacheJson    = p[Keys.NOTIFY_CACHE_JSON]      ?: "",
-            // §1-NOTIF-ARCHIVE: частота email-уведомлений из архива m.vk.ru/settings?act=notify.
-            emailNotifyFreq    = p[Keys.EMAIL_NOTIFY_FREQ]      ?: 0,
 
             // §42 #PUSH-NOTIFICATIONS: локальные push-уведомления.
             pushEnabled            = p[Keys.PUSH_ENABLED]            ?: true,
@@ -912,10 +899,6 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
     suspend fun setMsgLpV14(v: Boolean)                   = put(Keys.MSG_LP_V14, v)
     /** §52.5 Sprint A (P0): Modern Sync API — messages.getDiff (lp_version=21). */
     suspend fun setMsgModernSync(v: Boolean)              = put(Keys.MSG_MODERN_SYNC, v)
-    /** P4.4: execute batching — группировка API-вызовов через VKScript. */
-    suspend fun setMsgExecuteBatch(v: Boolean)            = put(Keys.MSG_EXECUTE_BATCH, v)
-    /** P4.3: WebSocket transport для каналов (stub, недокументировано). */
-    suspend fun setMsgWsChannels(v: Boolean)              = put(Keys.MSG_WS_CHANNELS, v)
     /** P4.2: сохранить последний ts LongPoll (для backfill). */
     suspend fun setLpLastTs(v: Long)                      = put(Keys.LP_LAST_TS, v)
     /** P4.2: сохранить последний pts LongPoll (для backfill). */
@@ -1457,8 +1440,6 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
      * — невалидное значение игнорируется в пользу авто.
      */
     suspend fun setCallsDnsPinIp(v: String)            = put(Keys.CALLS_DNS_PIN_IP, v.trim())
-    /** §1-NOTIF-ARCHIVE: частота email-уведомлений (0=всегда, 1=не чаще раза в день, 2=никогда). */
-    suspend fun setEmailNotifyFreq(v: Int)              = put(Keys.EMAIL_NOTIFY_FREQ, v)
 
     /**
      * Волна 45 #SETTINGS-EXPORT: сырой снимок ВСЕХ ключей DataStore — полный дамп
@@ -1769,21 +1750,6 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val msgLpV14: Boolean,
         /** §52.5 Sprint A (P0): Modern Sync API — messages.getDiff lp_version=21 (default false). */
         val msgModernSync: Boolean,
-        /** P4.4: execute batching — группировка API-вызовов через VKScript (default false).
-         *  #SETTINGS-FIX (P3-9, Task 3-b): @Deprecated — мёртвое поле: UI-тумблер удалён
-         *  (Fix #REMOVE-DEAD-TOGGLES), потребителей НЕТ (проверено rg по app/core/feature —
-         *  единственное вхождение вне VkMintPrefs — конструктор Snapshot в FeedScreen:298,
-         *  хардкод false; потребителем НЕ является). Поле НЕ удалено только ради этого
-         *  конструктора (FeedScreen вне зоны волны 3-b). */
-        val msgExecuteBatch: Boolean,
-        /** P4.3: WebSocket transport для каналов (stub, недокументировано, default false).
-         *  #SETTINGS-FIX (P3-9, Task 3-b): @Deprecated — мёртвое поле: UI-тумблер удалён
-         *  (Fix #REMOVE-DEAD-TOGGLES), потребителей НЕТ (упоминания в KDoc
-         *  ChannelWebSocketClient.kt:57/74 — комментарии, не чтения; FeedScreen:299 —
-         *  конструктор Snapshot, хардкод false). Поле НЕ удалено ради этого конструктора
-         *  (FeedScreen вне зоны волны 3-b); заготовка ChannelWebSocketClient сохранена
-         *  для будущего WS-перехода. */
-        val msgWsChannels: Boolean,
         /** P4.2: последний сохранённый ts LongPoll (для backfill при старте). */
         val lpLastTs: Long,
         /** P4.2: последний сохранённый pts LongPoll (для backfill при старте). */
@@ -1898,13 +1864,6 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
          * кэша (используются defaults из NOTIFY_DEFAULTS в SettingsScreen).
          */
         val notifyCacheJson: String,
-        /** §1-NOTIF-ARCHIVE: частота email-уведомлений (0=всегда, 1=не чаще раза в день, 2=никогда).
-         *  #SETTINGS-FIX (P3-9 + P2-5, Task 3-b): @Deprecated — после перевода секции
-         *  «Уведомления на почту» на серверный BFF page=email (settingsGeneralGetNotifySettings)
-         *  UI больше НЕ читает это поле; setter setEmailNotifyFreq больше не вызывается из UI.
-         *  Поле НЕ удалено: конструктор Snapshot в FeedScreen:401 передаёт хардкод 0
-         *  (FeedScreen вне зоны волны 3-b). */
-        val emailNotifyFreq: Int,
 
         /**
          * §42 #PUSH-NOTIFICATIONS: локальные push-уведомления для VK-событий
@@ -2247,10 +2206,6 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val MSG_LP_V14             = booleanPreferencesKey("msg_lp_v14")
         // §52.5 Sprint A (P0): Modern Sync API — messages.getDiff (lp_version=21)
         val MSG_MODERN_SYNC        = booleanPreferencesKey("msg_modern_sync")
-        // P4.4: execute batching — группировка API-вызовов
-        val MSG_EXECUTE_BATCH      = booleanPreferencesKey("msg_execute_batch")
-        // P4.3: WebSocket transport для каналов (stub)
-        val MSG_WS_CHANNELS        = booleanPreferencesKey("msg_ws_channels")
         val LP_LAST_TS             = longPreferencesKey("lp_last_ts")
         val LP_LAST_PTS            = longPreferencesKey("lp_last_pts")
         // P5.1: открытие ссылок из чата во внутреннем браузере (WebView).
@@ -2347,8 +2302,6 @@ class VkMintPrefs(context: Context, debugDefault: Boolean = false) {
         val AUTH_FORCE_REVOKE    = booleanPreferencesKey("auth_force_revoke")
         // Fix #302 (Task 2-b): кэш sn_* notification toggles (JSON map).
         val NOTIFY_CACHE_JSON    = stringPreferencesKey("notify_cache_json")
-        // §1-NOTIF-ARCHIVE: частота email-уведомлений (0=всегда, 1=не чаще раза в день, 2=никогда).
-        val EMAIL_NOTIFY_FREQ    = intPreferencesKey("email_notify_freq")
 
         // §42 #PUSH-NOTIFICATIONS: локальные push-уведомления.
         val PUSH_ENABLED            = booleanPreferencesKey("push_enabled")

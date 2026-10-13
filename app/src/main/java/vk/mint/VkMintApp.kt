@@ -1428,11 +1428,6 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
         // #32: UnreadMessagesCounter — счётчик непрочитанных для badge на иконке.
         vk.mint.realtime.UnreadMessagesCounter.init(this)
 
-        // §37.12 Phase 7: ClipsCounter — счётчик новых clips от подписок.
-        // badge на пункте «Клипы» в боковой панели. Polling каждые 5 минут.
-        // Stage-4 cleanup: ClipsCounter.count / .reset() нигде не читаются в UI — зомби-поллер.
-        // vk.mint.realtime.ClipsCounter.start(this)
-
         // Fix #45: Единый network watcher — обрабатывает переключение WiFi↔Mobile
         // для ВСЕХ компонентов, а не только LongPoll (как было раньше).
         registerGlobalNetworkWatcher()

@@ -361,8 +361,6 @@ fun FeedScreen(
             msgLpV14 = false,
             // §52.5 Sprint A (P0): Modern Sync API (default false — opt-in).
             msgModernSync = false,
-            msgExecuteBatch = false,
-            msgWsChannels = false,
             lpLastTs = 0L,
             lpLastPts = 0L,
             // P5.1: открытие ссылок из чата во внутреннем браузере (default false).
@@ -468,12 +466,6 @@ fun FeedScreen(
             // Fix #302 (Task 2-b): notifyCacheJson — пустая строка (= нет кэша),
             // реальные значения подгрузятся из VkMintPrefs при первом же collect.
             notifyCacheJson = "",
-            // §1-NOTIF-ARCHIVE: emailNotifyFreq — частота email-уведомлений
-            // (0=всегда, 1=не чаще раза в день, 2=никогда). FeedScreen не использует
-            // это поле, но Snapshot расширился — нужно передать initial-значение,
-            // иначе компилятор падает: «No value passed for parameter 'emailNotifyFreq'».
-            // (Тот же класс бага что Fix #100 / #110 / #189 / #237 / #302 — Snapshot расширился.)
-            emailNotifyFreq = 0,
             // Fix #337: редактор панелей — порядок/видимость кнопок. FeedScreen
             // не использует эти поля, но Snapshot расширился — нужно передать
             // initial-значения (тот же класс бага что Fix #100/#110/#189/#302).
