@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -394,6 +395,23 @@ fun VkSimpleCell(
  *    нажатии пружинно морфирует в тактильный сквиркл (`10.dp`) с заливкой `primaryContainer` / `primary`.
  */
 @Composable
+fun VkSubnavigationBar(
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(contentPadding),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
+}
+
+@Composable
 fun <T> VkSubnavigationBar(
     items: List<T>,
     selectedItem: T,
@@ -720,6 +738,7 @@ fun VkReactionPill(
     modifier: Modifier = Modifier,
     count: Int = 0,
     active: Boolean = false,
+    enabled: Boolean = true,
     activeContainerColor: Color = VkMintColors.VkLikeRed.copy(alpha = 0.14f),
     activeContentColor: Color = VkMintColors.VkLikeRed,
     contentDescription: String? = null,
@@ -762,6 +781,7 @@ fun VkReactionPill(
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
+                enabled = enabled,
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
@@ -815,3 +835,228 @@ fun formatVkCount(count: Int): String = when {
     }
     else -> count.toString()
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  7. VkPanelHeader — Шапка экрана (VKUI PanelHeader × M3E TopBar)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Шапка экрана `PanelHeader` по стандарту **VKUI v8 × M3E**:
+ *  - Фиксированная высота `56.dp` (мобильный канон VKUI v8).
+ *  - Слот [before]: навигационная иконка «Назад» или бургер-меню.
+ *  - Центральная зона: `title` (`vkTitle3`), опциональный `subtitle` (`vkSubhead` / `vkFootnote`).
+ *  - Слот [after]: кнопки быстрых действий (поиск, шаринг, контекстное меню).
+ *  - Разделитель [showSeparator]: нижний `VkSeparator` при необходимости.
+ */
+@Composable
+fun VkPanelHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    before: (@Composable () -> Unit)? = null,
+    after: (@Composable RowScope.() -> Unit)? = null,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    showSeparator: Boolean = false,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = containerColor,
+        contentColor = contentColor,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (before != null) {
+                    Box(
+                        modifier = Modifier.size(48.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        before()
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                } else {
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.vkTitle3,
+                        color = contentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (!subtitle.isNullOrBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.vkSubhead,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                if (after != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End,
+                        content = after,
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+            }
+            if (showSeparator) {
+                VkSeparator(insetStart = 0.dp, insetEnd = 0.dp)
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  8. VkButton — Кнопка действия (VKUI Button × M3E Shape Morphing)
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum class VkButtonMode {
+    /** Основная заливка (`primary` фон, контрастный текст). */
+    Primary,
+    /** Вторичная тональная кнопка (`surfaceContainerHigh` / `secondaryContainer`). */
+    Secondary,
+    /** Тональная кнопка акцента (`primaryContainer`). */
+    Tonal,
+    /** Контурная кнопка (`outline` бордер, прозрачный фон). */
+    Outline,
+}
+
+enum class VkButtonSize {
+    /** Компактная кнопка `32.dp` (внутренние списки, чипы). */
+    Small,
+    /** Стандартная кнопка `38.dp` (карточки, модалки, подписки). */
+    Medium,
+    /** Полноразмерная кнопка `44.dp` (CTA, главные действия). */
+    Large,
+}
+
+@Composable
+fun VkButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    text: String? = null,
+    mode: VkButtonMode = VkButtonMode.Primary,
+    size: VkButtonSize = VkButtonSize.Medium,
+    enabled: Boolean = true,
+    before: (@Composable () -> Unit)? = null,
+    after: (@Composable () -> Unit)? = null,
+    content: (@Composable RowScope.() -> Unit)? = null,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val height = when (size) {
+        VkButtonSize.Small -> 32.dp
+        VkButtonSize.Medium -> 38.dp
+        VkButtonSize.Large -> 44.dp
+    }
+
+    val restCorner = when (size) {
+        VkButtonSize.Small -> 10.dp
+        VkButtonSize.Medium -> 12.dp
+        VkButtonSize.Large -> 14.dp
+    }
+    val pressedCorner = (restCorner - 4.dp).coerceAtLeast(6.dp)
+
+    val shape = rememberM3EMorphingShape(
+        pressed = isPressed,
+        restCorner = restCorner,
+        pressedCorner = pressedCorner,
+    )
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = M3ExpressiveMotion.fastSpatial(),
+        label = "VkButtonScale",
+    )
+
+    val containerColor = when (mode) {
+        VkButtonMode.Primary -> if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+        VkButtonMode.Secondary -> if (enabled) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow
+        VkButtonMode.Tonal -> if (enabled) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainer
+        VkButtonMode.Outline -> Color.Transparent
+    }
+
+    val contentColor = when (mode) {
+        VkButtonMode.Primary -> if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        VkButtonMode.Secondary -> if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        VkButtonMode.Tonal -> if (enabled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        VkButtonMode.Outline -> if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    }
+
+    val textStyle = when (size) {
+        VkButtonSize.Small -> MaterialTheme.typography.vkFootnote
+        VkButtonSize.Medium -> MaterialTheme.typography.vkSubheadMedium
+        VkButtonSize.Large -> MaterialTheme.typography.vkHeadline1
+    }
+
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .defaultMinSize(minHeight = height),
+        enabled = enabled,
+        shape = shape,
+        color = containerColor,
+        contentColor = contentColor,
+        border = if (mode == VkButtonMode.Outline) {
+            BorderStroke(
+                1.dp,
+                if (enabled) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant,
+            )
+        } else null,
+        interactionSource = interactionSource,
+    ) {
+        Row(
+            modifier = Modifier
+                .height(height)
+                .padding(horizontal = if (size == VkButtonSize.Small) 10.dp else 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            if (before != null) {
+                before()
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            if (text != null) {
+                Text(
+                    text = text,
+                    style = textStyle,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (content != null) {
+                content()
+            }
+            if (after != null) {
+                Spacer(modifier = Modifier.width(6.dp))
+                after()
+            }
+        }
+    }
+}
+

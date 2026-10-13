@@ -1,7 +1,6 @@
 package vk.mint.ui.screens.superapp
 
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,9 +38,6 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VideoLibrary
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,6 +69,13 @@ import vk.mint.VkMintApp
 import vk.mint.data.local.VkMintPrefs
 import vk.mint.data.model.UserProfile
 import vk.mint.ui.components.NotifyModeItem
+import vk.mint.ui.components.VkGroup
+import vk.mint.ui.components.VkGroupMode
+import vk.mint.ui.components.VkHeader
+import vk.mint.ui.components.VkHeaderMode
+import vk.mint.ui.components.VkSeparator
+import vk.mint.ui.components.VkSimpleCell
+import vk.mint.ui.icons.VkIcons
 import vk.mint.ui.navigation.FeedOpenRequest
 import vk.mint.ui.navigation.Screen
 import vk.mint.ui.navigation.ScreenTopBar
@@ -138,23 +141,26 @@ fun ServicesScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { onOpenSection?.invoke(Screen.Search) }) {
                         Icon(
-                            Icons.Default.Search,
+                            VkIcons.Search24,
                             contentDescription = "Поиск",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                     IconButton(onClick = { onOpenSection?.invoke(Screen.Notifications) }) {
                         Icon(
-                            Icons.Outlined.Notifications,
+                            VkIcons.NotificationsOutline28,
                             contentDescription = "Уведомления",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                     IconButton(onClick = { onOpenSection?.invoke(Screen.Settings) }) {
                         Icon(
-                            Icons.Outlined.Settings,
+                            VkIcons.SettingsOutline20,
                             contentDescription = "Настройки",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp),
                         )
                     }
                 }
@@ -339,43 +345,31 @@ fun ServicesScreen(
 
         // 2. Компактная 4-колоночная сетка разделов ВКонтакте (VK SuperApp style)
         item(key = "superapp_grid_card") {
-            Card(
+            VkGroup(
+                mode = VkGroupMode.Card,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    Text(
-                        text = "Все разделы",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 10.dp),
+                header = {
+                    VkHeader(
+                        title = "Все разделы",
+                        mode = VkHeaderMode.Primary,
                     )
-                    mainGridItems.chunked(4).forEach { rowItems ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                        ) {
-                            rowItems.forEach { item ->
-                                SuperAppGridTile(
-                                    item = item,
-                                    onClick = { handleItemClick(item) },
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            repeat(4 - rowItems.size) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
+                },
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+            ) {
+                mainGridItems.chunked(4).forEach { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        rowItems.forEach { item ->
+                            SuperAppGridTile(
+                                item = item,
+                                onClick = { handleItemClick(item) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        repeat(4 - rowItems.size) {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
@@ -384,14 +378,10 @@ fun ServicesScreen(
 
         // 3. Быстрый выбор режима уведомлений
         item(key = "notify_mode_card") {
-            Card(
+            VkGroup(
+                mode = VkGroupMode.Card,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                contentPadding = PaddingValues(0.dp),
             ) {
                 NotifyModeItem(
                     notifyMode = prefsSnap?.notifyMode ?: VkMintPrefs.NOTIFY_MODE_ALL,
@@ -404,27 +394,55 @@ fun ServicesScreen(
 
         // 4. Компактный список настроек, инструментов и управления сессией
         item(key = "tools_menu_card") {
-            Card(
+            VkGroup(
+                mode = VkGroupMode.Card,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                contentPadding = PaddingValues(vertical = 4.dp),
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    toolMenuItems.forEachIndexed { index, item ->
-                        ServiceMenuRow(
-                            item = item,
-                            onClick = { handleItemClick(item) },
-                        )
-                        if (index < toolMenuItems.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 64.dp, end = 16.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                            )
-                        }
+                toolMenuItems.forEachIndexed { index, item ->
+                    VkSimpleCell(
+                        title = item.title,
+                        subtitle = item.subtitle,
+                        before = {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .background(item.iconBgColor, MaterialTheme.shapes.medium),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = item.title,
+                                    tint = item.iconColor,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        },
+                        badgeAfterTitle = if (item.badge != null) {
+                            {
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            shape = MaterialTheme.shapes.extraSmall,
+                                        )
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                ) {
+                                    Text(
+                                        text = item.badge,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    )
+                                }
+                            }
+                        } else null,
+                        chevron = true,
+                        onClick = { handleItemClick(item) },
+                    )
+                    if (index < toolMenuItems.lastIndex) {
+                        VkSeparator(insetStart = 62.dp, insetEnd = 16.dp)
                     }
                 }
             }
@@ -454,77 +472,44 @@ private fun ServicesMiniProfileCard(
     }
     val avatarUrl = user?.photo200 ?: user?.photo100
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
-            .clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    VkGroup(
+        mode = VkGroupMode.Card,
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(vertical = 4.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (!avatarUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = avatarUrl,
-                    contentDescription = fullName,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = fullName.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        VkSimpleCell(
+            title = fullName,
+            subtitle = subtitle,
+            before = {
+                if (!avatarUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = fullName,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop,
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = fullName.take(1).uppercase(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
                 }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = fullName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            },
+            chevron = true,
+            onClick = onClick,
+        )
     }
 }
 
@@ -566,84 +551,6 @@ private fun SuperAppGridTile(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-        )
-    }
-}
-
-/**
- * Компактная строка меню в сгруппированной карточке инструментов/сессии.
- */
-@Composable
-private fun ServiceMenuRow(
-    item: ServiceItem,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .background(item.iconBgColor, MaterialTheme.shapes.medium),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = item.title,
-                tint = item.iconColor,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (item.badge != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = MaterialTheme.shapes.extraSmall,
-                            )
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    ) {
-                        Text(
-                            text = item.badge,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                }
-            }
-            Text(
-                text = item.subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

@@ -40,10 +40,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import vk.mint.ui.components.VkGroup
+import vk.mint.ui.components.VkGroupMode
+import vk.mint.ui.components.VkSearch
+import vk.mint.ui.components.VkSubnavigationBar
+import vk.mint.ui.components.VkSubnavigationButton
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.theme.vkHeadline1
+import vk.mint.ui.theme.vkSubhead
+import vk.mint.ui.theme.vkCaption1
+import vk.mint.ui.theme.vkCaption2
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -440,31 +449,23 @@ fun VideoScreen(
             },
             titleOverride = if (showSearch) {
                 {
-                    OutlinedTextField(
+                    VkSearch(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Поиск видео…", style = MaterialTheme.typography.bodySmall) },
+                        placeholder = "Поиск видео…",
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                            focusedBorderColor = vkAccent,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        ),
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
+                        trailingAction = if (searchQuery.isNotEmpty()) {
+                            {
                                 IconButton(onClick = { searchQuery = "" }) {
                                     Icon(
-                                        Icons.Filled.Close,
+                                        VkIcons.Clear16,
                                         contentDescription = "Очистить",
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
-                        },
+                        } else null,
                     )
                 }
             } else null,
@@ -916,64 +917,27 @@ private fun VideoMoreMenu(
 private fun VideoTabsBar(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
-    textColor: Color,
-    secondaryColor: Color,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
+    secondaryColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+    VkSubnavigationBar(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
     ) {
-        // Вкладки (#VIDEO-PORT: кликабельны — Мои видео / Альбомы / Каталоги).
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            VideoTab(
-                "Мои видео", selectedTab == 0, textColor, secondaryColor,
-                onClick = { onTabSelected(0) },
-            )
-            VideoTab(
-                "Альбомы", selectedTab == 1, textColor, secondaryColor,
-                onClick = { onTabSelected(1) },
-            )
-            VideoTab(
-                "Каталоги", selectedTab == 2, textColor, secondaryColor,
-                onClick = { onTabSelected(2) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun VideoTab(
-    name: String,
-    isActive: Boolean,
-    textColor: Color,
-    secondaryColor: Color,
-    onClick: () -> Unit = {},
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.extraSmall)
-            .clickable(onClick = onClick)
-            .padding(vertical = 2.dp),
-    ) {
-        Text(
-            text = name,
-            color = if (isActive) textColor else secondaryColor,
-            fontSize = 16.sp,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+        VkSubnavigationButton(
+            text = "Мои видео",
+            selected = selectedTab == 0,
+            onClick = { onTabSelected(0) },
         )
-        Spacer(modifier = Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .width(if (isActive) 24.dp else 0.dp)
-                .height(3.dp)
-                .clip(MaterialTheme.shapes.extraSmall)
-                .background(if (isActive) MaterialTheme.colorScheme.primary else Color.Transparent),
+        VkSubnavigationButton(
+            text = "Альбомы",
+            selected = selectedTab == 1,
+            onClick = { onTabSelected(1) },
+        )
+        VkSubnavigationButton(
+            text = "Каталоги",
+            selected = selectedTab == 2,
+            onClick = { onTabSelected(2) },
         )
     }
 }
@@ -1026,188 +990,191 @@ private fun VKVideoCard(
     onToggleAdd: (() -> Unit)? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    Box {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-    ) {
-        // Превью 16:9
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
+    Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+        VkGroup(
+            mode = VkGroupMode.Card,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(0.dp),
         ) {
-            val thumb = video.thumbUrl
-            if (thumb != null) {
-                AsyncImage(
-                    model = thumb,
-                    contentDescription = video.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                // Placeholder — цветной градиент если превью нет
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onClick),
+            ) {
+                // Превью 16:9
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.hsl((video.id % 360).toFloat(), 0.4f, 0.3f),
-                                    Color.hsl(((video.id * 31) % 360).toFloat(), 0.3f, 0.4f),
-                                ),
-                            ),
-                        ),
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.VideoLibrary,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(56.dp),
+                    val thumb = video.thumbUrl
+                    if (thumb != null) {
+                        AsyncImage(
+                            model = thumb,
+                            contentDescription = video.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        // Placeholder — цветной градиент если превью нет
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            Color.hsl((video.id % 360).toFloat(), 0.4f, 0.3f),
+                                            Color.hsl(((video.id * 31) % 360).toFloat(), 0.3f, 0.4f),
+                                        ),
+                                    ),
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.VideoLibrary,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.5f),
+                                modifier = Modifier.size(56.dp),
+                            )
+                        }
+                    }
+
+                    // Центральная кнопка Play (полупрозрачная)
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = "Воспроизвести",
+                            tint = Color.White,
+                            modifier = Modifier.size(30.dp),
+                        )
+                    }
+
+                    // Длительность в правом нижнем углу
+                    if (video.duration > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(8.dp)
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .background(Color.Black.copy(alpha = 0.8f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                text = formatVideoDuration(video.duration),
+                                color = Color.White,
+                                style = MaterialTheme.typography.vkCaption1,
+                            )
+                        }
+                    }
+
+                    // Бейдж "Офлайн" в левом верхнем углу
+                    if (downloadState?.isCompleted == true) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(8.dp)
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .background(Color(0xFF4CAF50).copy(alpha = 0.95f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                        ) {
+                            Text(
+                                text = "Офлайн",
+                                color = Color.White,
+                                style = MaterialTheme.typography.vkCaption2,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
+
+                // Прогресс-бар скачивания под превью
+                if (downloadState != null && downloadState.isInProgress) {
+                    LinearProgressIndicator(
+                        progress = {
+                            if (downloadState.progress >= 0) downloadState.progress / 100f else 0f
+                        },
+                        modifier = Modifier.fillMaxWidth().height(3.dp),
+                        color = accentColor,
+                        trackColor = Color.Transparent,
                     )
                 }
-            }
 
-            // Центральная кнопка Play (полупрозрачная)
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = "Воспроизвести",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp),
-                )
-            }
-
-            // Длительность в правом нижнем углу
-            if (video.duration > 0) {
-                Box(
+                // Информация о видео: RichCell стиль
+                Row(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .clip(MaterialTheme.shapes.extraSmall)
-                        .background(Color.Black.copy(alpha = 0.8f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = formatVideoDuration(video.duration),
-                        color = Color.White,
-                        fontSize = 12.sp,
-                    )
-                }
-            }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = video.title,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.vkHeadline1,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = buildString {
+                                if (video.views > 0) {
+                                    append(formatViews(video.views))
+                                    append(" просмотров")
+                                }
+                                if (video.commentsCount > 0) {
+                                    if (isNotEmpty()) append(" • ")
+                                    append(formatViews(video.commentsCount))
+                                    append(" комментариев")
+                                }
+                                if (video.date > 0) {
+                                    if (isNotEmpty()) append(" • ")
+                                    append(formatDate(video.date))
+                                }
+                            },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.vkSubhead,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
 
-            // Бейдж "Офлайн" в левом верхнем углу
-            if (downloadState?.isCompleted == true) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .clip(MaterialTheme.shapes.extraSmall)
-                        .background(Color(0xFF4CAF50).copy(alpha = 0.95f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
-                ) {
-                    Text(
-                        text = "Офлайн",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                    // Кнопка скачивания
+                    VKVideoDownloadButton(state = downloadState, onClick = onDownloadClick, accentColor = accentColor, secondaryColor = secondaryColor)
+
+                    // W30-1 #VIDEO-ADD-SELF: тумблер «Добавить себе» — паритет VK web
+                    if (onToggleAdd != null) {
+                        IconButton(onClick = onToggleAdd) {
+                            Icon(
+                                imageVector = if (isAdded) Icons.Filled.CheckCircle else Icons.Filled.AddCircle,
+                                contentDescription = if (isAdded) "Добавлено" else "Добавить себе",
+                                tint = if (isAdded) Color(0xFF4CAF50) else secondaryColor,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+
+                    // Троеточие-меню
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "Ещё",
+                            tint = secondaryColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         }
-
-        // Прогресс-бар скачивания под превью
-        if (downloadState != null && downloadState.isInProgress) {
-            LinearProgressIndicator(
-                progress = {
-                    if (downloadState.progress >= 0) downloadState.progress / 100f else 0f
-                },
-                modifier = Modifier.fillMaxWidth().height(3.dp),
-                color = accentColor,
-                trackColor = Color.Transparent,
-            )
-        }
-
-        // Информация о видео: заголовок + просмотры/дата + кнопки
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = video.title,
-                    color = textColor,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = buildString {
-                        if (video.views > 0) {
-                            append(formatViews(video.views))
-                            append(" просмотров")
-                        }
-                        if (video.commentsCount > 0) {
-                            if (isNotEmpty()) append(" • ")
-                            append(formatViews(video.commentsCount))
-                            append(" комментариев")
-                        }
-                        if (video.date > 0) {
-                            if (isNotEmpty()) append(" • ")
-                            append(formatDate(video.date))
-                        }
-                    },
-                    color = secondaryColor,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-
-            // Кнопка скачивания
-            VKVideoDownloadButton(state = downloadState, onClick = onDownloadClick, accentColor = accentColor, secondaryColor = secondaryColor)
-
-            // W30-1 #VIDEO-ADD-SELF: тумблер «Добавить себе» — паритет VK web
-            // (video_page_add_to_my_playlist): AddCircle → после добавления
-            // CheckCircle (зелёный 0xFF4CAF50 — тот же, что у бейджа «Офлайн»
-            // этого файла). NULL-ЯВНО: рендер только при явном коллбеке.
-            if (onToggleAdd != null) {
-                IconButton(onClick = onToggleAdd) {
-                    Icon(
-                        imageVector = if (isAdded) Icons.Filled.CheckCircle else Icons.Filled.AddCircle,
-                        contentDescription = if (isAdded) "Добавлено" else "Добавить себе",
-                        tint = if (isAdded) Color(0xFF4CAF50) else secondaryColor,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-
-            // Троеточие-меню
-            IconButton(onClick = { showMenu = true }) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "Ещё",
-                    tint = secondaryColor,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-    }
         // #VIDEO-MORE-MENU
         VideoMoreMenu(
             video = video,

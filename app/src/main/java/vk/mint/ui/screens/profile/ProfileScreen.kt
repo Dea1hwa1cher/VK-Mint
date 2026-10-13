@@ -58,6 +58,7 @@ import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -135,7 +136,23 @@ import vk.mint.ui.screens.feed.ReactionEntry
 import vk.mint.ui.screens.feed.ReactionPicker
 import vk.mint.util.AppLog
 // Fix #371: VK inline-ссылки [#alias|display|url] + URL в тексте поста кликабельны
-// (тот же линкер, что в ленте FeedScreen:2280).
+import android.content.Intent
+import androidx.compose.runtime.DisposableEffect
+import vk.mint.ui.components.VkGroup
+import vk.mint.ui.components.VkGroupMode
+import vk.mint.ui.components.VkPanelHeader
+import vk.mint.ui.components.VkButton
+import vk.mint.ui.components.VkButtonMode
+import vk.mint.ui.components.VkButtonSize
+import vk.mint.ui.components.VkReactionPill
+import vk.mint.ui.components.VkSimpleCell
+import vk.mint.ui.components.formatVkCount
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.navigation.ScreenTopBar
+import vk.mint.ui.theme.VkTypography
+import vk.mint.ui.theme.vkTitle2
+import vk.mint.ui.theme.vkSubhead
+import vk.mint.ui.theme.vkFootnote
 import vk.mint.util.linkifyVkText
 import vk.mint.util.openUrlExternal
 import vk.mint.util.toCountString
@@ -652,6 +669,50 @@ fun ProfileScreen(
 
     // ══ П-6a (#PROFILE-GAP-6a): обработчики «Действий» поста стены и лайка ══
     val context = LocalContext.current
+
+    // VKUI v8: Настройка компактного заголовка @domain и действия «Поделиться» в глобальном TopAppBar
+    DisposableEffect(p.id, p.domain, p.displayName) {
+        val token = ScreenTopBar.configure(
+            titleOverride = {
+                val domain = if (!p.domain.isNullOrBlank()) "@${p.domain}" else "id${p.id}"
+                Column {
+                    Text(
+                        text = domain,
+                        style = VkTypography.vkHeadline1,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = p.displayName,
+                        style = VkTypography.vkCaption1,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            },
+            actions = {
+                IconButton(onClick = {
+                    val shareText = "https://vk.com/${if (!p.domain.isNullOrBlank()) p.domain else "id${p.id}"}"
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                        type = "text/plain"
+                    }
+                    val shareIntent = Intent.createChooser(sendIntent, "Поделиться профилем")
+                    context.startActivity(shareIntent)
+                }) {
+                    Icon(
+                        Icons.Outlined.Share,
+                        contentDescription = "Поделиться",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        )
+        onDispose {
+            ScreenTopBar.clear(token)
+        }
+    }
 
     // Лайк/анлайк записи стены: optimistic (isLiked + счётчик ±1) → likes.add /
     // likes.delete (паттерн FeedScreen.onLikeToggle; обе функции возвращают Int —
@@ -1299,43 +1360,35 @@ fun ProfileScreen(
     val photoGridUrls = remember(photos) { photos.mapNotNull { extractPhotoAllUrl(it) } }
     Column(modifier = Modifier.fillMaxSize()) {
     Box(modifier = Modifier.weight(1f)) {
-    LazyColumn(modifier = Modifier.fillMaxSize().statusBarsPadding(), state = mainListState) {
-        // П-1: тап по статусу → диалог правки (status.set).
+    LazyColumn(modifier = Modifier.fillMaxSize(), state = mainListState) {
+        // VKUI v8: Верхний остров шапки профиля с полноширинной вторичной кнопкой редактирования
         item {
-            ProfileHeader(
-                profile = p,
-                onStatusClick = {
-                    statusError = null
-                    showStatusDialog = true
-                },
-            )
-        }
-        // П-3 (#PROFILE-SNAP): вход в редактор профиля (EditProfileScreen —
-        // account.saveProfileInfo + смена аватара/обложки). Паттерн кнопки-строки —
-        // как соседняя «Создать пост» (Icons.Filled.Edit уже в файле).
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                elevation = CardDefaults.cardElevation(0.dp),
+            VkGroup(
+                mode = VkGroupMode.Card,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(bottom = 12.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { onEditProfileClick() }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Filled.Edit,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Редактировать профиль",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
+                ProfileHeader(
+                    profile = p,
+                    onStatusClick = {
+                        statusError = null
+                        showStatusDialog = true
+                    },
+                )
+                VkButton(
+                    text = "Редактировать профиль",
+                    onClick = { onEditProfileClick() },
+                    mode = VkButtonMode.Secondary,
+                    size = VkButtonSize.Medium,
+                    before = {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                )
             }
         }
         item {
@@ -1389,28 +1442,23 @@ fun ProfileScreen(
             // (перенесена из ленты). VK API: wall.post — owner_id = текущий пользователь.
             // См. VK_IMPORT_API.MD §1.1.
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                    elevation = CardDefaults.cardElevation(0.dp),
+                VkGroup(
+                    mode = VkGroupMode.Card,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(0.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { creatingPost.value = true }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.Filled.Edit,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Создать пост",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
+                    VkSimpleCell(
+                        title = "Создать запись",
+                        before = {
+                            Icon(
+                                VkIcons.EditOutline20,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        onClick = { creatingPost.value = true },
+                    )
                 }
             }
             // П-1 (#PROFILE-SNAP): подвкладки стены «Все / Свои / Архив»
@@ -2312,10 +2360,10 @@ fun WallPostCard(
     // (openUrlExternal / startActivity) — один захват на карточку.
     val ctx = LocalContext.current
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(0.dp),
+    VkGroup(
+        mode = VkGroupMode.Card,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(0.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -2645,69 +2693,69 @@ fun WallPostCard(
                     carouselEnabled = carouselEnabled,
                 )
             }
+            // ─── VKUI v8 × M3E: Post Footer (VkReactionPill + Views) ───
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                // П-8-REACT: long-press по лайку → пикер реакций (паттерн
-                // FeedScreen :2186-2210). Пикер показывается только когда
-                // вызывающий экран прокинул onReaction (иначе dead-UX).
-                var showReactions by remember { mutableStateOf(false) }
-                Box {
-                    ActionIcon(
-                        icon = if (isLiked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                        count = likeCount,
-                        tint = if (isLiked) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        // П-6a (#PROFILE-GAP-6a): кликабельный лайк записи стены
-                        // (likes.add / likes.delete через onLikeToggle); во время полёта — disabled.
-                        onClick = { onLikeToggle(post) },
-                        // П-8-REACT: long-press → пикер реакций (только если экран
-                        // прокинул onReaction; иначе null — поведение как раньше).
-                        onLongClick = if (onReaction != null) {
-                            { showReactions = true }
-                        } else {
-                            null
-                        },
-                        enabled = !likePending,
-                    )
-                    if (showReactions) {
-                        Box(
-                            modifier = Modifier
-                                .offset(y = (-48).dp)
-                                .zIndex(10f),
-                        ) {
-                            ReactionPicker(
-                                onDismiss = { showReactions = false },
-                                // П-8-REACT: предвыделение «моей» реакции (0 = нет).
-                                selectedReactionId = pickerSelection,
-                                onSelect = { reaction -> onReaction?.invoke(post, reaction) },
-                            )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    var showReactions by remember { mutableStateOf(false) }
+                    Box {
+                        VkReactionPill(
+                            icon = if (isLiked) VkIcons.LikeFill20 else VkIcons.LikeOutline20,
+                            count = likeCount,
+                            active = isLiked,
+                            onClick = { onLikeToggle(post) },
+                            onLongClick = if (onReaction != null) { { showReactions = true } } else null,
+                            enabled = !likePending,
+                        )
+                        if (showReactions) {
+                            Box(
+                                modifier = Modifier
+                                    .offset(y = (-48).dp)
+                                    .zIndex(10f),
+                            ) {
+                                ReactionPicker(
+                                    onDismiss = { showReactions = false },
+                                    selectedReactionId = pickerSelection,
+                                    onSelect = { reaction -> onReaction?.invoke(post, reaction) },
+                                )
+                            }
                         }
                     }
+                    VkReactionPill(
+                        icon = VkIcons.CommentOutline20,
+                        count = commentCount,
+                        onClick = { onCommentClick(post) },
+                    )
+                    VkReactionPill(
+                        icon = VkIcons.RepostOutline20,
+                        count = repostCount,
+                        onClick = { onRepostClick(post) },
+                    )
                 }
-                Spacer(Modifier.width(8.dp))
-                ActionIcon(
-                    icon = Icons.Outlined.ChatBubbleOutline,
-                    count = commentCount,
-                    // Шаг 5 (#32e): тап по комментарию → PostDetailScreen (через onCommentClick).
-                    onClick = { onCommentClick(post) },
-                )
-                Spacer(Modifier.width(8.dp))
-                ActionIcon(
-                    icon = Icons.Outlined.Repeat,
-                    count = repostCount,
-                    onClick = { onRepostClick(post) },
-                )
-                Spacer(Modifier.weight(1f))
                 if (viewCount > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Visibility, null, modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(3.dp))
-                        Text(viewCount.toCountString(),
-                            style = MaterialTheme.typography.labelSmall,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            VkIcons.View16,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = viewCount.toCountString(),
+                            style = VkTypography.vkCaption2,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp)
+                        )
                     }
                 }
             }

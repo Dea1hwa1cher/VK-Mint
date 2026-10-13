@@ -31,11 +31,11 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import vk.mint.ui.components.VkSearch
+import vk.mint.ui.icons.VkIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -227,26 +227,23 @@ fun FriendsScreen(
             },
             titleOverride = if (showSearch) {
                 {
-                    OutlinedTextField(
+                    VkSearch(
                         value = query,
                         onValueChange = { query = it },
-                        placeholder = { Text("Поиск друзей…", style = MaterialTheme.typography.bodySmall) },
+                        placeholder = "Поиск друзей…",
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        ),
-                        trailingIcon = {
-                            if (query.isNotEmpty()) {
+                        trailingAction = if (query.isNotEmpty()) {
+                            {
                                 IconButton(onClick = { query = "" }) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Очистить", modifier = Modifier.size(18.dp))
+                                    Icon(
+                                        VkIcons.Clear16,
+                                        contentDescription = "Очистить",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                             }
-                        },
+                        } else null,
                     )
                 }
             } else null,

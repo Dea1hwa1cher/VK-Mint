@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -103,6 +104,12 @@ import vk.mint.util.toAbsoluteTime
 import vk.mint.util.toCountString
 import java.util.Locale
 import android.widget.Toast
+import vk.mint.ui.components.VkGroup
+import vk.mint.ui.components.VkGroupMode
+import vk.mint.ui.components.VkPanelHeader
+import vk.mint.ui.components.VkReactionPill
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.theme.VkTypography
 
 /**
  * Fix #67: Экран сообщества — header (ава + имя + описание) + стена (wall.get).
@@ -792,153 +799,165 @@ fun CommunityScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-    PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = { refreshWall() },
-        modifier = Modifier.fillMaxSize().statusBarsPadding(),
-    ) {
-    LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
-        item {
-            // Header — top row: back + avatar + name
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        VkPanelHeader(
+            modifier = Modifier.statusBarsPadding(),
+            title = g.name,
+            subtitle = if (g.membersCount > 0) "${formatMemberCount(g.membersCount)} подписчиков" else null,
+            before = {
                 IconButton(onClick = onBack) {
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
+                        VkIcons.ArrowBack24,
                         contentDescription = "Назад",
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                Spacer(Modifier.width(8.dp))
-                if (g.photo100 != null || g.photo200 != null) {
-                    AsyncImage(
-                        model = g.photo200 ?: g.photo100,
-                        contentDescription = g.name,
-                        modifier = Modifier.size(56.dp).clip(avatarShape),
-                        contentScale = ContentScale.Crop,
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.size(56.dp).clip(avatarShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center,
+            },
+            showSeparator = true,
+        )
+        Box(modifier = Modifier.weight(1f)) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { refreshWall() },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
+            item {
+                VkGroup(
+                    mode = VkGroupMode.Card,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                ) {
+                    // Header — avatar + name
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = g.name.take(1).uppercase(),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    // Name row with optional verified badge
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = g.name,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        if (g.verified == 1) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                Icons.Filled.CheckCircle,
-                                contentDescription = "Подтверждённое сообщество",
-                                modifier = Modifier.size(18.dp),
-                                tint = Color(0xFF1976D2),
+                        if (g.photo100 != null || g.photo200 != null) {
+                            AsyncImage(
+                                model = g.photo200 ?: g.photo100,
+                                contentDescription = g.name,
+                                modifier = Modifier.size(56.dp).clip(avatarShape),
+                                contentScale = ContentScale.Crop,
                             )
-                        }
-                    }
-                    // Type badge
-                    val typeLabel = when (g.type) {
-                        "page" -> "Публичная страница"
-                        "event" -> "Мероприятие"
-                        else -> "Группа"
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = typeLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                        if (g.isClosed == 1) {
-                            Text(
-                                text = " · Закрытое сообщество",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
-                        }
-                    }
-                    // Subscriber count — #OPVK-EXTRACT (Task 3-c): кликабельная
-                    // строка-вход «Участники»: тап по счётчику подписчиков
-                    // (members_count из GroupInfo) открывает список участников
-                    // (GroupMembersScreen, groups.getMembers). Шеврон — аффорданс;
-                    // тач-таргет ≥ 44dp (defaultMinSize).
-                    if (g.membersCount > 0) {
-                        val countStr = formatMemberCount(g.membersCount)
-                        Row(
-                            modifier = Modifier
-                                .defaultMinSize(minHeight = 44.dp)
-                                .clickable { onMembersClick(groupId) },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = "$countStr подписчиков",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = "Участники",
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            }
-            // Status text
-            if (!g.status.isNullOrBlank()) {
-                Text(
-                    text = g.status,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            // Description
-            if (!g.description.isNullOrBlank()) {
-                val maxLines = if (descExpanded) Int.MAX_VALUE else 3
-                // #30 (build fix): ClickableText deprecated в Compose 2025.06.00.
-                // Заменён на Text + clickable modifier — проще и стабильнее.
-                val descColor = MaterialTheme.colorScheme.onSurfaceVariant
-                val linkColor = Color(0xFF1976D2)
-                Text(
-                    text = buildAnnotatedString {
-                        append(g.description)
-                        if (!descExpanded) {
-                            withStyle(SpanStyle(color = linkColor)) {
-                                append(" Показать ещё")
+                        } else {
+                            Box(
+                                modifier = Modifier.size(56.dp).clip(avatarShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = g.name.take(1).uppercase(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
-                    },
-                    style = MaterialTheme.typography.bodySmall.copy(color = descColor),
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 2.dp)
-                        .clickable { if (!descExpanded) descExpanded = true },
-                    maxLines = maxLines,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            // Name row with optional verified badge
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = g.name,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                                if (g.verified == 1) {
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(
+                                        Icons.Filled.CheckCircle,
+                                        contentDescription = "Подтверждённое сообщество",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = Color(0xFF1976D2),
+                                    )
+                                }
+                            }
+                            // Type badge
+                            val typeLabel = when (g.type) {
+                                "page" -> "Публичная страница"
+                                "event" -> "Мероприятие"
+                                else -> "Группа"
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = typeLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                                if (g.isClosed == 1) {
+                                    Text(
+                                        text = " · Закрытое сообщество",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                }
+                            }
+                            // Subscriber count — #OPVK-EXTRACT (Task 3-c): кликабельная
+                            // строка-вход «Участники»: тап по счётчику подписчиков
+                            // (members_count из GroupInfo) открывает список участников
+                            // (GroupMembersScreen, groups.getMembers). Шеврон — аффорданс;
+                            // тач-таргет ≥ 44dp (defaultMinSize).
+                            if (g.membersCount > 0) {
+                                val countStr = formatMemberCount(g.membersCount)
+                                Row(
+                                    modifier = Modifier
+                                        .defaultMinSize(minHeight = 44.dp)
+                                        .clickable { onMembersClick(groupId) },
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "$countStr подписчиков",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Участники",
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    // Status text
+                    if (!g.status.isNullOrBlank()) {
+                        Text(
+                            text = g.status,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    // Description
+                    if (!g.description.isNullOrBlank()) {
+                        val maxLines = if (descExpanded) Int.MAX_VALUE else 3
+                        val descColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        val linkColor = Color(0xFF1976D2)
+                        Text(
+                            text = buildAnnotatedString {
+                                append(g.description)
+                                if (!descExpanded) {
+                                    withStyle(SpanStyle(color = linkColor)) {
+                                        append(" Показать ещё")
+                                    }
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall.copy(color = descColor),
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp, vertical = 2.dp)
+                                .clickable { if (!descExpanded) descExpanded = true },
+                            maxLines = maxLines,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
             }
-        }
         // S6-4: кнопка подписки / отписки.
         item {
             val buttonShape = MaterialTheme.shapes.medium
@@ -1211,10 +1230,6 @@ fun CommunityScreen(
                     }
                 },
                 likesOverride = likesState[postKey],
-            )
-            Box(
-                modifier = Modifier.fillMaxWidth().height(1.dp).padding(horizontal = 16.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             )
         }
         // Fix #85: футер пагинации.
@@ -1620,6 +1635,7 @@ fun CommunityScreen(
             .padding(end = 16.dp, bottom = 16.dp),
     )
     } // closes Box (Fix #389 #SCROLL-TOP-PARITY)
+    } // closes Column
 
     // Sprint 2, P1-1 (#88): полноэкранный просмотр фото.
     // #ADMIN-POST-ACTIONS: меню действий над постом.
@@ -1788,10 +1804,10 @@ private fun CommunityPostCard(
     val repostCount = post.reposts?.count ?: 0
     val viewCount = post.views?.count ?: 0
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        elevation = CardDefaults.cardElevation(0.dp),
+    VkGroup(
+        mode = VkGroupMode.Card,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(0.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -2015,39 +2031,51 @@ private fun CommunityPostCard(
                     }
                 }
             }
+            // ─── VKUI v8 × M3E: Post Footer (VkReactionPill + Views) ───
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                ActionIcon(
-                    icon = if (isLiked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                    count = likeCount,
-                    tint = if (isLiked) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    onClick = { onLikeToggle(post.ownerId, post.id, isLiked) },
-                )
-                Spacer(Modifier.width(8.dp))
-                ActionIcon(
-                    icon = Icons.Outlined.ChatBubbleOutline,
-                    count = commentCount,
-                    onClick = { onCommentClick(post.ownerId, post.id) },
-                )
-                Spacer(Modifier.width(8.dp))
-                // Sprint 2, P1-3 (#90): репост кликабелен.
-                ActionIcon(
-                    icon = Icons.Outlined.Repeat,
-                    count = repostCount,
-                    onClick = { onRepostClick(post) },
-                )
-                Spacer(Modifier.weight(1f))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    VkReactionPill(
+                        icon = if (isLiked) VkIcons.LikeFill20 else VkIcons.LikeOutline20,
+                        count = likeCount,
+                        active = isLiked,
+                        onClick = { onLikeToggle(post.ownerId, post.id, isLiked) },
+                    )
+                    VkReactionPill(
+                        icon = VkIcons.CommentOutline20,
+                        count = commentCount,
+                        onClick = { onCommentClick(post.ownerId, post.id) },
+                    )
+                    VkReactionPill(
+                        icon = VkIcons.RepostOutline20,
+                        count = repostCount,
+                        onClick = { onRepostClick(post) },
+                    )
+                }
                 if (viewCount > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Visibility, null, modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(3.dp))
-                        Text(viewCount.toCountString(),
-                            style = MaterialTheme.typography.labelSmall,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            VkIcons.View16,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = viewCount.toCountString(),
+                            style = VkTypography.vkCaption2,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp)
+                        )
                     }
                 }
             }

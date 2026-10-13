@@ -181,4 +181,23 @@ val vkFootnoteCaps: TextStyle get() = VkMintTypography.vkFootnoteCaps
 val vkCaption1: TextStyle get() = VkMintTypography.vkCaption1
 val vkCaption2: TextStyle get() = VkMintTypography.vkCaption2
 
+/**
+ * Синглтон для прямого доступа к токенам типографики VKUI.
+ */
+object VkTypography {
+    val vkTitle1: TextStyle get() = vk.mint.ui.theme.vkTitle1
+    val vkTitle2: TextStyle get() = vk.mint.ui.theme.vkTitle2
+    val vkTitle3: TextStyle get() = vk.mint.ui.theme.vkTitle3
+    val vkHeadline1: TextStyle get() = vk.mint.ui.theme.vkHeadline1
+    val vkHeadline2: TextStyle get() = vk.mint.ui.theme.vkHeadline2
+    val vkText: TextStyle get() = vk.mint.ui.theme.vkText
+    val vkParagraph: TextStyle get() = vk.mint.ui.theme.vkParagraph
+    val vkSubhead: TextStyle get() = vk.mint.ui.theme.vkSubhead
+    val vkSubheadMedium: TextStyle get() = vk.mint.ui.theme.vkSubheadMedium
+    val vkFootnote: TextStyle get() = vk.mint.ui.theme.vkFootnote
+    val vkFootnoteCaps: TextStyle get() = vk.mint.ui.theme.vkFootnoteCaps
+    val vkCaption1: TextStyle get() = vk.mint.ui.theme.vkCaption1
+    val vkCaption2: TextStyle get() = vk.mint.ui.theme.vkCaption2
+}
+
 
