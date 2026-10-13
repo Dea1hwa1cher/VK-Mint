@@ -1356,6 +1356,7 @@ data class Group(
     @SerializedName("can_message")     val canMessage: Int = 0,
     @SerializedName("can_suggest")     val canSuggest: Int = 0,
     @SerializedName("member_status")   val memberStatus: Int = 0,
+    @SerializedName("reposts_disabled") val repostsDisabled: Int = 0,
 ) {
     val isMemberBool: Boolean get() = isMember == 1
     // Fix #144: true если пользователь имеет права editor/admin (can_post в чужую стену).

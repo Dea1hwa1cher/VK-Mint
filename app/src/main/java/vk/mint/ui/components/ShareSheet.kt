@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Link
@@ -32,17 +33,20 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PostAdd
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -142,6 +146,11 @@ fun ShareSheet(
     var selectedPeerId by remember { mutableStateOf<Long?>(null) }
     var selectedGroup by remember { mutableStateOf<Group?>(null) }
 
+    // Опции публикации в сообщество (VK web parity)
+    var muteNotifications by remember { mutableStateOf(false) }
+    var closeComments by remember { mutableStateOf(false) }
+    var markAsAds by remember { mutableStateOf(false) }
+
     // #SHARE-18B: честный текст последней ошибки API для UI (без маскировки).
     // lastApiError приходит из VKApiClient в формате "<method>: <message>",
     // поэтому пользователь видит какой вызов и почему не прошёл. code==0 —
@@ -207,7 +216,8 @@ fun ShareSheet(
                 for (g in memberDeferred.await()) {
                     if (!merged.containsKey(g.id)) merged[g.id] = g
                 }
-                groups = merged.values.filter { it.canPost == 1 }
+                // Исключаем сообщества с reposts_disabled == 1; оставляем где can_post == 1, админ/редактор или разрешена предложка
+                groups = merged.values.filter { it.repostsDisabled != 1 && (it.canPost == 1 || it.adminLevel >= 2 || it.canSuggest == 1) }
             } catch (e: Exception) {
                 AppLog.e("ShareSheet", "loadGroups error", e)
                 statusMsg = "Не удалось загрузить сообщества: ${e.message}"
@@ -277,12 +287,10 @@ fun ShareSheet(
             targetGroup != null -> {
                 scope.launch {
                     sending = true
-                    statusMsg = "Публикация в сообществе…"
+                    val isSuggest = targetGroup.canSuggest == 1 && targetGroup.adminLevel < 2 && targetGroup.canPost != 1
+                    statusMsg = if (isSuggest) "Отправка в предложку…" else "Публикация в сообществе…"
                     try {
-                        // Честная проверка права (defense in depth): список
-                        // уже отфильтрован по can_post==1, но состояние могло
-                        // измениться между загрузкой и отправкой.
-                        if (targetGroup.canPost != 1 && targetGroup.adminLevel < 2) {
+                        if (targetGroup.canPost != 1 && targetGroup.adminLevel < 2 && targetGroup.canSuggest != 1) {
                             statusMsg = "Нет права публикации в «${targetGroup.name}»"
                             sending = false
                             return@launch
@@ -292,15 +300,16 @@ fun ShareSheet(
                             sending = false
                             return@launch
                         }
-                        // #SHARE-18B «Подписчикам сообщества»: wall.post
-                        // owner_id=-gid. Пост → attachments=wall{owner}_{id}
-                        // (repostToGroup); файлы → прямые attachment-строки.
+                        // #SHARE-18B «Подписчикам сообщества»: wall.repost с group_id
                         val newPostId = if (p != null) {
                             app.apiClient.repostToGroup(
                                 groupId = targetGroup.id,
                                 sourceOwnerId = p.ownerId,
                                 sourcePostId = p.id,
                                 message = comment.trim(),
+                                muteNotifications = muteNotifications,
+                                closeComments = closeComments,
+                                markAsAds = markAsAds,
                             )
                         } else {
                             app.apiClient.wallPostWithAttachments(
@@ -311,7 +320,8 @@ fun ShareSheet(
                         }
                         if (newPostId > 0) {
                             AppLog.i("ShareSheet", "Published to group ${targetGroup.id}, postId=$newPostId")
-                            Toast.makeText(context, "Опубликовано в «${targetGroup.name}»", Toast.LENGTH_SHORT).show()
+                            val successText = if (isSuggest) "Предложено в «${targetGroup.name}»" else "Опубликовано в «${targetGroup.name}»"
+                            Toast.makeText(context, successText, Toast.LENGTH_SHORT).show()
                             onSuccess()
                             onDismiss()
                         } else {
@@ -564,6 +574,53 @@ fun ShareSheet(
                 }
             }
 
+            // ── Post preview snippet (паритет VK web GlobalSharingModal) ──
+            if (p != null) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val firstPhoto = p.attachments?.firstOrNull { it.type == "photo" && it.photo != null }?.photo?.largestUrl
+                        if (firstPhoto != null) {
+                            AsyncImage(
+                                model = firstPhoto,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(MaterialTheme.shapes.extraSmall),
+                                contentScale = ContentScale.Crop,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Запись на стене",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            val previewText = p.text.takeIf { it.isNotBlank() }
+                                ?: p.attachments?.firstOrNull()?.type?.let { "Вложение: $it" }
+                                ?: "Запись wall${p.ownerId}_${p.id}"
+                            Text(
+                                text = previewText.replace('\n', ' '),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+
             // ── Quick actions row ────────────────────────────────
             // #SHARE-18B: 4 действия VK web SharePanel — стена / закладки /
             // избранное (self-chat) / ссылка. weight(1f) — равные ширины,
@@ -722,9 +779,15 @@ fun ShareSheet(
                                 // сравнение выделения без ?. (smart-cast в val).
                                 val sel = selectedGroup
                                 val isSelected = sel != null && sel.id == group.id
+                                val roleSubtitle = when {
+                                    group.adminLevel >= 2 -> "От имени сообщества"
+                                    group.canSuggest == 1 && group.adminLevel < 2 -> "Предложить новость"
+                                    else -> "${group.membersCount} участников"
+                                }
                                 ShareListItem(
                                     name = group.name,
                                     photoUrl = group.photo100 ?: "",
+                                    subtitle = roleSubtitle,
                                     isSelected = isSelected,
                                     onClick = {
                                         selectedGroup = if (isSelected) null else group
@@ -748,6 +811,32 @@ fun ShareSheet(
                             }
                         }
                     }
+                }
+            }
+
+            // ── Community repost options (паритет VK web: без звука / без комментариев / реклама) ──
+            if (selectedGroup != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        selected = muteNotifications,
+                        onClick = { muteNotifications = !muteNotifications },
+                        label = { Text("Без звука") },
+                    )
+                    FilterChip(
+                        selected = closeComments,
+                        onClick = { closeComments = !closeComments },
+                        label = { Text("Без комментов") },
+                    )
+                    FilterChip(
+                        selected = markAsAds,
+                        onClick = { markAsAds = !markAsAds },
+                        label = { Text("Реклама") },
+                    )
                 }
             }
 
@@ -836,9 +925,10 @@ private fun ShareListItem(
     name: String,
     photoUrl: String,
     isSelected: Boolean,
+    subtitle: String? = null,
     onClick: () -> Unit,
 ) {
-    val bg = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+    val bg = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
              else MaterialTheme.colorScheme.surface
 
     Row(
@@ -847,7 +937,7 @@ private fun ShareListItem(
             .clip(MaterialTheme.shapes.medium)
             .background(bg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Avatar
@@ -875,16 +965,35 @@ private fun ShareListItem(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = name,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        if (subtitle != null) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        } else {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+        }
         if (isSelected) {
             Icon(
-                Icons.Outlined.PostAdd,
+                Icons.Outlined.Check,
                 contentDescription = "Выбрано",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),

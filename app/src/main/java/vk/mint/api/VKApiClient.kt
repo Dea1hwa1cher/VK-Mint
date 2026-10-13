@@ -6321,12 +6321,31 @@ class VKApiClient(
      * @return `Pair<postId, repostsCount>` — id нового поста и обновлённое
      *         количество репостов оригинала. `Pair(-1L, -1)` при ошибке.
      */
-    suspend fun wallRepost(object_: String, message: String = ""): Pair<Long, Int> {
+    suspend fun wallRepost(
+        object_: String,
+        message: String = "",
+        groupId: Long? = null,
+        muteNotifications: Boolean = false,
+        closeComments: Boolean = false,
+        markAsAds: Boolean = false,
+        publishDate: Long? = null,
+        entryPoint: String = "share",
+        ref: String = if (groupId != null && groupId != 0L) "group" else "wall",
+    ): Pair<Long, Int> {
         if (isOffline()) return -1L to -1
         val args = mutableMapOf(
             "object" to object_,
         )
         if (message.isNotBlank()) args["message"] = message
+        if (groupId != null && groupId != 0L) {
+            args["group_id"] = kotlin.math.abs(groupId).toString()
+            args["entry_point"] = entryPoint
+            args["ref"] = ref
+        }
+        if (muteNotifications) args["mute_notifications"] = "1"
+        if (closeComments) args["close_comments"] = "1"
+        if (markAsAds) args["mark_as_ads"] = "1"
+        if (publishDate != null && publishDate > 0L) args["publish_date"] = publishDate.toString()
         val json = call("wall.repost", args) ?: return -1L to -1
         return try {
             val resp = json.getAsJsonObject("response") ?: return -1L to -1
@@ -6664,32 +6683,46 @@ class VKApiClient(
     }
 
     /**
-     * Репост на стену сообщества. VK: wall.post — owner_id=-gid,
-     * attachments=wall{srcOwner}_{srcPost}, message.
+     * Репост на стену сообщества (паритет VK web: wall.repost с group_id).
      *
-     * #SHARE-18B: random_id убран — это параметр messages.send, wall.post его
-     * не документирует; сообщение (message) передаётся в args как и прежде.
-     * Права: вызов требует can_post в сообществе (админ/редактор либо
-     * разрешённая стена); ошибка API (15/210) всплывает честно.
+     * VK: wall.repost — object=wall{srcOwner}_{srcPost}, group_id={gid}, entry_point=share, ref=group.
+     * Фолбэк на wall.post при ошибке или публикации в предложку.
      */
     suspend fun repostToGroup(
         groupId: Long,
         sourceOwnerId: Long,
         sourcePostId: Long,
         message: String = "",
+        muteNotifications: Boolean = false,
+        closeComments: Boolean = false,
+        markAsAds: Boolean = false,
+        publishDate: Long? = null,
     ): Long {
         if (isOffline()) return -1L
-        val copyHistory = "wall${sourceOwnerId}_${sourcePostId}"
+        val obj = "wall${sourceOwnerId}_${sourcePostId}"
+        // 1. Основной вызов VK Web: wall.repost с group_id
+        val (postId, _) = wallRepost(
+            object_ = obj,
+            message = message,
+            groupId = groupId,
+            muteNotifications = muteNotifications,
+            closeComments = closeComments,
+            markAsAds = markAsAds,
+            publishDate = publishDate,
+        )
+        if (postId > 0L) return postId
+
+        // 2. Фолбэк на wall.post, если wall.repost вернул ошибку
         val args = mutableMapOf(
-            "owner_id" to (-groupId).toString(),
-            "attachments" to copyHistory,
+            "owner_id" to (-kotlin.math.abs(groupId)).toString(),
+            "attachments" to obj,
         )
         if (message.isNotBlank()) args["message"] = message
+        if (muteNotifications) args["mute_notifications"] = "1"
+        if (closeComments) args["close_comments"] = "1"
+        if (markAsAds) args["mark_as_ads"] = "1"
+        if (publishDate != null && publishDate > 0L) args["publish_date"] = publishDate.toString()
         val json = call("wall.post", args) ?: return -1L
-        // #SHARE-18B: мульти-формат (items / post_id / post.id) —
-        // раньше только post.id; при документированном формате ответа
-        // {"response":{"post_id":N}} метод возвращал -1 при УСПЕШНОЙ
-        // публикации → UI показывал «Не удалось опубликовать».
         return parseWallPostId(json, "repostToGroup")
     }
 
@@ -9869,7 +9902,7 @@ class VKApiClient(
             "offset" to offset.toString(),
             "extended" to "1",
             // Fix #144: добавлен admin_level в fields (нужен для ForwardDialog).
-            "fields" to "members_count,description,status,verified,is_member,can_post,activity,site,type,admin_level",
+            "fields" to "members_count,description,status,verified,is_member,can_post,activity,site,type,admin_level,can_suggest,reposts_disabled",
         )
         if (userId != null) args["user_id"] = userId.toString()
         if (filter != null) args["filter"] = filter
@@ -9898,6 +9931,8 @@ class VKApiClient(
                     // Fix #144: admin_level — парсим из ответа (0 если поле отсутствует,
                     // например при groups.get без filter=admin_editor).
                     adminLevel = o.get("admin_level")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
+                    canSuggest = safeInt(o.get("can_suggest")),
+                    repostsDisabled = safeInt(o.get("reposts_disabled")),
                 )
             }
         } catch (e: Exception) {

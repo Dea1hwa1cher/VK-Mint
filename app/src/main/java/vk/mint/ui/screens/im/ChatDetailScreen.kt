@@ -6089,6 +6089,14 @@ fun ChatDetailScreen(
         )
     }
 
+    // #CHANNEL-SHARE: шторка шеринга поста канала (в диалоги / сообщества / на стену / в закладки)
+    channelSharePost?.let { sharePost ->
+        vk.mint.ui.components.ShareSheet(
+            post = sharePost,
+            onDismiss = { channelSharePost = null },
+        )
+    }
+
     // #CHANNEL-INFO-PANEL (2026-10-03): панель канала — аватар, название,
     // подписчики, кнопки «Открыть сообщество»/«Написать», ссылка на канал и
     // разделы Фото/Видео/Музыка/Файлы. Открывается тапом по шапке канала
