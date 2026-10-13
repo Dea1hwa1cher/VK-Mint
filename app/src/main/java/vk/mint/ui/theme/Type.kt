@@ -163,4 +163,22 @@ val Typography.vkCaption2: TextStyle
         letterSpacing = 0.sp,
     )
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  Top-level Convenience Accessors (VKUI Typography)
+// ═══════════════════════════════════════════════════════════════════════════
+
+val vkTitle1: TextStyle get() = VkMintTypography.vkTitle1
+val vkTitle2: TextStyle get() = VkMintTypography.vkTitle2
+val vkTitle3: TextStyle get() = VkMintTypography.vkTitle3
+val vkHeadline1: TextStyle get() = VkMintTypography.vkHeadline1
+val vkHeadline2: TextStyle get() = VkMintTypography.vkHeadline2
+val vkText: TextStyle get() = VkMintTypography.vkText
+val vkParagraph: TextStyle get() = VkMintTypography.vkParagraph
+val vkSubhead: TextStyle get() = VkMintTypography.vkSubhead
+val vkSubheadMedium: TextStyle get() = VkMintTypography.vkSubheadMedium
+val vkFootnote: TextStyle get() = VkMintTypography.vkFootnote
+val vkFootnoteCaps: TextStyle get() = VkMintTypography.vkFootnoteCaps
+val vkCaption1: TextStyle get() = VkMintTypography.vkCaption1
+val vkCaption2: TextStyle get() = VkMintTypography.vkCaption2
+
 

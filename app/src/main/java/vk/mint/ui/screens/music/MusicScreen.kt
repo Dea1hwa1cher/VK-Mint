@@ -123,6 +123,14 @@ import vk.mint.data.model.Track
 import vk.mint.media.PlayerConnection
 import vk.mint.media.TrackDownloadManager
 import vk.mint.ui.components.shareTrack
+import vk.mint.ui.components.VkSearch
+import vk.mint.ui.components.VkSubnavigationButton
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.theme.vkFootnote
+import vk.mint.ui.theme.vkHeadline1
+import vk.mint.ui.theme.vkParagraph
+import vk.mint.ui.theme.vkSubhead
+import vk.mint.ui.theme.vkTitle2
 import vk.mint.util.AppLog
 
 /**
@@ -412,14 +420,11 @@ fun MusicScreen(
             onBack = onBack,
         )
 
-        // ─── Inline поле поиска (Fix #269) ────────────────────────────
-        // Поле всегда видно вверху вкладки «Моя музыка». При вводе текста
-        // searchActive становится true → ниже показываются результаты поиска
-        // вместо основного контента вкладки. Поле остаётся видимым всегда,
-        // чтобы пользователь мог изменить запрос.
+        // ─── Inline поле поиска (VKUI v8 VkSearch × M3E) ────────────
+        // Поле всегда видно вверху вкладки «Библиотека» / «Загружено». При вводе текста
+        // searchActive становится true → ниже показываются результаты поиска.
         if (selectedTab == 0 || selectedTab == 1) {
-            val searchContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            OutlinedTextField(
+            VkSearch(
                 value = searchQuery,
                 onValueChange = {
                     searchQuery = it
@@ -428,50 +433,11 @@ fun MusicScreen(
                         searchLoadingMore = false
                     }
                 },
-                placeholder = {
-                    Text(
-                        if (selectedTab == 1) "Поиск в загруженном" else "Поиск в библиотеке",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = vkTextSecondary,
-                    )
-                },
+                placeholder = if (selectedTab == 1) "Поиск в загруженном" else "Поиск в библиотеке",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
                     .focusRequester(searchFocusRequester),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.Search,
-                        contentDescription = null,
-                        tint = vkTextSecondary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = {
-                            searchQuery = ""
-                            searchResult = null
-                        }) {
-                            Icon(
-                                Icons.Outlined.Close,
-                                contentDescription = "Очистить",
-                                modifier = Modifier.size(18.dp),
-                                tint = vkTextSecondary,
-                            )
-                        }
-                    }
-                },
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedContainerColor = searchContainerColor,
-                    focusedContainerColor = searchContainerColor,
-                    cursorColor = vkAccent,
-                ),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = vkTextPrimary),
             )
         }
 
@@ -1330,7 +1296,7 @@ private fun MusicTabsBar(
                     .padding(start = 4.dp),
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = VkIcons.ArrowBack24,
                     contentDescription = "Назад",
                     tint = textColor,
                 )
@@ -1341,39 +1307,17 @@ private fun MusicTabsBar(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val isLibrary = selectedTab == 0
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(if (isLibrary) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                    .clickable { onTabSelected(0) }
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Библиотека",
-                    color = if (isLibrary) MaterialTheme.colorScheme.onSecondaryContainer else textColor,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-            val isDownloaded = selectedTab == 1
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(if (isDownloaded) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                    .clickable { onTabSelected(1) }
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Загружено",
-                    color = if (isDownloaded) MaterialTheme.colorScheme.onSecondaryContainer else textColor,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+            VkSubnavigationButton(
+                text = "Библиотека",
+                selected = selectedTab == 0,
+                onClick = { onTabSelected(0) },
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            VkSubnavigationButton(
+                text = "Загружено",
+                selected = selectedTab == 1,
+                onClick = { onTabSelected(1) },
+            )
         }
     }
 }
@@ -1478,8 +1422,7 @@ private fun MyPlaylistsCarouselSection(
             Text(
                 text = "Плейлисты",
                 color = textColor,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
+                style = vkTitle2,
             )
             Spacer(modifier = Modifier.weight(1f))
             Box(
@@ -1491,7 +1434,7 @@ private fun MyPlaylistsCarouselSection(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    imageVector = VkIcons.ChevronRight20,
                     contentDescription = "Все плейлисты",
                     tint = textColor,
                     modifier = Modifier.size(20.dp),
@@ -1546,8 +1489,7 @@ private fun MyPlaylistsCarouselSection(
                         Text(
                             text = playlist.title,
                             color = textColor,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
+                            style = vkHeadline1.copy(fontSize = 14.sp),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.fillMaxWidth(),
@@ -1556,7 +1498,7 @@ private fun MyPlaylistsCarouselSection(
                             Text(
                                 text = subtitle,
                                 color = secondaryColor,
-                                fontSize = 12.sp,
+                                style = vkFootnote,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.fillMaxWidth(),
@@ -1643,14 +1585,13 @@ private fun MusicMyTracksTab(
                 Text(
                     text = "Мои аудиозаписи",
                     color = textColor,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = vkTitle2,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = if (totalCount > 0) "${totalCount.coerceAtLeast(tracks.size)}" else "${tracks.size}",
                     color = secondaryColor,
-                    fontSize = 15.sp,
+                    style = vkSubhead,
                 )
                 Spacer(modifier = Modifier.weight(1f))
 
@@ -1683,8 +1624,7 @@ private fun MusicMyTracksTab(
                         Text(
                             text = "К треку",
                             color = accentColor,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
+                            style = vkFootnote.copy(fontWeight = FontWeight.Medium),
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1702,15 +1642,14 @@ private fun MusicMyTracksTab(
                         Text(
                             text = sortOrder.title,
                             color = accentColor,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
+                            style = vkSubhead.copy(fontWeight = FontWeight.Medium),
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Icon(
-                            imageVector = Icons.Filled.KeyboardArrowDown,
+                            imageVector = VkIcons.ChevronDown20,
                             contentDescription = "Сортировка",
                             tint = accentColor,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(16.dp),
                         )
                     }
 
@@ -1751,12 +1690,12 @@ private fun MusicMyTracksTab(
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Shuffle,
+                        imageVector = VkIcons.Shuffle20,
                         contentDescription = "Перемешать",
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.size(24.dp),
@@ -1766,8 +1705,7 @@ private fun MusicMyTracksTab(
                 Text(
                     text = "Перемешать",
                     color = textColor,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = vkHeadline1,
                 )
             }
         }
@@ -2996,11 +2934,11 @@ private fun VKTrackRow(
                 .padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Обложка трека: сквиркл 48x48dp, 10dp скругление (как на скриншоте VK Music)
+            // Обложка трека: 48x48dp, 8dp скругление (как на скриншоте VK Music)
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center,
             ) {
@@ -3031,8 +2969,7 @@ private fun VKTrackRow(
                 Text(
                     text = track.title,
                     color = if (isCurrent) accentColor else textColor,
-                    fontSize = 15.sp,
-                    fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
+                    style = vkHeadline1.copy(fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -3040,7 +2977,7 @@ private fun VKTrackRow(
                 Text(
                     text = track.artist,
                     color = secondaryColor,
-                    fontSize = 13.sp,
+                    style = vkSubhead,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -3048,7 +2985,7 @@ private fun VKTrackRow(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Длительность + кнопка скачивания (если активна) + меню ⋮
+            // Длительность + кнопка скачивания (если активна) + меню ⋯
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (downloadState != null) {
                     VKDownloadButton(
@@ -3062,7 +2999,7 @@ private fun VKTrackRow(
                 Text(
                     text = formatTrackDuration(track.duration),
                     color = secondaryColor,
-                    fontSize = 13.sp,
+                    style = vkFootnote,
                 )
 
                 IconButton(
@@ -3070,7 +3007,7 @@ private fun VKTrackRow(
                     modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.MoreVert,
+                        imageVector = VkIcons.MoreHorizontal20,
                         contentDescription = "Ещё",
                         tint = secondaryColor,
                         modifier = Modifier.size(20.dp),
@@ -3191,14 +3128,13 @@ private fun MusicDownloadedTab(
                     Text(
                         text = "Скачанная музыка",
                         color = textColor,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = vkTitle2,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "${downloadedList.size}",
                         color = secondaryColor,
-                        fontSize = 15.sp,
+                        style = vkSubhead,
                     )
                     Spacer(modifier = Modifier.weight(1f))
 
@@ -3213,15 +3149,14 @@ private fun MusicDownloadedTab(
                             Text(
                                 text = sortOrder.title,
                                 color = accentColor,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
+                                style = vkSubhead.copy(fontWeight = FontWeight.Medium),
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                             Icon(
-                                imageVector = Icons.Filled.KeyboardArrowDown,
+                                imageVector = VkIcons.ChevronDown20,
                                 contentDescription = "Сортировка",
                                 tint = accentColor,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(16.dp),
                             )
                         }
 
@@ -3262,12 +3197,12 @@ private fun MusicDownloadedTab(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.secondaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Shuffle,
+                            imageVector = VkIcons.Shuffle20,
                             contentDescription = "Перемешать",
                             tint = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.size(24.dp),
@@ -3277,8 +3212,7 @@ private fun MusicDownloadedTab(
                     Text(
                         text = "Перемешать",
                         color = textColor,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
+                        style = vkHeadline1,
                     )
                 }
             }

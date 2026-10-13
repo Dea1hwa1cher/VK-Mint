@@ -97,6 +97,11 @@ import vk.mint.data.model.PlayerState
 import vk.mint.media.PlayerConnection
 import vk.mint.media.TrackDownloadManager
 import vk.mint.ui.components.shareTrack
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.theme.vkFootnote
+import vk.mint.ui.theme.vkHeadline1
+import vk.mint.ui.theme.vkSubhead
+import vk.mint.ui.theme.vkTitle2
 import vk.mint.util.AppLog
 import vk.mint.util.toDurationString
 import kotlinx.coroutines.launch
@@ -193,10 +198,10 @@ fun AudioPlayerScreen(
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    imageVector = VkIcons.ChevronDown20,
                     contentDescription = "Свернуть",
                     tint = vkTextPrimary,
-                    modifier = Modifier.size(30.dp),
+                    modifier = Modifier.size(26.dp),
                 )
             }
             Column(
@@ -389,8 +394,7 @@ fun AudioPlayerScreen(
                 Text(
                     text = displayTitle,
                     color = vkTextPrimary,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = vkTitle2,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -398,7 +402,7 @@ fun AudioPlayerScreen(
                 Text(
                     text = track.artist,
                     color = vkTextSecondary,
-                    fontSize = 14.sp,
+                    style = vkSubhead,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -554,12 +558,12 @@ fun AudioPlayerScreen(
                 Text(
                     text = playerState.positionMs.toDurationString(),
                     color = vkTextSecondary,
-                    fontSize = 11.sp,
+                    style = vkFootnote,
                 )
                 Text(
                     text = effectiveDuration.toDurationString(),
                     color = vkTextSecondary,
-                    fontSize = 11.sp,
+                    style = vkFootnote,
                 )
             }
         }
@@ -579,14 +583,14 @@ fun AudioPlayerScreen(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(MaterialTheme.shapes.medium)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                     .background(Color(0xFF262626))
                     .clickable { PlayerConnection.cycleRepeatMode() },
                 contentAlignment = Alignment.Center,
             ) {
                 val repeatIcon = when (playerState.repeatMode) {
-                    PlayerState.REPEAT_MODE_ONE, PlayerState.REPEAT_MODE_TWO -> Icons.Filled.RepeatOne
-                    else -> Icons.Filled.Repeat
+                    PlayerState.REPEAT_MODE_ONE, PlayerState.REPEAT_MODE_TWO -> VkIcons.RepeatOne20
+                    else -> VkIcons.Repeat20
                 }
                 Icon(
                     imageVector = repeatIcon,
@@ -615,7 +619,7 @@ fun AudioPlayerScreen(
                 modifier = Modifier.size(48.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Filled.SkipPrevious,
+                    imageVector = VkIcons.SkipPrevious24,
                     contentDescription = "Предыдущий",
                     tint = Color.White,
                     modifier = Modifier.size(34.dp),
@@ -632,7 +636,7 @@ fun AudioPlayerScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    imageVector = if (playerState.isPlaying) VkIcons.PauseFill24 else VkIcons.PlayFill24,
                     contentDescription = if (playerState.isPlaying) "Пауза" else "Играть",
                     tint = Color.White,
                     modifier = Modifier.size(38.dp),
@@ -645,7 +649,7 @@ fun AudioPlayerScreen(
                 modifier = Modifier.size(48.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Filled.SkipNext,
+                    imageVector = VkIcons.SkipNext24,
                     contentDescription = "Следующий",
                     tint = Color.White,
                     modifier = Modifier.size(34.dp),
@@ -657,7 +661,7 @@ fun AudioPlayerScreen(
                 onClick = { PlayerConnection.setShuffleModeEnabled(!playerState.shuffleModeEnabled) },
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Shuffle,
+                    imageVector = VkIcons.Shuffle20,
                     contentDescription = "Перемешать",
                     tint = if (playerState.shuffleModeEnabled) vkAccent else Color(0xFF8E8E8E),
                     modifier = Modifier.size(24.dp),

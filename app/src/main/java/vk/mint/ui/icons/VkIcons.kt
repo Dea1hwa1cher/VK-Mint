@@ -1468,4 +1468,200 @@ object VkIcons {
             }
         }.build().also { _settingsOutline20 = it }
     private var _settingsOutline20: ImageVector? = null
+
+    val ChevronDown20: ImageVector
+        get() = _chevronDown20 ?: ImageVector.Builder(
+            name = "VkIcons.ChevronDown20",
+            defaultWidth = 20.dp,
+            defaultHeight = 20.dp,
+            viewportWidth = 20f,
+            viewportHeight = 20f,
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.8f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(4.5f, 7.5f)
+                lineTo(10f, 13f)
+                lineTo(15.5f, 7.5f)
+            }
+        }.build().also { _chevronDown20 = it }
+    private var _chevronDown20: ImageVector? = null
+
+    val PlayFill24: ImageVector
+        get() = _playFill24 ?: ImageVector.Builder(
+            name = "VkIcons.PlayFill24",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(7.2f, 4.8f)
+                curveTo(6.4f, 4.3f, 5.4f, 4.88f, 5.4f, 5.82f)
+                lineTo(5.4f, 18.18f)
+                curveTo(5.4f, 19.12f, 6.4f, 19.7f, 7.2f, 19.2f)
+                lineTo(18.2f, 13.02f)
+                curveTo(19.0f, 12.55f, 19.0f, 11.45f, 18.2f, 10.98f)
+                close()
+            }
+        }.build().also { _playFill24 = it }
+    private var _playFill24: ImageVector? = null
+
+    val PauseFill24: ImageVector
+        get() = _pauseFill24 ?: ImageVector.Builder(
+            name = "VkIcons.PauseFill24",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(7.5f, 5f)
+                curveTo(6.67f, 5f, 6f, 5.67f, 6f, 6.5f)
+                lineTo(6f, 17.5f)
+                curveTo(6f, 18.33f, 6.67f, 19f, 7.5f, 19f)
+                curveTo(8.33f, 19f, 9f, 18.33f, 9f, 17.5f)
+                lineTo(9f, 6.5f)
+                curveTo(9f, 5.67f, 8.33f, 5f, 7.5f, 5f)
+                close()
+                moveTo(16.5f, 5f)
+                curveTo(15.67f, 5f, 15f, 5.67f, 15f, 6.5f)
+                lineTo(15f, 17.5f)
+                curveTo(15f, 18.33f, 15.67f, 19f, 16.5f, 19f)
+                curveTo(17.33f, 19f, 18f, 18.33f, 18f, 17.5f)
+                lineTo(18f, 6.5f)
+                curveTo(18f, 5.67f, 17.33f, 5f, 16.5f, 5f)
+                close()
+            }
+        }.build().also { _pauseFill24 = it }
+    private var _pauseFill24: ImageVector? = null
+
+    val SkipPrevious24: ImageVector
+        get() = _skipPrevious24 ?: ImageVector.Builder(
+            name = "VkIcons.SkipPrevious24",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(6f, 6f)
+                curveTo(5.45f, 6f, 5f, 6.45f, 5f, 7f)
+                lineTo(5f, 17f)
+                curveTo(5f, 17.55f, 5.45f, 18f, 6f, 18f)
+                curveTo(6.55f, 18f, 7f, 17.55f, 7f, 17f)
+                lineTo(7f, 7f)
+                curveTo(7f, 6.45f, 6.55f, 6f, 6f, 6f)
+                close()
+                moveTo(18.2f, 6.1f)
+                curveTo(18.9f, 5.6f, 19.8f, 6.1f, 19.8f, 6.95f)
+                lineTo(19.8f, 17.05f)
+                curveTo(19.8f, 17.9f, 18.9f, 18.4f, 18.2f, 17.9f)
+                lineTo(9.8f, 12.85f)
+                curveTo(9.1f, 12.43f, 9.1f, 11.57f, 9.8f, 11.15f)
+                close()
+            }
+        }.build().also { _skipPrevious24 = it }
+    private var _skipPrevious24: ImageVector? = null
+
+    val SkipNext24: ImageVector
+        get() = _skipNext24 ?: ImageVector.Builder(
+            name = "VkIcons.SkipNext24",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(18f, 6f)
+                curveTo(17.45f, 6f, 17f, 6.45f, 17f, 7f)
+                lineTo(17f, 17f)
+                curveTo(17f, 17.55f, 17.45f, 18f, 18f, 18f)
+                curveTo(18.55f, 18f, 19f, 17.55f, 19f, 17f)
+                lineTo(19f, 7f)
+                curveTo(19f, 6.45f, 18.55f, 6f, 18f, 6f)
+                close()
+                moveTo(5.8f, 6.1f)
+                curveTo(5.1f, 5.6f, 4.2f, 6.1f, 4.2f, 6.95f)
+                lineTo(4.2f, 17.05f)
+                curveTo(4.2f, 17.9f, 5.1f, 18.4f, 5.8f, 17.9f)
+                lineTo(14.2f, 12.85f)
+                curveTo(14.9f, 12.43f, 14.9f, 11.57f, 14.2f, 11.15f)
+                close()
+            }
+        }.build().also { _skipNext24 = it }
+    private var _skipNext24: ImageVector? = null
+
+    val Repeat20: ImageVector
+        get() = _repeat20 ?: ImageVector.Builder(
+            name = "VkIcons.Repeat20",
+            defaultWidth = 20.dp,
+            defaultHeight = 20.dp,
+            viewportWidth = 20f,
+            viewportHeight = 20f,
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.7f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(5f, 7.5f)
+                curveTo(5f, 5.6f, 6.6f, 4f, 8.5f, 4f)
+                lineTo(15.5f, 4f)
+                moveTo(13.5f, 2f)
+                lineTo(15.5f, 4f)
+                lineTo(13.5f, 6f)
+                moveTo(15f, 12.5f)
+                curveTo(15f, 14.4f, 13.4f, 16f, 11.5f, 16f)
+                lineTo(4.5f, 16f)
+                moveTo(6.5f, 14f)
+                lineTo(4.5f, 16f)
+                lineTo(6.5f, 18f)
+            }
+        }.build().also { _repeat20 = it }
+    private var _repeat20: ImageVector? = null
+
+    val RepeatOne20: ImageVector
+        get() = _repeatOne20 ?: ImageVector.Builder(
+            name = "VkIcons.RepeatOne20",
+            defaultWidth = 20.dp,
+            defaultHeight = 20.dp,
+            viewportWidth = 20f,
+            viewportHeight = 20f,
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.7f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(5f, 7.5f)
+                curveTo(5f, 5.6f, 6.6f, 4f, 8.5f, 4f)
+                lineTo(15.5f, 4f)
+                moveTo(13.5f, 2f)
+                lineTo(15.5f, 4f)
+                lineTo(13.5f, 6f)
+                moveTo(15f, 12.5f)
+                curveTo(15f, 14.4f, 13.4f, 16f, 11.5f, 16f)
+                lineTo(4.5f, 16f)
+                moveTo(6.5f, 14f)
+                lineTo(4.5f, 16f)
+                lineTo(6.5f, 18f)
+            }
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.5f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(9.2f, 9.2f)
+                lineTo(10.2f, 8.5f)
+                lineTo(10.2f, 12.2f)
+            }
+        }.build().also { _repeatOne20 = it }
+    private var _repeatOne20: ImageVector? = null
 }
