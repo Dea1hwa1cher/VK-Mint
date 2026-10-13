@@ -77,6 +77,7 @@ import vk.mint.data.model.AudioPlaylist
 import vk.mint.data.model.CatalogPlaylist
 import vk.mint.data.model.Track
 import vk.mint.media.PlayerConnection
+import vk.mint.ui.components.M3ELoadingIndicator
 import androidx.compose.runtime.collectAsState
 import vk.mint.util.toDurationString
 import java.text.SimpleDateFormat
@@ -403,7 +404,7 @@ fun MusicPlaylistsScreen(
 
         when {
             loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = VK_ACCENT)
+                M3ELoadingIndicator()
             }
             errorText != null && playlists.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(errorText ?: "", color = VK_TEXT_SECONDARY, fontSize = 14.sp)
@@ -619,7 +620,7 @@ fun PlaylistDetailScreen(
             if (loading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = VK_ACCENT)
+                        M3ELoadingIndicator()
                         loadProgress?.let { (loaded, total) ->
                             if (total > 0) {
                                 Spacer(Modifier.height(10.dp))

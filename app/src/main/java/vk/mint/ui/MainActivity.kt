@@ -70,12 +70,26 @@ import vk.mint.ui.navigation.VkMintNavHost
 import vk.mint.ui.navigation.VideoHolder
 import vk.mint.ui.screens.settings.SettingsScreen
 import vk.mint.ui.screens.videoplayer.VideoPlatformRouter
+import androidx.compose.ui.graphics.toArgb
 import vk.mint.data.model.Video
+import vk.mint.ui.theme.VkMintColors
 import vk.mint.ui.theme.VkMintTheme
 import vk.mint.util.AppLog
 import vk.mint.util.RequestAllPermissionsEffect
 
 class MainActivity : ComponentActivity() {
+
+    private fun launchLockerWithTheme(snap: vk.mint.data.local.VkMintPrefs.Snapshot) {
+        val accentArgb = VkMintColors.accents.getOrElse(snap.themeAccentIndex) { VkMintColors.Black }.toArgb()
+        LockerActivity.launch(
+            context = this,
+            pinHash = snap.lockerPinHash,
+            biometricEnabled = snap.lockerBiometric,
+            themeDark = snap.themeDark,
+            themeDynamic = snap.themeDynamic,
+            accentColorArgb = accentArgb,
+        )
+    }
 
     companion object {
         /**
@@ -257,13 +271,7 @@ class MainActivity : ComponentActivity() {
             if (!lockerVerifiedThisSession && lockerSnap.lockerEnabled && lockerSnap.lockerPinHash.isNotBlank()) {
                 lockerVerifiedThisSession = true
                 AppLog.i("MainActivity", "Auth success — PIN enabled, session not verified yet → launching LockerActivity (Fix #385)")
-                // Fix #PIN-CORE #LOCKER-TO-CORE-UI: LockerActivity живёт в :core:ui и
-                // не знает о VkMintPrefs — хэш/флаг передаются через Intent-extras.
-                vk.mint.locker.LockerActivity.launch(
-                    this@MainActivity,
-                    lockerSnap.lockerPinHash,
-                    lockerSnap.lockerBiometric,
-                )
+                launchLockerWithTheme(lockerSnap)
             }
             // Fix #386 #SILENT-AUTH-KEEP-UI: если на время silent-auth главный UI
             // оставался смонтированным (deep-sleep resume) — LP мог уйти в
@@ -990,13 +998,7 @@ class MainActivity : ComponentActivity() {
                         if (snap.lockerEnabled && snap.lockerPinHash.isNotBlank()) {
                             AppLog.i("MainActivity", "Locker enabled, launching LockerActivity")
                             lockerVerifiedThisSession = true
-                            // Fix #PIN-CORE #LOCKER-TO-CORE-UI: хэш/флаг биометрии —
-                            // из актуального boot-snapshot'а prefs (Intent-extras).
-                            LockerActivity.launch(
-                                this@MainActivity,
-                                snap.lockerPinHash,
-                                snap.lockerBiometric,
-                            )
+                            launchLockerWithTheme(snap)
                         }
                     }
                 }
@@ -1725,12 +1727,7 @@ class MainActivity : ComponentActivity() {
                 if (cached.lockerEnabled && cached.lockerOnBackground && cached.lockerPinHash.isNotBlank() && !unlockGrace) {
                     AppLog.i("MainActivity", "Locker on background (cached snapshot, ${System.currentTimeMillis() - t0}ms): launching LockerActivity")
                     lockerVerifiedThisSession = true
-                    // Fix #PIN-CORE #LOCKER-TO-CORE-UI: хэш/флаг — из cached-снапшота prefs.
-                    vk.mint.locker.LockerActivity.launch(
-                        this,
-                        cached.lockerPinHash,
-                        cached.lockerBiometric,
-                    )
+                    launchLockerWithTheme(cached)
                 } else {
                     // W36 #LOCKER-BG-MIGRATION: diagnostic-log с ТОЧНОЙ причиной
                     // пропуска — следующий logcat от пользователя сразу покажет,
@@ -1762,13 +1759,7 @@ class MainActivity : ComponentActivity() {
                     if (snap.lockerEnabled && snap.lockerOnBackground && snap.lockerPinHash.isNotBlank() && !unlockGrace) {
                         AppLog.i("MainActivity", "Locker on background (fallback: no cached snapshot — recreation/cold start, ${System.currentTimeMillis() - t0}ms): launching LockerActivity")
                         lockerVerifiedThisSession = true
-                        // Fix #PIN-CORE #LOCKER-TO-CORE-UI: хэш/флаг — из свежепрочитанного
-                        // runBlocking-снапшота prefs (Intent-extras).
-                        vk.mint.locker.LockerActivity.launch(
-                            this@MainActivity,
-                            snap.lockerPinHash,
-                            snap.lockerBiometric,
-                        )
+                        launchLockerWithTheme(snap)
                     } else {
                         // Диагностика a5abd16d и здесь: без неё возврат через
                         // пересоздание при невыполненном условии молчал бы —

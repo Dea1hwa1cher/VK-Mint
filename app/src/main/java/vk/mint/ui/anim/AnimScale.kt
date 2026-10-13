@@ -106,17 +106,75 @@ else spring(dampingRatio = dampingRatio, stiffness = (stiffness / scale.coerceAt
 /**
  * #M3E-MOTION: Спецификация пружинной физики Material 3 Expressive (https://matraic.github.io/m3e/styles/motion.html).
  *
- * M3 Expressive заменяет стандартные сплайны (bezier tween) на пружинную физику:
- *  - Пространственные переходы (Spatial / Container / Panels): damping 0.8f (выразительный лёгкий отскок/overshoot),
- *    stiffness 380f..400f (MediumLow) — быстрый, живой тактильный отклик.
- *  - Эффекты прозрачности (Fade / Alpha): damping 1.0f (DampingRatioNoBouncy, без перехлёста альфы),
- *    stiffness 450f (MediumLow..Medium) — чистая, мгновенная стабилизация.
+ * M3 Expressive использует 6 канонических токенов пружинной физики (Fast / Default / Slow × Spatial / Effects):
+ *  - Spatial (пространство, геометрия, морфинг, скейл): damping 0.8f (выразительный лёгкий упругий отклик)
+ *      • Fast Spatial: stiffness 1400f (переключатели, нажатия кнопок, микро-интеракции)
+ *      • Default Spatial: stiffness 700f (карточки, шторки, навигационные панели)
+ *      • Slow Spatial: stiffness 300f (полноэкранные переходы, крупные контейнеры)
+ *  - Effects (прозрачность, цвет, альфа): damping 1.0f (DampingRatioNoBouncy, без перехлёста альфы)
+ *      • Fast Effects: stiffness 3800f
+ *      • Default Effects: stiffness 1600f
+ *      • Slow Effects: stiffness 800f
  */
 object M3ExpressiveMotion {
     const val DampingExpressive: Float = 0.8f
     const val DampingStandard: Float = Spring.DampingRatioNoBouncy // 1.0f
-    const val StiffnessSpatial: Float = 380f
-    const val StiffnessEffects: Float = 450f
+
+    // Legacy aliases preserved for existing call sites
+    const val StiffnessSpatial: Float = 700f
+    const val StiffnessEffects: Float = 1600f
+
+    // Official M3E Spatial spring stiffness tokens (damping = 0.8f)
+    const val StiffnessFastSpatial: Float = 1400f
+    const val StiffnessDefaultSpatial: Float = 700f
+    const val StiffnessSlowSpatial: Float = 300f
+
+    // Official M3E Effects spring stiffness tokens (damping = 1.0f)
+    const val StiffnessFastEffects: Float = 3800f
+    const val StiffnessDefaultEffects: Float = 1600f
+    const val StiffnessSlowEffects: Float = 800f
+
+    fun <T> fastSpatial(scale: Float): FiniteAnimationSpec<T> =
+        expressiveSpringScaled(scale, DampingExpressive, StiffnessFastSpatial)
+
+    fun <T> defaultSpatial(scale: Float): FiniteAnimationSpec<T> =
+        expressiveSpringScaled(scale, DampingExpressive, StiffnessDefaultSpatial)
+
+    fun <T> slowSpatial(scale: Float): FiniteAnimationSpec<T> =
+        expressiveSpringScaled(scale, DampingExpressive, StiffnessSlowSpatial)
+
+    fun <T> fastEffects(scale: Float): FiniteAnimationSpec<T> =
+        expressiveSpringScaled(scale, DampingStandard, StiffnessFastEffects)
+
+    fun <T> defaultEffects(scale: Float): FiniteAnimationSpec<T> =
+        expressiveSpringScaled(scale, DampingStandard, StiffnessDefaultEffects)
+
+    fun <T> slowEffects(scale: Float): FiniteAnimationSpec<T> =
+        expressiveSpringScaled(scale, DampingStandard, StiffnessSlowEffects)
+
+    @Composable
+    fun <T> fastSpatial(): FiniteAnimationSpec<T> =
+        expressiveSpring(DampingExpressive, StiffnessFastSpatial)
+
+    @Composable
+    fun <T> defaultSpatial(): FiniteAnimationSpec<T> =
+        expressiveSpring(DampingExpressive, StiffnessDefaultSpatial)
+
+    @Composable
+    fun <T> slowSpatial(): FiniteAnimationSpec<T> =
+        expressiveSpring(DampingExpressive, StiffnessSlowSpatial)
+
+    @Composable
+    fun <T> fastEffects(): FiniteAnimationSpec<T> =
+        expressiveSpring(DampingStandard, StiffnessFastEffects)
+
+    @Composable
+    fun <T> defaultEffects(): FiniteAnimationSpec<T> =
+        expressiveSpring(DampingStandard, StiffnessDefaultEffects)
+
+    @Composable
+    fun <T> slowEffects(): FiniteAnimationSpec<T> =
+        expressiveSpring(DampingStandard, StiffnessSlowEffects)
 }
 
 /**
@@ -150,4 +208,5 @@ fun <T> expressiveSpring(
         stiffness = (stiffness / scale.coerceAtLeast(0.15f)),
     )
 }
+
 

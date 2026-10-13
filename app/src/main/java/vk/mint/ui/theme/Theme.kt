@@ -15,16 +15,44 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.sp
 import vk.mint.data.model.AvatarShape
 
 private val LocalVkMintAccent = compositionLocalOf { VkMintColors.Black }
+
+/**
+ * Генерирует гармоничный M3E secondary цвет из базового accent:
+ * приглушённая насыщенность (×0.55) с небольшим сдвигом тона (+8°).
+ */
+private fun deriveM3ESecondary(accent: Color, darkTheme: Boolean): Color {
+    if (accent == VkMintColors.Black) return if (darkTheme) Color(0xFFB8BCC2) else Color(0xFF45474A)
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(accent.toArgb(), hsv)
+    hsv[0] = (hsv[0] + 8f) % 360f
+    hsv[1] = (hsv[1] * 0.55f).coerceIn(0.15f, 0.65f)
+    hsv[2] = if (darkTheme) hsv[2].coerceAtLeast(0.82f) else hsv[2].coerceIn(0.35f, 0.55f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
+
+/**
+ * Генерирует выразительный M3E tertiary цвет из базового accent:
+ * смежный сдвиг оттенка (+35°) по стандарту M3 Expressive / Tonal Spot.
+ */
+private fun deriveM3ETertiary(accent: Color, darkTheme: Boolean): Color {
+    if (accent == VkMintColors.Black) return if (darkTheme) Color(0xFFD0D4DA) else Color(0xFF2E3133)
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(accent.toArgb(), hsv)
+    hsv[0] = (hsv[0] + 35f) % 360f
+    hsv[1] = (hsv[1] * 0.78f).coerceIn(0.25f, 0.85f)
+    hsv[2] = if (darkTheme) hsv[2].coerceAtLeast(0.86f) else hsv[2].coerceIn(0.38f, 0.62f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
 
 /**
  * Fix #UISCALE (2026-10-02): масштаб ВСЕГО интерфейса (кнопки/панели/текст).
@@ -65,36 +93,7 @@ fun Modifier.scaled(size: Dp): Modifier = this.then(Modifier.requiredSize(size *
 
 /**
  * VK Mint 2.0 theme — B&W minimalist base, swappable accent color,
- * optional Material You dynamic colors.
- *
- * Inspired by VK's ColorScheme system (VK Light / VK Dark / VK Blue),
- * but preconfigured for the VK Mint "B&W + accent" look.
- *
- * fontScale: целочисленный масштаб шрифта в процентах (70..150).
- *   100 = системный размер, <100 = мельче, >100 = крупнее.
- *   Реализован через переопределение LocalDensity (fontScale множитель)
- *   И scaled-копию VkMintTypography (на случай прямых .sp без MaterialTheme).
- *
- * uiScale (Fix #UISCALE): масштаб ВСЕГО интерфейса (0.75..1.3, дефолт 0.85 = −15%).
- *   Умножает fontScale (текст масштабируется глобально через LocalDensity) и
- *   поставляется в LocalUiScale — key-панели/кнопки масштабируют dp-размеры
- *   через UiScale.scaled(). Растёт с настройкой (интерфейс не замерзает на −15%).
- *
- * #MONET-DYNAMIC-COLOR: Material You / Monet — адаптивная цветовая тема,
- * доступна ТОЛЬКО на Android 12+ (API 31, S). На более старых версиях
- * Android система НЕ извлекает цвета из обоев — SystemColors API
- * отсутствует. Compose Material3 dynamicLightColorScheme/dynamicDarkColorScheme
- * помечены @RequiresApi(Build.VERSION_CODES.S), поэтому вызов ниже API 31
- * либо невозможен (если не защищён), либо вернёт fallback colorScheme
- * (НЕ настоящие dynamic colors).
- *
- * На Android < 12 мы игнорируем dynamicColor=true и используем статичную
- * B&W схему с пользовательским accent color. Пользователь видит в настройках
- * что Material You переключатель доступен, но если он на старом Android —
- * переключатель бесполезен (можно отключить визуально, но это усложнит UI;
- * лучше оставить включаемым с silent fallback).
- *
- * Источник: https://developer.android.com/develop/ui/views/theming/dynamic-colors
+ * optional Material You dynamic colors (M3E 2025 compliant).
  */
 @Composable
 fun VkMintTheme(
@@ -111,61 +110,49 @@ fun VkMintTheme(
     val white = Color.White
 
     // #WCAG-CONTRAST: динамический расчет контрастного onAccent.
-    // Для ярких/светлых акцентов (luminance > 0.4f, например Lime, Orange)
-    // черный текст обеспечивает WCAG AA/AAA контраст (>= 4.5:1).
-    // Для темных и насыщенных (VK Modern, VK Classic, Red, Blue, Black) — белый текст.
     val onAccent = if (accent.luminance() > 0.4f) VkMintColors.Black else white
+    val secondaryRole = deriveM3ESecondary(accent, darkTheme)
+    val onSecondaryRole = if (secondaryRole.luminance() > 0.4f) VkMintColors.Black else white
+    val tertiaryRole = deriveM3ETertiary(accent, darkTheme)
+    val onTertiaryRole = if (tertiaryRole.luminance() > 0.4f) VkMintColors.Black else white
 
-    // #MONET-DYNAMIC-COLOR: dynamic colors только на Android 12+ (API 31, S).
-    // На более старых версиях dynamicLightColorScheme/dynamicDarkColorScheme
-    // либо crash (нет @RequiresApi guard), либо возвращают fallback. Мы
-    // явно проверяем SDK_INT — на Android < 12 dynamicColor silent-отключается.
+    // Непрозрачные (opaque) тональные контейнеры по стандарту M3E 2025:
+    // исключают просвечивание FAB, активных карточек и таблеток навигации при скролле.
+    val darkSurfaceBase = Color(0xFF1E1E1E)
+    val primaryContainerDark = if (accent == VkMintColors.Black) Color(0xFF2C2C2C) else lerp(darkSurfaceBase, accent, 0.28f)
+    val onPrimaryContainerDark = if (accent == VkMintColors.Black) white else lerp(accent, white, 0.72f)
+    val secondaryContainerDark = if (accent == VkMintColors.Black) Color(0xFF2C2C2C) else lerp(darkSurfaceBase, secondaryRole, 0.26f)
+    val onSecondaryContainerDark = if (accent == VkMintColors.Black) white else lerp(secondaryRole, white, 0.78f)
+    val tertiaryContainerDark = if (accent == VkMintColors.Black) Color(0xFF242424) else lerp(darkSurfaceBase, tertiaryRole, 0.25f)
+    val onTertiaryContainerDark = if (accent == VkMintColors.Black) white else lerp(tertiaryRole, white, 0.75f)
+
+    val primaryContainerLight = if (accent == VkMintColors.Black) Color(0xFFE8E8E8) else lerp(white, accent, 0.16f)
+    val onPrimaryContainerLight = if (accent == VkMintColors.Black) VkMintColors.Black else lerp(accent, VkMintColors.Black, 0.55f)
+    val secondaryContainerLight = if (accent == VkMintColors.Black) Color(0xFFE2E7EE) else lerp(white, secondaryRole, 0.18f)
+    val onSecondaryContainerLight = if (accent == VkMintColors.Black) VkMintColors.Black else lerp(secondaryRole, VkMintColors.Black, 0.60f)
+    val tertiaryContainerLight = if (accent == VkMintColors.Black) Color(0xFFF0F0F0) else lerp(white, tertiaryRole, 0.16f)
+    val onTertiaryContainerLight = if (accent == VkMintColors.Black) VkMintColors.Black else lerp(tertiaryRole, VkMintColors.Black, 0.55f)
+
     val canUseDynamicColor = dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
-    // #MONET-HYBRID: гибридный режим Material You.
-    // Проблема: dynamicLightColorScheme/dynamicDarkColorScheme возвращают
-    //   ПОЛНОСТЬЮ обоевую схему — primary/secondary/tertiary = цвета из обоев,
-    //   а НЕ пользовательский accent. Все Material3-компоненты (Switch, Button,
-    //   FAB, ProgressIndicator и т.п. через MaterialTheme.colorScheme.primary)
-    //   перекрашиваются под обои, и выбранный accent теряется.
-    // Гибрид: берём dynamic-схему, но .copy() оверрайдим accent-роли (primary,
-    //   secondary, tertiary, onPrimary, onSecondary, onTertiary, container-токены) = accent.
-    //   Surface/background/surfaceVariant остаются от обоев. Так активные
-    //   элементы (кнопки, свитчи, прогресс) = accent, а подложка = обои.
-    // При monetHybrid=false — чистый Monet (все роли = обои), как раньше.
     val colorScheme = when {
         canUseDynamicColor -> {
             val ctx = LocalContext.current
             val dyn = if (darkTheme) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
             if (monetHybrid) {
-                val primaryContainerColor = if (darkTheme) {
-                    if (accent == VkMintColors.Black) Color(0xFF2C2C2C) else accent.copy(alpha = 0.22f)
-                } else {
-                    if (accent == VkMintColors.Black) Color(0xFFE8E8E8) else accent.copy(alpha = 0.12f)
-                }
-                val onPrimaryContainerColor = if (darkTheme) {
-                    white
-                } else {
-                    if (accent == VkMintColors.Black || accent.luminance() > 0.4f) VkMintColors.Black else accent
-                }
                 dyn.copy(
                     primary = accent,
                     onPrimary = onAccent,
-                    primaryContainer = primaryContainerColor,
-                    onPrimaryContainer = onPrimaryContainerColor,
-                    secondary = accent,
-                    onSecondary = onAccent,
-                    secondaryContainer = if (darkTheme) Color(0xFF2C2C2C) else Color(0xFFE2E7EE),
-                    onSecondaryContainer = if (darkTheme) white else VkMintColors.Black,
-                    tertiary = accent,
-                    onTertiary = onAccent,
-                    tertiaryContainer = if (darkTheme) {
-                        if (accent == VkMintColors.Black) Color(0xFF242424) else accent.copy(alpha = 0.15f)
-                    } else {
-                        if (accent == VkMintColors.Black) Color(0xFFF0F0F0) else accent.copy(alpha = 0.08f)
-                    },
-                    onTertiaryContainer = onPrimaryContainerColor,
-                    // inversePrimary оставляем от обоев — для inverse-поверхностей.
+                    primaryContainer = if (darkTheme) primaryContainerDark else primaryContainerLight,
+                    onPrimaryContainer = if (darkTheme) onPrimaryContainerDark else onPrimaryContainerLight,
+                    secondary = secondaryRole,
+                    onSecondary = onSecondaryRole,
+                    secondaryContainer = if (darkTheme) secondaryContainerDark else secondaryContainerLight,
+                    onSecondaryContainer = if (darkTheme) onSecondaryContainerDark else onSecondaryContainerLight,
+                    tertiary = tertiaryRole,
+                    onTertiary = onTertiaryRole,
+                    tertiaryContainer = if (darkTheme) tertiaryContainerDark else tertiaryContainerLight,
+                    onTertiaryContainer = if (darkTheme) onTertiaryContainerDark else onTertiaryContainerLight,
                 )
             } else {
                 dyn
@@ -174,22 +161,24 @@ fun VkMintTheme(
         darkTheme -> darkColorScheme(
             primary = accent,
             onPrimary = onAccent,
-            primaryContainer = if (accent == VkMintColors.Black) Color(0xFF2C2C2C) else accent.copy(alpha = 0.22f),
-            onPrimaryContainer = white,
-            secondary = accent,
-            onSecondary = onAccent,
-            secondaryContainer = Color(0xFF2C2C2C),
-            onSecondaryContainer = white,
-            tertiary = accent,
-            onTertiary = onAccent,
-            tertiaryContainer = if (accent == VkMintColors.Black) Color(0xFF242424) else accent.copy(alpha = 0.15f),
-            onTertiaryContainer = white,
-            background = Color(0xFF121212),       // VK desktop: page background
+            primaryContainer = primaryContainerDark,
+            onPrimaryContainer = onPrimaryContainerDark,
+            secondary = secondaryRole,
+            onSecondary = onSecondaryRole,
+            secondaryContainer = secondaryContainerDark,
+            onSecondaryContainer = onSecondaryContainerDark,
+            tertiary = tertiaryRole,
+            onTertiary = onTertiaryRole,
+            tertiaryContainer = tertiaryContainerDark,
+            onTertiaryContainer = onTertiaryContainerDark,
+            background = Color(0xFF121212),
             onBackground = white,
-            surface = Color(0xFF1E1E1E),          // VK desktop: card/surface
+            surface = darkSurfaceBase,
             onSurface = white,
-            surfaceVariant = Color(0xFF2A2A2A),   // VK: slightly lighter surface
-            onSurfaceVariant = Color(0xFF999999),  // VK: secondary text
+            surfaceVariant = Color(0xFF2A2A2A),
+            onSurfaceVariant = Color(0xFF999999),
+            surfaceDim = Color(0xFF121212),
+            surfaceBright = Color(0xFF38383A),
             surfaceContainerLowest = Color(0xFF0F0F10),
             surfaceContainerLow = Color(0xFF1A1A1A),
             surfaceContainer = Color(0xFF1E1E1E),
@@ -208,22 +197,24 @@ fun VkMintTheme(
         else -> lightColorScheme(
             primary = accent,
             onPrimary = onAccent,
-            primaryContainer = if (accent == VkMintColors.Black) Color(0xFFE8E8E8) else accent.copy(alpha = 0.12f),
-            onPrimaryContainer = if (accent == VkMintColors.Black || accent.luminance() > 0.4f) VkMintColors.Black else accent,
-            secondary = accent,
-            onSecondary = onAccent,
-            secondaryContainer = Color(0xFFE2E7EE),
-            onSecondaryContainer = VkMintColors.Black,
-            tertiary = accent,
-            onTertiary = onAccent,
-            tertiaryContainer = if (accent == VkMintColors.Black) Color(0xFFF0F0F0) else accent.copy(alpha = 0.08f),
-            onTertiaryContainer = if (accent == VkMintColors.Black || accent.luminance() > 0.4f) VkMintColors.Black else accent,
-            background = Color(0xFFF2F4F7),       // Modern neutral page background (separates white cards)
+            primaryContainer = primaryContainerLight,
+            onPrimaryContainer = onPrimaryContainerLight,
+            secondary = secondaryRole,
+            onSecondary = onSecondaryRole,
+            secondaryContainer = secondaryContainerLight,
+            onSecondaryContainer = onSecondaryContainerLight,
+            tertiary = tertiaryRole,
+            onTertiary = onTertiaryRole,
+            tertiaryContainer = tertiaryContainerLight,
+            onTertiaryContainer = onTertiaryContainerLight,
+            background = Color(0xFFF2F4F7),
             onBackground = VkMintColors.Black,
-            surface = white,                      // Clean white card / surface
+            surface = white,
             onSurface = VkMintColors.Black,
             surfaceVariant = Color(0xFFF0F2F5),
             onSurfaceVariant = Color(0xFF555555),
+            surfaceDim = Color(0xFFDADCE0),
+            surfaceBright = white,
             surfaceContainerLowest = white,
             surfaceContainerLow = Color(0xFFF7F9FB),
             surfaceContainer = Color(0xFFECEFF3),
@@ -241,12 +232,9 @@ fun VkMintTheme(
         )
     }
 
-    // Масштаб шрифта: переопределяем LocalDensity, чтобы fontScale применился
-    // ко всем sp-значениям глобально (включая явные .sp вне MaterialTheme.typography).
-    // Важно: сохраняем исходный density (x dpi), меняем только fontScale.
-    // Fix #UISCALE: дополнительно умножаем fontScale НА uiScale — так текст
-    // масштабируется и «Размером текста» (fontScale, отдельный), и «Масштабом
-    // интерфейса» (uiScale, −15% база + рост с настройкой).
+    // Масштаб шрифта: переопределяем LocalDensity.fontScale ОДИН раз.
+    // Compose автоматически умножает все .sp (включая VkMintTypography) на LocalDensity.fontScale,
+    // поэтому повторное умножение через scaleTypography давало квадратичное сжатие (scale^2).
     val original = LocalDensity.current
     val effectiveTextScale = (fontScale / 100f) * uiScale
     val scaledDensity = if (effectiveTextScale == 1f) {
@@ -257,11 +245,7 @@ fun VkMintTheme(
             fontScale = original.fontScale * effectiveTextScale,
         )
     }
-    val scaledTypography = if (effectiveTextScale == 1f) VkMintTypography
-        else scaleTypography(VkMintTypography, (effectiveTextScale * 100f).toInt())
 
-    // Fix #UISCALE: прокидываем коэффициент масштаба в LocalUiScale, чтобы
-    // key-панели/кнопки могли явно масштабировать dp-размеры через UiScale.scaled().
     val uiScaleValue = uiScale.coerceIn(0.75f, 1.3f)
     val currentAvatarShape = AvatarShapes.forShape(avatarShape)
 
@@ -273,40 +257,10 @@ fun VkMintTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = scaledTypography,
+            typography = VkMintTypography,
             shapes = VkMintShapes,
             content = content,
         )
     }
-}
-
-/**
- * Возвращает копию Typography с пересчитанными fontSize/lineHeight.
- * Нужна как страховка для компонентов, которые берут TextStyle напрямую
- * из MaterialTheme.typography, а не через LocalDensity (редкие случаи).
- */
-private fun scaleTypography(src: Typography, scalePercent: Int): Typography {
-    val k = scalePercent / 100f
-    fun TextStyle.scale() = copy(
-        fontSize = (fontSize.value * k).sp,
-        lineHeight = (lineHeight.value * k).sp,
-    )
-    return Typography(
-        displayLarge   = src.displayLarge.scale(),
-        displayMedium  = src.displayMedium.scale(),
-        displaySmall   = src.displaySmall.scale(),
-        headlineLarge  = src.headlineLarge.scale(),
-        headlineMedium = src.headlineMedium.scale(),
-        headlineSmall  = src.headlineSmall.scale(),
-        titleLarge     = src.titleLarge.scale(),
-        titleMedium    = src.titleMedium.scale(),
-        titleSmall     = src.titleSmall.scale(),
-        bodyLarge      = src.bodyLarge.scale(),
-        bodyMedium     = src.bodyMedium.scale(),
-        bodySmall      = src.bodySmall.scale(),
-        labelLarge     = src.labelLarge.scale(),
-        labelMedium    = src.labelMedium.scale(),
-        labelSmall     = src.labelSmall.scale(),
-    )
 }
 

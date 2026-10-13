@@ -2841,10 +2841,12 @@ private fun AvatarShapePickerCard(
             )
             Spacer(Modifier.height(14.dp))
 
-            // Интерактивное превью форм
+            // Интерактивное превью форм (включая полигоны M3 Expressive)
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 AvatarShape.entries.forEach { shape ->
@@ -2853,8 +2855,9 @@ private fun AvatarShapePickerCard(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
+                            .clip(MaterialTheme.shapes.medium)
                             .androidx_clickable { onSelectShape(shape) }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                     ) {
                         Box(
                             modifier = Modifier
@@ -2900,16 +2903,6 @@ private fun AvatarShapePickerCard(
                         )
                     }
                 }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            ExpressiveSegmentedButtonRow(
-                items = AvatarShape.entries,
-                selectedItem = currentShape,
-                onItemSelected = onSelectShape,
-            ) { shape ->
-                Text(shape.title)
             }
         }
     }

@@ -52,8 +52,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import vk.mint.ui.anim.LocalAnimScale
@@ -316,6 +320,16 @@ private fun BottomNavScrollButton(
                     else MaterialTheme.colorScheme.onSurfaceVariant
     val textColor = if (selected) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurfaceVariant
+    val pillWidth by animateDpAsState(
+        targetValue = if (selected) 56.dp else 28.dp,
+        animationSpec = M3ExpressiveMotion.fastSpatial(),
+        label = "NavPillWidth",
+    )
+    val pillAlpha by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = M3ExpressiveMotion.fastEffects(),
+        label = "NavPillAlpha",
+    )
     Column(
         modifier = modifier
             .height(UiScale.scaled(64.dp))
@@ -324,14 +338,19 @@ private fun BottomNavScrollButton(
         verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(height = 30.dp, width = 56.dp)
-                .background(
-                    if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-                    shape = CircleShape,
-                ),
+            modifier = Modifier.size(height = 30.dp, width = 56.dp),
             contentAlignment = Alignment.Center,
         ) {
+            if (pillAlpha > 0.01f) {
+                Box(
+                    modifier = Modifier
+                        .size(height = 30.dp, width = pillWidth)
+                        .background(
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = pillAlpha),
+                            shape = CircleShape,
+                        ),
+                )
+            }
             if (navIcon != null) {
                 if (item.destinationRoute == Screen.Messages.route && unreadCount > 0) {
                     BadgedBox(
@@ -1309,31 +1328,52 @@ fun VkMintNavHost(
                 // экранов (ChatDetail, PostDetail, Community, UserProfile и т.д.).
                 // #M3E-MOTION: выразительные пружинные переходы Material 3 Expressive (M3E).
                 // animScale=0 → snap() (Reduced Motion / выключенные анимации).
-                // animScale>0 → пружина с чистым затуханием (DampingStandard) и адаптацией жесткости (StiffnessEffects).
-                // Табы — равноправные разделы без мигания (EnterTransition.None).
+                // animScale>0 → комбинация Spatial-пружины (scaleIn/scaleOut с упругим откликом DampingExpressive = 0.8f)
+                // и Effects-пружины (fadeIn/fadeOut с чистым затуханием DampingStandard = 1.0f без перехлёста альфы).
+                // Табы — равноправные разделы без мигания (EnterTransition.None / ExitTransition.None).
                 enterTransition = {
                     val from = initialState.destination.route
                     val to = targetState.destination.route
                     if (from in tabRouteSet && to in tabRouteSet) EnterTransition.None
-                    else fadeIn(expressiveSpringScaled<Float>(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects))
+                    else scaleIn(
+                        initialScale = 0.94f,
+                        animationSpec = M3ExpressiveMotion.defaultSpatial(animScale),
+                    ) + fadeIn(
+                        animationSpec = M3ExpressiveMotion.defaultEffects(animScale),
+                    )
                 },
                 exitTransition = {
                     val from = initialState.destination.route
                     val to = targetState.destination.route
                     if (from in tabRouteSet && to in tabRouteSet) ExitTransition.None
-                    else fadeOut(expressiveSpringScaled<Float>(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects))
+                    else scaleOut(
+                        targetScale = 0.96f,
+                        animationSpec = M3ExpressiveMotion.defaultSpatial(animScale),
+                    ) + fadeOut(
+                        animationSpec = M3ExpressiveMotion.defaultEffects(animScale),
+                    )
                 },
                 popEnterTransition = {
                     val from = initialState.destination.route
                     val to = targetState.destination.route
                     if (from in tabRouteSet && to in tabRouteSet) EnterTransition.None
-                    else fadeIn(expressiveSpringScaled<Float>(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects))
+                    else scaleIn(
+                        initialScale = 0.96f,
+                        animationSpec = M3ExpressiveMotion.defaultSpatial(animScale),
+                    ) + fadeIn(
+                        animationSpec = M3ExpressiveMotion.defaultEffects(animScale),
+                    )
                 },
                 popExitTransition = {
                     val from = initialState.destination.route
                     val to = targetState.destination.route
                     if (from in tabRouteSet && to in tabRouteSet) ExitTransition.None
-                    else fadeOut(expressiveSpringScaled<Float>(animScale, M3ExpressiveMotion.DampingStandard, M3ExpressiveMotion.StiffnessEffects))
+                    else scaleOut(
+                        targetScale = 0.94f,
+                        animationSpec = M3ExpressiveMotion.defaultSpatial(animScale),
+                    ) + fadeOut(
+                        animationSpec = M3ExpressiveMotion.defaultEffects(animScale),
+                    )
                 },
             ) {
                 composable(Screen.Feed.route) {

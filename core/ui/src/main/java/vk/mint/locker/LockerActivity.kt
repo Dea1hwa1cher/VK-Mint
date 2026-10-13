@@ -84,10 +84,17 @@ class LockerActivity : FragmentActivity() {
         // запуске — core-модуль остаётся чистым от :app/:core:data.
         val storedHash = intent.getStringExtra(EXTRA_PIN_HASH).orEmpty()
         val biometricEnabled = intent.getBooleanExtra(EXTRA_BIOMETRIC, false)
+        val themeDarkExtra = if (intent.hasExtra(EXTRA_THEME_DARK)) intent.getBooleanExtra(EXTRA_THEME_DARK, false) else null
+        val themeDynamicExtra = intent.getBooleanExtra(EXTRA_THEME_DYNAMIC, false)
+        val accentArgbExtra = intent.getIntExtra(EXTRA_ACCENT_ARGB, 0)
         setContent {
             // Fix #PIN-CORE #LOCKER-TO-CORE-UI: приватная самодостаточная тема
-            // (см. LockerTheme) вместо vk.mint.ui.theme.VkMintTheme (:app).
-            LockerTheme {
+            // (см. LockerTheme) с пробросом выбранной темы и акцента M3E.
+            LockerTheme(
+                darkThemeOverride = themeDarkExtra,
+                dynamicColor = themeDynamicExtra,
+                accentArgb = accentArgbExtra,
+            ) {
                 LockerScreen(
                     storedHash = storedHash,
                     biometricEnabled = biometricEnabled,
@@ -112,16 +119,29 @@ class LockerActivity : FragmentActivity() {
         // с чужими ключами в Intent (могут быть серийные extras от системы).
         private const val EXTRA_PIN_HASH = "vk.mint.locker.EXTRA_PIN_HASH"
         private const val EXTRA_BIOMETRIC = "vk.mint.locker.EXTRA_BIOMETRIC"
+        private const val EXTRA_THEME_DARK = "vk.mint.locker.EXTRA_THEME_DARK"
+        private const val EXTRA_THEME_DYNAMIC = "vk.mint.locker.EXTRA_THEME_DYNAMIC"
+        private const val EXTRA_ACCENT_ARGB = "vk.mint.locker.EXTRA_ACCENT_ARGB"
 
         /**
-         * Запуск локера. pinHash/biometricEnabled берутся вызывающим (MainActivity)
-         * из актуального VkMintPrefs-snapshot'а — Snapshot-поля lockerPinHash/lockerBiometric.
+         * Запуск локера. pinHash/biometricEnabled и параметры темы берутся вызывающим (MainActivity)
+         * из актуального VkMintPrefs-snapshot'а.
          */
-        fun launch(context: Context, pinHash: String, biometricEnabled: Boolean) {
+        fun launch(
+            context: Context,
+            pinHash: String,
+            biometricEnabled: Boolean,
+            themeDark: Boolean? = null,
+            themeDynamic: Boolean = false,
+            accentColorArgb: Int = 0,
+        ) {
             val i = Intent(context, LockerActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 putExtra(EXTRA_PIN_HASH, pinHash)
                 putExtra(EXTRA_BIOMETRIC, biometricEnabled)
+                if (themeDark != null) putExtra(EXTRA_THEME_DARK, themeDark)
+                putExtra(EXTRA_THEME_DYNAMIC, themeDynamic)
+                if (accentColorArgb != 0) putExtra(EXTRA_ACCENT_ARGB, accentColorArgb)
             }
             context.startActivity(i)
         }
@@ -206,13 +226,20 @@ class LockerActivity : FragmentActivity() {
  * surfaceVariant (клавиши пада), error (сообщение об ошибке).
  */
 @Composable
-private fun LockerTheme(content: @Composable () -> Unit) {
-    val isDark = isSystemInDarkTheme()
+private fun LockerTheme(
+    darkThemeOverride: Boolean? = null,
+    dynamicColor: Boolean = false,
+    accentArgb: Int = 0,
+    content: @Composable () -> Unit,
+) {
+    val isDark = darkThemeOverride ?: isSystemInDarkTheme()
     val context = LocalContext.current
-    val colorScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val customAccent = if (accentArgb != 0) Color(accentArgb) else null
+    val baseScheme = if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else if (isDark) {
         darkColorScheme(
+            primary = customAccent ?: Color.White,
             background = Color(0xFF121212),       // VK desktop: page background
             onBackground = Color.White,
             surface = Color(0xFF1E1E1E),          // VK desktop: card/surface
@@ -223,6 +250,7 @@ private fun LockerTheme(content: @Composable () -> Unit) {
         )
     } else {
         lightColorScheme(
+            primary = customAccent ?: Color(0xFF000000),
             background = Color(0xFFF2F4F7),
             onBackground = Color(0xFF000000),     // VkMintColors.Black
             surface = Color.White,
@@ -232,13 +260,14 @@ private fun LockerTheme(content: @Composable () -> Unit) {
             error = Color(0xFFBA1A1A),
         )
     }
+    val colorScheme = if (customAccent != null) baseScheme.copy(primary = customAccent) else baseScheme
     MaterialTheme(
         colorScheme = colorScheme,
         shapes = Shapes(
             extraSmall = RoundedCornerShape(4.dp),
             small = RoundedCornerShape(8.dp),
-            medium = RoundedCornerShape(16.dp),
-            large = RoundedCornerShape(24.dp),
+            medium = RoundedCornerShape(12.dp),
+            large = RoundedCornerShape(16.dp),
             extraLarge = RoundedCornerShape(28.dp),
         ),
         content = content,
@@ -305,8 +334,12 @@ private fun LockerScreen(
                         modifier = Modifier
                             .size(16.dp)
                             .clip(CircleShape)
-                            .background(if (filled) MaterialTheme.colorScheme.onBackground else Color.Transparent)
-                            .border(2.dp, MaterialTheme.colorScheme.onBackground, CircleShape),
+                            .background(if (filled) MaterialTheme.colorScheme.primary else Color.Transparent)
+                            .border(
+                                2.dp,
+                                if (filled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                                CircleShape,
+                            ),
                     )
                 }
             }
