@@ -218,9 +218,7 @@ fun LyricsSheet(
                                 text = line.ifBlank { "♪" },
                                 color = Color.White,
                                 fontSize = 16.sp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { /* karaoke seek — TODO: timings */ },
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }

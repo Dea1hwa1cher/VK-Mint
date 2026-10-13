@@ -1,6 +1,7 @@
 package vk.mint.ui.screens.clips
 
 import android.Manifest
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -506,7 +507,9 @@ private fun ReviewStage(
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.medium)
                     .background(Color.White.copy(alpha = 0.08f))
-                    .clickable { /* TODO §37.12: music picker */ }
+                    .clickable {
+                        Toast.makeText(context, "Выбор музыки для клипов в разработке", Toast.LENGTH_SHORT).show()
+                    }
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

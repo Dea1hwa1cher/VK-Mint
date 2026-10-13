@@ -2155,65 +2155,6 @@ private fun ReplyItem(
 /** Fix #237: форматирование размера файла для чипа документа в комментарии. */
 private fun formatFileSize(bytes: Long): String = bytes.toFileSizeString()
 
-/** Аудио-строка в детальном просмотре поста. */
-@Composable
-private fun PostDetailAudioRow(track: Track) {
-    val isCurrentPlaying = with(PlayerConnection.playerState.collectAsState().value) {
-        currentTrack?.id == track.id && isPlaying
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
-            .background(
-                if (isCurrentPlaying)
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                else
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            )
-            .clickable {
-                if (isCurrentPlaying) {
-                    PlayerConnection.togglePlayPause()
-                } else {
-                    PlayerConnection.playTrackList(listOf(track))
-                }
-            }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = if (isCurrentPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp),
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = track.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = track.artist,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        val m = track.duration / 60
-        val s = track.duration % 60
-        Text(
-            text = "${m}:${"%02d".format(s)}",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
 
 // ══════════════════════════════════════════════════════════════════════
 // Fix #237: multi-file + emoji для композера комментария (как в чате).

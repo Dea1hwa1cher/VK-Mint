@@ -4609,7 +4609,13 @@ fun ChatDetailScreen(
                                             color = MaterialTheme.colorScheme.onPrimary,
                                         )
                                     }
-                                    SendButtonState.LIMIT -> IconButton(onClick = {}) {
+                                    SendButtonState.LIMIT -> IconButton(onClick = {
+                                        Toast.makeText(
+                                            ctx,
+                                            "Превышен лимит сообщения ($MSG_TEXT_LIMIT символов)",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }) {
                                         Icon(
                                             Icons.Outlined.Warning,
                                             contentDescription = "Сообщение слишком длинное (${MSG_TEXT_LIMIT} символов макс.)",

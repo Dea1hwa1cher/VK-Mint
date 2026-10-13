@@ -432,10 +432,7 @@ fun ChatInfoScreen(
                                 },
                                 onChangePhoto = {
                                     showActionsMenu = false
-                                    // TODO Fix #267 P0-CHAT-2: интеграция с photo picker
-                                    // (требует ActivityResultLauncher). VKApiClient.messagesSetChatPhoto
-                                    // уже реализован — нужен только UI выбора файла.
-                                    AppLog.i("ChatInfoScreen", "TODO: change chat photo (picker not integrated)")
+                                    Toast.makeText(context, "Изменение фото беседы в разработке", Toast.LENGTH_SHORT).show()
                                 },
                                 onChangeDescription = {
                                     showActionsMenu = false
@@ -443,9 +440,7 @@ fun ChatInfoScreen(
                                 },
                                 onSearchInChat = {
                                     showActionsMenu = false
-                                    // TODO Fix #267 P1-CHAT-2: переход в ChatDetailScreen с открытой
-                                    // поиск-строкой. Пока no-op callback.
-                                    AppLog.i("ChatInfoScreen", "TODO: search in chat (no-op callback)")
+                                    Toast.makeText(context, "Поиск по переписке в разработке", Toast.LENGTH_SHORT).show()
                                 },
                                 onClearHistory = {
                                     showActionsMenu = false

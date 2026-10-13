@@ -275,11 +275,6 @@ fun SkeletonFeedList(count: Int = 5) {
     SkeletonList(count = count) { SkeletonPostCard() }
 }
 
-/** S7-3: Список из N скелетон-треков для MusicScreen. */
-@Composable
-fun SkeletonTrackList(count: Int = 10) {
-    SkeletonList(count = count) { SkeletonTrackRow() }
-}
 
 /** S7-3: Список из N скелетон-диалогов для MessagesScreen. */
 @Composable

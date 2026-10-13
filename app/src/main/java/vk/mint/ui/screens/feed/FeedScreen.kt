@@ -141,6 +141,7 @@ import vk.mint.ui.components.AudioAttachmentList
 import vk.mint.ui.components.AttachmentPickerSheet
 import vk.mint.ui.components.AttachmentPickerTab
 import vk.mint.ui.components.CommentAttachmentsView
+import vk.mint.ui.components.CreatePostDialog
 import vk.mint.ui.components.PhotoViewer
 import vk.mint.ui.components.PlaylistAttachmentCard
 import vk.mint.ui.components.PostMenuItem
@@ -990,6 +991,8 @@ fun FeedScreen(
     val photoViewerState = remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
     // Sprint 2, P1-3 → ShareSheet: расширенный диалог «Поделиться».
     val sharePost = remember { mutableStateOf<Post?>(null) }
+    // Редактирование записи (onEditPost в FeedPostMenuBottomSheet).
+    val editingPost = remember { mutableStateOf<Post?>(null) }
     // #FEED-RIGHTPANEL (19-A): правое боковое меню ленты открыто.
     // Вместо локального remember — глобальный FeedPanelState.visible (см.
     // ScreenTopBar.kt): кнопка ⋮ живёт в глобальном TopAppBar (другая композиция),
@@ -1960,7 +1963,7 @@ fun FeedScreen(
                             AppLog.d("FeedScreen", "pin toggle: ok=$ok")
                         }
                     },
-                    onEditPost = { /* TODO: экран редактирования поста */ },
+                    onEditPost = { p -> editingPost.value = p },
                     onHideFromFeed = { p ->
                         scope.launch {
                             val ok = app.apiClient.newsfeedIgnoreItem("wall", p.ownerId, p.id)
@@ -2141,6 +2144,75 @@ fun FeedScreen(
             dismissButton = {
                 TextButton(onClick = { reportingPost.value = null }, enabled = !reportInFlight) {
                     Text("Отмена")
+                }
+            },
+        )
+    }
+
+    val ep = editingPost.value
+    if (ep != null) {
+        CreatePostDialog(
+            initialText = ep.text,
+            submitLabel = "Сохранить",
+            onDismiss = { editingPost.value = null },
+            onSubmit = { message, friendsOnly ->
+                scope.launch {
+                    try {
+                        val ok = app.apiClient.wallEdit(
+                            ownerId = ep.ownerId,
+                            postId = ep.id,
+                            message = message,
+                            friendsOnly = friendsOnly,
+                        )
+                        if (ok) {
+                            allPosts = allPosts.map {
+                                if (it.ownerId == ep.ownerId && it.id == ep.id) it.copy(text = message) else it
+                            }
+                            posts = posts.map {
+                                if (it.ownerId == ep.ownerId && it.id == ep.id) it.copy(text = message) else it
+                            }
+                            FeedDataHolder.allPosts = allPosts
+                            android.widget.Toast.makeText(app.applicationContext, "Запись сохранена", android.widget.Toast.LENGTH_SHORT).show()
+                            editingPost.value = null
+                        } else {
+                            val err = app.apiClient.lastApiError ?: "Не удалось сохранить запись"
+                            android.widget.Toast.makeText(app.applicationContext, err, android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        AppLog.e("FeedScreen", "Failed to edit post", e)
+                        android.widget.Toast.makeText(app.applicationContext, "Ошибка: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onSubmitWithAttachments = { message, friendsOnly, attachments ->
+                scope.launch {
+                    try {
+                        val attachStr = if (attachments.isNotEmpty()) attachments.joinToString(",") else null
+                        val ok = app.apiClient.wallEdit(
+                            ownerId = ep.ownerId,
+                            postId = ep.id,
+                            message = message,
+                            attachments = attachStr,
+                            friendsOnly = friendsOnly,
+                        )
+                        if (ok) {
+                            allPosts = allPosts.map {
+                                if (it.ownerId == ep.ownerId && it.id == ep.id) it.copy(text = message) else it
+                            }
+                            posts = posts.map {
+                                if (it.ownerId == ep.ownerId && it.id == ep.id) it.copy(text = message) else it
+                            }
+                            FeedDataHolder.allPosts = allPosts
+                            android.widget.Toast.makeText(app.applicationContext, "Запись сохранена", android.widget.Toast.LENGTH_SHORT).show()
+                            editingPost.value = null
+                        } else {
+                            val err = app.apiClient.lastApiError ?: "Не удалось сохранить запись"
+                            android.widget.Toast.makeText(app.applicationContext, err, android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        AppLog.e("FeedScreen", "Failed to edit post", e)
+                        android.widget.Toast.makeText(app.applicationContext, "Ошибка: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 }
             },
         )

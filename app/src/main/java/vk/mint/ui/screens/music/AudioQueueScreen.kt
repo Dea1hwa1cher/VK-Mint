@@ -49,10 +49,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
+import vk.mint.VkMintApp
 import vk.mint.data.model.PlayerState
 import vk.mint.data.model.Track
 import vk.mint.media.PlayerConnection
+import vk.mint.ui.components.AudioMoreMenu
+import vk.mint.ui.components.shareTrack
+import vk.mint.util.AppLog
 import kotlin.math.abs
 
 /**
@@ -85,6 +96,10 @@ fun AudioQueueScreen(
     BackHandler { onBack() }
 
     val playerState by PlayerConnection.playerState.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val app = VkMintApp.get()
+    var moreMenuTrack by remember { mutableStateOf<Track?>(null) }
 
     // Адаптивная палитра: привязка к MaterialTheme (Material You / VkMintTheme)
     val colorScheme = MaterialTheme.colorScheme
@@ -155,7 +170,9 @@ fun AudioQueueScreen(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
-                    .clickable { /* TODO: сохранение в плейлист */ }
+                    .clickable {
+                        Toast.makeText(context, "Сохранение очереди в плейлист в разработке", Toast.LENGTH_SHORT).show()
+                    }
                     .padding(horizontal = 8.dp, vertical = 8.dp),
             )
         }
@@ -220,6 +237,7 @@ fun AudioQueueScreen(
                                 PlayerConnection.togglePlayPause()
                             }
                         },
+                        onMoreClick = { moreMenuTrack = track },
                     )
                 }
             }
@@ -272,6 +290,43 @@ fun AudioQueueScreen(
                 }
             }
         }
+
+        val moreTrack = moreMenuTrack
+        if (moreTrack != null) {
+            AudioMoreMenu(
+                track = moreTrack,
+                expanded = true,
+                onDismiss = { moreMenuTrack = null },
+                onShare = {
+                    shareTrack(context, moreTrack)
+                },
+                onCopyLink = {
+                    val link = "https://vk.com/audio${moreTrack.ownerId}_${moreTrack.id}"
+                    try {
+                        val cm = context.getSystemService(android.content.ClipboardManager::class.java)
+                        cm?.setPrimaryClip(android.content.ClipData.newPlainText("VK audio", link))
+                        Toast.makeText(context, "Ссылка скопирована", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        AppLog.e("AudioQueueScreen", "copyLink error", e)
+                    }
+                },
+                onBookmark = {
+                    scope.launch {
+                        val nowBookmarked = try {
+                            app.trackBookmarksRepository.toggle(moreTrack)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        val msg = when (nowBookmarked) {
+                            true -> "Добавлено в закладки"
+                            false -> "Удалено из закладок"
+                            null -> "Не удалось обновить закладку"
+                        }
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -286,6 +341,7 @@ private fun QueueTrackRow(
     secondaryColor: Color,
     accentColor: Color,
     onClick: () -> Unit,
+    onMoreClick: () -> Unit = {},
 ) {
     // Волна 31 #AUDIO-QUEUE-PLAYLIST: пройденные треки приглушены (как в VK
     // web queue). alpha стоит ПОСЛЕ background в цепочке — фон текущего трека
@@ -354,7 +410,7 @@ private fun QueueTrackRow(
             )
         }
 
-        IconButton(onClick = { /* TODO: меню трека */ }) {
+        IconButton(onClick = onMoreClick) {
             Icon(Icons.Filled.MoreVert, "Ещё", tint = secondaryColor, modifier = Modifier.size(20.dp))
         }
     }

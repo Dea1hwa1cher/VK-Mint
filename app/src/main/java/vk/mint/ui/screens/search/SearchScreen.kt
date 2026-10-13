@@ -585,23 +585,6 @@ private fun AvatarOrPlaceholder(
     }
 }
 
-@Composable
-private fun TabChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    val bg = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
-    val fg = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    Surface(
-        color = bg,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.clickable(onClick = onClick),
-    ) {
-        Text(
-            text = label,
-            color = fg,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        )
-    }
-}
 
 @Composable
 private fun NewsfeedPostRow(post: Post) {
