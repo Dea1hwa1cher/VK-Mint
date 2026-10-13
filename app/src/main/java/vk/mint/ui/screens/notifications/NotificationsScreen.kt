@@ -1,4 +1,4 @@
-﻿package vk.mint.ui.screens.notifications
+package vk.mint.ui.screens.notifications
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -952,27 +952,11 @@ fun NotificationsScreen(
             // При showSearch=true — TextField как и раньше (поиск важнее бейджа).
             titleOverride = {
                 if (showSearch) {
-                    OutlinedTextField(
+                    vk.mint.ui.components.VkSearch(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Поиск...", style = MaterialTheme.typography.bodySmall) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        ),
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Outlined.Close, contentDescription = "Очистить", modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        },
+                        placeholder = "Поиск...",
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     )
                 } else {
                     // Row с заголовком + бейджем непрочитанных.

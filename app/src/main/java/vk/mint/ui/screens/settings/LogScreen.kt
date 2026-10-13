@@ -269,16 +269,12 @@ fun LogScreen(onClose: () -> Unit) {
                 )
             }
 
-            // LOGSEARCH-P2: строка поиска (как в FAB-логе)
-            OutlinedTextField(
+            // LOGSEARCH-P2: строка поиска (VKUI VkSearch)
+            vk.mint.ui.components.VkSearch(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                placeholder = { Text("Поиск по логам") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true,
-                shape = OutlinedTextFieldDefaults.shape,
-                colors = OutlinedTextFieldDefaults.colors(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                placeholder = "Поиск по логам",
             )
 
             Spacer(Modifier.height(4.dp))

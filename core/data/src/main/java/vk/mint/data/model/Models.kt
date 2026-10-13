@@ -372,6 +372,8 @@ data class Video(
     // OK movieId (например "16108201904696") или YouTube videoId — извлекается
     // из `player` URL регуляркой в detectPlatform(). null для VK-native видео.
     val externalId: String? = null,
+    val ownerName: String? = null,
+    val ownerPhoto: String? = null,
 ) {
     data class Thumb(
         @SerializedName("url")    val url: String,

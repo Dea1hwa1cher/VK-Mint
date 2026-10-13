@@ -1108,13 +1108,40 @@ private fun VKVideoCard(
                     )
                 }
 
-                // Информация о видео: RichCell стиль
+                // Информация о видео: RichCell стиль (VKUI v8 × M3E)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // Аватар автора / канала (VKUI RichCell стиль: 36.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val photo = video.ownerPhoto
+                        if (!photo.isNullOrBlank()) {
+                            AsyncImage(
+                                model = photo,
+                                contentDescription = video.ownerName ?: video.title,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            Text(
+                                text = (video.ownerName ?: video.title).take(1).uppercase(),
+                                style = MaterialTheme.typography.vkSubhead,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = video.title,
@@ -1126,6 +1153,10 @@ private fun VKVideoCard(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = buildString {
+                                if (!video.ownerName.isNullOrBlank()) {
+                                    append(video.ownerName)
+                                    append(" • ")
+                                }
                                 if (video.views > 0) {
                                     append(formatViews(video.views))
                                     append(" просмотров")

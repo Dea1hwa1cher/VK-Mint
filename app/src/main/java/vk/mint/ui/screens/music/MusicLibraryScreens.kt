@@ -1282,23 +1282,11 @@ fun MusicAlbumsScreen(
 
     Column(modifier = Modifier.fillMaxSize().background(VK_BLACK)) {
         LibraryTopBar("Альбомы", onBack)
-        OutlinedTextField(
+        vk.mint.ui.components.VkSearch(
             value = query,
             onValueChange = { query = it },
+            placeholder = "Поиск альбомов…",
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text("Поиск альбомов…", color = VK_TEXT_SECONDARY, fontSize = 14.sp) },
-            leadingIcon = { Icon(Icons.Filled.Search, null, tint = VK_TEXT_SECONDARY) },
-            singleLine = true,
-            shape = MaterialTheme.shapes.large,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = VK_CARD,
-                unfocusedContainerColor = VK_CARD,
-                focusedBorderColor = VK_ACCENT,
-                unfocusedBorderColor = VK_CARD,
-                cursorColor = VK_ACCENT,
-                focusedTextColor = VK_TEXT_PRIMARY,
-                unfocusedTextColor = VK_TEXT_PRIMARY,
-            ),
         )
         when {
             query.isBlank() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1413,23 +1401,11 @@ fun MusicArtistsScreen(
 
     Column(modifier = Modifier.fillMaxSize().background(VK_BLACK)) {
         LibraryTopBar("Артисты и кураторы", onBack)
-        OutlinedTextField(
+        vk.mint.ui.components.VkSearch(
             value = query,
             onValueChange = { query = it },
+            placeholder = "Поиск артистов…",
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text("Поиск артистов…", color = VK_TEXT_SECONDARY, fontSize = 14.sp) },
-            leadingIcon = { Icon(Icons.Filled.Search, null, tint = VK_TEXT_SECONDARY) },
-            singleLine = true,
-            shape = MaterialTheme.shapes.large,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = VK_CARD,
-                unfocusedContainerColor = VK_CARD,
-                focusedBorderColor = VK_ACCENT,
-                unfocusedBorderColor = VK_CARD,
-                cursorColor = VK_ACCENT,
-                focusedTextColor = VK_TEXT_PRIMARY,
-                unfocusedTextColor = VK_TEXT_PRIMARY,
-            ),
         )
         when {
             query.isBlank() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

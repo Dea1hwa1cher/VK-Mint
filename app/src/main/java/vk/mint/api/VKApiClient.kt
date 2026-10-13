@@ -9342,6 +9342,37 @@ class VKApiClient(
     }
 
     /**
+     * Парсинг profiles и groups из ответа video.get / video.search (extended=1)
+     * в карту: id пользователя (>0) или группы (<0) -> Pair(имя, url_аватарки).
+     */
+    private fun parseVideoProfilesMap(resp: com.google.gson.JsonObject): Map<Long, Pair<String, String?>> {
+        val map = HashMap<Long, Pair<String, String?>>()
+        resp.getAsJsonArray("profiles")?.forEach { el ->
+            if (el.isJsonObject) {
+                val u = el.asJsonObject
+                val uid = u.get("id")?.asLong ?: return@forEach
+                val first = u.get("first_name")?.asString.orEmpty()
+                val last = u.get("last_name")?.asString.orEmpty()
+                val name = "$first $last".trim()
+                val photo = u.get("photo_100")?.takeIf { !it.isJsonNull }?.asString
+                    ?: u.get("photo_50")?.takeIf { !it.isJsonNull }?.asString
+                map[uid] = Pair(name, photo)
+            }
+        }
+        resp.getAsJsonArray("groups")?.forEach { el ->
+            if (el.isJsonObject) {
+                val g = el.asJsonObject
+                val gid = g.get("id")?.asLong ?: return@forEach
+                val name = g.get("name")?.asString.orEmpty()
+                val photo = g.get("photo_100")?.takeIf { !it.isJsonNull }?.asString
+                    ?: g.get("photo_50")?.takeIf { !it.isJsonNull }?.asString
+                map[-gid] = Pair(name, photo)
+            }
+        }
+        return map
+    }
+
+    /**
      * Получить конкретное видео по owner_id + video_id + access_key.
      *
      * VK возвращает полные файлы (mp4_*, hls, dash) только через video.get,
@@ -9372,16 +9403,20 @@ class VKApiClient(
         )
         val json = call("video.get", args) ?: return null
         return try {
-            val items = json.getAsJsonObject("response")?.getAsJsonArray("items")
+            val resp = json.getAsJsonObject("response") ?: return null
+            val items = resp.getAsJsonArray("items")
             if (items == null || items.size() == 0) {
                 AppLog.w("VKApiClient", "videoGetById: пустой ответ для $videosParam")
                 return null
             }
+            val profilesMap = parseVideoProfilesMap(resp)
             val o = items.get(0).asJsonObject
             val thumbs = parseVideoThumbs(o)
+            val vOwnerId = o.get("owner_id")?.asLong ?: 0L
+            val ownerInfo = profilesMap[vOwnerId]
             val v = Video(
                 id = o.get("id")?.asLong ?: 0L,
-                ownerId = o.get("owner_id")?.asLong ?: 0L,
+                ownerId = vOwnerId,
                 title = o.get("title")?.asString ?: "",
                 description = o.get("description")?.takeIf { !it.isJsonNull }?.asString,
                 duration = o.get("duration")?.asInt ?: 0,
@@ -9397,6 +9432,8 @@ class VKApiClient(
                 // ни для видео сообществ, ни для видео из ленты.
                 comments = parseVideoCommentsMeta(o),
                 canComment = safeIntNullable(o.get("can_comment")),
+                ownerName = ownerInfo?.first,
+                ownerPhoto = ownerInfo?.second,
             )
             // OK-IMPL-1 (Stage 1): определяем типизированную платформу видео
             // (VK/OK/YOUTUBE/EXTERNAL_IFRAME/UNKNOWN) и externalId для OK/YouTube.
@@ -9427,7 +9464,9 @@ class VKApiClient(
         if (offset > 0) args["offset"] = offset.toString()
         val json = call("video.get", args) ?: return emptyList()
         return try {
-            val items = json.getAsJsonObject("response")?.getAsJsonArray("items") ?: return emptyList()
+            val resp = json.getAsJsonObject("response") ?: return emptyList()
+            val items = resp.getAsJsonArray("items") ?: return emptyList()
+            val profilesMap = parseVideoProfilesMap(resp)
             items.mapNotNull { el ->
                 if (!el.isJsonObject) return@mapNotNull null
                 val o = el.asJsonObject
@@ -9442,9 +9481,11 @@ class VKApiClient(
                 // ExoPlayer НЕ может воспроизвести HTML. Сохраняем для fallback
                 // (открыть в браузере), но приоритет в VideoPlayerScreen — files.
                 val playerUrl = o.get("player")?.takeIf { !it.isJsonNull }?.asString
+                val vOwnerId = o.get("owner_id")?.asLong ?: 0L
+                val ownerInfo = profilesMap[vOwnerId]
                 val v = Video(
                     id = o.get("id")?.asLong ?: 0L,
-                    ownerId = o.get("owner_id")?.asLong ?: 0L,
+                    ownerId = vOwnerId,
                     title = o.get("title")?.asString ?: "",
                     description = o.get("description")?.takeIf { !it.isJsonNull }?.asString,
                     duration = o.get("duration")?.asInt ?: 0,
@@ -9460,6 +9501,8 @@ class VKApiClient(
                     // videoGetById (см. комментарий там).
                     comments = parseVideoCommentsMeta(o),
                     canComment = safeIntNullable(o.get("can_comment")),
+                    ownerName = ownerInfo?.first,
+                    ownerPhoto = ownerInfo?.second,
                 )
                 // OK-IMPL-1 (Stage 1): определяем платформу + externalId (OK/YouTube).
                 v.withDetectedPlatform()
@@ -9507,6 +9550,7 @@ class VKApiClient(
             if (resp == null) return emptyList()
             val items = resp.getAsJsonArray("items")
             if (items == null) return emptyList()
+            val profilesMap = parseVideoProfilesMap(resp)
             items.mapNotNull { el ->
                 if (!el.isJsonObject) return@mapNotNull null
                 val o = el.asJsonObject
@@ -9524,9 +9568,11 @@ class VKApiClient(
                 val widthEl = o.get("width")
                 val heightEl = o.get("height")
                 val typeEl = o.get("type")
+                val vOwnerId = if (ownerIdEl != null && !ownerIdEl.isJsonNull) ownerIdEl.asLong else 0L
+                val ownerInfo = profilesMap[vOwnerId]
                 val v = Video(
                     id = if (idEl != null && !idEl.isJsonNull) idEl.asLong else 0L,
-                    ownerId = if (ownerIdEl != null && !ownerIdEl.isJsonNull) ownerIdEl.asLong else 0L,
+                    ownerId = vOwnerId,
                     title = if (titleEl != null && !titleEl.isJsonNull) titleEl.asString else "",
                     duration = if (durationEl != null && !durationEl.isJsonNull) durationEl.asInt else 0,
                     date = if (dateEl != null && !dateEl.isJsonNull) dateEl.asLong else 0L,
@@ -9545,6 +9591,8 @@ class VKApiClient(
                     width = if (widthEl != null && !widthEl.isJsonNull) widthEl.asInt else 0,
                     isClips = if (isClipsEl != null && !isClipsEl.isJsonNull) isClipsEl.asInt else null,
                     type = if (typeEl != null && !typeEl.isJsonNull) typeEl.asString else null,
+                    ownerName = ownerInfo?.first,
+                    ownerPhoto = ownerInfo?.second,
                 )
                 // OK-IMPL-1: типизированная платформа + externalId (как в videoGet).
                 v.withDetectedPlatform()
@@ -9609,16 +9657,20 @@ class VKApiClient(
         if (offset > 0) args["offset"] = offset.toString()
         val json = call("video.search", args) ?: return emptyList()
         return try {
-            val items = json.getAsJsonObject("response")?.getAsJsonArray("items") ?: return emptyList()
+            val resp = json.getAsJsonObject("response") ?: return emptyList()
+            val items = resp.getAsJsonArray("items") ?: return emptyList()
+            val profilesMap = parseVideoProfilesMap(resp)
             items.mapNotNull { el ->
                 if (!el.isJsonObject) return@mapNotNull null
                 val o = el.asJsonObject
                 val thumbs = parseVideoThumbs(o)
                 val filesMap = parseVideoFiles(o)
                 val playerUrl = o.get("player")?.takeIf { !it.isJsonNull }?.asString
+                val vOwnerId = o.get("owner_id")?.asLong ?: 0L
+                val ownerInfo = profilesMap[vOwnerId]
                 val v = Video(
                     id = o.get("id")?.asLong ?: 0L,
-                    ownerId = o.get("owner_id")?.asLong ?: 0L,
+                    ownerId = vOwnerId,
                     title = o.get("title")?.asString ?: "",
                     description = o.get("description")?.takeIf { !it.isJsonNull }?.asString,
                     duration = o.get("duration")?.asInt ?: 0,
@@ -9629,6 +9681,8 @@ class VKApiClient(
                     accessKey = o.get("access_key")?.takeIf { !it.isJsonNull }?.asString,
                     image = thumbs,
                     likes = parseLikes(o.getAsJsonObject("likes")),
+                    ownerName = ownerInfo?.first,
+                    ownerPhoto = ownerInfo?.second,
                 )
                 v.withDetectedPlatform()
             }

@@ -240,37 +240,21 @@ fun SearchScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        OutlinedTextField(
+        vk.mint.ui.components.VkSearch(
             value = query,
             onValueChange = { query = it },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            placeholder = { Text("Поиск людей и сообществ…") },
-            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-            singleLine = true,
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            placeholder = "Поиск людей и сообществ…",
         )
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SearchTab.entries.forEach { tab ->
-                TabChip(
-                    label = tab.label,
-                    selected = activeTab == tab,
-                    onClick = {
-                        activeTab = tab
-                        // Fix #87: activeTab в ключах LaunchedEffect — переключение
-                        // вкладки само перезапускает поиск, хак с query больше не нужен.
-                    },
-                )
-            }
-        }
+        vk.mint.ui.components.VkSubnavigationBar(
+            items = SearchTab.entries,
+            selectedItem = activeTab,
+            onItemSelected = { activeTab = it },
+            label = { it.label },
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+        )
 
         if (loading) {
             Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -657,9 +641,5 @@ private fun NewsfeedPostRow(post: Post) {
 
 @Composable
 private fun Divider() {
-    Box(
-        modifier = Modifier.fillMaxWidth().height(1.dp)
-            .padding(horizontal = 76.dp)
-            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-    )
+    vk.mint.ui.components.VkSeparator(insetStart = 76.dp)
 }

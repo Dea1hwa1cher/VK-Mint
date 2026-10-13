@@ -332,15 +332,13 @@ fun BlacklistScreen(onBack: () -> Unit) {
                     ) {
                         // bl-filter (§1.6) — локальная фильтрация по имени.
                         item(key = "filter") {
-                            OutlinedTextField(
+                            vk.mint.ui.components.VkSearch(
                                 value = filter,
                                 onValueChange = { filter = it },
-                                singleLine = true,
-                                placeholder = { Text("Фильтр по имени") },
+                                placeholder = "Фильтр по имени",
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .heightIn(min = 44.dp),
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
                             )
                         }
                         if (filtered.isEmpty()) {
