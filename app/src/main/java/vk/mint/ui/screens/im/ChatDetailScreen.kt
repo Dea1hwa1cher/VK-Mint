@@ -142,6 +142,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -982,6 +983,10 @@ fun ChatDetailScreen(
     // GroupInfo сообщества-канала — для PostHolder.lastGroups (имя сообщества
     // в PostDetailScreen, паритет CommunityScreen).
     var channelGroup by remember { mutableStateOf<vk.mint.api.VKApiClient.GroupInfo?>(null) }
+    // Метаданные канала из channels.getById (подписчики, донат, родительская группа)
+    var channelInfo by remember { mutableStateOf<vk.mint.api.VKApiClient.ChannelInfo?>(null) }
+    // Закреплённые сообщения канала из channels.getPinnedMessages
+    var channelPinnedMessages by remember { mutableStateOf<List<Message>>(emptyList()) }
     // P0.7 (2026-10-04): админ канала имеет canWrite.allowed=true → Chat.isChannel
     // (Models.kt:758) = false → UI-панели канала (peerId<0 && isChannel) не
     // открывались, клик по шапке — no-op без else. Локально расширяем: канал
@@ -2312,22 +2317,39 @@ fun ChatDetailScreen(
     fun loadChannelMeta() {
         scope.launch {
             try {
-                val g = app.apiClient.groupsGetById(listOf(-peerId)).firstOrNull()
+                // 1. Метаданные канала из channels.getById (число подписчиков канала, донат, родитель)
+                val info = app.apiClient.channelsGetById(peerId)
+                if (info != null) {
+                    channelInfo = info
+                    if (info.title.isNotBlank() && info.title != currentTitle) currentTitle = info.title
+                    val chPhoto = info.photoBase
+                    if (chPhoto != null && chPhoto.isNotBlank() && chPhoto != currentPhoto) {
+                        currentPhoto = chPhoto
+                    }
+                    if (info.membersCount > 0) channelSubscribers = info.membersCount
+                }
+
+                // 2. Закреплённые сообщения канала (channels.getPinnedMessages)
+                val pinned = app.apiClient.channelsGetPinned(peerId)
+                if (pinned.isNotEmpty()) {
+                    channelPinnedMessages = pinned
+                }
+
+                // 3. Информация о родительском сообществе канала для ссылок и меню
+                val targetGroupId = info?.parentId?.let { kotlin.math.abs(it) } ?: kotlin.math.abs(peerId)
+                val g = app.apiClient.groupsGetById(listOf(targetGroupId)).firstOrNull()
                 if (g != null) {
                     channelGroup = g
                     // Fix #394: удалённое сообщество отдаёт name="DELETED" — НЕ
-                    // затираем исходное имя из карточки диалога (баг-репорт 14.09:
-                    // шапка «Время Перемен. Новости» превращалась в «DELETED»).
-                    if (g.name.isNotBlank() && g.name != "DELETED" && g.name != currentTitle) currentTitle = g.name
-                    // NULL-ЯВНО: photo200 может отсутствовать — фолбэк на
-                    // photo100 (паттерн рендера аватарок всего проекта).
-                    // #CHANNEL-AVATAR: для КАНАЛА VK Web нет photo_200/100 —
-                    // только группы photo_base (ресайз-URL): приоритет на неё.
-                    val gPhoto = g.photoBase ?: g.photo200 ?: g.photo100
-                    if (gPhoto != null && gPhoto.isNotBlank() && gPhoto != currentPhoto) {
-                        currentPhoto = gPhoto
+                    // затираем исходное имя из карточки диалога
+                    if (channelInfo == null) {
+                        if (g.name.isNotBlank() && g.name != "DELETED" && g.name != currentTitle) currentTitle = g.name
+                        val gPhoto = g.photoBase ?: g.photo200 ?: g.photo100
+                        if (gPhoto != null && gPhoto.isNotBlank() && gPhoto != currentPhoto) {
+                            currentPhoto = gPhoto
+                        }
+                        if (g.membersCount > 0 && channelSubscribers == 0) channelSubscribers = g.membersCount
                     }
-                    if (g.membersCount > 0) channelSubscribers = g.membersCount
                 }
             } catch (ce: kotlinx.coroutines.CancellationException) {
                 // Уход с экрана — нормальный lifecycle, не ошибка (паттерн Fix #151).
@@ -4881,6 +4903,7 @@ fun ChatDetailScreen(
                                         likesState = channelLikeStates,
                                         likePending = channelLikeInFlight.containsKey(likeKey),
                                         onLikeToggle = { toggleChannelPostLike(it) },
+                                        showViewsInHeader = true,
                                     )
                                     // #CHANNELS-UI2 (Task 1): в wall-режиме, как и в
                                     // history-режиме, под карточкой поста выводим строку
@@ -4891,6 +4914,7 @@ fun ChatDetailScreen(
                                     // все посты — канальные). Полностью аддитивно.
                                     ChannelPostWallInfoRow(
                                         post = post,
+                                        showViews = false,
                                         onPaywallClick = {
                                             val slugId = -peerId
                                             val payUrl = "https://vk.ru/club$slugId" +
@@ -5011,6 +5035,16 @@ fun ChatDetailScreen(
                         onClick = {
                             // Скролл к pinned сообщению в списке (по id).
                             scrollToLoadedMessage(pinned.id)
+                        },
+                    )
+                } else if (peerId < 0 && channelHistoryMode && channelPinnedMessages.isNotEmpty()) {
+                    ChannelPinnedBanner(
+                        pinnedMessages = channelPinnedMessages,
+                        onClick = { pin ->
+                            val found = scrollToLoadedMessage(pin.id)
+                            if (!found) {
+                                openChannelPost(messageToChannelPost(pin))
+                            }
                         },
                     )
                 }
@@ -5148,9 +5182,11 @@ fun ChatDetailScreen(
                                             likesState = channelLikeStates,
                                             likePending = channelLikeInFlight.containsKey(likeKey),
                                             onLikeToggle = { toggleChannelPostLike(it) },
+                                            showViewsInHeader = true,
                                         )
                                         ChannelPostWallInfoRow(
                                             post = channelPost,
+                                            showViews = false,
                                             onPaywallClick = {
                                                 val slugId = if (peerId < 0) -peerId else peerId
                                                 val payUrl = "https://vk.ru/club$slugId" +
@@ -6066,6 +6102,7 @@ fun ChatDetailScreen(
         ) {
             ChannelInfoPanelContent(
                 group = channelGroup,
+                channelInfo = channelInfo,
                 peerId = peerId,
                 channelTitle = currentTitle,
                 channelPhoto = currentPhoto,
@@ -6091,6 +6128,20 @@ fun ChatDetailScreen(
                         Toast.makeText(ctx, "Ссылка на канал скопирована", Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) {
                         AppLog.e("ChatDetailScreen", "copy channel link failed: ${e.message}")
+                    }
+                },
+                onOpenUrl = { url ->
+                    showChannelInfoPanel = false
+                    onUrlClick(url)
+                },
+                onScrollToUnread = {
+                    showChannelInfoPanel = false
+                    val readCmid = channelInfo?.readUpToCmid ?: 0L
+                    if (readCmid > 0L) {
+                        val found = scrollToLoadedMessage(readCmid)
+                        if (!found) {
+                            Toast.makeText(ctx, "Сообщение не найдено в текущей истории", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 },
                 onSectionClick = { section ->
@@ -7838,6 +7889,7 @@ private fun ChannelPostInfoRow(
 @Composable
 private fun ChannelPostWallInfoRow(
     post: Post,
+    showViews: Boolean = true,
     onPaywallClick: (() -> Unit)? = null,
     // #CHANNELS-COMMENTS: тап по кнопке комментариев → открыть панель.
     onCommentsClick: () -> Unit = {},
@@ -7853,7 +7905,7 @@ private fun ChannelPostWallInfoRow(
         // #CHANNEL-POST-UI: счётчик просмотров «как в ВК» (ChannelPostMeta__views:
         // «глаз» view_12 + «1,3K»). Счётчик комментариев здесь не дублируем — он
         // в отдельной кликабельной строке ниже.
-        if (views != null) {
+        if (showViews && views != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -10535,6 +10587,91 @@ private fun PinnedMessageBar(
 }
 
 /**
+ * Баннер закреплённого сообщения канала (VK Web MultiplePins / BannerPanel).
+ */
+@Composable
+private fun ChannelPinnedBanner(
+    pinnedMessages: List<Message>,
+    onClick: (Message) -> Unit,
+) {
+    if (pinnedMessages.isEmpty()) return
+    var activeIndex by remember(pinnedMessages) { mutableStateOf(0) }
+    val currentPin = pinnedMessages.getOrNull(activeIndex) ?: pinnedMessages.first()
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick(currentPin) },
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.PushPin,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (pinnedMessages.size > 1) {
+                        "Закреплённый пост (${activeIndex + 1}/${pinnedMessages.size})"
+                    } else {
+                        "Закреплённый пост"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium,
+                )
+                val preview = if (currentPin.text.isNotBlank()) {
+                    currentPin.text.replace('\n', ' ')
+                } else {
+                    val att = currentPin.attachments?.firstOrNull()
+                    when (att?.type) {
+                        "photo" -> "📷 Фото"
+                        "video" -> "🎥 Видео"
+                        "audio" -> "🎵 Аудио"
+                        "doc" -> "📄 Документ"
+                        "sticker" -> "🎨 Стикер"
+                        "wall" -> "📝 Запись"
+                        "gift" -> "🎁 Подарок"
+                        "link" -> "🔗 Ссылка"
+                        else -> "Вложение"
+                    }
+                }
+                Text(
+                    text = preview,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (pinnedMessages.size > 1) {
+                IconButton(
+                    onClick = {
+                        activeIndex = (activeIndex + 1) % pinnedMessages.size
+                    },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        imageVector = vk.mint.ui.icons.VkIcons.ChevronRight20,
+                        contentDescription = "Следующий закреп",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * P3.4: ChannelFooterBar — нижняя панель для каналов (broadcast-сообществ).
  *
  * Канал = диалог где пользователь не может писать (conversation.can_write.allowed == false).
@@ -10687,6 +10824,7 @@ private fun channelCommunityUrl(group: vk.mint.api.VKApiClient.GroupInfo?, peerI
 @Composable
 private fun ChannelInfoPanelContent(
     group: vk.mint.api.VKApiClient.GroupInfo?,
+    channelInfo: vk.mint.api.VKApiClient.ChannelInfo? = null,
     peerId: Long,
     channelTitle: String,
     channelPhoto: String?,
@@ -10694,10 +10832,13 @@ private fun ChannelInfoPanelContent(
     onOpenCommunity: () -> Unit,
     onWrite: () -> Unit,
     onCopyLink: (String) -> Unit,
+    onOpenUrl: (String) -> Unit = {},
+    onScrollToUnread: () -> Unit = {},
     onSectionClick: (String) -> Unit,
 ) {
     val linkUrl = channelCommunityUrl(group, peerId)
-    val ava = channelPhoto ?: group?.photo200 ?: group?.photo100
+    val ava = channelInfo?.photoBase ?: channelPhoto ?: group?.photo200 ?: group?.photo100
+    val effectiveSubscribers = channelInfo?.membersCount?.takeIf { it > 0 } ?: subscribers
 
     Column(
         modifier = Modifier
@@ -10725,9 +10866,9 @@ private fun ChannelInfoPanelContent(
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(4.dp))
-        if (subscribers >= 0) {
+        if (effectiveSubscribers >= 0) {
             Text(
-                text = subscribersLabel(subscribers),
+                text = subscribersLabel(effectiveSubscribers),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline,
             )
@@ -10755,8 +10896,25 @@ private fun ChannelInfoPanelContent(
             )
         }
 
+        // Кнопка «К непрочитанным» (если есть unread_count > 0)
+        if ((channelInfo?.unreadCount ?: 0) > 0) {
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = onScrollToUnread,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    Icons.Outlined.MarkChatUnread,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("К непрочитанным (${channelInfo!!.unreadCount})")
+            }
+        }
+
         // Кнопки «Открыть сообщество» / «Написать».
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -10772,6 +10930,47 @@ private fun ChannelInfoPanelContent(
                 modifier = Modifier.weight(1f),
             ) {
                 Text("Написать")
+            }
+        }
+
+        // VK Donut блок превью ChannelProfileVKDonutPostsPreview
+        if (channelInfo?.donutEnabled == true && !channelInfo.isDon) {
+            Spacer(Modifier.height(14.dp))
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = "🍩 VK Donut",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Эксклюзивные посты в канале уже ждут",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            val targetOwner = channelInfo.parentId?.takeIf { it != 0L } ?: peerId
+                            val url = channelInfo.donutButtonUrl?.takeIf { it.isNotBlank() }
+                                ?: "https://vk.ru/donut/${kotlin.math.abs(targetOwner)}"
+                            onOpenUrl(url)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(channelInfo.donutButtonTitle?.takeIf { it.isNotBlank() } ?: "Поддержать автора")
+                    }
+                }
             }
         }
 

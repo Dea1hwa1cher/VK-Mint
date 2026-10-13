@@ -2315,6 +2315,8 @@ fun WallPostCard(
     // карусель на чужом профиле всегда включена (дефолт), независимо от
     // настройки. Проброс prefs-флага в UserProfileScreen — follow-up оркестратору.
     carouselEnabled: Boolean = true,
+    // Канальный режим (VK web): просмотры выводятся в шапке поста рядом со временем
+    showViewsInHeader: Boolean = false,
 ) {
     val photoAttachments = post.attachments?.filter { it.type == "photo" && it.photo != null }.orEmpty()
     // Fix #70: ранее video-вложения вообще не отображались на стене профиля.
@@ -2399,11 +2401,39 @@ fun WallPostCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = timeStr,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        if (showViewsInHeader && viewCount > 0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            ) {
+                                Icon(
+                                    VkIcons.View16,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(13.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = viewCount.toCountString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text(
+                                text = "·",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                        Text(
+                            text = timeStr,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    }
                 }
                 // П-6a (#PROFILE-GAP-6a): «⋯»-меню «Действий» поста (как в VK web).
                 if (menuVisible) {
@@ -2740,7 +2770,7 @@ fun WallPostCard(
                         onClick = { onRepostClick(post) },
                     )
                 }
-                if (viewCount > 0) {
+                if (!showViewsInHeader && viewCount > 0) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),

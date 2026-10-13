@@ -7584,6 +7584,119 @@ class VKApiClient(
         val pts: Long,
     )
 
+    /** Модель метаданных канала в мессенджере (channels.getById). */
+    data class ChannelInfo(
+        val id: Long,
+        val title: String,
+        val photoBase: String? = null,
+        val membersCount: Int = 0,
+        val parentId: Long? = null,
+        val channelType: String? = null,
+        val canComment: Boolean = true,
+        val active: Boolean = true,
+        val isMember: Boolean = false,
+        val isDon: Boolean = false,
+        val isOwner: Boolean = false,
+        val adminLevel: Int = 0,
+        val unreadCount: Int = 0,
+        val readUpToCmid: Long = 0L,
+        val notificationsEnabled: Boolean = true,
+        val donutEnabled: Boolean = false,
+        val donutButtonTitle: String? = null,
+        val donutButtonUrl: String? = null,
+        val lastMessageRaw: JsonObject? = null,
+    )
+
+    /**
+     * channels.getById — получение метаданных канала: подписчики, родительская группа,
+     * настройки доната, статус подписки и непрочитанные сообщения.
+     */
+    suspend fun channelsGetById(channelId: Long): ChannelInfo? {
+        if (isOffline()) return null
+        val json = call(
+            "channels.getById",
+            mapOf("channel_ids" to channelId.toString(), "extended" to "1"),
+            forceWebGateway = true,
+        ) ?: return null
+        return try {
+            val resp = json.get("response")?.takeIf { it.isJsonObject }?.asJsonObject
+            val items = resp?.get("items")?.takeIf { it.isJsonArray }?.asJsonArray
+            val entry = items?.firstOrNull()?.takeIf { it.isJsonObject }?.asJsonObject ?: return null
+            val ch = entry.get("channel")?.takeIf { it.isJsonObject }?.asJsonObject ?: entry
+            val cid = ch.get("channel_id")?.takeIf { !it.isJsonNull }?.asLong
+                ?: ch.get("id")?.takeIf { !it.isJsonNull }?.asLong
+                ?: channelId
+            val title = ch.get("title")?.takeIf { !it.isJsonNull }?.asString ?: ""
+            val photoBase = ch.get("photo_base")?.takeIf { !it.isJsonNull }?.asString
+            val membersCount = safeInt(ch.get("members_count"))
+            val parentId = ch.get("parent_id")?.takeIf { !it.isJsonNull }?.asLong
+            val channelType = ch.get("channel_type")?.takeIf { !it.isJsonNull }?.asString
+            val canComment = safeBool(ch.get("can_comment"))
+            val active = ch.get("active")?.let { safeBool(it) } ?: true
+
+            val userData = ch.get("user_data")?.takeIf { it.isJsonObject }?.asJsonObject
+            val isMember = safeBool(userData?.get("is_member"))
+            val isDon = safeBool(userData?.get("is_don"))
+            val isOwner = safeBool(userData?.get("is_owner"))
+            val adminLevel = safeInt(userData?.get("admin_level"))
+            val readState = userData?.get("read_state")?.takeIf { it.isJsonObject }?.asJsonObject
+            val unreadCount = safeInt(readState?.get("unread_count"))
+            val readUpToCmid = readState?.get("read_up_to_cmid")?.takeIf { !it.isJsonNull }?.asLong ?: 0L
+            val notifObj = userData?.get("notification_settings")?.takeIf { it.isJsonObject }?.asJsonObject
+            val notifEnabled = notifObj?.let { safeBool(it.get("is_enabled")) } ?: true
+
+            val donut = ch.get("donut_settings")?.takeIf { it.isJsonObject }?.asJsonObject
+            val donutEnabled = safeBool(donut?.get("is_enabled"))
+            val subBtn = donut?.get("subscription_button")?.takeIf { it.isJsonObject }?.asJsonObject
+            val donutBtnTitle = subBtn?.get("title")?.takeIf { !it.isJsonNull }?.asString
+            val donutBtnUrl = subBtn?.get("action")?.takeIf { it.isJsonObject }?.asJsonObject
+                ?.get("url")?.takeIf { !it.isJsonNull }?.asString
+                ?: subBtn?.get("url")?.takeIf { !it.isJsonNull }?.asString
+
+            val lastMsgRaw = entry.get("last_message")?.takeIf { it.isJsonObject }?.asJsonObject
+
+            ChannelInfo(
+                id = cid,
+                title = title,
+                photoBase = photoBase,
+                membersCount = membersCount,
+                parentId = parentId,
+                channelType = channelType,
+                canComment = canComment,
+                active = active,
+                isMember = isMember,
+                isDon = isDon,
+                isOwner = isOwner,
+                adminLevel = adminLevel,
+                unreadCount = unreadCount,
+                readUpToCmid = readUpToCmid,
+                notificationsEnabled = notifEnabled,
+                donutEnabled = donutEnabled,
+                donutButtonTitle = donutBtnTitle,
+                donutButtonUrl = donutBtnUrl,
+                lastMessageRaw = lastMsgRaw,
+            )
+        } catch (e: Exception) {
+            AppLog.e("VKApiClient", "channelsGetById parse error", e)
+            null
+        }
+    }
+
+    /**
+     * channels.getPinnedMessages — получение закреплённых сообщений канала.
+     */
+    suspend fun channelsGetPinned(channelId: Long): List<Message> {
+        val raw = channelsGetPinnedMessages(channelId) ?: return emptyList()
+        val items = raw.getAsJsonArray("items") ?: return emptyList()
+        val result = mutableListOf<Message>()
+        for (el in items) {
+            if (!el.isJsonObject) continue
+            val m = parseChannelHistoryItem(el.asJsonObject, channelId)
+            if (m != null) result.add(m)
+        }
+        return result
+    }
+
     suspend fun channelsGetHistory(
         channelId: Long,
         count: Int = 30,
@@ -7600,15 +7713,8 @@ class VKApiClient(
         var newestRaw: JsonObject? = null
         var start = startCmid
         if (start == null) {
-            val byId = call(
-                "channels.getById",
-                mapOf("channel_ids" to channelId.toString(), "extended" to "1"),
-                forceWebGateway = true,
-            )
-            val ch0 = byId?.get("response")?.takeIf { it.isJsonObject }?.asJsonObject
-                ?.get("items")?.takeIf { it.isJsonArray }?.asJsonArray
-                ?.firstOrNull()?.takeIf { it.isJsonObject }?.asJsonObject
-            newestRaw = ch0?.get("last_message")?.takeIf { it.isJsonObject }?.asJsonObject
+            val chInfo = channelsGetById(channelId)
+            newestRaw = chInfo?.lastMessageRaw
             newestCmid = newestRaw?.get("cmid")?.takeIf { !it.isJsonNull }?.asLong
                 ?: newestRaw?.get("conversation_message_id")?.takeIf { !it.isJsonNull }?.asLong
             if (newestCmid != null && newestCmid != 0L) start = newestCmid
