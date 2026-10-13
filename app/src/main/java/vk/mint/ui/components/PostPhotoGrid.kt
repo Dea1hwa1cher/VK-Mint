@@ -142,28 +142,34 @@ fun PostPhotoGrid(
     } else {
         // 3+ фото — сетка (FlowRow).
         val colCount = if (photosWithUrl.size <= 4) 2 else 3
-        FlowRow(
+        androidx.compose.foundation.layout.BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            maxItemsInEachRow = colCount,
         ) {
-            photosWithUrl.forEachIndexed { index, (_, url, ratio) ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(ratio.coerceIn(0.5f, 2f))
-                        .clip(MaterialTheme.shapes.small)
-                        .clickable { onPhotoClick(allUrls, index) },
-                    elevation = CardDefaults.cardElevation(0.dp),
-                ) {
-                    AsyncImage(
-                        model = url, contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
+            val spacing = 4.dp
+            val cellWidth = (maxWidth - spacing * (colCount - 1)) / colCount
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+                verticalArrangement = Arrangement.spacedBy(spacing),
+                maxItemsInEachRow = colCount,
+            ) {
+                photosWithUrl.forEachIndexed { index, (_, url, ratio) ->
+                    Card(
+                        modifier = Modifier
+                            .width(cellWidth)
+                            .aspectRatio(ratio.coerceIn(0.75f, 1.33f))
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { onPhotoClick(allUrls, index) },
+                        elevation = CardDefaults.cardElevation(0.dp),
+                    ) {
+                        AsyncImage(
+                            model = url, contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
                 }
             }
         }

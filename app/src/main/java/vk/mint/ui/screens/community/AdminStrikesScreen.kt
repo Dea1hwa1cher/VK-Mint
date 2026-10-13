@@ -136,18 +136,18 @@ fun AdminStrikesScreen(groupId: Long, onBack: () -> Unit) {
 
             when {
                 loading -> Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center,
                 ) { CircularProgressIndicator() }
 
                 error != null -> ErrorView(
                     message = error,
                     onRetry = { load() },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                 )
 
                 page.data.isEmpty() -> Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -157,7 +157,7 @@ fun AdminStrikesScreen(groupId: Long, onBack: () -> Unit) {
                     )
                 }
 
-                else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+                else -> LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     items(page.data, key = { it.id }) { strike ->
                         StrikeRow(strike)
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))

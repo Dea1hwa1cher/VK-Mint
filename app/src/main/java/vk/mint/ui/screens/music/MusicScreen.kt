@@ -525,6 +525,7 @@ fun MusicScreen(
                                         cardColor = vkCard,
                                         textColor = vkTextPrimary,
                                         secondaryColor = vkTextSecondary,
+                                        onClick = { onOpenArtist(artist.domain ?: "", artist.name) },
                                     )
                                 }
                             }
@@ -565,6 +566,7 @@ fun MusicScreen(
                                         cardColor = vkCard,
                                         textColor = vkTextPrimary,
                                         secondaryColor = vkTextSecondary,
+                                        onClick = { onOpenPlaylist(pl.ownerId, pl.id, pl.accessKey) },
                                     )
                                 }
                             }
@@ -733,14 +735,18 @@ fun MusicScreen(
                 // Волна 31 #AUDIO-QUEUE-PLAYLIST: очередь из «Моей музыки» —
                 // все загруженные пейджером треки + append новых страниц в живую
                 // очередь (fromMyMusic=true).
-                onShuffleAll = { PlayerConnection.shuffleAll(tracks, fromMyMusic = true) },
-                onPlayTrack = { track ->
+                onShuffleAll = { list -> PlayerConnection.shuffleAll(list, fromMyMusic = list === tracks) },
+                onPlayTrack = { track, list ->
                     val isCurrent = track.id == playerState.currentTrack?.id &&
                         track.ownerId == playerState.currentTrack?.ownerId
                     if (isCurrent) {
                         PlayerConnection.togglePlayPause()
                     } else {
-                        PlayerConnection.playTrackList(tracks, tracks.indexOf(track), fromMyMusic = true)
+                        PlayerConnection.playTrackList(
+                            list,
+                            list.indexOf(track).coerceAtLeast(0),
+                            fromMyMusic = list === tracks,
+                        )
                     }
                 },
                 onDownloadToggle = { track ->
@@ -1425,8 +1431,8 @@ private fun MusicMyTracksTab(
     onOpenAlbums: () -> Unit = {},
     onOpenArtists: () -> Unit = {},
     onOpenDownloaded: () -> Unit = {},
-    onShuffleAll: () -> Unit,
-    onPlayTrack: (Track) -> Unit,
+    onShuffleAll: (List<Track>) -> Unit,
+    onPlayTrack: (Track, List<Track>) -> Unit,
     onDownloadToggle: (Track) -> Unit,
     onMoreClick: (Track) -> Unit = {},
 ) {
@@ -1581,7 +1587,7 @@ private fun MusicMyTracksTab(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onShuffleAll)
+                    .clickable(onClick = { onShuffleAll(displayedTracks) })
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1659,7 +1665,7 @@ private fun MusicMyTracksTab(
                 accentColor = accentColor,
                 textColor = textColor,
                 secondaryColor = secondaryColor,
-                onPlayClick = { onPlayTrack(track) },
+                onPlayClick = { onPlayTrack(track, displayedTracks) },
                 onDownloadClick = { onDownloadToggle(track) },
                 onMoreClick = { onMoreClick(track) },
             )
@@ -3500,12 +3506,14 @@ private fun SearchArtistCard(
     cardColor: Color,
     textColor: Color,
     secondaryColor: Color,
+    onClick: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
             .width(88.dp)
             .clip(MaterialTheme.shapes.medium)
             .background(cardColor)
+            .clickable(onClick = onClick)
             .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -3570,12 +3578,14 @@ private fun SearchPlaylistCard(
     cardColor: Color,
     textColor: Color,
     secondaryColor: Color,
+    onClick: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
             .width(140.dp)
             .clip(MaterialTheme.shapes.medium)
             .background(cardColor)
+            .clickable(onClick = onClick)
             .padding(10.dp),
     ) {
         Box(

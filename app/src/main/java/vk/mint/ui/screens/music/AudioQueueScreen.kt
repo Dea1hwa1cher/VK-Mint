@@ -166,6 +166,7 @@ fun AudioQueueScreen(
         // панель теперь в Column-flow (не overlay), список её не перекрывает.
         // 80dp давали лишний пустой хвост при скролле.
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().weight(1f),
             contentPadding = PaddingValues(bottom = 16.dp),
         ) {

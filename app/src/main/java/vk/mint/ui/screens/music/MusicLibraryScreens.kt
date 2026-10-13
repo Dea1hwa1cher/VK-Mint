@@ -732,17 +732,26 @@ fun PlaylistDetailScreen(
                                         .clip(MaterialTheme.shapes.small)
                                         .clickable {
                                             scope.launch {
-                                                isFollowed = !isFollowed
-                                                val msg = if (isFollowed) "Добавлено в библиотеку" else "Удалено из библиотеки"
-                                                android.widget.Toast.makeText(app.applicationContext, msg, android.widget.Toast.LENGTH_SHORT).show()
-                                                app.apiClient.audioFollowPlaylist(ownerId, playlistId)
+                                                val targetFollow = !isFollowed
+                                                val ok = if (targetFollow) {
+                                                    app.apiClient.audioFollowPlaylist(ownerId, playlistId)
+                                                } else {
+                                                    app.apiClient.audioDeletePlaylist(ownerId, playlistId)
+                                                }
+                                                if (ok) {
+                                                    isFollowed = targetFollow
+                                                    val msg = if (isFollowed) "Добавлено в библиотеку" else "Удалено из библиотеки"
+                                                    android.widget.Toast.makeText(app.applicationContext, msg, android.widget.Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    android.widget.Toast.makeText(app.applicationContext, "Не удалось обновить статус плейлиста", android.widget.Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         }
                                         .padding(horizontal = 12.dp, vertical = 6.dp),
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.DeleteOutline,
-                                        contentDescription = "Добавлено",
+                                        imageVector = if (isFollowed) Icons.Outlined.DeleteOutline else Icons.AutoMirrored.Filled.PlaylistAdd,
+                                        contentDescription = if (isFollowed) "Добавлено" else "Добавить",
                                         tint = VK_ACCENT,
                                         modifier = Modifier.size(24.dp),
                                     )

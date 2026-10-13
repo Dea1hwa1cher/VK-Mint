@@ -89,7 +89,16 @@ fun CallsWebViewScreen(
         } catch (e: Exception) {
             AppLog.e(TAG, "cookie sync error: ${e.message}")
         }
-        onDispose { }
+        onDispose {
+            webView?.apply {
+                stopLoading()
+                loadUrl("about:blank")
+                clearHistory()
+                (parent as? android.view.ViewGroup)?.removeView(this)
+                destroy()
+            }
+            webView = null
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {

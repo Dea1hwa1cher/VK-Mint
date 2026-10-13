@@ -795,6 +795,7 @@ fun PostDetailScreen(
                                     "video" -> {
                                         val video = attachment.video
                                         if (video != null) {
+                                            val thumbUrl = video.thumbUrl ?: video.clipPosterUrl
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -804,11 +805,27 @@ fun PostDetailScreen(
                                                     .clickable { onVideoClickSavePos(video) },
                                                 contentAlignment = Alignment.Center,
                                             ) {
-                                                Icon(
-                                                    Icons.Outlined.PlayArrow,
-                                                    contentDescription = "Видео",
-                                                    tint = Color.White,
-                                                )
+                                                if (!thumbUrl.isNullOrBlank()) {
+                                                    AsyncImage(
+                                                        model = thumbUrl,
+                                                        contentDescription = video.title,
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        contentScale = ContentScale.Crop,
+                                                    )
+                                                }
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(48.dp)
+                                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                                        .background(Color.Black.copy(alpha = 0.55f)),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    Icon(
+                                                        Icons.Outlined.PlayArrow,
+                                                        contentDescription = "Видео",
+                                                        tint = Color.White,
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -1336,6 +1353,7 @@ fun PostDetailScreen(
                     if (!hasContent || sending || uploading) return@IconButton
                     // Фиксируем attachmentToSend ДО очистки attachmentString.
                     val attachmentToSend = attachmentString
+                    val attachedFileNameToSend = attachedFileName
                     val replyToCommentId = replyingToComment?.id
                     val replyToUserId = replyingToComment?.fromId
                     // Прячем UI сразу — оптимистичный UX.
@@ -1395,8 +1413,6 @@ fun PostDetailScreen(
                                         }
                                     } catch (fe: Exception) {
                                         AppLog.e("PostDetail", "comment file upload error: ${pf.displayName}", fe)
-                                    } finally {
-                                        pf.file.delete()
                                     }
                                 }
                                 uploading = false
@@ -1434,6 +1450,7 @@ fun PostDetailScreen(
                                 replyToComment = replyToCommentId,
                             )
                             if (serverCommentId > 0L) {
+                                filesToSend.forEach { it.file.delete() }
                                 // Заменяем optimistic ID на server ID — теперь
                                 // дедупликация (Fix #231) корректно смёржет с
                                 // freshly-fetched comments при reload.
@@ -1444,23 +1461,23 @@ fun PostDetailScreen(
                                 // Fix #233 (P1-7): откатываем optimistic при ошибке.
                                 localComments = localComments.filterNot { it.id == optimisticId }
                                 AppLog.w("PostDetail", "wallCreateComment failed (serverCommentId=$serverCommentId) — optimistic comment rolled back (Fix #233)")
-                                // Fix #234/#236: возвращаем фото/файлы в превью, чтобы юзер не терял выбор.
-                                if (photosToSend.isNotEmpty() || filesToSend.isNotEmpty()) {
-                                    pendingCommentPhotos = photosToSend
-                                    pendingCommentFiles = filesToSend
-                                    inputText = textToSend
-                                }
+                                // Fix #234/#236: возвращаем фото/файлы/вложения в превью, чтобы юзер не терял выбор.
+                                pendingCommentPhotos = photosToSend
+                                pendingCommentFiles = filesToSend
+                                attachmentString = attachmentToSend
+                                attachedFileName = attachedFileNameToSend
+                                inputText = textToSend
                             }
                         } catch (e: Exception) {
                             AppLog.e("PostDetail", "send comment error", e)
                             // Fix #233 (P1-7): откатываем optimistic и при exception.
                             localComments = localComments.filterNot { it.id < 0L }
-                            // Fix #234/#236: возвращаем фото/файлы в превью при exception.
-                            if (photosToSend.isNotEmpty() || filesToSend.isNotEmpty()) {
-                                pendingCommentPhotos = photosToSend
-                                pendingCommentFiles = filesToSend
-                                inputText = textToSend
-                            }
+                            // Fix #234/#236: возвращаем фото/файлы/вложения в превью при exception.
+                            pendingCommentPhotos = photosToSend
+                            pendingCommentFiles = filesToSend
+                            attachmentString = attachmentToSend
+                            attachedFileName = attachedFileNameToSend
+                            inputText = textToSend
                         } finally {
                             sending = false
                         }

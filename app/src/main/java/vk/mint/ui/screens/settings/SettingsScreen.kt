@@ -531,8 +531,12 @@ private fun CallsTab(
     ) {
         item { SectionHeader("Разрешения") }
         item {
-            val micGranted = vk.mint.util.PermissionManager.isGranted(context, android.Manifest.permission.RECORD_AUDIO)
-            val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+            var micGranted by remember {
+                mutableStateOf(vk.mint.util.PermissionManager.isGranted(context, android.Manifest.permission.RECORD_AUDIO))
+            }
+            val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                micGranted = granted || vk.mint.util.PermissionManager.isGranted(context, android.Manifest.permission.RECORD_AUDIO)
+            }
             ToggleRow(
                 title = "Микрофон",
                 subtitle = "Доступ к микрофону для звонков",
@@ -545,8 +549,12 @@ private fun CallsTab(
             }
         }
         item {
-            val notifGranted = vk.mint.util.PermissionManager.isGranted(context, android.Manifest.permission.POST_NOTIFICATIONS)
-            val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+            var notifGranted by remember {
+                mutableStateOf(vk.mint.util.PermissionManager.isGranted(context, android.Manifest.permission.POST_NOTIFICATIONS))
+            }
+            val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                notifGranted = granted || vk.mint.util.PermissionManager.isGranted(context, android.Manifest.permission.POST_NOTIFICATIONS)
+            }
             ToggleRow(
                 title = "Уведомления о звонках",
                 subtitle = "Всплывающее уведомление при входящем звонке",

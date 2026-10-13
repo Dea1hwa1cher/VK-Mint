@@ -2126,12 +2126,13 @@ composable(Screen.CallsHistory.route) {
                         deps = app,
                         onNavigateBack = { nav.popBackStack() },
                         incomingPayload = payload,
+                        video = video,
                         // #CALLS-JOIN-BY-LINK (Этап Г): сессия join-по-ссылке из holder'а
                         // (кладёт CallsJoinByLinkDialog после реального joinConversationByLink).
                         // CallScreen consume'ит её при композиции (см. экран).
                         joinByLink = vk.mint.ui.screens.calls.CallJoinByLinkHolder.session != null,
                     )
-}
+                }
                 composable(Screen.CallsWebView.route) {
                     vk.mint.ui.screens.calls.CallsWebViewScreen(
                         onBack = { nav.popBackStack() },

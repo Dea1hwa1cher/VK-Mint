@@ -162,7 +162,7 @@ fun CallScreen(
         callId = "",
         peer = peer,
         direction = direction,
-        mediaType = CallMediaType.AUDIO,
+        mediaType = if (video) CallMediaType.VIDEO else CallMediaType.AUDIO,
         phase = phase,
         isMuted = isMuted,
         isSpeakerOn = isSpeakerOn,
@@ -353,7 +353,7 @@ fun CallScreen(
     //  - videoRxEnabled — kill-switch из настроек (callsVideoRx, default true).
     var remoteVideoTrack by remember { mutableStateOf<org.webrtc.VideoTrack?>(null) }
     var peerVideoEnabled by remember { mutableStateOf(false) }
-    var isVideoCall by remember { mutableStateOf(false) }
+    var isVideoCall by remember { mutableStateOf(video) }
     var videoFrames by remember { mutableStateOf(-1) }
     var videoRxEnabled by remember { mutableStateOf(false) }
     // #CALLS-AEC-TOGGLE: hardware AEC/NS из настроек (читается до initialize).
@@ -620,7 +620,7 @@ fun CallScreen(
             AppLog.w("CallScreen", "SERVER-REJOIN: нет uid/convId ($rejoinUid/$rejoinConvId) — фолбэк bounce")
             signaling.bounce()
         } else {
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            uiScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 runCatching {
                     val (_, vchatResp) = deps.getCallConversationParams(rejoinConvId)
                     val fresh = vchatResp?.let { vk.mint.media.ConversationParamsDecoder.decodeParamsJson(it) }
@@ -849,7 +849,7 @@ fun CallScreen(
                 signaling.start(userId = uid, conversationId = convId, params = decoded, peerId = peerId)
                 // #CALLS-SERVER-REJOIN: параметры старта для ре-join'а (как у входящего).
                 sigRestart = { reAccept ->
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    uiScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                         signaling.stop()
                         signaling.start(userId = uid, conversationId = convId, params = decoded, peerId = peerId)
                         var waited = 0
@@ -950,7 +950,7 @@ fun CallScreen(
                 // (watchdog входящего: offer не пришёл → переподключаем WS; reAccept=true —
                 // после перерегистрации заново отправить accept-call).
                 sigRestart = { reAccept ->
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    uiScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                         signaling.stop()
                         signaling.start(userId = uid, conversationId = convId, params = resolvedParams, peerId = peerId)
                         var waited = 0
@@ -1011,7 +1011,7 @@ fun CallScreen(
                     // #CALLS-OUTGOING (2026-08-24): продолжаем исходящий звонок —
                     // получаем conversation params (vchat) и запускаем WebRTC-сигналинг
                     // как initiator (createOffer → отправка offer через WS).
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    uiScope.launch {
                         // #CALLS-FIX: форсируем свежие credentials — получаем okcdn uid
                         // (584520805550) из auth.anonymLogin, нужен для WS userId.
                         val sk2 = deps.ensureCallsSessionKey(force = true)
@@ -1657,10 +1657,12 @@ fun CallScreen(
     // снова — таймер навсегда застывал на первой секунде ACTIVE (симптом «0:05» на
     // скриншоте при dur=215с в логе). Теперь цикл: тик каждую секунду до смены фазы
     // (LaunchedEffect(phase) отменяет корутину при уходе с ACTIVE — утечки нет).
+    var activeStartTime by remember { mutableStateOf(0L) }
     LaunchedEffect(phase) {
         if (phase == CallPhase.ACTIVE) {
+            if (activeStartTime == 0L) activeStartTime = System.currentTimeMillis()
             while (true) {
-                callDuration = (System.currentTimeMillis() - startTime) / 1000
+                callDuration = (System.currentTimeMillis() - activeStartTime) / 1000
                 kotlinx.coroutines.delay(1000)
             }
         }
@@ -2323,15 +2325,13 @@ fun CallScreen(
                                         if (signaling.isWsReady()) {
                                             signaling.declineCall()
                                         } else {
-                                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
                                                 // Task 22: force=false — прежний дефолт VkMintApp
                                                 // (аргумент без дефолта в интерфейсе CallsDependencies).
                                                 val sk = deps.ensureCallsSessionKey(force = false)
                                                 val cid = activeCallId.value
                                                 if (sk != null && !cid.isNullOrBlank()) {
-                                                    withContext(Dispatchers.IO) {
-                                                        deps.apiClient.vchatHangupConversation(cid, sk, reason = "declined")
-                                                    }
+                                                    deps.apiClient.vchatHangupConversation(cid, sk, reason = "declined")
                                                 } else {
                                                     AppLog.w("CallScreen", "Отклонить: нет WS и нет convId/sessionKey — decline не отправлен")
                                                 }
@@ -2413,7 +2413,7 @@ fun CallScreen(
                                         android.widget.Toast.makeText(context, "Звонок ещё не создан", android.widget.Toast.LENGTH_SHORT).show()
                                         return@CallControlButton
                                     }
-                                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                                    uiScope.launch {
                                         try {
                                             val snap = deps.prefs.data.first()
                                             val sk = snap.callsSessionKey

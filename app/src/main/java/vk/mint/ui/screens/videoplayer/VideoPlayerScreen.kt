@@ -1476,7 +1476,15 @@ fun VideoPlayerScreen(
                     player.removeListener(this)
                     isSwitchingQuality = false
                     AppLog.i(TAG, "Quality switch complete → ${option.label}")
+                } else if (state == Player.STATE_IDLE) {
+                    player.removeListener(this)
+                    isSwitchingQuality = false
                 }
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                player.removeListener(this)
+                isSwitchingQuality = false
             }
         })
     }
@@ -1520,7 +1528,15 @@ fun VideoPlayerScreen(
                     player.removeListener(this)
                     isSwitchingQuality = false
                     AppLog.i(TAG, "HLS switch complete")
+                } else if (state == Player.STATE_IDLE) {
+                    player.removeListener(this)
+                    isSwitchingQuality = false
                 }
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                player.removeListener(this)
+                isSwitchingQuality = false
             }
         })
     }
@@ -3011,7 +3027,7 @@ private fun VKSettingsPopup(
                         onClose = onDismiss,
                     )
                     // Quality items (only in quality sub-menu)
-                    if (showQualitySelector && qualityOptions.isNotEmpty()) {
+                    if (showQualitySelector && (qualityOptions.isNotEmpty() || hlsOption != null)) {
                         // Fix #337: HLS-адаптивный поток ("Авто") — рабочий выбор
                         // для устройств, не поддерживающих HEVC. Показываем первым,
                         // если VK отдал настоящий m3u8-плейлист.
@@ -3022,7 +3038,9 @@ private fun VKSettingsPopup(
                                 selected = selectedHls,
                                 onClick = onHlsSelected,
                             )
-                            VKSettingsDivider()
+                            if (qualityOptions.isNotEmpty()) {
+                                VKSettingsDivider()
+                            }
                         }
                         qualityOptions.forEachIndexed { index, option ->
                             val isFailed = option.key in failedQualities
@@ -3045,6 +3063,19 @@ private fun VKSettingsPopup(
                 }
 
                 if (submenu == null) {
+                    if (showQualitySelector && (qualityOptions.isNotEmpty() || hlsOption != null)) {
+                        val currentQualityLabel = when {
+                            selectedHls && hlsOption != null -> hlsOption.label
+                            selectedQualityIndex in qualityOptions.indices -> qualityOptions[selectedQualityIndex].label
+                            hlsOption != null -> hlsOption.label
+                            else -> ""
+                        }
+                        VKSettingsItem(
+                            label = "Качество",
+                            sublabel = currentQualityLabel,
+                            onClick = { onSubmenuOpen("quality") },
+                        )
+                    }
                     // Speed
                     VKSettingsItem(
                         label = "Скорость",

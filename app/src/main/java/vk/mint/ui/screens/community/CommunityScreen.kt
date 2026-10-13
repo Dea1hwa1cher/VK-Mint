@@ -770,12 +770,22 @@ fun CommunityScreen(
         val sd = softDeletedPost
         if (sd != null) {
             if (softDeleteSeconds <= 0) {
-                scope.launch { app.apiClient.wallDelete(-groupId, sd.id) }
+                app.apiClient.wallDelete(-groupId, sd.id)
                 softDeletedPost = null
                 refreshWall()
             } else {
                 kotlinx.coroutines.delay(1000)
                 softDeleteSeconds -= 1
+            }
+        }
+    }
+    androidx.compose.runtime.DisposableEffect(groupId) {
+        onDispose {
+            val pending = softDeletedPost
+            if (pending != null) {
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+                    app.apiClient.wallDelete(-groupId, pending.id)
+                }
             }
         }
     }
@@ -1610,7 +1620,15 @@ fun CommunityScreen(
             isPinnedInMain = mp.isPinned == 1,
             isCommentsClosed = (mp.comments?.canPost ?: 1) == 0,
             onEdit = { editingPost = mp; showComposer = true; menuPost = null },
-            onSoftDelete = { softDeletedPost = mp; softDeleteSeconds = 10; menuPost = null },
+            onSoftDelete = {
+                val prev = softDeletedPost
+                if (prev != null && prev.id != mp.id) {
+                    scope.launch { app.apiClient.wallDelete(-groupId, prev.id) }
+                }
+                softDeletedPost = mp
+                softDeleteSeconds = 10
+                menuPost = null
+            },
             onDismiss = { menuPost = null },
             onChanged = { refreshWall() },
         )

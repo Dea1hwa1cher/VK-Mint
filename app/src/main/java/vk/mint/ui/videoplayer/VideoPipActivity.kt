@@ -183,7 +183,12 @@ class VideoPipActivity : ComponentActivity() {
                             useController = true
                         }
                     },
-                    update = { pv -> pv.useController = !inPip },
+                    update = { pv ->
+                        if (pv.player !== player) {
+                            pv.player = player
+                        }
+                        pv.useController = !inPip
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (!inPip) {
@@ -198,6 +203,7 @@ class VideoPipActivity : ComponentActivity() {
                             savePosition()
                             player?.release()
                             player = null
+                            registerActivePlayer(null)
                             finishAndRemoveTask()
                         }) {
                             Icon(
@@ -287,7 +293,12 @@ class VideoPipActivity : ComponentActivity() {
                             useController = true
                         }
                     },
-                    update = { pv -> pv.useController = !inPip },
+                    update = { pv ->
+                        if (pv.player !== player) {
+                            pv.player = player
+                        }
+                        pv.useController = !inPip
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (!inPip) {
@@ -300,7 +311,9 @@ class VideoPipActivity : ComponentActivity() {
                     ) {
                         IconButton(onClick = {
                             savePosition()
-                            p?.release()
+                            player?.release()
+                            player = null
+                            registerActivePlayer(null)
                             finishAndRemoveTask()
                         }) {
                             Icon(

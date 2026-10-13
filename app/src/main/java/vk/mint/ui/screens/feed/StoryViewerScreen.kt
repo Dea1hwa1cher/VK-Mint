@@ -1051,9 +1051,35 @@ fun StoryViewerScreen(
                     onFocusChange = { replyFocused = it },
                     onSubmit = {
                         keyboardController?.hide()
-                        val title = currentGroup.name ?: ""
-                        val photo = currentGroup.photo100
-                        onReplyToAuthor(currentGroup.ownerId, title, photo)
+                        val msgText = replyText.trim()
+                        if (msgText.isNotBlank()) {
+                            val peerId = currentGroup.ownerId
+                            val storyAtt = buildString {
+                                append("story").append(currentStory.ownerId).append('_').append(currentStory.id)
+                                if (!currentStory.accessKey.isNullOrBlank()) append('_').append(currentStory.accessKey)
+                            }
+                            replyText = ""
+                            replyFocused = false
+                            scope.launch {
+                                try {
+                                    val msgId = app.apiClient.sendWithAttachment(peerId, storyAtt, msgText)
+                                        .takeIf { it > 0 } ?: app.apiClient.messagesSend(peerId, msgText)
+                                    if (msgId > 0) {
+                                        Toast.makeText(context, "Ответ отправлен", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        replyText = msgText
+                                        Toast.makeText(context, "Не удалось отправить ответ", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    replyText = msgText
+                                    Toast.makeText(context, "Ошибка отправки: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                            val title = currentGroup.name ?: ""
+                            val photo = currentGroup.photo100
+                            onReplyToAuthor(currentGroup.ownerId, title, photo)
+                        }
                     },
                     // P0.16 (Task 25): кнопка стикеров в поле ответа. loadStickers
                     // кэширует packs (повторные клики — no-op), showStickerPicker=true

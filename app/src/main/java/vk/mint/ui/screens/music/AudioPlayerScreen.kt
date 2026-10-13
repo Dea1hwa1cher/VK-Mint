@@ -955,15 +955,24 @@ fun AudioPlayerScreen(
             }
         }
 
-        // Fetch lyrics when sheet opens
-        LaunchedEffect(showLyrics) {
+        // Fetch lyrics when sheet opens or track changes while sheet is open
+        LaunchedEffect(showLyrics, track?.id, track?.ownerId) {
             // #ARCH-CONTAINERS 3.7-1: lyricsId в :core:data — захват ДО проверки
             // (lyricsId != null одновременно гарантирует track != null).
             val lyricsId = track?.lyricsId
-            if (showLyrics && lyricsId != null) {
-                lyricsLoading = true
-                lyricsText = app.apiClient.audioGetLyrics(lyricsId)
-                lyricsLoading = false
+            if (showLyrics) {
+                if (lyricsId != null && lyricsId != 0L) {
+                    lyricsLoading = true
+                    lyricsText = null
+                    try {
+                        lyricsText = app.apiClient.audioGetLyrics(lyricsId)
+                    } finally {
+                        lyricsLoading = false
+                    }
+                } else {
+                    lyricsLoading = false
+                    lyricsText = null
+                }
             }
         }
     }

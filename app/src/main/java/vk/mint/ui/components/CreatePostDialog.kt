@@ -757,7 +757,7 @@ fun CreatePostDialog(
                         }
                     },
                     enabled = text.isNotBlank() || selectedPhotoUri != null || hasInternalAttachments,
-                ) { Text("Опубликовать") }
+                ) { Text(submitLabel) }
             }
         },
         dismissButton = {

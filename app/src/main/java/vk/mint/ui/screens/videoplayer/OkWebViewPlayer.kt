@@ -293,10 +293,30 @@ fun OkWebViewPlayer(
         AppLog.i(TAG, "Loading embed URL: $embedUrl (platform=${video.videoPlatform}, movieId=${video.externalId})")
     }
 
+    var customViewRef by remember { mutableStateOf<android.view.View?>(null) }
+    var customViewCallbackRef by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
+
+    fun exitCustomFullscreen() {
+        isFullscreen = false
+        val act = context as? android.app.Activity
+        val cv = customViewRef
+        if (cv != null) {
+            val parentGroup = cv.parent as? ViewGroup
+            parentGroup?.removeView(cv)
+            customViewRef = null
+        }
+        runCatching { customViewCallbackRef?.onCustomViewHidden() }
+        customViewCallbackRef = null
+        if (act != null) {
+            val controller = WindowCompat.getInsetsController(act.window, act.window.decorView)
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
     // ── Back handler: выход из fullscreen优先, потом onBack ─────────────
     BackHandler(enabled = true) {
         if (isFullscreen) {
-            isFullscreen = false
+            exitCustomFullscreen()
         } else {
             onBack()
         }
@@ -323,6 +343,9 @@ fun OkWebViewPlayer(
     // ── Destroy WebView on dispose ──────────────────────────────────────
     DisposableEffect(Unit) {
         onDispose {
+            if (isFullscreen || customViewRef != null) {
+                exitCustomFullscreen()
+            }
             val wv = webViewRef
             if (wv != null) {
                 wv.apply {
@@ -533,16 +556,25 @@ fun OkWebViewPlayer(
                     // ── WebChromeClient: fullscreen video handling ───────
                     webChromeClient = object : WebChromeClient() {
                         override fun onShowCustomView(view: android.view.View?, callback: CustomViewCallback?) {
-                            // OK/YouTube плеер запросил fullscreen (например, при
-                            // тапе на кнопку fullscreen внутри iframe) — переключаем
-                            // Compose-состояние, скрываем оверлеи.
+                            if (customViewRef != null) {
+                                callback?.onCustomViewHidden()
+                                return
+                            }
                             isFullscreen = true
+                            customViewRef = view
+                            customViewCallbackRef = callback
                             AppLog.d(TAG, "WebChrome onShowCustomView — fullscreen")
-                            // Fix #140: скрываем status bar + navigation bar через
-                            // WindowInsetsControllerCompat. РАНЬШЕ не скрывались →
-                            // плеер оставался под системными панелями.
                             val act = context as? android.app.Activity
                             if (act != null) {
+                                if (view != null) {
+                                    (act.window.decorView as? ViewGroup)?.addView(
+                                        view,
+                                        ViewGroup.LayoutParams(
+                                            ViewGroup.LayoutParams.MATCH_PARENT,
+                                            ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ),
+                                    )
+                                }
                                 val controller = WindowCompat.getInsetsController(act.window, act.window.decorView)
                                 controller.systemBarsBehavior =
                                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -551,14 +583,8 @@ fun OkWebViewPlayer(
                         }
 
                         override fun onHideCustomView() {
-                            isFullscreen = false
                             AppLog.d(TAG, "WebChrome onHideCustomView — exit fullscreen")
-                            // Fix #140: показываем system bars обратно
-                            val act = context as? android.app.Activity
-                            if (act != null) {
-                                val controller = WindowCompat.getInsetsController(act.window, act.window.decorView)
-                                controller.show(WindowInsetsCompat.Type.systemBars())
-                            }
+                            exitCustomFullscreen()
                         }
                     }
 

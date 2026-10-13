@@ -2878,7 +2878,10 @@ fun ChatDetailScreen(
                         if (msgId > 0) {
                             AppLog.i("ChatDetailScreen", "batch files sent: ${attachments.size} attachments (msgId=$msgId)")
                             // Чистим temp-файлы только после успешной отправки.
-                            pfiles.forEach { it.file.delete() }
+                            pfiles.forEach {
+                                it.file.delete()
+                                it.thumbPath?.let { path -> File(path).delete() }
+                            }
                             pendingFiles = emptyList()
                             reloadMessages()
                         } else {
@@ -2893,7 +2896,10 @@ fun ChatDetailScreen(
                         if (caption.isNotBlank()) {
                             app.apiClient.messagesSend(peerId, caption)
                         }
-                        pfiles.forEach { it.file.delete() }
+                        pfiles.forEach {
+                            it.file.delete()
+                            it.thumbPath?.let { path -> File(path).delete() }
+                        }
                         pendingFiles = emptyList()
                         reloadMessages()
                     } else if (!authFailed) {
@@ -3503,18 +3509,14 @@ fun ChatDetailScreen(
     //      «показать в чате» (догрузка старой истории вверх до нахождения cmid).
     val onReplyBadgeClick: (Message) -> Unit = { reply ->
         val targetCmid = reply.conversationMessageId
-        val idx = messages.indexOfFirst { m ->
+        val target = messages.firstOrNull { m ->
             // Приоритет: совпадение по conversation_message_id (надёжнее, т.к.
             // replyMessage.id может отличаться от id в текущей истории у некоторых
             // edge-cases с fwd/действиями). Fallback — по id.
             (targetCmid != null && m.conversationMessageId == targetCmid) || m.id == reply.id
         }
-        if (idx >= 0) {
-            val target = messages[idx]
-            scope.launch {
-                listState.animateScrollToItem(idx)
-                highlightedMsgId = target.id
-            }
+        if (target != null) {
+            scrollToLoadedMessage(target.id)
         } else {
             // Цель вне загруженной истории — показываем preview-диалог.
             replyPreviewMsg = reply
@@ -3559,14 +3561,7 @@ fun ChatDetailScreen(
                 if (found != null) {
                     // Закрываем preview, скроллим, подсвечиваем.
                     replyPreviewMsg = null
-                    val idx = messages.indexOfFirst { m ->
-                        (targetCmid != null && m.conversationMessageId == targetCmid) ||
-                            m.id == target.id
-                    }
-                    if (idx >= 0) {
-                        listState.animateScrollToItem(idx)
-                        highlightedMsgId = messages[idx].id
-                    }
+                    scrollToLoadedMessage(found.id)
                 } else {
                     // Не нашли даже после догрузки — оставляем preview открытым,
                     // показываем Toast (сообщение могло быть удалено).
@@ -4977,10 +4972,7 @@ fun ChatDetailScreen(
                         },
                         onClick = {
                             // Скролл к pinned сообщению в списке (по id).
-                            val idx = messages.indexOfFirst { it.id == pinned.id }
-                            if (idx >= 0) {
-                                scope.launch { listState.animateScrollToItem(idx) }
-                            }
+                            scrollToLoadedMessage(pinned.id)
                         },
                     )
                 }
@@ -12396,8 +12388,10 @@ private class VoicePlaybackController {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
                     if (playing) {
-                        progress = 0f
-                        currentPositionMs = 0L
+                        if (ep.currentPosition <= 0L) {
+                            progress = 0f
+                            currentPositionMs = 0L
+                        }
                         startProgressTracking()
                         ep.let { p -> proximityManager?.start(p) }
                         triggerMarkListened(messageId, currentIsOut)
@@ -12446,8 +12440,9 @@ private class VoicePlaybackController {
                 kotlinx.coroutines.delay(50)
                 val p = player ?: break
                 try {
-                    val d = p.duration.coerceAtLeast(1L)
-                    val pos = p.currentPosition.coerceIn(0L, p.duration)
+                    val rawDuration = p.duration
+                    val d = if (rawDuration > 0L) rawDuration else (durationSec * 1000f).toLong().coerceAtLeast(1L)
+                    val pos = p.currentPosition.coerceIn(0L, d)
                     currentPositionMs = pos
                     progress = (pos.toFloat() / d.toFloat()).coerceIn(0f, 1f)
                 } catch (_: Exception) {

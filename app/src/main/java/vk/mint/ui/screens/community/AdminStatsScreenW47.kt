@@ -218,8 +218,10 @@ fun AdminStatsScreen(
         onDispose { poller.stop() }
     }
 
+    var reloadKey by remember { mutableIntStateOf(0) }
+
     // Первичная загрузка: bootstrap + sections + poller, затем layout.
-    LaunchedEffect(groupId) {
+    LaunchedEffect(groupId, reloadKey) {
         loading = true
         error = null
         try {
@@ -272,13 +274,13 @@ fun AdminStatsScreen(
 
             error != null && sections.isEmpty() -> ErrorView(
                 message = error,
-                onRetry = { /* перезапуск через рекомпозицию невозможен — просим вернуться */ },
+                onRetry = { reloadKey++ },
                 modifier = Modifier.padding(pad),
             )
 
             sections.isEmpty() -> ErrorView(
                 message = "Статистика недоступна",
-                onRetry = {},
+                onRetry = { reloadKey++ },
                 modifier = Modifier.padding(pad),
             )
 

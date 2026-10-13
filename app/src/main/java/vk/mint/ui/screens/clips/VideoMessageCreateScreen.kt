@@ -143,14 +143,6 @@ fun VideoMessageCreateScreen(
     var activeRecording by remember { mutableStateOf<Recording?>(null) }
     var videoCaptureRef by remember { mutableStateOf<VideoCapture<Recorder>?>(null) }
 
-    val permLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions(),
-    ) { result ->
-        if (!result.values.all { it }) {
-            AppLog.w(TAG, "Camera/mic permission denied: $result")
-        }
-    }
-
     fun hasCameraPermission(): Boolean {
         val cam = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED
@@ -159,8 +151,21 @@ fun VideoMessageCreateScreen(
         return cam && mic
     }
 
+    var hasPerm by remember { mutableStateOf(hasCameraPermission()) }
+
+    val permLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { result ->
+        val allGranted = result.values.all { it }
+        hasPerm = allGranted || hasCameraPermission()
+        if (!hasPerm) {
+            AppLog.w(TAG, "Camera/mic permission denied: $result")
+        }
+    }
+
     LaunchedEffect(Unit) {
-        if (!hasCameraPermission()) {
+        hasPerm = hasCameraPermission()
+        if (!hasPerm) {
             permLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO))
         }
     }
@@ -281,7 +286,7 @@ fun VideoMessageCreateScreen(
             isRecording = uiState.stage == VmStage.RECORDING,
             elapsed = elapsed,
             cameraError = uiState.camError,
-            permissionGranted = hasCameraPermission(),
+            permissionGranted = hasPerm,
             onPermissionRequest = {
                 permLauncher.launch(arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO))
             },

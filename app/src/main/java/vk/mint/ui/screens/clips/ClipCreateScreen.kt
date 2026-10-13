@@ -49,7 +49,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -108,17 +110,20 @@ fun ClipCreateScreen(
     val uiState by vm.uiState.collectAsState()
 
     // Permission launcher — запрашивает CAMERA + RECORD_AUDIO вместе.
+    var hasPermissions by remember { mutableStateOf(vm.hasCameraPermission()) }
     val permLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { result ->
         val allGranted = result.values.all { it }
-        if (!allGranted) {
+        hasPermissions = allGranted || vm.hasCameraPermission()
+        if (!hasPermissions) {
             AppLog.w(TAG, "Camera/mic permission denied: $result")
         }
     }
 
     LaunchedEffect(Unit) {
-        if (!vm.hasCameraPermission()) {
+        hasPermissions = vm.hasCameraPermission()
+        if (!hasPermissions) {
             permLauncher.launch(arrayOf(
                 Manifest.permission.CAMERA,
                 Manifest.permission.RECORD_AUDIO,
@@ -129,6 +134,7 @@ fun ClipCreateScreen(
     when (uiState.stage) {
         ClipCreateStage.Camera -> CameraStage(
             vm = vm,
+            hasPermissions = hasPermissions,
             onBack = onBack,
             permLauncher = permLauncher,
         )
@@ -149,6 +155,7 @@ fun ClipCreateScreen(
 @Composable
 private fun CameraStage(
     vm: ClipCreateViewModel,
+    hasPermissions: Boolean,
     onBack: () -> Unit,
     permLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>,
 ) {
@@ -156,7 +163,7 @@ private fun CameraStage(
     val lifecycleOwner = LocalLifecycleOwner.current
     val uiState by vm.uiState.collectAsState()
 
-    if (!vm.hasCameraPermission()) {
+    if (!hasPermissions) {
         PermissionRequestView(
             onGrant = {
                 permLauncher.launch(arrayOf(

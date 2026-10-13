@@ -1943,10 +1943,17 @@ fun FeedScreen(
                     // VK_MINT_lenta: контекстное меню поста.
                     onToggleBookmark = { p ->
                         scope.launch {
+                            val newFav = !p.isFavoriteBool
                             val ok = if (p.isFavoriteBool) {
                                 app.apiClient.faveRemove("post", p.ownerId, p.id)
                             } else {
                                 app.apiClient.faveAdd("post", p.ownerId, p.id)
+                            }
+                            if (ok) {
+                                allPosts = allPosts.map {
+                                    if (it.ownerId == p.ownerId && it.id == p.id) it.copy(isFavorite = newFav) else it
+                                }
+                                FeedDataHolder.allPosts = allPosts
                             }
                             AppLog.d("FeedScreen", "bookmark toggle: ok=$ok")
                         }
@@ -1954,16 +1961,27 @@ fun FeedScreen(
                     onDeletePost = { p ->
                         scope.launch {
                             val ok = app.apiClient.wallDelete(p.ownerId, p.id)
-                            if (ok) { posts = posts.filter { it.ownerId != p.ownerId || it.id != p.id } }
+                            if (ok) {
+                                allPosts = allPosts.filter { it.ownerId != p.ownerId || it.id != p.id }
+                                posts = posts.filter { it.ownerId != p.ownerId || it.id != p.id }
+                                FeedDataHolder.allPosts = allPosts
+                            }
                             AppLog.d("FeedScreen", "delete post: ok=$ok")
                         }
                     },
                     onTogglePin = { p ->
                         scope.launch {
+                            val newPin = if (p.isPinnedBool) 0 else 1
                             val ok = if (p.isPinnedBool) {
                                 app.apiClient.wallUnpin(p.ownerId, p.id)
                             } else {
                                 app.apiClient.wallPin(p.ownerId, p.id)
+                            }
+                            if (ok) {
+                                allPosts = allPosts.map {
+                                    if (it.ownerId == p.ownerId && it.id == p.id) it.copy(isPinned = newPin) else it
+                                }
+                                FeedDataHolder.allPosts = allPosts
                             }
                             AppLog.d("FeedScreen", "pin toggle: ok=$ok")
                         }
@@ -1972,7 +1990,11 @@ fun FeedScreen(
                     onHideFromFeed = { p ->
                         scope.launch {
                             val ok = app.apiClient.newsfeedIgnoreItem("wall", p.ownerId, p.id)
-                            if (ok) { posts = posts.filter { it.ownerId != p.ownerId || it.id != p.id } }
+                            if (ok) {
+                                allPosts = allPosts.filter { it.ownerId != p.ownerId || it.id != p.id }
+                                posts = posts.filter { it.ownerId != p.ownerId || it.id != p.id }
+                                FeedDataHolder.allPosts = allPosts
+                            }
                             AppLog.d("FeedScreen", "hide from feed: ok=$ok")
                         }
                     },
@@ -1983,7 +2005,11 @@ fun FeedScreen(
                             } else {
                                 app.apiClient.newsfeedAddBan(userIds = listOf(p.fromId))
                             }
-                            if (ok) { posts = posts.filter { it.fromId != p.fromId } }
+                            if (ok) {
+                                allPosts = allPosts.filter { it.fromId != p.fromId }
+                                posts = posts.filter { it.fromId != p.fromId }
+                                FeedDataHolder.allPosts = allPosts
+                            }
                             AppLog.d("FeedScreen", "ban source: ok=$ok")
                         }
                     },
