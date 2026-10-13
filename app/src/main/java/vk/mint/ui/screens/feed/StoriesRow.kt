@@ -127,13 +127,13 @@ fun StoriesRow(
         ) {
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(6) {
                     Box(
                         modifier = Modifier
-                            .size(55.dp)
+                            .size(68.dp)
                             .clip(avatarShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                     )
@@ -153,111 +153,112 @@ fun StoriesRow(
     ) {
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Кнопка "Моя история" — акцентная плашка с "+".
             item(key = "my_story") {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.width(55.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(55.dp)
-                        .clip(avatarShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center,
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.width(72.dp),
                 ) {
-                    Icon(
-                        Icons.Outlined.Add,
-                        contentDescription = "Создать историю",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(24.dp),
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(avatarShape)
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Add,
+                            contentDescription = "Создать историю",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
+                    Text(
+                        text = "История",
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
-                Text(
-                    text = "История",
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
             }
-        }
-        // Истории от пользователей/сообществ.
-        items(displayGroups, key = { it.ownerId }) { group ->
-            val ringColor = if (!group.isSeen) {
-                // Акцентный градиент M3E (primary → tertiary).
-                Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.tertiary,
-                    ),
-                )
-            } else {
-                Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.outlineVariant,
-                        MaterialTheme.colorScheme.outlineVariant,
-                    ),
-                )
-            }
-            val groupIndex = displayGroups.indexOf(group)
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .width(55.dp)
-                    .clickable { onStoryClick(displayGroups, groupIndex) },
-            ) {
-                Box(
+            // Истории от пользователей/сообществ.
+            items(displayGroups, key = { it.ownerId }) { group ->
+                val ringColor = if (!group.isSeen) {
+                    // Акцентный градиент M3E (primary → tertiary).
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiary,
+                        ),
+                    )
+                } else {
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.outlineVariant,
+                            MaterialTheme.colorScheme.outlineVariant,
+                        ),
+                    )
+                }
+                val groupIndex = displayGroups.indexOf(group)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .size(58.dp)
-                        .padding(2.dp)
-                        .clip(avatarShape)
-                        .background(ringColor)
-                        .padding(3.dp),
-                    contentAlignment = Alignment.Center,
+                        .width(72.dp)
+                        .clickable { onStoryClick(displayGroups, groupIndex) },
                 ) {
-                    if (group.photo100 != null) {
-                        AsyncImage(
-                            model = group.photo100,
-                            contentDescription = group.name ?: "",
-                            modifier = Modifier
-                                .size(49.dp)
-                                .clip(avatarShape)
-                                .border(2.dp, MaterialTheme.colorScheme.surface, avatarShape),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(49.dp)
-                                .clip(avatarShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer)
-                                .border(2.dp, MaterialTheme.colorScheme.surface, avatarShape),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = (group.name ?: "?").take(1).uppercase(),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .padding(2.dp)
+                            .clip(avatarShape)
+                            .background(ringColor)
+                            .padding(2.5.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (group.photo100 != null) {
+                            AsyncImage(
+                                model = group.photo100,
+                                contentDescription = group.name ?: "",
+                                modifier = Modifier
+                                    .size(58.dp)
+                                    .clip(avatarShape)
+                                    .border(2.dp, MaterialTheme.colorScheme.surface, avatarShape),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                             )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(58.dp)
+                                    .clip(avatarShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .border(2.dp, MaterialTheme.colorScheme.surface, avatarShape),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = (group.name ?: "?").take(1).uppercase(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
                         }
                     }
+                    Text(
+                        text = group.name ?: "",
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
                 }
-                Text(
-                    text = group.name ?: "",
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
             }
         }
-    }
     }
 }

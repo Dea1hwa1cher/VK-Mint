@@ -395,6 +395,8 @@ class VKApiClient(
                         photo100 = o.get("photo_100")?.takeIf { !it.isJsonNull }?.asString,
                         photo200 = o.get("photo_200")?.takeIf { !it.isJsonNull }?.asString,
                         isClosed = o.get("is_closed")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
+                        isMember = o.get("is_member")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
+                        memberStatus = o.get("member_status")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
                         verified = o.get("verified")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
                     )
                 }
@@ -11760,6 +11762,8 @@ class VKApiClient(
                 UserProfile.City(it.get("title")?.asString ?: "")
             },
             verified = o.get("verified")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
+            friendStatus = o.get("friend_status")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
+            isSubscribed = o.get("is_subscribed")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
             followersCount = countersObj?.get("followers")?.takeIf { !it.isJsonNull }?.asInt ?: 0,
         )
     }

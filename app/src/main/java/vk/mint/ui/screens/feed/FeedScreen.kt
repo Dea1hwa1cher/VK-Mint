@@ -38,7 +38,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -697,9 +696,19 @@ fun FeedScreen(
     fun toggleSubscribe(post: Post) {
         val key = post.fromId.toString()
         if (post.fromId == 0L || post.fromId == myUserId) return
-        val current = subscribeState[key]
-            ?: if (post.fromId < 0) (likesGroups[-post.fromId] ?: groups[-post.fromId])?.let { it.isMember == 1 } else null
-        val target = !(current ?: false)
+        val explicitSub: Boolean? = subscribeState[key]
+        val current = explicitSub ?: run {
+            if (post.fromId < 0) {
+                val g = groups[-post.fromId] ?: likesGroups[-post.fromId]
+                if (g != null) g.isMember == 1 || g.memberStatus == 1
+                else post.postType !in listOf("suggest", "suggested")
+            } else {
+                val p = profiles[post.fromId]
+                if (p != null) p.friendStatus == 3 || p.isSubscribed == 1
+                else post.postType !in listOf("suggest", "suggested")
+            }
+        }
+        val target = !current
         subscribeState[key] = target // оптимистично
         scope.launch {
             val ok = if (target) {
@@ -710,9 +719,7 @@ fun FeedScreen(
                 else app.apiClient.newsfeedUnsubscribe(type = "wall", ownerId = post.fromId, itemId = post.fromId)
             }
             if (!ok) {
-                // Откат: absent-состояние дефолтит в false («Подписаться») —
-                // ровно то, что пользователь видел до тапа.
-                subscribeState[key] = current ?: false
+                subscribeState[key] = current
                 android.widget.Toast.makeText(
                     app.applicationContext,
                     app.apiClient.lastApiError ?: "Не удалось изменить подписку",
@@ -1147,7 +1154,7 @@ fun FeedScreen(
     }
 
     // Иконки быстрого доступа на глобальной верхней панели в разделе «Главная» (как в мобильном VK:
-    // Поиск по новостям, Уведомления, Меню ленты).
+    // Поиск по новостям и Уведомления. Меню разделов вынесено в поднавигационные чипы).
     DisposableEffect(Unit) {
         val token = ScreenTopBar.configure(
             actions = {
@@ -1173,16 +1180,6 @@ fun FeedScreen(
                             contentDescription = "Уведомления",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp),
-                        )
-                    }
-                    IconButton(onClick = {
-                        AppLog.i("FeedScreen", "⋮ menu clicked → FeedPanelState.visible = true")
-                        FeedPanelState.visible = true
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.MenuOpen,
-                            contentDescription = "Меню ленты",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -2349,29 +2346,42 @@ private fun PostCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                // #FEED-SUBSCRIBE (IMP-FEED-1, п.2): компактная кнопка подписки
-                // в хедере карточки (снапшот: post-header-subscription-button,
-                // раздел «Реакции»). Чип-стиль (pill, primary-текст). Скрыта на
-                // своих постах (fromId == myUserId) и у постов без автора.
+                // #FEED-SUBSCRIBE: компактная кнопка подписки в хедере карточки.
+                // В VK кнопка «Подписаться» показывается ТОЛЬКО когда пользователь НЕ подписан на автора
+                // (рекомендованные записи, сторонние авторы). Если подписка есть, кнопка скрывается.
                 if (post.fromId != 0L && post.fromId != myUserId) {
-                    val subscribed: Boolean? = subscriptionState[post.fromId.toString()]
-                        ?: if (post.fromId < 0) groups[-post.fromId]?.let { it.isMember == 1 } else null
-                    Text(
-                        text = if (subscribed == true) "Отписаться" else "Подписаться",
-                        style = MaterialTheme.typography.vkFootnote,
-                        fontWeight = FontWeight.Medium,
-                        color = if (subscribed == true) MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(
-                                if (subscribed == true) MaterialTheme.colorScheme.surfaceVariant
-                                else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            )
-                            .clickable { onSubscribe(post) }
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                    )
+                    val explicitSub: Boolean? = subscriptionState[post.fromId.toString()]
+                    val isSubscribed: Boolean = explicitSub ?: run {
+                        if (post.fromId < 0) {
+                            val g = groups[-post.fromId]
+                            if (g != null) {
+                                g.isMember == 1 || g.memberStatus == 1
+                            } else {
+                                post.postType !in listOf("suggest", "suggested")
+                            }
+                        } else {
+                            val p = profiles[post.fromId]
+                            if (p != null) {
+                                p.friendStatus == 3 || p.isSubscribed == 1
+                            } else {
+                                post.postType !in listOf("suggest", "suggested")
+                            }
+                        }
+                    }
+                    if (!isSubscribed) {
+                        Text(
+                            text = "Подписаться",
+                            style = MaterialTheme.typography.vkFootnote,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                .clickable { onSubscribe(post) }
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                        )
+                    }
                 }
                 // VKUI: vkuiIconButton 36x36, more_horizontal_20
                 Box {
