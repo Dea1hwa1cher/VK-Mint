@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,7 +23,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -30,7 +33,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
@@ -147,6 +153,7 @@ import vk.mint.util.AppLog
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @Composable
 fun MusicScreen(
+    onBack: (() -> Unit)? = null,
     onOpenPlayer: () -> Unit = {},
     onOpenQueue: () -> Unit = {},
     // #MUSIC-PORT: навигация на экраны музыкальной библиотеки.
@@ -172,8 +179,20 @@ fun MusicScreen(
     // Волна 31: ошибка загрузки живёт в пейджере (показывается при пустом списке).
     val apiErrorMessage = pagerState.error
 
+    var userPlaylists by remember { mutableStateOf<List<AudioPlaylist>>(emptyList()) }
+
     LaunchedEffect(Unit) {
         pager.ensureStarted()
+        try {
+            val (_, loadedPlaylists) = withContext(Dispatchers.IO) {
+                app.apiClient.audioGetPlaylists(count = 30, offset = 0)
+            }
+            userPlaylists = loadedPlaylists
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AppLog.w("MusicScreen", "Failed to load user playlists for carousel: ${e.message}")
+        }
     }
 
     // Fix #86: AudioMoreMenu + LyricsSheet (из ui/components/AudioMoreMenu.kt).
@@ -390,6 +409,7 @@ fun MusicScreen(
             onTabSelected = { selectedTab = it },
             textColor = vkTextPrimary,
             secondaryColor = vkTextSecondary,
+            onBack = onBack,
         )
 
         // ─── Inline поле поиска (Fix #269) ────────────────────────────
@@ -398,6 +418,7 @@ fun MusicScreen(
         // вместо основного контента вкладки. Поле остаётся видимым всегда,
         // чтобы пользователь мог изменить запрос.
         if (selectedTab == 0 || selectedTab == 1) {
+            val searchContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = {
@@ -410,7 +431,7 @@ fun MusicScreen(
                 placeholder = {
                     Text(
                         if (selectedTab == 1) "Поиск в загруженном" else "Поиск в библиотеке",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = vkTextSecondary,
                     )
                 },
@@ -424,7 +445,7 @@ fun MusicScreen(
                         Icons.Outlined.Search,
                         contentDescription = null,
                         tint = vkTextSecondary,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(22.dp),
                     )
                 },
                 trailingIcon = {
@@ -442,15 +463,15 @@ fun MusicScreen(
                         }
                     }
                 },
-                shape = MaterialTheme.shapes.large,
+                shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color.Transparent,
                     focusedBorderColor = Color.Transparent,
-                    unfocusedContainerColor = vkCard,
-                    focusedContainerColor = vkCard,
+                    unfocusedContainerColor = searchContainerColor,
+                    focusedContainerColor = searchContainerColor,
                     cursorColor = vkAccent,
                 ),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(color = vkTextPrimary),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = vkTextPrimary),
             )
         }
 
@@ -706,6 +727,7 @@ fun MusicScreen(
         when (selectedTab) {
             0 -> MusicMyTracksTab(
                 tracks = tracks,
+                playlists = userPlaylists,
                 totalCount = totalCount,
                 loading = loading,
                 loadingMore = loadingMore,
@@ -729,6 +751,7 @@ fun MusicScreen(
                     }
                 },
                 onOpenPlaylists = onOpenPlaylists,
+                onOpenPlaylist = onOpenPlaylist,
                 onOpenAlbums = onOpenAlbums,
                 onOpenArtists = onOpenArtists,
                 onOpenDownloaded = { selectedTab = 1 },
@@ -1282,7 +1305,7 @@ private fun EditTrackDialog(
     )
 }
 
-// ─── Header с 5 вкладками ────────────────────────────────────────────────────
+// ─── Header с вкладками «Библиотека» / «Загружено» ───────────────────────────
 
 @Composable
 private fun MusicTabsBar(
@@ -1290,47 +1313,67 @@ private fun MusicTabsBar(
     onTabSelected: (Int) -> Unit,
     textColor: Color,
     secondaryColor: Color,
+    onBack: (() -> Unit)? = null,
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(top = 10.dp, bottom = 6.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(top = 8.dp, bottom = 6.dp),
     ) {
-        val isLibrary = selectedTab == 0
-        Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(if (isLibrary) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                .clickable { onTabSelected(0) }
-                .padding(horizontal = 22.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "Библиотека",
-                color = if (isLibrary) MaterialTheme.colorScheme.onSecondaryContainer else textColor,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
+        if (onBack != null) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 4.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Назад",
+                    tint = textColor,
+                )
+            }
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        val isDownloaded = selectedTab == 1
-        Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(if (isDownloaded) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                .clickable { onTabSelected(1) }
-                .padding(horizontal = 22.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center,
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "Загружено",
-                color = if (isDownloaded) MaterialTheme.colorScheme.onSecondaryContainer else textColor,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
+            val isLibrary = selectedTab == 0
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (isLibrary) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                    .clickable { onTabSelected(0) }
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Библиотека",
+                    color = if (isLibrary) MaterialTheme.colorScheme.onSecondaryContainer else textColor,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            val isDownloaded = selectedTab == 1
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (isDownloaded) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                    .clickable { onTabSelected(1) }
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Загружено",
+                    color = if (isDownloaded) MaterialTheme.colorScheme.onSecondaryContainer else textColor,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
     }
 }
@@ -1409,11 +1452,129 @@ internal fun DualNotesPlaceholder(
 
 internal fun headRadiusY(w: Float, h: Float): Float = h * 0.11f
 
-// ─── Вкладка «Моя музыка»: меню + мои треки с пагинацией ─────────────────────
+// ─── Карусель «Плейлисты» в шапке библиотеки (по скриншоту VK Music) ─────────
+
+@Composable
+private fun MyPlaylistsCarouselSection(
+    playlists: List<AudioPlaylist>,
+    textColor: Color,
+    secondaryColor: Color,
+    onOpenPlaylists: () -> Unit,
+    onOpenPlaylist: (ownerId: Long, playlistId: Long, accessKey: String?) -> Unit,
+) {
+    val tileBg = MaterialTheme.colorScheme.surfaceContainerHigh
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 4.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onOpenPlaylists)
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Плейлисты",
+                color = textColor,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(tileBg)
+                    .clickable(onClick = onOpenPlaylists),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Все плейлисты",
+                    tint = textColor,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+
+        if (playlists.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                itemsIndexed(
+                    items = playlists,
+                    key = { idx, pl -> "my_pl_${idx}_${pl.ownerId}_${pl.id}" },
+                ) { _, playlist ->
+                    val coverUrl = playlist.coverUrl
+                    val desc = playlist.description
+                    val subtitle = when {
+                        !desc.isNullOrBlank() -> desc
+                        playlist.count > 0 -> "${playlist.count} треков"
+                        else -> ""
+                    }
+                    Column(
+                        modifier = Modifier
+                            .width(136.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                onOpenPlaylist(playlist.ownerId, playlist.id, playlist.accessKey)
+                            },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(136.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(tileBg),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (!coverUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = coverUrl,
+                                    contentDescription = playlist.title,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                )
+                            } else {
+                                DualNotesPlaceholder(modifier = Modifier.size(36.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = playlist.title,
+                            color = textColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (subtitle.isNotBlank()) {
+                            Text(
+                                text = subtitle,
+                                color = secondaryColor,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Вкладка «Библиотека»: Плейлисты + Мои аудиозаписи с пагинацией ──────────
 
 @Composable
 private fun MusicMyTracksTab(
     tracks: List<Track>,
+    playlists: List<AudioPlaylist> = emptyList(),
     totalCount: Int,
     loading: Boolean,
     loadingMore: Boolean,
@@ -1428,6 +1589,7 @@ private fun MusicMyTracksTab(
     apiErrorMessage: String?,
     onRetry: (() -> Unit)? = null,
     onOpenPlaylists: () -> Unit = {},
+    onOpenPlaylist: (ownerId: Long, playlistId: Long, accessKey: String?) -> Unit = { _, _, _ -> },
     onOpenAlbums: () -> Unit = {},
     onOpenArtists: () -> Unit = {},
     onOpenDownloaded: () -> Unit = {},
@@ -1459,20 +1621,18 @@ private fun MusicMyTracksTab(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = if (playerState.currentTrack != null) 100.dp else 16.dp),
     ) {
-        // ─── Меню разделов (7 сквиркл-категорий) ───
+        // ─── Секция «Плейлисты» (горизонтальная карусель) ───
         item {
-            MyMusicMenuList(
+            MyPlaylistsCarouselSection(
+                playlists = playlists,
                 textColor = textColor,
                 secondaryColor = secondaryColor,
-                cardColor = cardColor,
                 onOpenPlaylists = onOpenPlaylists,
-                onOpenAlbums = onOpenAlbums,
-                onOpenArtists = onOpenArtists,
-                onOpenDownloaded = onOpenDownloaded,
+                onOpenPlaylist = onOpenPlaylist,
             )
         }
 
-        // ─── Заголовок «Мои треки» + счётчик + селектор сортировки ───
+        // ─── Заголовок «Мои аудиозаписи» + счётчик + селектор сортировки ───
         item {
             Row(
                 modifier = Modifier
@@ -1481,20 +1641,16 @@ private fun MusicMyTracksTab(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Мои треки",
+                    text = "Мои аудиозаписи",
                     color = textColor,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = when {
-                        hasMore && totalCount > 0 -> "${tracks.size} / ~$totalCount"
-                        hasMore -> "${tracks.size}…"
-                        else -> "${tracks.size}"
-                    },
+                    text = if (totalCount > 0) "${totalCount.coerceAtLeast(tracks.size)}" else "${tracks.size}",
                     color = secondaryColor,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                 )
                 Spacer(modifier = Modifier.weight(1f))
 
@@ -1509,7 +1665,7 @@ private fun MusicMyTracksTab(
                                     it.id == target.id && it.ownerId == target.ownerId
                                 }
                                 if (idx >= 0) {
-                                    // LazyColumn items: 0=меню, 1=заголовок, 2=перемешать, 3...=треки
+                                    // LazyColumn items: 0=плейлисты, 1=заголовок, 2=перемешать, 3...=треки
                                     val targetIndex = 3 + idx
                                     scope.launch { listState.animateScrollToItem(targetIndex) }
                                 }
@@ -1545,15 +1701,16 @@ private fun MusicMyTracksTab(
                     ) {
                         Text(
                             text = sortOrder.title,
-                            color = secondaryColor,
-                            fontSize = 13.sp,
+                            color = accentColor,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Icon(
                             imageVector = Icons.Filled.KeyboardArrowDown,
                             contentDescription = "Сортировка",
-                            tint = secondaryColor,
-                            modifier = Modifier.size(16.dp),
+                            tint = accentColor,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
 
@@ -1593,8 +1750,8 @@ private fun MusicMyTracksTab(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(MaterialTheme.shapes.medium)
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1602,15 +1759,15 @@ private fun MusicMyTracksTab(
                         imageVector = Icons.Filled.Shuffle,
                         contentDescription = "Перемешать",
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(24.dp),
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(14.dp))
                 Text(
                     text = "Перемешать",
                     color = textColor,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
+                    fontWeight = FontWeight.Medium,
                 )
             }
         }
@@ -2804,6 +2961,18 @@ private fun SectionHeader(
 
 // ─── VK-style Track Row ────────────────────────────────────────────────────
 
+private fun formatTrackDuration(seconds: Int): String {
+    if (seconds <= 0) return ""
+    val hours = seconds / 3600
+    val mins = (seconds % 3600) / 60
+    val secs = seconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, mins, secs)
+    } else {
+        "%02d:%02d".format(mins, secs)
+    }
+}
+
 @Composable
 private fun VKTrackRow(
     track: Track,
@@ -2824,15 +2993,15 @@ private fun VKTrackRow(
                 .fillMaxWidth()
                 .clickable(onClick = onPlayClick)
                 .background(if (isCurrent) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else Color.Transparent)
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Обложка трека: сквиркл 44x44dp, 8dp (small) скругление
+            // Обложка трека: сквиркл 48x48dp, 10dp скругление (как на скриншоте VK Music)
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(cardColor),
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center,
             ) {
                 val albumThumb = track.albumThumb
@@ -2891,13 +3060,14 @@ private fun VKTrackRow(
                 }
 
                 Text(
-                    text = track.duration.toDurationString(),
+                    text = formatTrackDuration(track.duration),
                     color = secondaryColor,
                     fontSize = 13.sp,
                 )
 
                 IconButton(
                     onClick = onMoreClick,
+                    modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.MoreVert,
@@ -3028,7 +3198,7 @@ private fun MusicDownloadedTab(
                     Text(
                         text = "${downloadedList.size}",
                         color = secondaryColor,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                     )
                     Spacer(modifier = Modifier.weight(1f))
 
@@ -3042,15 +3212,16 @@ private fun MusicDownloadedTab(
                         ) {
                             Text(
                                 text = sortOrder.title,
-                                color = secondaryColor,
-                                fontSize = 13.sp,
+                                color = accentColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                             Icon(
                                 imageVector = Icons.Filled.KeyboardArrowDown,
                                 contentDescription = "Сортировка",
-                                tint = secondaryColor,
-                                modifier = Modifier.size(16.dp),
+                                tint = accentColor,
+                                modifier = Modifier.size(18.dp),
                             )
                         }
 
@@ -3090,8 +3261,8 @@ private fun MusicDownloadedTab(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
-                            .clip(MaterialTheme.shapes.medium)
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(MaterialTheme.colorScheme.secondaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -3099,14 +3270,15 @@ private fun MusicDownloadedTab(
                             imageVector = Icons.Filled.Shuffle,
                             contentDescription = "Перемешать",
                             tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.size(22.dp),
+                            modifier = Modifier.size(24.dp),
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
                     Text(
                         text = "Перемешать",
                         color = textColor,
                         fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
                     )
                 }
             }

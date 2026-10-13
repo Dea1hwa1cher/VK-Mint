@@ -1005,7 +1005,7 @@ fun VkMintNavHost(
     // Clips: full-screen vertical pager — TopAppBar с заголовком «Клипы»
     // занимает место поверх видео, но нижняя навигация нужна для перехода
     // на другие вкладки. Overlay клипов (←, 🔊, +) поднимается наверх.
-    val hidesGlobalTopBarOnly = currentRoute == Screen.Clips.route
+    val hidesGlobalTopBarOnly = currentRoute == Screen.Clips.route || currentRoute == Screen.Music.route
     val showGlobalTopBar = !hasOwnTopBar && !hidesGlobalTopBarOnly
 
     // Fix #256: сбрасываем ScreenTopBar при смене маршрута. Экраны конфигурируют
@@ -1019,7 +1019,7 @@ fun VkMintNavHost(
     // имеет hasOwnTopBar). Guard ниже срабатывает ТОЛЬКО для экранов со своим
     // TopAppBar / скрывающих глобальный — они НЕ владеют global actions, поэтому
     // clear() (force, без токена) безопасен и не затирает конфиг ленты.
-    LaunchedEffect(currentRoute, hasOwnTopBar) {
+    LaunchedEffect(currentRoute, hasOwnTopBar, hidesGlobalTopBarOnly) {
         if (hasOwnTopBar || hidesGlobalTopBarOnly) {
             // На экранах со своим TopAppBar ИЛИ скрывающих глобальный — очищаем.
             // Это force-clear, но только для экранов БЕЗ global actions (лента тронута не будет).
@@ -1481,6 +1481,7 @@ fun VkMintNavHost(
                 }
                 composable(Screen.Music.route) {
                     MusicScreen(
+                        onBack = if (Screen.Music.route !in bottomRoutes) ({ nav.popBackStack() }) else null,
                         onOpenPlayer = { nav.navigate(Screen.AudioPlayer.route) },
                         onOpenQueue = { nav.navigate(Screen.AudioQueue.route) },
                         // #MUSIC-PORT: навигация на экраны музыкальной библиотеки.
