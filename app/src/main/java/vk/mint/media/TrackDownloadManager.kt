@@ -1825,61 +1825,19 @@ object TrackDownloadManager {
         }
     }
 
-    /** #39 C3: HTTP-загрузка MP3 с поддержкой Range-resume. */
+    /** #39 C3: HTTP-загрузка MP3 с поддержкой Range-resume через единый HttpRangeDownloader. */
     private fun downloadDirectWithResume(trackId: Long, url: String, tempFile: File) {
-        val existingBytes = if (tempFile.exists()) tempFile.length() else 0L
-        val requestBuilder = Request.Builder().url(url)
-        if (existingBytes > 0) {
-            requestBuilder.header("Range", "bytes=$existingBytes-")
-            AppLog.i(TAG, "downloadDirectWithResume: resuming #$trackId from $existingBytes bytes")
-        }
-        val request = requestBuilder.build()
-
-        httpClient.newCall(request).execute().use { response ->
-            val isPartial = response.code == 206
-            if (!response.isSuccessful && response.code != 206) {
-                throw RuntimeException("HTTP ${response.code}: ${response.message}")
-            }
-            val append = isPartial && existingBytes > 0
-            if (!append && tempFile.exists()) tempFile.delete()
-
-            val body = response.body ?: throw RuntimeException("Empty response body")
-            val contentLength = body.contentLength()
-            val totalBytes = when {
-                append && contentLength > 0 -> existingBytes + contentLength
-                contentLength > 0 -> contentLength
-                else -> -1L
-            }
-            var bytesRead = if (append) existingBytes else 0L
-            body.byteStream().use { input ->
-                FileOutputStream(tempFile, append).use { output ->
-                    val buffer = ByteArray(8192)
-                    while (true) {
-                        val read = input.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        bytesRead += read
-                        if (totalBytes > 0) {
-                            val progress = ((bytesRead.toFloat() / totalBytes.toFloat()) * 100f)
-                                .toInt().coerceIn(0, 100)
-                            updateState(trackId, DownloadState(trackId, DownloadStatus.DOWNLOADING, progress))
-                        }
-                    }
+        HttpRangeDownloader.downloadWithResume(
+            client = httpClient,
+            url = url,
+            tempFile = tempFile,
+            bufferSize = 8192,
+            onProgress = { _, _, progress ->
+                if (progress >= 0) {
+                    updateState(trackId, DownloadState(trackId, DownloadStatus.DOWNLOADING, progress))
                 }
             }
-            // Fix #147: Content-Length vs received bytes integrity check.
-            // Если сервер отдал Content-Length, но мы прочитали меньше —
-            // файл обрезан (stream закрылся раньше времени, сеть упала).
-            // Без этой проверки обрезанный MP3 сохранялся как «успешно скачанный»
-            // и падал только при воспроизведении (или вообще играл с артефактами).
-            // Бросаем IOException → retry loop в downloadTrack подхватит.
-            if (totalBytes > 0 && bytesRead < totalBytes) {
-                throw java.io.IOException(
-                    "Truncated download #$trackId: got $bytesRead of $totalBytes bytes " +
-                    "(${(bytesRead.toFloat() / totalBytes.toFloat() * 100f).toInt()}%)"
-                )
-            }
-        }
+        )
     }
 
     /**

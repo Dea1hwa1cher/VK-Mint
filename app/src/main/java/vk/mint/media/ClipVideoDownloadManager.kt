@@ -337,8 +337,6 @@ object ClipVideoDownloadManager {
         check(initialized) { "ClipVideoDownloadManager not initialized. Call init(context) in VkMintApp.onCreate." }
     }
 
-    @Volatile
-    private var lastProgressTs: Long = 0L
 
     private fun updateState(key: String, state: DownloadState) {
         _downloads.update { current -> current + (key to state) }
@@ -403,11 +401,25 @@ object ClipVideoDownloadManager {
         while (true) {
             attempt++
             try {
-                downloadWithResume(currentUrl, tempFile, key, videoId, ownerId, title, artistName)
-                if (!tempFile.renameTo(targetFile)) {
-                    tempFile.copyTo(targetFile, overwrite = true)
-                    tempFile.delete()
+                val throttler = HttpRangeDownloader.ProgressThrottler { progress, _, _ ->
+                    updateState(key, DownloadState(
+                        trackId = videoId,
+                        status = DownloadStatus.DOWNLOADING,
+                        progress = progress,
+                        title = title,
+                        artist = artistName,
+                        ownerId = ownerId,
+                    ))
                 }
+                HttpRangeDownloader.downloadWithResume(
+                    client = httpClient,
+                    url = currentUrl,
+                    tempFile = tempFile,
+                    onProgress = { bytesRead, totalBytes, progress ->
+                        throttler.update(bytesRead, totalBytes, progress)
+                    }
+                )
+                HttpRangeDownloader.atomicMove(tempFile, targetFile)
                 saveMetadata(video, authorName, authorAvatar)
                 updateState(key, DownloadState(
                     trackId = videoId,
@@ -490,79 +502,6 @@ object ClipVideoDownloadManager {
         } catch (e: Exception) {
             AppLog.w(TAG, "refreshClipUrl failed: ${e.message}", e)
             null
-        }
-    }
-
-    private fun downloadWithResume(
-        url: String,
-        tempFile: File,
-        key: String,
-        videoId: Long,
-        ownerId: Long,
-        title: String,
-        artist: String,
-    ) {
-        val existingBytes = if (tempFile.exists()) tempFile.length() else 0L
-        val requestBuilder = Request.Builder().url(url)
-        if (existingBytes > 0) {
-            requestBuilder.header("Range", "bytes=$existingBytes-")
-            AppLog.i(TAG, "downloadWithResume: resuming from $existingBytes bytes (key=$key)")
-        }
-        val request = requestBuilder.build()
-
-        httpClient.newCall(request).execute().use { response ->
-            val isPartial = response.code == 206
-            if (!response.isSuccessful && response.code != 206) {
-                throw RuntimeException("HTTP ${response.code}: ${response.message}")
-            }
-            val append = isPartial && existingBytes > 0
-            if (!append && tempFile.exists()) {
-                tempFile.delete()
-            }
-
-            val body = response.body ?: throw RuntimeException("Empty response body")
-            val contentLength = body.contentLength()
-            val totalBytes = when {
-                append && contentLength > 0 -> existingBytes + contentLength
-                contentLength > 0 -> contentLength
-                else -> -1L
-            }
-            var bytesRead = if (append) existingBytes else 0L
-
-            body.byteStream().use { input ->
-                FileOutputStream(tempFile, append).use { output ->
-                    val buffer = ByteArray(65536)
-                    while (true) {
-                        val read = input.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        bytesRead += read
-
-                        if (totalBytes > 0) {
-                            val progress = ((bytesRead.toFloat() / totalBytes.toFloat()) * 100f)
-                                .toInt().coerceIn(0, 100)
-                            val nowMs = System.currentTimeMillis()
-                            val lastProg = _downloads.value[key]?.progress ?: -1
-                            val delta = progress - lastProg
-                            val enoughTime = nowMs - lastProgressTs >= 500L
-                            if (progress != lastProg && (delta >= 2 || delta <= -2 || enoughTime)) {
-                                lastProgressTs = nowMs
-                                updateState(key, DownloadState(
-                                    trackId = videoId,
-                                    status = DownloadStatus.DOWNLOADING,
-                                    progress = progress,
-                                    title = title,
-                                    artist = artist,
-                                    ownerId = ownerId,
-                                ))
-                            }
-                        }
-                    }
-                }
-            }
-            if (totalBytes > 0L && bytesRead < totalBytes) {
-                throw java.io.IOException("Incomplete clip download: read $bytesRead of $totalBytes bytes")
-            }
         }
     }
 

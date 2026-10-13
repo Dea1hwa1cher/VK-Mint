@@ -617,9 +617,6 @@ object VideoDownloadManager {
         check(initialized) { "VideoDownloadManager not initialized. Call init(context) in VkMintApp.onCreate." }
     }
 
-    // #LOGCAT-NOISE-FIX: throttle для chunk-level progress (downloadVideoDirect).
-    @Volatile
-    private var lastProgressTs: Long = 0L
 
     private fun updateState(key: String, state: DownloadState) {
         // #RACE-FIX (2026-08-03): atomic update.
@@ -714,13 +711,24 @@ object VideoDownloadManager {
         while (true) {
             attempt++
             try {
-                downloadWithResume(url, tempFile, key, videoId, ownerId, title)
-                // Атомарная замена (renameTo может молча провалиться на разных
-                // файловых системах — используем copyTo + delete как fallback).
-                if (!tempFile.renameTo(targetFile)) {
-                    tempFile.copyTo(targetFile, overwrite = true)
-                    tempFile.delete()
+                val throttler = HttpRangeDownloader.ProgressThrottler { progress, _, _ ->
+                    updateState(key, DownloadState(
+                        trackId = videoId,
+                        status = DownloadStatus.DOWNLOADING,
+                        progress = progress,
+                        title = title,
+                        ownerId = ownerId,
+                    ))
                 }
+                HttpRangeDownloader.downloadWithResume(
+                    client = httpClient,
+                    url = url,
+                    tempFile = tempFile,
+                    onProgress = { bytesRead, totalBytes, progress ->
+                        throttler.update(bytesRead, totalBytes, progress)
+                    }
+                )
+                HttpRangeDownloader.atomicMove(tempFile, targetFile)
                 // #DOCFILE-SD (P2): копируем финальный .mp4 на SD-карту если
                 // активирован DocumentFile tree URI (non-primary volume).
                 // Internal копия остаётся для быстрого воспроизведения
@@ -750,92 +758,6 @@ object VideoDownloadManager {
         }
     }
 
-    /**
-     * #39 C3: HTTP-загрузка с поддержкой Range-resume.
-     *
-     * Если tempFile уже существует (частичная загрузка), отправляем
-     * `Range: bytes=<size>-` и дописываем (HTTP 206 Partial Content).
-     * Если сервер вернул 200 (Range не поддерживается) — стартуем с нуля.
-     */
-    private fun downloadWithResume(
-        url: String,
-        tempFile: File,
-        key: String,
-        videoId: Long,
-        ownerId: Long,
-        title: String,
-    ) {
-        val existingBytes = if (tempFile.exists()) tempFile.length() else 0L
-        val requestBuilder = Request.Builder().url(url)
-        if (existingBytes > 0) {
-            requestBuilder.header("Range", "bytes=$existingBytes-")
-            AppLog.i(TAG, "downloadWithResume: resuming from $existingBytes bytes (key=$key)")
-        }
-        val request = requestBuilder.build()  // UA добавляется interceptor'ом в init()
-
-        httpClient.newCall(request).execute().use { response ->
-            val isPartial = response.code == 206
-            if (!response.isSuccessful && response.code != 206) {
-                throw RuntimeException("HTTP ${response.code}: ${response.message}")
-            }
-            // Сервер проигнорировал Range (200 OK) — начинаем с нуля.
-            val append = isPartial && existingBytes > 0
-            if (!append && tempFile.exists()) {
-                tempFile.delete()
-            }
-
-            val body = response.body ?: throw RuntimeException("Empty response body")
-            val contentLength = body.contentLength()
-            val totalBytes = when {
-                append && contentLength > 0 -> existingBytes + contentLength
-                contentLength > 0 -> contentLength
-                else -> -1L
-            }
-            var bytesRead = if (append) existingBytes else 0L
-
-            body.byteStream().use { input ->
-                FileOutputStream(tempFile, append).use { output ->
-                    val buffer = ByteArray(65536)
-                    while (true) {
-                        val read = input.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        bytesRead += read
-
-                        if (totalBytes > 0) {
-                            val progress = ((bytesRead.toFloat() / totalBytes.toFloat()) * 100f)
-                                .toInt().coerceIn(0, 100)
-                            // #LOGCAT-NOISE-FIX + #RECOMPOSE-FIX (2026-08-03):
-                            // Раньше updateState вызывался на КАЖДОМ 64KB chunk →
-                            // ~hundreds of updates/sec → logcat spam + recompose storm.
-                            // Теперь: throttle — обновляем StateFlow не чаще чем
-                            // каждые 500ms ИЛИ при изменении прогресса на >=2%.
-                            val nowMs = System.currentTimeMillis()
-                            val lastProg = _downloads.value[key]?.progress ?: -1
-                            val delta = progress - lastProg
-                            val enoughTime = nowMs - lastProgressTs >= 500L
-                            // Throttle: update StateFlow only if progress changed by
-                            // >=2% OR 500ms passed since last update. Avoids logcat
-                            // spam + recompose storm from per-64KB-chunk updates.
-                            if (progress != lastProg && (delta >= 2 || delta <= -2 || enoughTime)) {
-                                lastProgressTs = nowMs
-                                updateState(key, DownloadState(
-                                    trackId = videoId,
-                                    status = DownloadStatus.DOWNLOADING,
-                                    progress = progress,
-                                    title = title,
-                                    ownerId = ownerId,
-                                ))
-                            }
-                        }
-                    }
-                }
-            }
-            if (totalBytes > 0L && bytesRead < totalBytes) {
-                throw java.io.IOException("Incomplete video download: read $bytesRead of $totalBytes bytes")
-            }
-        }
-    }
 
     private fun refreshFromDisk() {
         val map = mutableMapOf<String, DownloadState>()

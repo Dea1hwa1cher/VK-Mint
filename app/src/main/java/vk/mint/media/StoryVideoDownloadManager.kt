@@ -81,54 +81,6 @@ object StoryVideoDownloadManager {
      */
     fun storyKey(ownerId: Long, storyId: Int): String = "s_${ownerId}_${storyId}"
 
-    /** Сменить директорию скачивания (переносит файлы). Mirror [VideoDownloadManager.reconfigurePath]. */
-    fun reconfigurePath(newPath: String) {
-        if (!initialized) return
-        val newDir = if (newPath.isNotBlank()) File(newPath) else File(appContext.filesDir, DOWNLOAD_DIR)
-        newDir.mkdirs()
-        // Fix #123: probe-write + try/catch на перенос (Scoped Storage EPERM guard).
-        if (!newDir.exists() || !newDir.canWrite() || !probeWritable(newDir)) {
-            AppLog.e(TAG, "reconfigurePath: target dir not writable: ${newDir.absolutePath} — falling back to internal")
-            val fallback = File(appContext.filesDir, DOWNLOAD_DIR).apply { mkdirs() }
-            if (fallback.canWrite()) downloadDir = fallback
-            refreshFromDisk()
-            return
-        }
-        if (newDir.absolutePath == downloadDir.absolutePath) return
-        val previousDir = downloadDir
-        try {
-            downloadDir.listFiles()?.forEach { file ->
-                file.copyTo(File(newDir, file.name), overwrite = true)
-                file.delete()
-            }
-            downloadDir = newDir
-            AppLog.i(TAG, "reconfigurePath: dir=${downloadDir.absolutePath}")
-        } catch (e: Exception) {
-            AppLog.e(TAG, "reconfigurePath: copy failed (${e.javaClass.simpleName}: ${e.message}) — keeping previous dir=${previousDir.absolutePath}", e)
-            downloadDir = previousDir
-            runCatching {
-                downloadDir.listFiles()?.forEach { src ->
-                    val dst = File(newDir, src.name)
-                    if (dst.exists() && src.exists()) dst.delete()
-                }
-            }
-        }
-        refreshFromDisk()
-    }
-
-    /** Fix #123: probe-write для надёжной проверки Scoped Storage. */
-    private fun probeWritable(dir: File): Boolean {
-        val probe = File(dir, ".vkmint_probe_${System.currentTimeMillis()}")
-        return try {
-            java.io.FileOutputStream(probe).use { it.write(0) }
-            probe.delete()
-            true
-        } catch (e: Exception) {
-            AppLog.w(TAG, "probeWritable: write test FAILED for ${dir.absolutePath}: ${e.javaClass.simpleName}: ${e.message}")
-            probe.delete()
-            false
-        }
-    }
 
     fun init(context: Context) {
         if (initialized) return
@@ -366,8 +318,6 @@ object StoryVideoDownloadManager {
         check(initialized) { "StoryVideoDownloadManager not initialized. Call init(context) in VkMintApp.onCreate." }
     }
 
-    @Volatile
-    private var lastProgressTs: Long = 0L
 
     private fun updateState(key: String, state: DownloadState) {
         _downloads.update { current -> current + (key to state) }
@@ -441,11 +391,25 @@ object StoryVideoDownloadManager {
         while (true) {
             attempt++
             try {
-                downloadWithResume(currentUrl, tempFile, key, storyId, ownerId, ownerName)
-                if (!tempFile.renameTo(targetFile)) {
-                    tempFile.copyTo(targetFile, overwrite = true)
-                    tempFile.delete()
+                val throttler = HttpRangeDownloader.ProgressThrottler { progress, _, _ ->
+                    updateState(key, DownloadState(
+                        trackId = storyId.toLong(),
+                        status = DownloadStatus.DOWNLOADING,
+                        progress = progress,
+                        title = ownerName,
+                        artist = ownerName,
+                        ownerId = ownerId,
+                    ))
                 }
+                HttpRangeDownloader.downloadWithResume(
+                    client = httpClient,
+                    url = currentUrl,
+                    tempFile = tempFile,
+                    onProgress = { bytesRead, totalBytes, progress ->
+                        throttler.update(bytesRead, totalBytes, progress)
+                    }
+                )
+                HttpRangeDownloader.atomicMove(tempFile, targetFile)
                 saveMetadata(story, ownerName, ownerPhoto100)
                 updateState(key, DownloadState(
                     trackId = storyId.toLong(),
@@ -523,77 +487,6 @@ object StoryVideoDownloadManager {
         }
     }
 
-    private fun downloadWithResume(
-        url: String,
-        tempFile: File,
-        key: String,
-        storyId: Int,
-        ownerId: Long,
-        title: String,
-    ) {
-        val existingBytes = if (tempFile.exists()) tempFile.length() else 0L
-        val requestBuilder = Request.Builder().url(url)
-        if (existingBytes > 0) {
-            requestBuilder.header("Range", "bytes=$existingBytes-")
-            AppLog.i(TAG, "downloadWithResume: resuming from $existingBytes bytes (key=$key)")
-        }
-        val request = requestBuilder.build()
-
-        httpClient.newCall(request).execute().use { response ->
-            val isPartial = response.code == 206
-            if (!response.isSuccessful && response.code != 206) {
-                throw RuntimeException("HTTP ${response.code}: ${response.message}")
-            }
-            val append = isPartial && existingBytes > 0
-            if (!append && tempFile.exists()) {
-                tempFile.delete()
-            }
-
-            val body = response.body ?: throw RuntimeException("Empty response body")
-            val contentLength = body.contentLength()
-            val totalBytes = when {
-                append && contentLength > 0 -> existingBytes + contentLength
-                contentLength > 0 -> contentLength
-                else -> -1L
-            }
-            var bytesRead = if (append) existingBytes else 0L
-
-            body.byteStream().use { input ->
-                FileOutputStream(tempFile, append).use { output ->
-                    val buffer = ByteArray(65536)
-                    while (true) {
-                        val read = input.read(buffer)
-                        if (read == -1) break
-                        output.write(buffer, 0, read)
-                        bytesRead += read
-
-                        if (totalBytes > 0) {
-                            val progress = ((bytesRead.toFloat() / totalBytes.toFloat()) * 100f)
-                                .toInt().coerceIn(0, 100)
-                            val nowMs = System.currentTimeMillis()
-                            val lastProg = _downloads.value[key]?.progress ?: -1
-                            val delta = progress - lastProg
-                            val enoughTime = nowMs - lastProgressTs >= 500L
-                            if (progress != lastProg && (delta >= 2 || delta <= -2 || enoughTime)) {
-                                lastProgressTs = nowMs
-                                updateState(key, DownloadState(
-                                    trackId = storyId.toLong(),
-                                    status = DownloadStatus.DOWNLOADING,
-                                    progress = progress,
-                                    title = title,
-                                    artist = title,
-                                    ownerId = ownerId,
-                                ))
-                            }
-                        }
-                    }
-                }
-            }
-            if (totalBytes > 0L && bytesRead < totalBytes) {
-                throw java.io.IOException("Incomplete story download: read $bytesRead of $totalBytes bytes")
-            }
-        }
-    }
 
     private fun refreshFromDisk() {
         val map = mutableMapOf<String, DownloadState>()
