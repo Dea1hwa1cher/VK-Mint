@@ -74,6 +74,8 @@ import vk.mint.data.model.FaveTag
 import vk.mint.data.model.Track
 import vk.mint.media.PlayerConnection
 import vk.mint.ui.components.ScrollToTopFab
+import vk.mint.ui.components.PostCard
+import vk.mint.ui.components.PostMenuItem
 import vk.mint.ui.components.VkSubnavigationBar
 import vk.mint.ui.components.VkSubnavigationButton
 import vk.mint.util.AppLog
@@ -417,45 +419,77 @@ fun BookmarksScreen(
                 ) {
                     LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
                         items(bookmarks, key = { "${bookmarkKey(it)}_${it.addedDate}" }) { bm ->
-                            BookmarkRow(
-                                bm = bm,
-                                onLongClick = { removeTarget = bm },
-                                onRemoveClick = { removeTarget = bm },
-                                onClick = {
-                                    when (bm.type) {
-                                        "post" -> bm.post?.let { p ->
-                                            onPostClick?.invoke(p.ownerId, p.id)
+                            val post = bm.post
+                            if (bm.type == "post" && post != null) {
+                                val authorIsGroup = post.fromId < 0 || post.ownerId < 0
+                                PostCard(
+                                    post = post,
+                                    authorName = if (authorIsGroup) "Сообщество" else "Запись",
+                                    authorPhoto = null,
+                                    authorIsGroup = authorIsGroup,
+                                    showFullDate = true,
+                                    isBookmarked = true,
+                                    onToggleBookmark = { removeTarget = bm },
+                                    onPostClick = { onPostClick?.invoke(post.ownerId, post.id) },
+                                    onAuthorClick = {
+                                        if (authorIsGroup) {
+                                            onGroupClick?.invoke(if (post.fromId < 0) -post.fromId else -post.ownerId)
+                                        } else {
+                                            onUserClick?.invoke(if (post.fromId > 0) post.fromId else post.ownerId)
                                         }
-                                        "user", "profile" -> bm.user?.let { u ->
-                                            onUserClick?.invoke(u.id)
-                                        }
-                                        "group" -> bm.group?.let { g ->
-                                            onGroupClick?.invoke(g.id)
-                                        }
-                                        "video" -> bm.video?.let { v ->
-                                            onVideoClick?.invoke(v.ownerId, v.id)
-                                        }
-                                        "link" -> {
-                                            val url = bm.link?.url
-                                            if (!url.isNullOrBlank()) {
-                                                val intent = android.content.Intent(
-                                                    android.content.Intent.ACTION_VIEW,
-                                                    android.net.Uri.parse(url),
-                                                )
-                                                context.startActivity(intent)
+                                    },
+                                    onVideoClick = { v -> onVideoClick?.invoke(v.ownerId, v.id) },
+                                    onCommentClick = { onPostClick?.invoke(post.ownerId, post.id) },
+                                    menuItems = listOf(
+                                        PostMenuItem(
+                                            text = "Удалить из закладок",
+                                            icon = Icons.Outlined.Delete,
+                                            isDestructive = true,
+                                            onClick = { removeTarget = bm },
+                                        )
+                                    ),
+                                )
+                            } else {
+                                BookmarkRow(
+                                    bm = bm,
+                                    onLongClick = { removeTarget = bm },
+                                    onRemoveClick = { removeTarget = bm },
+                                    onClick = {
+                                        when (bm.type) {
+                                            "post" -> bm.post?.let { p ->
+                                                onPostClick?.invoke(p.ownerId, p.id)
+                                            }
+                                            "user", "profile" -> bm.user?.let { u ->
+                                                onUserClick?.invoke(u.id)
+                                            }
+                                            "group" -> bm.group?.let { g ->
+                                                onGroupClick?.invoke(g.id)
+                                            }
+                                            "video" -> bm.video?.let { v ->
+                                                onVideoClick?.invoke(v.ownerId, v.id)
+                                            }
+                                            "link" -> {
+                                                val url = bm.link?.url
+                                                if (!url.isNullOrBlank()) {
+                                                    val intent = android.content.Intent(
+                                                        android.content.Intent.ACTION_VIEW,
+                                                        android.net.Uri.parse(url),
+                                                    )
+                                                    context.startActivity(intent)
+                                                }
+                                            }
+                                            else -> {
+                                                Toast.makeText(context, "Тип ${bm.type} — просмотр в разработке, удаление доступно по корзине", Toast.LENGTH_SHORT).show()
                                             }
                                         }
-                                        else -> {
-                                            Toast.makeText(context, "Тип ${bm.type} — просмотр в разработке, удаление доступно по корзине", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                },
-                            )
-                            Box(
-                                modifier = Modifier.fillMaxWidth().height(1.dp)
-                                    .padding(horizontal = 76.dp)
-                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                            )
+                                    },
+                                )
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(1.dp)
+                                        .padding(horizontal = 76.dp)
+                                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                )
+                            }
                         }
                         // Fix #83: футер пагинации.
                         item {

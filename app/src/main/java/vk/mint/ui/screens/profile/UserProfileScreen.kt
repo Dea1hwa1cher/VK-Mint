@@ -54,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -194,6 +195,7 @@ fun UserProfileScreen(
     // Начальные значения выставляются из профиля (is_subscribed / is_favorite).
     var subscribed by remember { mutableStateOf(false) }
     var isBookmarked by remember { mutableStateOf(false) }
+    val postBookmarkStates = remember(userId) { mutableStateMapOf<String, Boolean>() }
     // is_hidden_from_feed модель UserProfile не парсит — состояние локальное
     // (сессионное), сбрасывается при перезагрузке экрана.
     var hiddenFromFeed by remember { mutableStateOf(false) }
@@ -1003,6 +1005,8 @@ fun UserProfileScreen(
                 }
 
                 items(filteredPosts, key = { "${it.ownerId}_${it.id}" }) { post ->
+                    val postKey = "${post.ownerId}_${post.id}"
+                    val isBm = postBookmarkStates[postKey] ?: post.isFavoriteBool
                     WallPostCard(
                         post = post,
                         authorName = p.fullName,
@@ -1019,6 +1023,26 @@ fun UserProfileScreen(
                         // своём профиле) → меню открывается с одним «Пожаловаться».
                         showReport = !isSelf,
                         onReportSpam = { reportingPost.value = it },
+                        showFullDate = true,
+                        isBookmarked = isBm,
+                        onToggleBookmark = {
+                            val newB = !isBm
+                            postBookmarkStates[postKey] = newB
+                            scope.launch {
+                                try {
+                                    if (newB) {
+                                        app.apiClient.faveAdd("post", post.ownerId, post.id)
+                                        Toast.makeText(context, "Добавлено в закладки", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        app.apiClient.faveRemove("post", post.ownerId, post.id)
+                                        Toast.makeText(context, "Удалено из закладок", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    postBookmarkStates[postKey] = !newB
+                                    Toast.makeText(context, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
                     )
                 }
                 // Fix #86: футер пагинации.

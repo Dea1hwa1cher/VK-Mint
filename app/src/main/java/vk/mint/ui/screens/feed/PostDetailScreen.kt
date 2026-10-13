@@ -126,6 +126,13 @@ import vk.mint.util.toFileSizeString
 import vk.mint.ui.components.PendingPhotosBar
 import vk.mint.ui.components.PendingPhoto
 import vk.mint.ui.components.nextPendingPhotoId
+import vk.mint.ui.components.PostCard
+import vk.mint.ui.components.PostMenuItem
+import androidx.compose.material.icons.outlined.ContentCopy
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import vk.mint.ui.theme.avatarShape
 import vk.mint.ui.theme.titleSmallEmphasized
 import java.text.SimpleDateFormat
@@ -193,6 +200,7 @@ fun PostDetailScreen(
     var localComments by remember { mutableStateOf<List<Comment>>(emptyList()) }
     var isLiked by remember { mutableStateOf(post?.likes?.userLikes == 1) }
     var likeCount by remember { mutableStateOf(post?.likes?.count ?: 0) }
+    var isBookmarked by remember { mutableStateOf(post?.isFavoriteBool ?: false) }
     // §37.12 #328: развёртывание веток ответов в комментариях.
     // expandedReplies — множество ID комментариев, чья ветка развёрнута.
     // threadReplies — дополнительно загруженные ответы (когда preview из
@@ -416,6 +424,7 @@ fun PostDetailScreen(
                     }
                     isLiked = fetched.likes?.userLikes == 1
                     likeCount = fetched.likes?.count ?: 0
+                    isBookmarked = fetched.isFavoriteBool
                     p = fetched
                 }
             } catch (e: Exception) {
@@ -625,6 +634,26 @@ fun PostDetailScreen(
         }
     }
 
+    fun toggleBookmark() {
+        val currentPost = post ?: return
+        val newB = !isBookmarked
+        isBookmarked = newB
+        scope.launch {
+            try {
+                if (newB) {
+                    app.apiClient.faveAdd("post", currentPost.ownerId, currentPost.id)
+                    Toast.makeText(ctx, "Добавлено в закладки", Toast.LENGTH_SHORT).show()
+                } else {
+                    app.apiClient.faveRemove("post", currentPost.ownerId, currentPost.id)
+                    Toast.makeText(ctx, "Удалено из закладок", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                isBookmarked = !newB
+                Toast.makeText(ctx, "Ошибка: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     // Pull-to-refresh.
     fun doRefresh() {
         if (post == null) return
@@ -714,204 +743,63 @@ fun PostDetailScreen(
                 ) {
                     // --- Пост ---
                     item {
-                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            // Автор поста.
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 12.dp)
-                                    // #POST-DETAIL-SCROLL: тап по header'у автора →
-                                    // экран сообщества (для fromId < 0). По образцу
-                                    // FeedScreen Fix #67. saveScrollPosition() перед
-                                    // уходом — позиция комментариев восстановится при
-                                    // возврате. Для fromId > 0 (пользователь) клика
-                                    // нет — PostDetailScreen не имеет onUserClick.
-                                    .then(
-                                        if (post.fromId < 0) Modifier.clickable {
-                                            onGroupClickSavePos(-post.fromId)
-                                        } else Modifier
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                AsyncImage(
-                                    model = authorAvatarUrl,
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(avatarShape),
-                                    contentDescription = "Аватар",
-                                )
-                                Spacer(modifier = Modifier.size(8.dp))
-                                val authorName = if (post.fromId > 0) {
-                                    val p = profiles[post.fromId]
-                                    p?.fullName ?: ""
-                                } else {
-                                    // Fix #99: показываем имя сообщества.
-                                    val g = groups[-post.fromId]
-                                    g?.name ?: "Сообщество"
-                                }
-                                val nameColor = if (post.fromId < 0)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.onSurface
-                                Text(
-                                    text = authorName,
-                                    style = MaterialTheme.typography.titleSmallEmphasized,
-                                    color = nameColor,
-                                )
-                            }
-
-                            // Текст поста.
-                            if (post.text.isNotBlank()) {
-                                // Fix #204: парсим VK inline-ссылки [#alias|display|url] + обычные URL.
-                                Text(
-                                    text = vk.mint.util.linkifyVkText(
-                                        text = post.text,
-                                        linkColor = MaterialTheme.colorScheme.primary,
-                                        onUrlClick = { url -> vk.mint.util.openUrlExternal(ctx, url) },
-                                    ),
-                                    modifier = Modifier.padding(top = 8.dp),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                )
-                            }
-
-                            // Вложения.
-                            val attachments = post.attachments ?: emptyList()
-                            // #22B-POST-PHOTOS (волна 22): фото поста собираются заранее
-                            // и рендерятся ОДНИМ блоком PostPhotoGrid ПОСЛЕ when-цикла —
-                            // раньше каждое фото шло отдельным 16:9-кропом внутри цикла.
-                            // СМЕНА ПОРЯДКА РЕНДЕРА при перемешанных вложениях
-                            // (фото+видео вперемешку) — осознанная: VK web группирует
-                            // все фото поста в один блок-карусель, а видео/аудио/плейлисты
-                            // остаются на своих местах. mapNotNull: attachment.photo
-                            // опционален по схеме Gson; фото без sizes отфильтрует сам
-                            // PostPhotoGrid (прежняя семантика клика не изменилась —
-                            // photoViewerState получает (urls, index) по всем показанным
-                            // фото, как и раньше).
-                            val postPhotos = attachments
-                                .filter { it.type == "photo" }
-                                .mapNotNull { att -> att.photo }
-                            for (attachment in attachments) {
-                                when (attachment.type) {
-                                    "video" -> {
-                                        val video = attachment.video
-                                        if (video != null) {
-                                            val thumbUrl = video.thumbUrl ?: video.clipPosterUrl
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .aspectRatio(16f / 9f)
-                                                    .clip(MaterialTheme.shapes.small)
-                                                    .background(Color.Black)
-                                                    .clickable { onVideoClickSavePos(video) },
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                if (!thumbUrl.isNullOrBlank()) {
-                                                    AsyncImage(
-                                                        model = thumbUrl,
-                                                        contentDescription = video.title,
-                                                        modifier = Modifier.fillMaxSize(),
-                                                        contentScale = ContentScale.Crop,
-                                                    )
-                                                }
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(48.dp)
-                                                        .clip(androidx.compose.foundation.shape.CircleShape)
-                                                        .background(Color.Black.copy(alpha = 0.55f)),
-                                                    contentAlignment = Alignment.Center,
-                                                ) {
-                                                    Icon(
-                                                        Icons.Outlined.PlayArrow,
-                                                        contentDescription = "Видео",
-                                                        tint = Color.White,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                    "audio" -> {
-                                        val track = attachment.audio
-                                        if (track != null) {
-                                            PostDetailAudioRow(track = track)
-                                        }
-                                    }
-                                    // #30 (playlists): audio_playlist вложение.
-                                    "audio_playlist" -> {
-                                        val playlist = attachment.audioPlaylist
-                                        if (playlist != null) {
-                                            vk.mint.ui.components.PlaylistAttachmentCard(playlist = playlist)
-                                        }
-                                    }
-                                    else -> {}
-                                }
-                            }
-                            // #22B-POST-PHOTOS: единый блок фото поста (общий
-                            // PostPhotoGrid): при carouselEnabled и фото > 1 — карусель
-                            // VK web vkuiCarouselBase (свайп + стрелки + счётчик),
-                            // иначе прежний вид (1-2 — пейджер, 3+ — сетка).
-                            // Клик → photoViewerState — семантика прежняя; urls
-                            // для просмотрщика формирует сам компонент.
-                            if (postPhotos.isNotEmpty()) {
-                                PostPhotoGrid(
-                                    photos = postPhotos,
-                                    onPhotoClick = { urls, idx -> photoViewerState.value = urls to idx },
-                                    carouselEnabled = carouselEnabled,
-                                )
-                            }
-
-                            // Action bar (лайк/коммент/репост/просмотры).
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            ) {
-                                // Лайк.
-                                IconButton(onClick = ::toggleLike) {
-                                    Icon(
-                                        if (isLiked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                                        contentDescription = "Лайк",
-                                        tint = if (isLiked) MaterialTheme.colorScheme.primary
-                                               else MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                                Text("$likeCount")
-
-                                // Комментарий.
-                                IconButton(onClick = { /* scroll to comment input */ }) {
-                                    Icon(
-                                        Icons.Outlined.ChatBubbleOutline,
-                                        contentDescription = "Комментарий",
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                                Text("${post.comments?.count ?: 0}")
-
-                                // Репост.
-                                IconButton(onClick = { showRepostDialog = true }) {
-                                    Icon(
-                                        Icons.Outlined.Repeat,
-                                        contentDescription = "Репост",
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                                Text("${post.reposts?.count ?: 0}")
-
-                                // Просмотры.
-                                Row(
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.Visibility,
-                                        contentDescription = "Просмотры",
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Text("${post.views?.count ?: 0}")
-                                }
-                            }
+                        val authorName = if (post.fromId > 0) {
+                            profiles[post.fromId]?.fullName ?: "Пользователь"
+                        } else {
+                            groups[-post.fromId]?.name ?: "Сообщество"
                         }
+                        val postMenuItems = buildList {
+                            add(
+                                PostMenuItem(
+                                    text = "Скопировать ссылку",
+                                    icon = Icons.Outlined.ContentCopy,
+                                    onClick = {
+                                        val link = "https://vk.com/wall${post.ownerId}_${post.id}"
+                                        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                        clipboard?.setPrimaryClip(ClipData.newPlainText("VK Post", link))
+                                        Toast.makeText(ctx, "Ссылка скопирована", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            )
+                        }
+
+                        PostCard(
+                            post = post,
+                            authorName = authorName,
+                            authorPhoto = authorAvatarUrl,
+                            authorIsGroup = post.fromId < 0,
+                            showFullDate = true,
+                            textMaxLines = Int.MAX_VALUE,
+                            onAuthorClick = {
+                                if (post.fromId < 0) {
+                                    onGroupClickSavePos(-post.fromId)
+                                }
+                            },
+                            onPostClick = {},
+                            onVideoClick = { onVideoClickSavePos(it) },
+                            onPhotoClick = { urls, idx -> photoViewerState.value = urls to idx },
+                            isLiked = isLiked,
+                            likeCount = likeCount,
+                            onLikeToggle = { toggleLike() },
+                            onCommentClick = { /* already viewing comments */ },
+                            onRepostClick = { showRepostDialog = true },
+                            onReaction = { clickedPost, reaction ->
+                                scope.launch {
+                                    try {
+                                        app.apiClient.likesAdd("post", clickedPost.ownerId, clickedPost.id, reactionId = reaction.reactionId)
+                                        isLiked = true
+                                        likeCount = likeCount + 1
+                                    } catch (e: Exception) {
+                                        AppLog.e("PostDetail", "reaction error", e)
+                                    }
+                                }
+                            },
+                            menuItems = postMenuItems,
+                            isBookmarked = isBookmarked,
+                            onToggleBookmark = { toggleBookmark() },
+                            carouselEnabled = carouselEnabled,
+                            showViews = true,
+                        )
                     }
 
                     // --- Комментарии ---
