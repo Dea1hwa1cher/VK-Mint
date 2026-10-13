@@ -1089,13 +1089,8 @@ fun ChatDetailScreen(
 
     // P0.25 #VOICE-ASR-FETCH: запрос transcript (расшифровки ASR) для voice-сообщений.
     // VK LongPoll НЕ возвращает transcript/transcript_state — VK готовит ASR на сервере
-    // 5-30 сек после отправки. Запрашиваем messages.getById для свежих голосовых без
-    // transcript, обновляем attachments в messages.
-    // P0.25 #VOICE-ASR-FETCH: запрос transcript (расшифровки ASR) для voice-сообщений.
-    // VK LongPoll НЕ возвращает transcript/transcript_state — VK готовит ASR на сервере
-    // 5-30 сек после отправки. Запрашиваем messages.getById для свежих голосовых без
-    // transcript, обновляем attachments в messages.
-    // P0.25d: suspend — caller ждёт completion перед следующей проверкой hasPendingVoice.
+    // 5-30 сек после отправки/запроса. Запрашиваем messages.getById для голосовых без
+    // готового transcript, обновляем attachments в messages.
     suspend fun fetchVoiceTranscripts() {
         // Фильтруем voice-сообщения без transcript (transcript==null ИЛИ state != "done").
         val voiceMsgIds = messages.filter { m ->
@@ -1161,6 +1156,8 @@ fun ChatDetailScreen(
                 if (newAtts != m.attachments) m.copy(attachments = newAtts) else m
             }
             AppLog.i("ChatDetailScreen", "fetchVoiceTranscripts: updated ${updates.size} voice messages")
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
         } catch (e: Exception) {
             AppLog.w("ChatDetailScreen", "fetchVoiceTranscripts error: ${e.message}")
         }
@@ -1192,11 +1189,15 @@ fun ChatDetailScreen(
         // терялось на полпути (LeftCompositionCancellationException).
         app.appScope.launch {
             try {
-                app.apiClient.sendVoiceMessage(peerId, file)
+                val sentId = app.apiClient.sendVoiceMessage(peerId, file)
                 // UI-обновление — в композиционном scope (no-op если экран закрыт).
                 scope.launch {
-                    reloadMessages()
-                    listState.animateScrollToItem(0)
+                    if (sentId > 0L) {
+                        reloadMessages()
+                        listState.animateScrollToItem(0)
+                    } else {
+                        errorText = "Не удалось отправить голосовое сообщение"
+                    }
                 }
             } catch (e: Exception) {
                 AppLog.e("ChatDetailScreen", "sendVoice error", e)
@@ -1223,10 +1224,14 @@ fun ChatDetailScreen(
         sending = true
         app.appScope.launch {
             try {
-                app.apiClient.sendVoiceMessage(peerId, file)
+                val sentId = app.apiClient.sendVoiceMessage(peerId, file)
                 scope.launch {
-                    reloadMessages()
-                    listState.animateScrollToItem(0)
+                    if (sentId > 0L) {
+                        reloadMessages()
+                        listState.animateScrollToItem(0)
+                    } else {
+                        errorText = "Не удалось отправить голосовое сообщение"
+                    }
                 }
             } catch (e: Exception) {
                 AppLog.e("ChatDetailScreen", "sendPendingVoice error", e)
@@ -3675,24 +3680,29 @@ fun ChatDetailScreen(
     // any event within TYPING_TIMEOUT_MS as "still typing".
     val myUserId = remember { app.exchangeAuthRepository.userId() }
 
-    // P0.25 #VOICE-ASR-FETCH: авто-запрос transcript для голосовых без расшифровки.
-    // VK LongPoll НЕ возвращает transcript — ASR готовится на сервере 5-30 сек.
-    // Запускаем периодический poll: каждые 10 сек проверяем есть ли voice без
-    // done-transcript. Если есть — запрашиваем getById. Max 6 попыток (60 сек).
-    // После 6 попыток прекращаем — если VK не подготовил ASR за 60 сек, вероятно
-    // голосовое слишком короткое/шумное и ASR невозможен.
-    LaunchedEffect(peerId) {
+    // P0.25 #VOICE-ASR-FETCH: авто-запрос transcript для голосовых в статусе in_progress.
+    // VK LongPoll НЕ возвращает готовый transcript — ASR готовится на сервере 5-30 сек.
+    val hasInProgressVoice = remember(messages) {
+        messages.any { m ->
+            m.attachments?.any { att ->
+                val am = att.doc?.audioMsg ?: att.audioMessage
+                am != null && am.transcriptState == "in_progress"
+            } == true
+        }
+    }
+    LaunchedEffect(peerId, hasInProgressVoice) {
+        if (!hasInProgressVoice) return@LaunchedEffect
         var attempt = 0
         while (attempt < 6) {
-            kotlinx.coroutines.delay(10000L)
-            val hasPendingVoice = messages.any { m ->
+            kotlinx.coroutines.delay(5000L)
+            fetchVoiceTranscripts()
+            val stillInProgress = messages.any { m ->
                 m.attachments?.any { att ->
                     val am = att.doc?.audioMsg ?: att.audioMessage
-                    am != null && am.transcriptState != "done"
+                    am != null && am.transcriptState == "in_progress"
                 } == true
             }
-            if (!hasPendingVoice) break
-            fetchVoiceTranscripts()
+            if (!stillInProgress) break
             attempt++
         }
     }
@@ -5177,8 +5187,6 @@ fun ChatDetailScreen(
                                     message = msg,
                                     profiles = chatProfiles,
                                     voicePlaybackController = voicePlaybackController,
-                                    // P0.25 #VOICE-ASR-FETCH: передаём callback для запроса transcript.
-                                    onFetchVoiceTranscripts = { scope.launch { fetchVoiceTranscripts() } },
                                     // P0.25e #VOICE-ASR-REQUEST: callback для messages.recogniseAudioMessage.
                                     // ChatDetailScreen scope имеет доступ к app + scope + fetchVoiceTranscripts.
                                     onRequestAsr = { pId, cId, amId ->
@@ -5187,10 +5195,21 @@ fun ChatDetailScreen(
                                                 val ok = app.apiClient.messagesRecogniseAudioMessage(pId, cId, amId)
                                                 AppLog.i("VoiceASR", "recogniseAudioMessage result: $ok (peer=$pId cmid=$cId audioMsgId=$amId)")
                                                 if (ok) {
-                                                    // VK принял запрос — через 5-30 сек transcript появится.
-                                                    kotlinx.coroutines.delay(5000)
-                                                    fetchVoiceTranscripts()
+                                                    // VK готовит ASR на сервере 5-30 сек: опрашиваем до готовности (до 6 попыток по 5 сек).
+                                                    for (attempt in 1..6) {
+                                                        kotlinx.coroutines.delay(5000L)
+                                                        fetchVoiceTranscripts()
+                                                        val stillPending = messages.any { m ->
+                                                            m.conversationMessageId == cId && m.attachments?.any { att ->
+                                                                val am = att.doc?.audioMsg ?: att.audioMessage
+                                                                am != null && am.transcriptState != "done" && am.transcriptState != "error"
+                                                            } == true
+                                                        }
+                                                        if (!stillPending) break
+                                                    }
                                                 }
+                                            } catch (ce: kotlinx.coroutines.CancellationException) {
+                                                throw ce
                                             } catch (e: Exception) {
                                                 AppLog.e("VoiceASR", "recogniseAudioMessage crash: ${e.message}", e)
                                             }
@@ -6171,11 +6190,7 @@ private fun MessageBubble(
     canMarkImportant: Boolean = false,
     // Fix #120: единый voice-плеер на чат — только одно голосовое играет за раз.
     voicePlaybackController: VoicePlaybackController,
-    // P0.25 #VOICE-ASR-FETCH: запрос transcript (messages.getById) при тапе ASR кнопки.
-    onFetchVoiceTranscripts: () -> Unit = {},
     // P0.25e #VOICE-ASR-REQUEST: callback для messages.recogniseAudioMessage.
-    // (peerId, cmid, audioMessageId) -> Unit. Caller (ChatDetailScreen) запускает
-    // корутину: messagesRecogniseAudioMessage → 5 сек delay → fetchVoiceTranscripts.
     onRequestAsr: (peerId: Long, cmid: Long, audioMessageId: String) -> Unit = { _, _, _ -> },
     // #59: ответ на сообщение
     onReply: () -> Unit = {},
@@ -6757,14 +6772,18 @@ private fun MessageBubble(
                             )
                         }
                         doc?.let {
+                            val voiceAccent = when {
+                                bubbleless -> MaterialTheme.colorScheme.primary
+                                isOut && customOutBg != null -> textColor
+                                !isOut && customInBg != null -> textColor
+                                else -> MaterialTheme.colorScheme.primary
+                            }
                             VoiceMessageBubble(
                                 doc = it,
                                 textColor = textColor,
-                                accentColor = if (isOut) textColor else MaterialTheme.colorScheme.primary,
+                                accentColor = voiceAccent,
                                 messageId = message.id,
                                 controller = voicePlaybackController,
-                                // P0.25 #VOICE-ASR-FETCH: запрос transcript при тапе ASR кнопки.
-                                onRequestTranscript = onFetchVoiceTranscripts,
                                 // P0.25e #VOICE-ASR-REQUEST: параметры для messages.recogniseAudioMessage.
                                 peerId = message.peerId,
                                 cmid = message.conversationMessageId ?: 0L,
@@ -9789,14 +9808,7 @@ private fun VoiceMessageBubble(
     accentColor: Color,
     messageId: Long,
     controller: VoicePlaybackController,
-    // P0.25 #VOICE-ASR-FETCH: callback для запроса transcript (messages.getById).
-    // Вызывается при тапе на ASR-кнопку, если transcript ещё не готов.
-    onRequestTranscript: () -> Unit = {},
     // P0.25e #VOICE-ASR-REQUEST: параметры для messages.recogniseAudioMessage.
-    // VK web (HAR): при тапе ASR-кнопки ВЫЗЫВАЕТ recognizeAudioMessage —
-    // это ЗАПРОС на расшифровку (не getById). VK начинает ASR на сервере,
-    // через 5-30 сек transcript появляется в getDiffContent/getHistory.
-    // onRequestAsr: (peerId, cmid, audioMessageId) -> Unit — запускает recognizeAudioMessage.
     peerId: Long = 0L,
     cmid: Long = 0L,
     onRequestAsr: (peerId: Long, cmid: Long, audioMessageId: String) -> Unit = { _, _, _ -> },
@@ -9805,11 +9817,7 @@ private fun VoiceMessageBubble(
     voiceShowDownloadButton: Boolean = true,
 ) {
     val context = LocalContext.current
-    // P0.22 #VOICE-COLOR (2026-10): аудио-сообщения ВСЕГДА в цвете VK Modern #0077FF.
-    // Раньше: accentColor = MaterialTheme.colorScheme.primary (для входящих) или textColor
-    // (для исходящих — белый/чёрный). Пользователь захотел единый VK-акцент для всех голосовых.
-    // Источник: VK Brand Guidelines — #0077FF = primary accent (vk.design).
-    val voiceColor = Color(0xFF0077FF)
+    val voiceColor = accentColor
     // Fix #244: состояние выбора для вложения.
     val sel = LocalAttachmentSelection.current
     val audioMsg = doc.audioMsg ?: return

@@ -216,6 +216,25 @@ fun StoryViewerScreen(
         }
     }
 
+    var startTimerRef: () -> Unit = {}
+
+    fun goToNext() {
+        val g = groups.getOrNull(groupIndex)
+        if (g == null) { onBack(); return }
+        if (storyIndex < g.stories.size - 1) {
+            storyIndex++
+            progress = 0f
+            startTimerRef()
+        } else if (groupIndex < groups.size - 1) {
+            groupIndex++
+            storyIndex = 0
+            progress = 0f
+            startTimerRef()
+        } else {
+            onBack()
+        }
+    }
+
     fun startTimer() {
         cancelTimer()
         // Fix #49-1: для видео-историй НЕ запускаем tween-таймер — длительность
@@ -234,28 +253,10 @@ fun StoryViewerScreen(
             ) {
                 progress = value
             }
-            // Таймер истёк → следующая история.
-            // P0.18 (Task 27 fix): inline advanceToNext — Kotlin local functions
-            // НЕ поддерживают mutual recursion через forward references. Task 25
-            // вынес логику в advanceToNext(), но startTimer↔advanceToNext взаимно
-            // вызывают друг друга → Unresolved reference. Дублируем логику тут и
-            // в resumeTimer (accept duplication over mutual recursion).
-            val g = groups.getOrNull(groupIndex)
-            if (g == null) { onBack(); return@launch }
-            if (storyIndex < g.stories.size - 1) {
-                storyIndex++
-                progress = 0f
-                startTimer()
-            } else if (groupIndex < groups.size - 1) {
-                groupIndex++
-                storyIndex = 0
-                progress = 0f
-                startTimer()
-            } else {
-                onBack()
-            }
+            goToNext()
         }
     }
+    startTimerRef = ::startTimer
 
     // P0.13 (Task 25): возобновление таймера с текущего progress (НЕ с 0).
     // Вызывается когда isComposing/isPaused стали false — анимация продолжается
@@ -272,22 +273,9 @@ fun StoryViewerScreen(
             return
         }
         // Если прогресс уже 1f (история закончилась, но pause не сбросил progress),
-        // просто переходим к следующей (inline advanceToNext — см. startTimer).
+        // просто переходим к следующей.
         if (progress >= 1f) {
-            val g0a = groups.getOrNull(groupIndex)
-            if (g0a == null) { onBack(); return }
-            if (storyIndex < g0a.stories.size - 1) {
-                storyIndex++
-                progress = 0f
-                startTimer()
-            } else if (groupIndex < groups.size - 1) {
-                groupIndex++
-                storyIndex = 0
-                progress = 0f
-                startTimer()
-            } else {
-                onBack()
-            }
+            goToNext()
             return
         }
         timerJob = scope.launch {
@@ -301,36 +289,7 @@ fun StoryViewerScreen(
             ) {
                 progress = value
             }
-            // inline advanceToNext (см. startTimer для объяснения).
-            val g0b = groups.getOrNull(groupIndex)
-            if (g0b == null) { onBack(); return@launch }
-            if (storyIndex < g0b.stories.size - 1) {
-                storyIndex++
-                progress = 0f
-                startTimer()
-            } else if (groupIndex < groups.size - 1) {
-                groupIndex++
-                storyIndex = 0
-                progress = 0f
-                startTimer()
-            } else {
-                onBack()
-            }
-        }
-    }
-
-    fun goToNext() {
-        val g = groups.getOrNull(groupIndex)
-        if (g == null) { onBack(); return }
-        if (storyIndex < g.stories.size - 1) {
-            storyIndex++
-            progress = 0f
-            startTimer()
-        } else if (groupIndex < groups.size - 1) {
-            groupIndex++
-            storyIndex = 0
-            progress = 0f
-            startTimer()
+            goToNext()
         }
     }
 

@@ -10224,11 +10224,15 @@ class VKApiClient(
                     .post(requestBody)
                     .build()
                 httpClient.newCall(req).execute().use { resp ->
-                val body = resp.body?.string() ?: return@withContext null
-                val json = JsonParser.parseString(body).asJsonObject
-                mapOf(
-                    "file" to (json.get("file")?.asString ?: return@withContext null),
-                )
+                    val body = resp.body?.string() ?: return@withContext null
+                    if (!resp.isSuccessful || !body.trimStart().startsWith("{")) {
+                        AppLog.w("VKApiClient", "docsUploadVoice failed (HTTP ${resp.code}): ${body.take(200)}")
+                        return@withContext null
+                    }
+                    val json = JsonParser.parseString(body).asJsonObject
+                    mapOf(
+                        "file" to (json.get("file")?.asString ?: return@withContext null),
+                    )
                 }
             } catch (e: Exception) {
                 AppLog.e("VKApiClient", "docsUploadVoice error", e)
@@ -10495,20 +10499,31 @@ class VKApiClient(
         // Старый docs.* pipeline (docs.getMessagesUploadServer → docs.save) мог быть
         // устаревшим/нестабильным для audio_message — голосовые не отправлялись.
 
-        // 1. Получить upload URL.
-        val uploadUrl = messagesGetAudioMessageUploadServer() ?: run {
-            AppLog.e("VKApiClient", "sendVoiceMessage ✗ step1 getAudioMessageUploadServer failed")
-            return -1L
-        }
-        // 2. Загрузить файл (multipart, filename="voice_recording" как в VK web).
-        val uploadResponse = uploadAudioMessage(uploadUrl, audioFile) ?: run {
-            AppLog.e("VKApiClient", "sendVoiceMessage ✗ step2 upload failed → $uploadUrl")
-            return -1L
-        }
-        // 3. messages.saveAudioMessage — file=uploadResponse (JSON string).
-        val saved = messagesSaveAudioMessage(uploadResponse) ?: run {
-            AppLog.e("VKApiClient", "sendVoiceMessage ✗ step3 saveAudioMessage failed")
-            return -1L
+        // 1–3. Пробуем основной v2 audio-message pipeline (VK web HAR),
+        // а при отказе любого шага — fallback на docs.getMessagesUploadServer(type="audio_message") → docs.save.
+        val saved: Triple<Long, Long, String> = run {
+            val v2Saved = messagesGetAudioMessageUploadServer()?.let { uploadUrl ->
+                uploadAudioMessage(uploadUrl, audioFile)?.let { uploadJson ->
+                    messagesSaveAudioMessage(uploadJson)
+                }
+            }
+            if (v2Saved != null) {
+                v2Saved
+            } else {
+                AppLog.w("VKApiClient", "sendVoiceMessage: v2 pipeline failed, trying docs.* fallback")
+                val fallbackUrl = docsGetMessagesUploadServer("audio_message") ?: run {
+                    AppLog.e("VKApiClient", "sendVoiceMessage ✗ fallback docsGetMessagesUploadServer failed")
+                    return -1L
+                }
+                val uploaded = docsUploadVoice(fallbackUrl, audioFile)?.get("file") ?: run {
+                    AppLog.e("VKApiClient", "sendVoiceMessage ✗ fallback docsUploadVoice failed")
+                    return -1L
+                }
+                docsSave(uploaded, title = audioFile.name) ?: run {
+                    AppLog.e("VKApiClient", "sendVoiceMessage ✗ fallback docsSave failed")
+                    return -1L
+                }
+            }
         }
         val (ownerId, docId, accessKey) = saved
         // 4. Отправить сообщение с attachment.
@@ -10576,6 +10591,10 @@ class VKApiClient(
                     .build()
                 httpClient.newCall(req).execute().use { resp ->
                     val body = resp.body?.string() ?: return@withContext null
+                    if (!resp.isSuccessful || !body.trimStart().startsWith("{")) {
+                        AppLog.w("VKApiClient", "uploadAudioMessage failed (HTTP ${resp.code}): ${body.take(200)}")
+                        return@withContext null
+                    }
                     AppLog.i("VKApiClient", "uploadAudioMessage response: ${body.take(200)}")
                     body  // raw JSON string — saveAudioMessage takes this as `file` param.
                 }
