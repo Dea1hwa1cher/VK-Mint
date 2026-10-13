@@ -11,11 +11,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 // #IM-SEARCH (Fix #394): scrim+slide паттерн правой панели (образец FeedRightPanel)
 // для «Поиск по постам» в канальном режиме.
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -182,6 +186,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
@@ -246,6 +251,7 @@ import vk.mint.ui.anim.springScaled
 import vk.mint.ui.anim.tweenScaled
 import vk.mint.ui.theme.avatarShape
 import vk.mint.ui.theme.BubbleColorPresets
+import vk.mint.ui.theme.VkMintColors
 import vk.mint.ui.theme.UiScale
 import vk.mint.ui.theme.vkHeadline1
 import vk.mint.ui.theme.vkParagraph
@@ -4413,7 +4419,10 @@ fun ChatDetailScreen(
                             )
                         }
 
-                        // VKUI × M3E: Seamless Capsule поле ввода со скрепкой внутри
+                        // VKUI × M3E: Seamless Capsule поле ввода со скрепкой внутри (#F2F3F5 light / #232324 dark)
+                        val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                        val writeBarFieldColor = if (isDarkTheme) VkMintColors.VkDarkSecondary else VkMintColors.VkLightField
+
                         OutlinedTextField(
                             value = inputText,
                             onValueChange = { inputText = it },
@@ -4429,8 +4438,8 @@ fun ChatDetailScreen(
                             maxLines = 4,
                             shape = RoundedCornerShape(20.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                focusedContainerColor = writeBarFieldColor,
+                                unfocusedContainerColor = writeBarFieldColor,
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent,
                                 cursorColor = MaterialTheme.colorScheme.primary,
@@ -4529,8 +4538,9 @@ fun ChatDetailScreen(
                             }
                         }
 
+                        val animScale = LocalAnimScale.current
                         Spacer(modifier = Modifier.width(4.dp))
-                        // VKUI × M3E: круглая акцентная кнопка действия (44dp: Send / Mic / Edit)
+                        // VKUI × M3E: круглая акцентная кнопка действия (44dp: Send / Mic / Edit) с пружинным морфингом M3E
                         if (dualButtonEnabled) {
                             val sendState = when {
                                 editingMsgId != null -> SendButtonState.EDIT
@@ -4539,111 +4549,143 @@ fun ChatDetailScreen(
                                 hasContent -> SendButtonState.SUBMIT
                                 else -> SendButtonState.MIC
                             }
-                            when (sendState) {
-                                SendButtonState.EDIT -> FilledIconButton(
-                                    onClick = { doSend() },
-                                    shape = CircleShape,
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
-                                    modifier = Modifier.size(44.dp),
-                                ) {
-                                    Icon(VkIcons.EditOutline20, contentDescription = "Сохранить")
-                                }
-                                SendButtonState.LOADING -> FilledIconButton(
-                                    onClick = {},
-                                    enabled = false,
-                                    shape = CircleShape,
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
-                                    modifier = Modifier.size(44.dp),
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                    )
-                                }
-                                SendButtonState.LIMIT -> IconButton(onClick = {}) {
-                                    Icon(
-                                        Icons.Outlined.Warning,
-                                        contentDescription = "Сообщение слишком длинное (${MSG_TEXT_LIMIT} символов макс.)",
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                                SendButtonState.SUBMIT -> FilledIconButton(
-                                    onClick = { doSend() },
-                                    enabled = !sending,
-                                    shape = CircleShape,
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
-                                    modifier = Modifier.size(44.dp),
-                                ) {
-                                    Icon(VkIcons.Send24, contentDescription = "Отправить")
-                                }
-                                SendButtonState.MIC -> FilledIconButton(
-                                    onClick = {
-                                        val hasPermission = ContextCompat.checkSelfPermission(
-                                            ctx, Manifest.permission.RECORD_AUDIO
-                                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                        if (hasPermission) startVoiceRecording()
-                                        else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                    },
-                                    enabled = !sending && !uploading,
-                                    shape = CircleShape,
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    ),
-                                    modifier = Modifier.size(44.dp),
-                                ) {
-                                    Icon(VkIcons.VoiceOutline24, contentDescription = "Голосовое сообщение")
-                                }
-                            }
-                        } else if (hasContent) {
-                            FilledIconButton(
-                                onClick = { doSend() },
-                                enabled = !sending && !uploading,
-                                shape = CircleShape,
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                                modifier = Modifier.size(44.dp),
-                            ) {
-                                if (sending || uploading) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                    )
-                                } else {
-                                    Icon(VkIcons.Send24, contentDescription = "Отправить")
+                            AnimatedContent(
+                                targetState = sendState,
+                                transitionSpec = {
+                                    (scaleIn(animationSpec = M3ExpressiveMotion.fastSpatial(animScale)) + fadeIn(animationSpec = M3ExpressiveMotion.fastEffects(animScale)))
+                                        .togetherWith(scaleOut(animationSpec = M3ExpressiveMotion.fastSpatial(animScale)) + fadeOut(animationSpec = M3ExpressiveMotion.fastEffects(animScale)))
+                                },
+                                label = "SendButtonMorph",
+                            ) { targetSendState ->
+                                when (targetSendState) {
+                                    SendButtonState.EDIT -> FilledIconButton(
+                                        onClick = { doSend() },
+                                        shape = CircleShape,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                        modifier = Modifier.size(44.dp),
+                                    ) {
+                                        Icon(VkIcons.EditOutline20, contentDescription = "Сохранить")
+                                    }
+                                    SendButtonState.LOADING -> FilledIconButton(
+                                        onClick = {},
+                                        enabled = false,
+                                        shape = CircleShape,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                        modifier = Modifier.size(44.dp),
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                        )
+                                    }
+                                    SendButtonState.LIMIT -> IconButton(onClick = {}) {
+                                        Icon(
+                                            Icons.Outlined.Warning,
+                                            contentDescription = "Сообщение слишком длинное (${MSG_TEXT_LIMIT} символов макс.)",
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
+                                    SendButtonState.SUBMIT -> FilledIconButton(
+                                        onClick = { doSend() },
+                                        enabled = !sending,
+                                        shape = CircleShape,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                        modifier = Modifier.size(44.dp),
+                                    ) {
+                                        Icon(VkIcons.Send24, contentDescription = "Отправить")
+                                    }
+                                    SendButtonState.MIC -> FilledIconButton(
+                                        onClick = {
+                                            val hasPermission = ContextCompat.checkSelfPermission(
+                                                ctx, Manifest.permission.RECORD_AUDIO
+                                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                            if (hasPermission) startVoiceRecording()
+                                            else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                        },
+                                        enabled = !sending && !uploading,
+                                        shape = CircleShape,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                        modifier = Modifier.size(44.dp),
+                                    ) {
+                                        Icon(VkIcons.VoiceOutline24, contentDescription = "Голосовое сообщение")
+                                    }
                                 }
                             }
                         } else {
-                            FilledIconButton(
-                                onClick = {
-                                    val hasPermission = ContextCompat.checkSelfPermission(
-                                        ctx, Manifest.permission.RECORD_AUDIO
-                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                    if (hasPermission) startVoiceRecording()
-                                    else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            val nonDualState = when {
+                                sending || uploading -> SendButtonState.LOADING
+                                hasContent -> SendButtonState.SUBMIT
+                                else -> SendButtonState.MIC
+                            }
+                            AnimatedContent(
+                                targetState = nonDualState,
+                                transitionSpec = {
+                                    (scaleIn(animationSpec = M3ExpressiveMotion.fastSpatial(animScale)) + fadeIn(animationSpec = M3ExpressiveMotion.fastEffects(animScale)))
+                                        .togetherWith(scaleOut(animationSpec = M3ExpressiveMotion.fastSpatial(animScale)) + fadeOut(animationSpec = M3ExpressiveMotion.fastEffects(animScale)))
                                 },
-                                enabled = !sending && !uploading,
-                                shape = CircleShape,
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                                modifier = Modifier.size(44.dp),
-                            ) {
-                                Icon(VkIcons.VoiceOutline24, contentDescription = "Голосовое сообщение")
+                                label = "NonDualSendMorph",
+                            ) { targetSendState ->
+                                when (targetSendState) {
+                                    SendButtonState.LOADING -> FilledIconButton(
+                                        onClick = {},
+                                        enabled = false,
+                                        shape = CircleShape,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                        modifier = Modifier.size(44.dp),
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                        )
+                                    }
+                                    SendButtonState.SUBMIT -> FilledIconButton(
+                                        onClick = { doSend() },
+                                        enabled = !sending && !uploading,
+                                        shape = CircleShape,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                        modifier = Modifier.size(44.dp),
+                                    ) {
+                                        Icon(VkIcons.Send24, contentDescription = "Отправить")
+                                    }
+                                    else -> FilledIconButton(
+                                        onClick = {
+                                            val hasPermission = ContextCompat.checkSelfPermission(
+                                                ctx, Manifest.permission.RECORD_AUDIO
+                                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                            if (hasPermission) startVoiceRecording()
+                                            else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                        },
+                                        enabled = !sending && !uploading,
+                                        shape = CircleShape,
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ),
+                                        modifier = Modifier.size(44.dp),
+                                    ) {
+                                        Icon(VkIcons.VoiceOutline24, contentDescription = "Голосовое сообщение")
+                                    }
+                                }
                             }
                         }
                     }

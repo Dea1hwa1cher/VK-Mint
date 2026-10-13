@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,6 +74,8 @@ import vk.mint.data.model.FaveTag
 import vk.mint.data.model.Track
 import vk.mint.media.PlayerConnection
 import vk.mint.ui.components.ScrollToTopFab
+import vk.mint.ui.components.VkSubnavigationBar
+import vk.mint.ui.components.VkSubnavigationButton
 import vk.mint.util.AppLog
 import vk.mint.util.toDurationString
 import java.text.SimpleDateFormat
@@ -353,17 +356,17 @@ fun BookmarksScreen(
         // «Треки». Треки — локальные (у fave.* нет аудио-раздела), поэтому
         // отдельный раздел вместо подмешивания в серверный список.
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SectionChip(
-                label = "Закладки VK",
+            VkSubnavigationButton(
+                text = "Закладки VK",
                 selected = section == 0,
                 onClick = { section = 0 },
                 modifier = Modifier.weight(1f),
             )
-            SectionChip(
-                label = "Треки",
+            VkSubnavigationButton(
+                text = "Треки",
                 selected = section == 1,
                 onClick = { section = 1 },
                 modifier = Modifier.weight(1f),
@@ -374,20 +377,17 @@ fun BookmarksScreen(
             // ─── Раздел «Закладки VK» (fave.get) ───────────────────────────
             // S6-2: горизонтальная строка фильтров по тегам.
             if (tags.isNotEmpty()) {
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                VkSubnavigationBar(
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 ) {
-                    item {
-                        TagFilterChip(
-                            label = "Все",
-                            selected = selectedTagId == null,
-                            onClick = { selectedTagId = null },
-                        )
-                    }
-                    items(tags, key = { it.id }) { tag ->
-                        TagFilterChip(
-                            label = tag.name,
+                    VkSubnavigationButton(
+                        text = "Все",
+                        selected = selectedTagId == null,
+                        onClick = { selectedTagId = null },
+                    )
+                    tags.forEach { tag ->
+                        VkSubnavigationButton(
+                            text = tag.name,
                             selected = selectedTagId == tag.id,
                             onClick = { selectedTagId = tag.id },
                         )
@@ -673,45 +673,6 @@ private fun BookmarkedTrackRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-/** Волна 40: чип переключателя разделов («Закладки VK» / «Треки»). */
-@Composable
-private fun SectionChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val bg = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
-    val fg = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    Surface(
-        color = bg,
-        shape = MaterialTheme.shapes.large,
-        modifier = modifier.clickable(onClick = onClick),
-    ) {
-        Text(
-            text = label,
-            color = fg,
-            style = MaterialTheme.typography.labelLarge,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
-        )
-    }
-}
-
-/** S6-2: чип фильтра тегов закладок. */
-@Composable
-private fun TagFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    val bg = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
-    val fg = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    Surface(
-        color = bg,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.clickable(onClick = onClick),
-    ) {
-        Text(
-            text = label,
-            color = fg,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-        )
     }
 }
 

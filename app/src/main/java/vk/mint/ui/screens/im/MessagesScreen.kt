@@ -65,6 +65,7 @@ import vk.mint.ui.components.PinVerifyDialog
 import vk.mint.ui.components.VkCounterBadge
 import vk.mint.ui.components.VkCounterMode
 import vk.mint.ui.components.VkSearch
+import vk.mint.ui.components.VkSubnavigationBar
 import vk.mint.ui.components.VkSubnavigationButton
 import vk.mint.ui.icons.VkIcons
 import vk.mint.ui.theme.VkMintColors
@@ -86,13 +87,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -3014,51 +3013,41 @@ private fun FolderTabRow(
     onTabSelect: (Int) -> Unit,
     onFoldersSettings: () -> Unit,
 ) {
-    val scrollState = rememberScrollState()
     val unreadIdx = folders.size + 1
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
+    VkSubnavigationBar(
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(scrollState)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // «Все» — FIX (P5.2): сумма непрочитанных сообщений (сбрасывается при чтении).
+        // «Все» — FIX (P5.2): сумма непрочитанных сообщений (сбрасывается при чтении).
+        FolderTabChip(
+            text = "Все",
+            selected = activeTab == 0,
+            badge = totalUnreadSum.takeIf { it > 0 },
+            onClick = { onTabSelect(0) },
+        )
+        // Папки — FIX (P5.2): сумма непрочитанных для чатов в этой папке.
+        folders.forEachIndexed { index, folder ->
+            val folderUnread = folderUnreadSums.getOrNull(index) ?: 0
             FolderTabChip(
-                text = "Все",
-                selected = activeTab == 0,
-                badge = totalUnreadSum.takeIf { it > 0 },
-                onClick = { onTabSelect(0) },
+                text = folder.title,
+                selected = activeTab == index + 1,
+                badge = folderUnread.takeIf { it > 0 },
+                onClick = { onTabSelect(index + 1) },
             )
-            // Папки — FIX (P5.2): сумма непрочитанных для чатов в этой папке.
-            folders.forEachIndexed { index, folder ->
-                val folderUnread = folderUnreadSums.getOrNull(index) ?: 0
-                FolderTabChip(
-                    text = folder.title,
-                    selected = activeTab == index + 1,
-                    badge = folderUnread.takeIf { it > 0 },
-                    onClick = { onTabSelect(index + 1) },
-                )
-            }
-            // «Непрочитанные» — сколько диалогов имеют непрочитанные.
-            FolderTabChip(
-                text = "Непрочитанные",
-                selected = activeTab == unreadIdx,
-                badge = unreadCount.takeIf { it > 0 },
-                onClick = { onTabSelect(unreadIdx) },
+        }
+        // «Непрочитанные» — сколько диалогов имеют непрочитанные.
+        FolderTabChip(
+            text = "Непрочитанные",
+            selected = activeTab == unreadIdx,
+            badge = unreadCount.takeIf { it > 0 },
+            onClick = { onTabSelect(unreadIdx) },
+        )
+        // Gear → FoldersSettings
+        IconButton(onClick = onFoldersSettings) {
+            Icon(
+                imageVector = VkIcons.SettingsOutline20,
+                contentDescription = "Настройки папок",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            // Gear → FoldersSettings
-            IconButton(onClick = onFoldersSettings) {
-                Icon(
-                    imageVector = VkIcons.SettingsOutline20,
-                    contentDescription = "Настройки папок",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }

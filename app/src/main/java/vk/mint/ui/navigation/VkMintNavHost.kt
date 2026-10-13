@@ -63,6 +63,8 @@ import androidx.compose.runtime.collectAsState
 import vk.mint.ui.anim.LocalAnimScale
 import vk.mint.ui.anim.M3ExpressiveMotion
 import vk.mint.ui.anim.expressiveSpringScaled
+import vk.mint.ui.components.VkCounterBadge
+import vk.mint.ui.components.VkCounterMode
 import vk.mint.ui.components.VkSeparator
 import vk.mint.ui.icons.VkIcons
 import vk.mint.ui.theme.VkMintColors
@@ -360,19 +362,18 @@ private fun BottomNavScrollButton(
                 if (item.destinationRoute == Screen.Messages.route && unreadCount > 0) {
                     BadgedBox(
                         badge = {
-                            Badge(
-                                containerColor = VkMintColors.VkLikeRed,
-                                contentColor = Color.White,
-                            ) {
-                                Text(if (unreadCount > 99) "99+" else unreadCount.toString())
-                            }
+                            VkCounterBadge(
+                                count = unreadCount,
+                                mode = VkCounterMode.Prominent,
+                                maxCount = 99,
+                            )
                         },
                     ) {
                         Icon(
                             navIcon,
                             contentDescription = item.title,
                             tint = iconColor,
-                            modifier = Modifier.size(26.dp),
+                            modifier = Modifier.size(28.dp),
                         )
                     }
                 } else {
@@ -380,7 +381,7 @@ private fun BottomNavScrollButton(
                         navIcon,
                         contentDescription = item.title,
                         tint = iconColor,
-                        modifier = Modifier.size(26.dp),
+                        modifier = Modifier.size(28.dp),
                     )
                 }
             }
@@ -1273,26 +1274,25 @@ fun VkMintNavHost(
                                                         if (itemDest == Screen.Messages.route && unreadCount > 0) {
                                                             BadgedBox(
                                                                 badge = {
-                                                                    Badge(
-                                                                        containerColor = VkMintColors.VkLikeRed,
-                                                                        contentColor = Color.White,
-                                                                    ) {
-                                                                        Text(if (unreadCount > 99) "99+" else unreadCount.toString())
-                                                                    }
+                                                                    VkCounterBadge(
+                                                                        count = unreadCount,
+                                                                        mode = VkCounterMode.Prominent,
+                                                                        maxCount = 99,
+                                                                    )
                                                                 },
                                                             ) {
                                                                 Icon(
                                                                     navIcon,
                                                                     contentDescription = item.title,
-                                                                    modifier = Modifier.size(26.dp),
+                                                                    modifier = Modifier.size(28.dp),
                                                                 )
                                                             }
                                                         } else {
                                                             Icon(
                                                                 navIcon,
                                                                 contentDescription = item.title,
-                                                                modifier = Modifier.size(26.dp),
-                                                            )
+                                                                modifier = Modifier.size(28.dp),
+                                                                )
                                                         }
                                                     }
                                                 },

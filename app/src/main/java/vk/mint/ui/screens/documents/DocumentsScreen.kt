@@ -52,6 +52,10 @@ import kotlinx.coroutines.launch
 import vk.mint.VkMintApp
 import vk.mint.data.model.DocFile
 import vk.mint.ui.components.ScrollToTopFab
+import vk.mint.ui.components.VkSeparator
+import vk.mint.ui.theme.vkCaption1
+import vk.mint.ui.theme.vkCaption2
+import vk.mint.ui.theme.vkHeadline1
 import vk.mint.util.AppLog
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -178,11 +182,7 @@ fun DocumentsScreen() {
         LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
             items(docs, key = { "${it.ownerId}_${it.id}" }) { doc ->
                 DocRow(doc = doc)
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(1.dp)
-                        .padding(horizontal = 76.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                )
+                VkSeparator(insetStart = 72.dp)
             }
             // Fix #83: футер пагинации.
             item {
@@ -281,14 +281,14 @@ private fun DocRow(doc: DocFile) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = doc.title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.vkHeadline1,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = "${doc.ext.uppercase()} • ${doc.sizeLabel} • ${doc.typeLabel}",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.vkCaption1,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
@@ -296,7 +296,7 @@ private fun DocRow(doc: DocFile) {
                 Text(
                     text = SimpleDateFormat("d MMM yyyy", Locale.forLanguageTag("ru"))
                         .format(Date(doc.date * 1000)),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.vkCaption2,
                     color = MaterialTheme.colorScheme.outline,
                 )
             }
