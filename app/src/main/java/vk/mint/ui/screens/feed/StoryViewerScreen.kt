@@ -948,12 +948,12 @@ fun StoryViewerScreen(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(avatarShape)
-                        .background(Color.Gray),
+                        .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = (currentGroup.name ?: "?").take(1).uppercase(),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -1244,7 +1244,7 @@ private fun StoryDownloadButton(
                     contentDescription = if (state?.status == DownloadStatus.FAILED)
                         "Ошибка загрузки — повторить" else "Скачать историю",
                     tint = if (state?.status == DownloadStatus.FAILED)
-                        Color(0xFFFF6B6B) else Color.White,
+                        MaterialTheme.colorScheme.error else Color.White,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -1253,7 +1253,7 @@ private fun StoryDownloadButton(
                 val pct = if (state.progress >= 0) state.progress / 100f else 0f
                 CircularProgressIndicator(
                     progress = { pct },
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 2.5.dp,
                     modifier = Modifier.size(26.dp),
                 )
@@ -1266,7 +1266,7 @@ private fun StoryDownloadButton(
             }
             state.status == DownloadStatus.REMOVING -> {
                 CircularProgressIndicator(
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 2.5.dp,
                     modifier = Modifier.size(22.dp),
                 )
@@ -1275,7 +1275,7 @@ private fun StoryDownloadButton(
                 Icon(
                     imageVector = Icons.Filled.DownloadDone,
                     contentDescription = "Сохранено — удалить из кэша",
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -1341,6 +1341,7 @@ private fun StoryReplyField(
     onOpenStickerPicker: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val hasText = text.isNotBlank()
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -1362,8 +1363,8 @@ private fun StoryReplyField(
             maxLines = 1,
             shape = MaterialTheme.shapes.extraLarge,
             colors = OutlinedTextFieldDefaults.colors(
-                cursorColor = Color.White,
-                focusedBorderColor = Color.White.copy(alpha = 0.7f),
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = Color.Transparent,
                 focusedContainerColor = Color.Black.copy(alpha = 0.45f),
                 unfocusedContainerColor = Color.Black.copy(alpha = 0.45f),
@@ -1386,16 +1387,20 @@ private fun StoryReplyField(
         Spacer(modifier = Modifier.width(6.dp))
         IconButton(
             onClick = onSubmit,
-            enabled = focused || text.isNotBlank(),
+            enabled = focused || hasText,
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.45f)),
+                .background(
+                    if (hasText) MaterialTheme.colorScheme.primary
+                    else Color.Black.copy(alpha = 0.45f)
+                ),
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
                 contentDescription = "Написать автору",
-                tint = Color.White.copy(alpha = if (focused || text.isNotBlank()) 1f else 0.4f),
+                tint = if (hasText) MaterialTheme.colorScheme.onPrimary
+                else Color.White.copy(alpha = if (focused) 1f else 0.4f),
             )
         }
     }
@@ -1607,8 +1612,8 @@ private fun StoryOverlayChip(
     primary: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val bg = if (primary) Color.White.copy(alpha = 0.85f) else Color.Black.copy(alpha = 0.55f)
-    val fg = if (primary) Color.Black else Color.White
+    val bg = if (primary) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.55f)
+    val fg = if (primary) MaterialTheme.colorScheme.onPrimary else Color.White
     Box(
         modifier = Modifier
             .clip(CircleShape)

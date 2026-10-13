@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Icon
@@ -30,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +38,7 @@ import vk.mint.util.AppLog
 import vk.mint.VkMintApp
 import vk.mint.data.model.StoryGroup
 import vk.mint.ui.navigation.StoriesHolder
+import vk.mint.ui.theme.LocalAvatarShape
 
 /**
  * Горизонтальный ряд историй (Stories), как в VK —
@@ -74,6 +73,7 @@ fun StoriesRow(
     onStoryClick: (List<StoryGroup>, Int) -> Unit = { _, _ -> },
 ) {
     val app = VkMintApp.get()
+    val avatarShape = LocalAvatarShape.current
     // Audit #40: удалён rememberCoroutineScope — не используется после упрощения LaunchedEffect.
     var storyGroups by remember { mutableStateOf<List<StoryGroup>>(StoriesHolder.storyGroups ?: emptyList()) }
     var loading by remember { mutableStateOf(StoriesHolder.storyGroups == null) }
@@ -119,7 +119,7 @@ fun StoriesRow(
     }
 
     if (loading && displayGroups.isEmpty()) {
-        // Скелетон — серые кружки.
+        // Скелетон — серые плашки в форме аватарок.
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -134,7 +134,7 @@ fun StoriesRow(
                     Box(
                         modifier = Modifier
                             .size(55.dp)
-                            .clip(CircleShape)
+                            .clip(avatarShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                     )
                 }
@@ -156,7 +156,7 @@ fun StoriesRow(
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            // Кнопка "Моя история" — синий кружок с "+".
+            // Кнопка "Моя история" — акцентная плашка с "+".
             item(key = "my_story") {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -165,14 +165,14 @@ fun StoriesRow(
                 Box(
                     modifier = Modifier
                         .size(55.dp)
-                        .clip(CircleShape)
+                        .clip(avatarShape)
                         .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Outlined.Add,
                         contentDescription = "Создать историю",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(24.dp),
                     )
                 }
@@ -189,11 +189,11 @@ fun StoriesRow(
         // Истории от пользователей/сообществ.
         items(displayGroups, key = { it.ownerId }) { group ->
             val ringColor = if (!group.isSeen) {
-                // Градиент ВК — голубой → фиолетовый.
+                // Акцентный градиент M3E (primary → tertiary).
                 Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF0077FF),
-                        Color(0xFF7B61FF),
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.tertiary,
                     ),
                 )
             } else {
@@ -215,7 +215,7 @@ fun StoriesRow(
                     modifier = Modifier
                         .size(58.dp)
                         .padding(2.dp)
-                        .clip(CircleShape)
+                        .clip(avatarShape)
                         .background(ringColor)
                         .padding(3.dp),
                     contentAlignment = Alignment.Center,
@@ -226,22 +226,23 @@ fun StoriesRow(
                             contentDescription = group.name ?: "",
                             modifier = Modifier
                                 .size(49.dp)
-                                .clip(CircleShape)
-                                .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                                .clip(avatarShape)
+                                .border(2.dp, MaterialTheme.colorScheme.surface, avatarShape),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                         )
                     } else {
                         Box(
                             modifier = Modifier
                                 .size(49.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                .clip(avatarShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .border(2.dp, MaterialTheme.colorScheme.surface, avatarShape),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = (group.name ?: "?").take(1).uppercase(),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                         }
                     }
