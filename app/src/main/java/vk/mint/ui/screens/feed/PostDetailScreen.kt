@@ -56,6 +56,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -185,6 +186,7 @@ fun PostDetailScreen(
     val holderPost = PostHolder.last?.takeIf { it.ownerId == ownerId && it.id == postId }
     var fetchedPost by remember { mutableStateOf<vk.mint.data.model.Post?>(null) }
     val post: vk.mint.data.model.Post? = fetchedPost ?: holderPost
+    var isLoadingPost by remember { mutableStateOf(post == null) }
     // Fix #99: берём группы из holder'а для отображения имени сообщества.
     var groups by remember { mutableStateOf(PostHolder.lastGroups ?: emptyMap()) }
 
@@ -406,12 +408,13 @@ fun PostDetailScreen(
     // wallGetById подтягивает полный пост + группы, затем грузим комментарии.
     // Ранее stub post (из Ответов/Уведомлений) показывался пустым: нет хедера,
     // нет тела, нет лайков — только список комментариев под ним.
-    LaunchedEffect(ownerId, postId) {
+    LaunchedEffect(ownerId, postId, postDetailReloadKey) {
         val current = post
         val isStub = current == null ||
             (current.text.isBlank() && current.attachments.isNullOrEmpty())
         var p = current
         if (isStub) {
+            isLoadingPost = true
             try {
                 val result = app.apiClient.wallGetById(listOf(ownerId to postId))
                 val fetched = result.posts.firstOrNull { it.ownerId == ownerId && it.id == postId }
@@ -429,6 +432,8 @@ fun PostDetailScreen(
                 }
             } catch (e: Exception) {
                 AppLog.e("PostDetail", "fetch post via wallGetById error", e)
+            } finally {
+                isLoadingPost = false
             }
         }
         if (p == null) return@LaunchedEffect
@@ -670,8 +675,52 @@ fun PostDetailScreen(
     }
 
     if (post == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Пост не найден")
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Пост") },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Назад",
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                )
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isLoadingPost) {
+                    CircularProgressIndicator()
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Text(
+                            text = "Пост не найден или был удалён",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedButton(onClick = {
+                            postDetailReloadKey++
+                        }) {
+                            Text("Повторить")
+                        }
+                    }
+                }
+            }
         }
         return
     }

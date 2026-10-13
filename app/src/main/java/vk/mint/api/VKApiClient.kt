@@ -1705,7 +1705,10 @@ class VKApiClient(
             // Unresolved reference), поэтому берём примитив после проверки выше.
             val prim = resp.asJsonPrimitive
             if (prim.isBoolean) prim.asBoolean else prim.asInt == 1
-        } catch (_: Exception) { false }
+        } catch (e: Exception) {
+            AppLog.e("VKApiClient", "messagesArchiveConversation parse error", e)
+            false
+        }
     }
 
     /**
@@ -1727,7 +1730,10 @@ class VKApiClient(
             // Unresolved reference), поэтому берём примитив после проверки выше.
             val prim = resp.asJsonPrimitive
             if (prim.isBoolean) prim.asBoolean else prim.asInt == 1
-        } catch (_: Exception) { false }
+        } catch (e: Exception) {
+            AppLog.e("VKApiClient", "messagesUnarchiveConversation parse error", e)
+            false
+        }
     }
 
     /** messages.restore — восстановить удалённое сообщение. */
@@ -3283,7 +3289,10 @@ class VKApiClient(
         return try {
             val prim = resp.asJsonPrimitive
             if (prim.isBoolean) prim.asBoolean else prim.asInt == 1
-        } catch (_: Exception) { false }
+        } catch (e: Exception) {
+            AppLog.e("VKApiClient", "audioEdit parse error", e)
+            false
+        }
     }
 
 
@@ -6046,7 +6055,10 @@ class VKApiClient(
                 ?.firstOrNull()?.asJsonObject?.get("message_id")?.asLong
                 ?: json.getAsJsonObject("response")?.get("message_id")?.asLong
                 ?: -1L
-        } catch (_: Exception) { -1L }
+        } catch (e: Exception) {
+            AppLog.e("VKApiClient", "messagesSendShare parse error", e)
+            -1L
+        }
     }
 
     /**
