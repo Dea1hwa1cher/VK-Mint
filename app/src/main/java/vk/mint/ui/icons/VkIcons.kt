@@ -1423,4 +1423,49 @@ object VkIcons {
             }
         }.build().also { _shuffle20 = it }
     private var _shuffle20: ImageVector? = null
+
+    val SettingsOutline20: ImageVector
+        get() = _settingsOutline20 ?: ImageVector.Builder(
+            name = "VkIcons.SettingsOutline20",
+            defaultWidth = 20.dp,
+            defaultHeight = 20.dp,
+            viewportWidth = 20f,
+            viewportHeight = 20f,
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.6f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(10f, 12.5f)
+                arcTo(2.5f, 2.5f, 0f, true, false, 10f, 7.5f)
+                arcTo(2.5f, 2.5f, 0f, true, false, 10f, 12.5f)
+                close()
+                moveTo(15.8f, 11f)
+                lineTo(17.2f, 10f)
+                lineTo(15.8f, 9f)
+                lineTo(15f, 7.6f)
+                lineTo(14.8f, 6f)
+                lineTo(13.2f, 5.6f)
+                lineTo(12.2f, 6.8f)
+                lineTo(10.6f, 6.6f)
+                lineTo(9.4f, 5.6f)
+                lineTo(7.8f, 6.2f)
+                lineTo(7.8f, 7.8f)
+                lineTo(6.8f, 9f)
+                lineTo(5.4f, 10f)
+                lineTo(6.8f, 11f)
+                lineTo(7f, 12.6f)
+                lineTo(7.8f, 14f)
+                lineTo(9.4f, 14.6f)
+                lineTo(10.6f, 13.6f)
+                lineTo(12.2f, 13.8f)
+                lineTo(13.2f, 14.8f)
+                lineTo(14.8f, 14.2f)
+                lineTo(14.8f, 12.6f)
+                close()
+            }
+        }.build().also { _settingsOutline20 = it }
+    private var _settingsOutline20: ImageVector? = null
 }

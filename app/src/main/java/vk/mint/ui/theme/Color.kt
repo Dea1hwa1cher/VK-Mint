@@ -51,6 +51,7 @@ object VkMintColors {
 
     // Семантические статусы VKUI:
     val VkPositive           = Color(0xFF4BB34B) // --vkui--color_background_positive / icon_positive
+    val VkOnlineGreen        = Color(0xFF4BB34B) // VKUI онлайн статус (#4BB34B)
     val VkNegative           = Color(0xFFE64646) // --vkui--color_background_negative (Light)
     val VkNegativeDark       = Color(0xFFFF5C5C) // --vkui--color_text_negative (Dark)
     val VkLikeRed            = Color(0xFFFF3347) // --vkui--color_icon_crimson (активный лайк ВК)

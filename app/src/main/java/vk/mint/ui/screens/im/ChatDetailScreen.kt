@@ -247,6 +247,13 @@ import vk.mint.ui.anim.tweenScaled
 import vk.mint.ui.theme.avatarShape
 import vk.mint.ui.theme.BubbleColorPresets
 import vk.mint.ui.theme.UiScale
+import vk.mint.ui.theme.vkHeadline1
+import vk.mint.ui.theme.vkParagraph
+import vk.mint.ui.theme.vkFootnote
+import vk.mint.ui.theme.vkSubhead
+import vk.mint.ui.theme.vkTitle2
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.components.VkSeparator
 import vk.mint.media.VoiceRecorder
 import vk.mint.media.VoiceDownloadHelper
 import vk.mint.realtime.LongPollEvent
@@ -3763,6 +3770,7 @@ fun ChatDetailScreen(
                     },
                 )
             } else {
+            Column {
             TopAppBar(
                 title = {
                     Row(
@@ -3793,7 +3801,7 @@ fun ChatDetailScreen(
                                 model = currentPhoto,
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(36.dp)
                                     .clip(avatarShape),
                                 contentScale = ContentScale.Crop,
                             )
@@ -3801,7 +3809,7 @@ fun ChatDetailScreen(
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(36.dp)
                                     .clip(avatarShape)
                                     .background(
                                         if (isSelfChat) MaterialTheme.colorScheme.primary
@@ -3811,15 +3819,15 @@ fun ChatDetailScreen(
                             ) {
                                 if (isSelfChat) {
                                     Icon(
-                                        Icons.Outlined.Bookmark,
+                                        VkIcons.BookmarkFill20,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(20.dp),
+                                        modifier = Modifier.size(18.dp),
                                     )
                                 } else {
                                     Text(
                                         text = currentTitle.take(1).uppercase(),
-                                        style = MaterialTheme.typography.titleMedium,
+                                        style = MaterialTheme.typography.vkHeadline1,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     )
@@ -3827,7 +3835,7 @@ fun ChatDetailScreen(
                             }
                             Spacer(modifier = Modifier.width(10.dp))
                         }
-                        // Имя + статус собеседника в стиле Telegram
+                        // Имя + статус собеседника в стиле VKUI PanelHeader
                         Column {
                             val displayTitle = if (peerId in 1..1_999_999_999L) {
                                 vk.mint.data.local.UserAliasResolver.resolveName(peerId, currentTitle)
@@ -3837,14 +3845,14 @@ fun ChatDetailScreen(
                                     text = displayTitle,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.vkHeadline1,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.weight(1f, fill = false),
                                 )
                                 if (muted) {
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
-                                        Icons.Outlined.NotificationsOff,
+                                        VkIcons.Mute16,
                                         contentDescription = "Уведомления выключены",
                                         modifier = Modifier.size(15.dp),
                                         tint = MaterialTheme.colorScheme.outline,
@@ -3885,7 +3893,7 @@ fun ChatDetailScreen(
                                     text = statusText,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.vkFootnote,
                                     color = if (typingEnabled && typingIds.isNotEmpty()) {
                                         MaterialTheme.colorScheme.primary
                                     } else if (la != null && la.online == 1) {
@@ -3900,7 +3908,7 @@ fun ChatDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(VkIcons.ArrowBack24, contentDescription = "Назад")
                     }
                 },
                 actions = {
@@ -3911,7 +3919,7 @@ fun ChatDetailScreen(
                     IconButton(onClick = {
                         if (isChannel) showChannelSearch = true else showSearch = true
                     }) {
-                        Icon(Icons.Filled.Search, contentDescription = "Поиск")
+                        Icon(VkIcons.Search24, contentDescription = "Поиск")
                     }
                     // #CALLS: кнопка звонка в шапке диалога (data-testid="convo-call-menu-trigger").
                     // #ARCH-CONTAINERS (Этап 1.4): рисуем только при живом CallStarter
@@ -3924,7 +3932,7 @@ fun ChatDetailScreen(
                     // #59: меню показываем для ВСЕХ диалогов (не только групповых).
                     Box {
                         IconButton(onClick = { showChatMenu = true }) {
-                            Icon(Icons.Outlined.MoreVert, contentDescription = "Управление диалогом")
+                            Icon(VkIcons.MoreHorizontal20, contentDescription = "Управление диалогом")
                         }
                             DropdownMenu(
                                 expanded = showChatMenu,
@@ -4084,6 +4092,8 @@ fun ChatDetailScreen(
                         actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     ),
             )
+            VkSeparator(insetStart = 0.dp, insetEnd = 0.dp)
+            }
             }  // P2.5: closes else (not selection mode)
         },
         bottomBar = {
@@ -4381,7 +4391,7 @@ fun ChatDetailScreen(
                             .imePadding(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // Telegram MD3: кнопка смайлов/стикеров слева
+                        // VKUI × M3E WriteBar: кнопка смайлов/стикеров слева
                         IconButton(
                             onClick = {
                                 keyboardController?.hide()
@@ -4397,13 +4407,13 @@ fun ChatDetailScreen(
                             enabled = !sending && !uploading,
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.EmojiEmotions,
+                                imageVector = VkIcons.SmileOutline24,
                                 contentDescription = "Смайлы и стикеры",
                                 tint = if (showEmojiStickerPanel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
-                        // Telegram MD3: Pill поле ввода со скрепкой внутри
+                        // VKUI × M3E: Seamless Capsule поле ввода со скрепкой внутри
                         OutlinedTextField(
                             value = inputText,
                             onValueChange = { inputText = it },
@@ -4411,12 +4421,13 @@ fun ChatDetailScreen(
                             placeholder = {
                                 Text(
                                     text = if (editingMsgId != null) "Редактирование…" else "Сообщение…",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.vkParagraph,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 )
                             },
+                            textStyle = MaterialTheme.typography.vkParagraph,
                             maxLines = 4,
-                            shape = MaterialTheme.shapes.extraLarge,
+                            shape = RoundedCornerShape(20.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -4434,7 +4445,7 @@ fun ChatDetailScreen(
                                             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                                         } else {
                                             Icon(
-                                                imageVector = Icons.Outlined.AttachFile,
+                                                imageVector = VkIcons.Attach24,
                                                 contentDescription = "Прикрепить файл",
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -4502,7 +4513,7 @@ fun ChatDetailScreen(
                             ),
                         )
 
-                        // Telegram MD3: кнопка видеосообщения («кружок») рядом со Send/Mic
+                        // Кнопка видеосообщения («кружок») рядом со Send/Mic
                         val hasContent = inputText.isNotBlank() || editingMsgId != null || pendingFiles.isNotEmpty() || pendingPhotos.isNotEmpty()
                         if (!hasContent) {
                             Spacer(modifier = Modifier.width(4.dp))
@@ -4519,7 +4530,7 @@ fun ChatDetailScreen(
                         }
 
                         Spacer(modifier = Modifier.width(4.dp))
-                        // Telegram MD3: круглая акцентная кнопка действия (Send / Mic / Edit)
+                        // VKUI × M3E: круглая акцентная кнопка действия (44dp: Send / Mic / Edit)
                         if (dualButtonEnabled) {
                             val sendState = when {
                                 editingMsgId != null -> SendButtonState.EDIT
@@ -4538,7 +4549,7 @@ fun ChatDetailScreen(
                                     ),
                                     modifier = Modifier.size(44.dp),
                                 ) {
-                                    Icon(Icons.Outlined.Edit, contentDescription = "Сохранить")
+                                    Icon(VkIcons.EditOutline20, contentDescription = "Сохранить")
                                 }
                                 SendButtonState.LOADING -> FilledIconButton(
                                     onClick = {},
@@ -4573,7 +4584,7 @@ fun ChatDetailScreen(
                                     ),
                                     modifier = Modifier.size(44.dp),
                                 ) {
-                                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить")
+                                    Icon(VkIcons.Send24, contentDescription = "Отправить")
                                 }
                                 SendButtonState.MIC -> FilledIconButton(
                                     onClick = {
@@ -4591,7 +4602,7 @@ fun ChatDetailScreen(
                                     ),
                                     modifier = Modifier.size(44.dp),
                                 ) {
-                                    Icon(Icons.Filled.Mic, contentDescription = "Голосовое сообщение")
+                                    Icon(VkIcons.VoiceOutline24, contentDescription = "Голосовое сообщение")
                                 }
                             }
                         } else if (hasContent) {
@@ -4612,7 +4623,7 @@ fun ChatDetailScreen(
                                         color = MaterialTheme.colorScheme.onPrimary,
                                     )
                                 } else {
-                                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить")
+                                    Icon(VkIcons.Send24, contentDescription = "Отправить")
                                 }
                             }
                         } else {
@@ -4632,7 +4643,7 @@ fun ChatDetailScreen(
                                 ),
                                 modifier = Modifier.size(44.dp),
                             ) {
-                                Icon(Icons.Filled.Mic, contentDescription = "Голосовое сообщение")
+                                Icon(VkIcons.VoiceOutline24, contentDescription = "Голосовое сообщение")
                             }
                         }
                     }

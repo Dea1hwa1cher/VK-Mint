@@ -62,6 +62,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import vk.mint.ui.components.EditUserAliasDialog
 import vk.mint.ui.components.PinSetupDialog
 import vk.mint.ui.components.PinVerifyDialog
+import vk.mint.ui.components.VkCounterBadge
+import vk.mint.ui.components.VkCounterMode
+import vk.mint.ui.components.VkSearch
+import vk.mint.ui.components.VkSubnavigationButton
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.theme.VkMintColors
+import vk.mint.ui.theme.vkFootnote
+import vk.mint.ui.theme.vkHeadline1
+import vk.mint.ui.theme.vkParagraph
+import vk.mint.ui.theme.vkSubhead
+import vk.mint.ui.theme.vkTitle2
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -1157,7 +1168,7 @@ fun MessagesScreen(
                         if (!showSearch) searchQuery = ""
                     }) {
                         Icon(
-                            Icons.Filled.Search,
+                            VkIcons.Search24,
                             contentDescription = "Поиск",
                             tint = if (showSearch) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1167,35 +1178,11 @@ fun MessagesScreen(
             },
             titleOverride = if (showSearch) {
                 {
-                    OutlinedTextField(
+                    VkSearch(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Поиск по чатам…", style = MaterialTheme.typography.bodyMedium) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.extraLarge,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        ),
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Search,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Очистить", modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        },
+                        placeholder = "Поиск по чатам…",
+                        modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
                     )
                 }
             } else {
@@ -1223,7 +1210,7 @@ fun MessagesScreen(
                     ) {
                         Text(
                             text = if (showHiddenChats) "Чаты (скрытые)" else "Чаты",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.vkTitle2,
                             fontWeight = FontWeight.Bold,
                         )
                         if (showHiddenChats) {
@@ -1272,39 +1259,30 @@ fun MessagesScreen(
                     // P1.4: TabRow с 3 табами: Все / Каналы / Непрочитанные.
                     // FIX (P5.2): бейджи показывают непрочитанное (сбрасывается при чтении),
                     // а не total count чатов.
-                    PrimaryTabRow(selectedTabIndex = activeTab) {
-                        Tab(
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        VkSubnavigationButton(
+                            text = "Диалоги",
                             selected = activeTab == 0,
+                            badgeCount = dialogsUnreadSum,
                             onClick = { activeTab = 0 },
-                            text = {
-                                BadgedBox(badge = {
-                                    if (dialogsUnreadSum > 0) {
-                                        Badge { Text(if (dialogsUnreadSum > 99) "99+" else dialogsUnreadSum.toString()) }
-                                    }
-                                }) { Text("Диалоги") }
-                            },
                         )
-                        Tab(
+                        VkSubnavigationButton(
+                            text = "Каналы",
                             selected = activeTab == 1,
+                            badgeCount = channelUnreadSum,
                             onClick = { activeTab = 1 },
-                            text = {
-                                BadgedBox(badge = {
-                                    if (channelUnreadSum > 0) {
-                                        Badge { Text(if (channelUnreadSum > 99) "99+" else channelUnreadSum.toString()) }
-                                    }
-                                }) { Text("Каналы") }
-                            },
                         )
-                        Tab(
+                        VkSubnavigationButton(
+                            text = "Непрочитанные",
                             selected = activeTab == 2,
+                            badgeCount = unreadCount,
                             onClick = { activeTab = 2 },
-                            text = {
-                                BadgedBox(badge = {
-                                    if (unreadCount > 0) {
-                                        Badge { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
-                                    }
-                                }) { Text("Непрочитанные") }
-                            },
                         )
                     }
                 }
@@ -1323,8 +1301,11 @@ fun MessagesScreen(
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    FilterChip(
+                    VkSubnavigationButton(
+                        text = if (showArchived) "Архив (${archivedChats.size}) — открыть список"
+                        else "Архив (${archivedChats.size})",
                         selected = showArchived,
+                        leadingIcon = Icons.Outlined.Archive,
                         onClick = {
                             showArchived = !showArchived
                             if (showArchived && archivedServerChats.isEmpty()) {
@@ -1344,19 +1325,6 @@ fun MessagesScreen(
                                     }
                                 }
                             }
-                        },
-                        label = {
-                            Text(
-                                if (showArchived) "Архив (${archivedChats.size}) — открыть список диалогов"
-                                else "Архив (${archivedChats.size})",
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Outlined.Archive,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
                         },
                     )
                 }
@@ -2149,8 +2117,6 @@ fun MessagesScreen(
                             pinnedIndex = pinnedIndex,
                             onSetAlias = { peerId, defaultName -> aliasDialogTarget = peerId to defaultName },
                         )
-                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).padding(horizontal = 16.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)))
                     }
                 }
                 // Fix #127: footer-indicator при подгрузке следующих страниц.
@@ -2407,7 +2373,7 @@ private fun ChatCard(
         colors = CardDefaults.cardColors(
             containerColor = when {
                 isDragging -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                isPinned -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                isPinned -> MaterialTheme.colorScheme.surfaceContainerLow
                 else -> MaterialTheme.colorScheme.surface
             },
         ),
@@ -2418,7 +2384,7 @@ private fun ChatCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // Fix #274: drag handle виден только у закреплённых чатов.
@@ -2463,14 +2429,14 @@ private fun ChatCard(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
 
-                    // Telegram MD3 Avatar: 54dp круг с онлайн-индикатором
+                    // VKUI × M3E Avatar: 56dp с онлайн-индикатором VkOnlineGreen
                     Box(contentAlignment = Alignment.BottomEnd) {
                         if (photo != null) {
                             AsyncImage(
                                 model = photo,
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(54.dp)
+                                    .size(56.dp)
                                     .clip(avatarShape),
                                 contentScale = ContentScale.Crop,
                             )
@@ -2478,7 +2444,7 @@ private fun ChatCard(
                             val isSelfChat = chat.peer.id > 0 && chat.peer.title == "Избранное"
                             Box(
                                 modifier = Modifier
-                                    .size(54.dp)
+                                    .size(56.dp)
                                     .clip(avatarShape)
                                     .background(
                                         if (isSelfChat) MaterialTheme.colorScheme.primary
@@ -2488,7 +2454,7 @@ private fun ChatCard(
                             ) {
                                 if (isSelfChat) {
                                     Icon(
-                                        Icons.Filled.Bookmark,
+                                        VkIcons.BookmarkFill20,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.size(24.dp),
@@ -2496,7 +2462,7 @@ private fun ChatCard(
                                 } else {
                                     Text(
                                         text = title.take(1).uppercase(),
-                                        style = MaterialTheme.typography.titleMedium,
+                                        style = MaterialTheme.typography.vkHeadline1,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     )
@@ -2504,29 +2470,29 @@ private fun ChatCard(
                             }
                         }
 
-                        // Telegram Online dot
+                        // VKUI Online dot (#4BB34B)
                         if (chat.peer.type == "user" && chat.peer.id > 0 && chat.peer.online == true) {
                             Box(
                                 modifier = Modifier
-                                    .size(14.dp)
+                                    .size(16.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        if (isPinned) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                                        if (isPinned) MaterialTheme.colorScheme.surfaceContainerLow
                                         else MaterialTheme.colorScheme.surface
                                     ),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(10.dp)
+                                        .size(12.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF4CAF50)),
+                                        .background(VkMintColors.VkOnlineGreen),
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(13.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
                         // Верхняя строка: Название + маркеры (канал, закреп, mute) + статус/время
@@ -2541,8 +2507,8 @@ private fun ChatCard(
                             ) {
                                 Text(
                                     text = title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.vkHeadline1,
+                                    fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Medium,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -2569,22 +2535,22 @@ private fun ChatCard(
                                 if (isMuted) {
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(
-                                        Icons.Outlined.NotificationsOff,
+                                        VkIcons.Mute16,
                                         contentDescription = "Заглушено",
-                                        modifier = Modifier.size(15.dp),
+                                        modifier = Modifier.size(16.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
                                     )
                                 }
                             }
 
-                            // Время и галочки прочтения исходящих (в стиле Telegram)
+                            // Время и галочки прочтения исходящих (VKUI ChecksRead16 / Check16)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
                                 if (showOutCheckmarks) {
                                     Icon(
-                                        imageVector = if (lastOutRead) Icons.Filled.DoneAll else Icons.Filled.Done,
+                                        imageVector = if (lastOutRead) VkIcons.ChecksRead16 else VkIcons.Check16,
                                         contentDescription = if (lastOutRead) "Прочитано" else "Отправлено",
                                         modifier = Modifier.size(16.dp),
                                         tint = if (lastOutRead) MaterialTheme.colorScheme.primary
@@ -2594,9 +2560,9 @@ private fun ChatCard(
                                 chat.lastMessage?.let { lm ->
                                     Text(
                                         text = lm.date.toMsgTime(),
-                                        style = MaterialTheme.typography.labelMedium,
+                                        style = MaterialTheme.typography.vkFootnote,
                                         color = if (hasUnread) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.outline,
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -2604,14 +2570,14 @@ private fun ChatCard(
 
                         Spacer(modifier = Modifier.height(3.dp))
 
-                        // Нижняя строка: сниппет сообщения + бейдж непрочитанных / pin
+                        // Нижняя строка: сниппет сообщения + VkCounterBadge / Pin16
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = if (typingText != null) typingText else preview,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.vkParagraph,
                                 color = if (typingText != null)
                                     MaterialTheme.colorScheme.primary
                                 else if (hasUnread)
@@ -2623,31 +2589,17 @@ private fun ChatCard(
                                 modifier = Modifier.weight(1f),
                             )
 
-                            // Telegram MD3 Unread pill badge / Pin icon
                             if (hasUnread) {
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isMuted) MaterialTheme.colorScheme.surfaceContainerHigh
-                                            else MaterialTheme.colorScheme.primary
-                                        )
-                                        .padding(horizontal = 7.dp, vertical = 2.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (isMuted) MaterialTheme.colorScheme.onSurfaceVariant
-                                        else MaterialTheme.colorScheme.onPrimary,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                }
+                                VkCounterBadge(
+                                    count = chat.unreadCount,
+                                    mode = if (isMuted) VkCounterMode.Secondary else VkCounterMode.Primary,
+                                    maxCount = 99,
+                                )
                             } else if (isPinned) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Icon(
-                                    imageVector = Icons.Filled.PushPin,
+                                    imageVector = VkIcons.Pin16,
                                     contentDescription = "Закреплён",
                                     modifier = Modifier.size(16.dp),
                                     tint = MaterialTheme.colorScheme.outline,
@@ -2656,13 +2608,6 @@ private fun ChatCard(
                         }
                     }
                 }
-
-                // Telegram Inset Divider между диалогами
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 80.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                    thickness = 0.5.dp,
-                )
             }
             // Fix #274: расширенное DropdownMenu — Закрепить/Открепить, Заглушить,
             // Отметить непрочитанным/прочитанным (как в нативном VK).
@@ -3079,7 +3024,7 @@ private fun FolderTabRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(scrollState)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // «Все» — FIX (P5.2): сумма непрочитанных сообщений (сбрасывается при чтении).
@@ -3109,7 +3054,7 @@ private fun FolderTabRow(
             // Gear → FoldersSettings
             IconButton(onClick = onFoldersSettings) {
                 Icon(
-                    imageVector = Icons.Outlined.Settings,
+                    imageVector = VkIcons.SettingsOutline20,
                     contentDescription = "Настройки папок",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -3119,7 +3064,7 @@ private fun FolderTabRow(
 }
 
 /**
- * P3.3: Таб-чип для FolderTabRow. Стиль: pill с selected-состоянием.
+ * P3.3 + Stage 4: Таб-чип для FolderTabRow на базе гибридного [VkSubnavigationButton].
  */
 @Composable
 private fun FolderTabChip(
@@ -3128,47 +3073,13 @@ private fun FolderTabChip(
     badge: Int?,
     onClick: () -> Unit,
 ) {
-    val bg = if (selected) MaterialTheme.colorScheme.primaryContainer
-    else MaterialTheme.colorScheme.surfaceContainerHigh
-    val fg = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-    else MaterialTheme.colorScheme.onSurfaceVariant
-    Row(
-        modifier = Modifier
-            .padding(horizontal = 4.dp)
-            .clip(CircleShape)
-            .background(bg)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            color = fg,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines = 1,
-        )
-        if (badge != null) {
-            Spacer(Modifier.width(6.dp))
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(
-                        if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                    )
-                    .padding(horizontal = 6.dp, vertical = 1.dp),
-            ) {
-                Text(
-                    text = badge.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-        }
-    }
+    VkSubnavigationButton(
+        text = text,
+        selected = selected,
+        badgeCount = badge ?: 0,
+        onClick = onClick,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
 }
 
 /**
