@@ -28,9 +28,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
@@ -56,8 +58,10 @@ import vk.mint.ui.navigation.Screen
 //  Эти 3 кнопки НЕ входят в sidebarItemsOrder/Hidden — они рендерятся
 //  отдельно в VkMintNavHost (фиксированный «хвост» drawer'а).
 //
-//  Нижняя панель — редактируется полностью (все 5 кнопок dockScreens).
+//  Нижняя панель — до 5 основных вкладок (как в оригинальном мобильном VK).
 // ══════════════════════════════════════════════════════════════════════
+
+private const val MAX_BOTTOM_BAR_TABS = 5
 
 /**
  * Все редактируемые пункты боковой и нижней панелей.
@@ -122,6 +126,7 @@ fun PanelEditorTab(
     app: VkMintApp,
     scope: CoroutineScope,
 ) {
+    val context = LocalContext.current
     var bottomOrder by remember(s.bottomBarItemsOrder) {
         mutableStateOf(normalizeOrder(parseRoutes(s.bottomBarItemsOrder), CANONICAL_PANEL_ITEMS))
     }
@@ -136,16 +141,17 @@ fun PanelEditorTab(
         }
     }
 
+    val visibleCount = CANONICAL_PANEL_ITEMS.count { it.key !in bottomHidden }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { SectionHeader("Нижняя панель навигации") }
+        item { SectionHeader("Нижняя панель навигации ($visibleCount из $MAX_BOTTOM_BAR_TABS)") }
         item {
             Text(
-                "Редактируется полностью: порядок, видимость. " +
-                    "Если скрыть все кнопки — панель скроется целиком. " +
-                    "При больше 5 видимых кнопок панель прокручивается вбок.",
+                "Выберите до $MAX_BOTTOM_BAR_TABS основных разделов для быстрого доступа на нижней панели (как в приложении VK). " +
+                    "Все остальные разделы всегда доступны во вкладке «Сервисы».",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 8.dp),
@@ -157,10 +163,10 @@ fun PanelEditorTab(
                 horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(onClick = {
-                    // #BOTTOM-DEFAULT-4: сброс к дефолту (4 кнопки:
-                    // Уведомления, Мессенджер, Сообщества, Фотографии).
+                    // Сброс к стандартным 5 вкладкам оригинального VK:
+                    // Главная (Лента), Сервисы, Мессенджер (Чаты), Клипы, Профиль.
                     val defaultVisible = listOf(
-                        "notifications", "messenger", "groups", "photos",
+                        "feed", "services", "messenger", "clips", "profile",
                     )
                     val defaultOrder = defaultVisible +
                         CANONICAL_PANEL_ITEMS.filter { it.key !in defaultVisible }.map { it.key }
@@ -197,12 +203,22 @@ fun PanelEditorTab(
                     }
                 },
                 onToggleVisible = { key ->
-                    bottomHidden = if (key in bottomHidden) {
-                        bottomHidden - key
+                    if (key in bottomHidden) {
+                        val currentVisible = CANONICAL_PANEL_ITEMS.count { it.key !in bottomHidden }
+                        if (currentVisible >= MAX_BOTTOM_BAR_TABS) {
+                            Toast.makeText(
+                                context,
+                                "На нижней панели может быть не более $MAX_BOTTOM_BAR_TABS вкладок (остальные доступны в «Сервисах»)",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        } else {
+                            bottomHidden = bottomHidden - key
+                            commitBottom()
+                        }
                     } else {
-                        bottomHidden + key
+                        bottomHidden = bottomHidden + key
+                        commitBottom()
                     }
-                    commitBottom()
                 },
             )
         }

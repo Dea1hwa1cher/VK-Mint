@@ -3,6 +3,8 @@ package vk.mint.ui.screens.community
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1057,32 +1059,40 @@ fun CommunityScreen(
             )
         }
         item {
-            // #30j (community tabs): ScrollableTabRow с динамическими вкладками.
-            // Соответствует §9.8 VK_IMPORT_API.MD: group_tab_wall/photos/videos/audios/topics.
-            // P0.8 (Task 16): tabs — List<Pair<Int, String>> (логический индекс → заголовок);
-            // selectedTabIndex ищем через indexOfFirst, т.к. selectedTab хранит
-            // логический индекс (0..6), а не позицию в списке (м.б. меньше 7,
-            // если админ выключил часть секций).
-            val selectedTabIndex = tabs.indexOfFirst { it.first == selectedTab }.coerceAtLeast(0)
-            ScrollableTabRow(
-                selectedTabIndex = selectedTabIndex,
-                modifier = Modifier.fillMaxWidth(),
-                edgePadding = 0.dp,
-                indicator = { tabPositions ->
-                    if (selectedTabIndex in tabPositions.indices) {
-                        TabRowDefaults.SecondaryIndicator(
-                            Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                },
+            // #30j (community tabs): единый VK-ряд капсульных вкладок контента сообщества
+            // (Записи, Обсуждения, Фото, Видео, Клипы, Музыка, Файлы).
+            // P0.8 (Task 16): tabs — List<Pair<Int, String>> (логический индекс → заголовок).
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 tabs.forEach { (idx, title) ->
-                    Tab(
-                        selected = selectedTab == idx,
-                        onClick = { selectedTab = idx },
-                        text = { Text(title, style = MaterialTheme.typography.labelLarge) },
-                    )
+                    val isSelected = selectedTab == idx
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                                else MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
+                            .clickable { selectedTab = idx }
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
                 }
             }
         }

@@ -15,6 +15,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,6 +56,7 @@ import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Repeat
@@ -189,11 +192,11 @@ import kotlin.math.roundToInt
 //   в VK web раздел «Друзья» — чистая лента постов друзей).
 // SEARCH → newsfeed.search.
 private enum class FeedFilter(val label: String, val apiFilters: String?, val recommended: Boolean) {
-    ALL("Все новости", "post,photo,video", false),
-    RECOMMENDED("Рекомендации", null, true),
-    LIKES("Реакции", null, false),
-    PHOTOS("Фото", "post,photo,video", false),
+    ALL("Новости", "post,photo,video", false),
+    RECOMMENDED("Для вас", null, true),
     FRIENDS("Друзья", null, false),
+    PHOTOS("Фото", "post,photo,video", false),
+    LIKES("Реакции", null, false),
     SEARCH("Поиск", null, false),
 }
 
@@ -998,35 +1001,6 @@ fun FeedScreen(
     // конфигурируются только FeedScreen'ом (при уходе clear(). сбрасывает).
     // При ограниченном месте (узкий экран/сплит-экран, screenWidthDp < 320) —
     // показываем только иконку.
-    DisposableEffect(Unit) {
-        val token = ScreenTopBar.configure(
-            actions = {
-                val screenWidthDp = LocalConfiguration.current.screenWidthDp
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (screenWidthDp >= 320) {
-                        Text(
-                            text = "меню ленты",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 4.dp),
-                        )
-                    }
-                    IconButton(onClick = {
-                        AppLog.i("FeedScreen", "⋮ menu clicked → FeedPanelState.visible = true")
-                        FeedPanelState.visible = true
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.MenuOpen,
-                            contentDescription = "Меню ленты",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            },
-        )
-        onDispose { ScreenTopBar.clear(token) }
-    }
-
     // Клиентская фильтрация ленты по настройкам.
     // VK API частично фильтрует рекламу (тип=ads пропускается в VKApiClient),
     // но marked_as_ads посты всё равно приходят. Репосты и промо тоже не
@@ -1156,6 +1130,49 @@ fun FeedScreen(
                 feedJobRunning = false
             }
         }
+    }
+
+    // Иконки быстрого доступа на глобальной верхней панели в разделе «Главная» (как в мобильном VK:
+    // Поиск по новостям, Уведомления, Меню ленты).
+    DisposableEffect(Unit) {
+        val token = ScreenTopBar.configure(
+            actions = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = {
+                        val next = if (feedFilter == FeedFilter.SEARCH) FeedFilter.ALL else FeedFilter.SEARCH
+                        feedFilterName = next.name
+                        reloadFeed()
+                    }) {
+                        Icon(
+                            Icons.Outlined.Search,
+                            contentDescription = "Поиск по новостям",
+                            tint = if (feedFilter == FeedFilter.SEARCH) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = {
+                        onFeedPanelNavigate(Screen.Notifications)
+                    }) {
+                        Icon(
+                            Icons.Outlined.Notifications,
+                            contentDescription = "Уведомления",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = {
+                        AppLog.i("FeedScreen", "⋮ menu clicked → FeedPanelState.visible = true")
+                        FeedPanelState.visible = true
+                    }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.MenuOpen,
+                            contentDescription = "Меню ленты",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            },
+        )
+        onDispose { ScreenTopBar.clear(token) }
     }
 
     // Fix #377 #DOZE-RESUME-RELOAD (H3 из разведки 26-1-d): после глубокого сна
@@ -1575,31 +1592,9 @@ fun FeedScreen(
         )
     }
 
-    if (loading) {
-        SkeletonFeedList(count = 5)
-        return
-    }
-
-    if (errorText != null && posts.isEmpty()) {
-        ErrorView(
-            message = errorText,
-            onRetry = { reloadFeed() },
-            isOffline = isOffline,
-        )
-        return
-    }
-
     // #238: scroll-to-top FAB — показывается при прокрутке вниз, тап →
     // плавная анимация к началу ленты. Гейтится настройкой feedShowScrollFab
     // (SettingsScreen → Интерфейс → «Кнопка наверх в ленте»).
-    //
-    // #FEED-FAB-SYNC: FAB показывается ТАКЖЕ когда нижнее меню скрыто
-    // (bottomBarVisible == false), независимо от величины скролла. Раньше пороги
-    // были рассинхронизированы: меню пряталось при ~24px скролла (accumulator
-    // < -24f в VkMintNavHost), а FAB появлялся только при >200px или index>0 —
-    // получалась «слепая зона» 24–200px, где меню уже спрятано, а кнопки ещё
-    // нет → пользователь видел «кнопка пропала при скрытии меню». Теперь FAB
-    // появляется ровно в момент скрытия панели.
     val bottomBarVisibleState = vk.mint.ui.navigation.LocalBottomBarVisible.current
     val showScrollToTopFab by remember {
         derivedStateOf {
@@ -1610,19 +1605,33 @@ fun FeedScreen(
         }
     }
 
-    // Sprint 1, P0-4 (#77): PullToRefreshBox — pull-to-refresh ленты.
-    // ExperimentalMaterial3Api — PullToRefreshBox стабилен в material3 1.4+,
-    // но аннотация пока остаётся.
-    // #238: обёрнут в Box чтобы наложить scroll-to-top FAB (PullToRefreshBox
-    // сам по себе не принимает overlay-контент).
-    //
-    // Fix #359 → Fix #363 #FEED-MENU-TOPBAR-2: закреплённая строка с кнопкой
-    // «меню ленты» УДАЛЕНА — кнопка переехала на глобальный TopAppBar через
-    // ScreenTopBar.configure (DisposableEffect выше, токен-паттерн Fix #256/#262).
-    // Раньше она пришла сюда из первого item LazyColumn (Fix #359), теперь
-    // финальное место — слот actions глобального TopAppBar (VkMintNavHost).
-    // Column сохранён как обёртка скролл-зоны (Box weight 1f + FAB-оверлей).
     Column(modifier = Modifier.fillMaxSize()) {
+        // Горизонтальная панель разделов ленты (как в оригинальном мобильном VK:
+        // «Новости», «Для вас», «Друзья», «Фото», «Реакции», «Поиск»).
+        FeedFilterBar(
+            currentFilter = feedFilter,
+            onSelect = { f ->
+                if (f != feedFilter) {
+                    feedFilterName = f.name
+                    reloadFeed()
+                }
+            },
+        )
+
+        if (loading) {
+            SkeletonFeedList(count = 5)
+            return@Column
+        }
+
+        if (errorText != null && posts.isEmpty()) {
+            ErrorView(
+                message = errorText,
+                onRetry = { reloadFeed() },
+                isOffline = isOffline,
+            )
+            return@Column
+        }
+
         Box(modifier = Modifier.weight(1f)) {
         PullToRefreshBox(
             isRefreshing = isRefreshing,
@@ -1632,21 +1641,6 @@ fun FeedScreen(
             LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
             item(key = "stories_row") {
                 Column {
-                    // Fix #359 → Fix #363: кнопка «меню ленты» ПЕРЕНЕСЕНА из этого
-                    // item сначала в закреплённую панель (#359), затем на глобальный
-                    // TopAppBar (#363, ScreenTopBar.configure) — над списком её больше нет.
-                    // #FEED-FILTER-TOGGLE: панель разделов скрывается настройкой.
-                    if (feedPrefs.feedShowFilter) {
-                        FeedFilterBar(
-                            currentFilter = feedFilter,
-                            onSelect = { f ->
-                                if (f != feedFilter) {
-                                    feedFilterName = f.name
-                                    reloadFeed()
-                                }
-                            },
-                        )
-                    }
                     // #FEED-FILTER-SEARCH: поле поиска для вкладки «Поиск».
                     if (feedFilter == FeedFilter.SEARCH) {
                         OutlinedTextField(
@@ -2177,52 +2171,46 @@ fun FeedScreen(
     }
 }
 
-// #FEED-FILTER: кнопка-переключатель раздела ленты (аналог VK rightmenu
-// на vk.ru/feed). Открывает DropdownMenu с разделами «Все новости / Рекомендации /
-// Видео / Фото / Записи». Компактная — в sticky-хэдере над историями.
+// Горизонтальная панель разделов ленты в стиле оригинального мобильного VK:
+// «Новости», «Для вас», «Друзья», «Фото», «Реакции», «Поиск».
 @Composable
 private fun FeedFilterBar(
     currentFilter: FeedFilter,
     onSelect: (FeedFilter) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = UiScale.scaled(12.dp), vertical = UiScale.scaled(2.dp)),
+            .background(MaterialTheme.colorScheme.surface)
+            .horizontalScroll(scrollState)
+            .padding(horizontal = UiScale.scaled(12.dp), vertical = UiScale.scaled(6.dp)),
+        horizontalArrangement = Arrangement.spacedBy(UiScale.scaled(8.dp)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box {
-            TextButton(
-                onClick = { expanded = true },
-                modifier = Modifier.height(UiScale.scaled(36.dp)),
+        FeedFilter.entries.forEach { f ->
+            val active = f == currentFilter
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(
+                        if (active) MaterialTheme.colorScheme.secondaryContainer
+                        else MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                    .clickable {
+                        if (!active) onSelect(f)
+                    }
+                    .padding(horizontal = UiScale.scaled(14.dp), vertical = UiScale.scaled(7.dp)),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = currentFilter.label,
-                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    text = f.label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                    color = if (active) MaterialTheme.colorScheme.onSecondaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
                 )
-                Icon(
-                    Icons.Filled.KeyboardArrowDown,
-                    contentDescription = "Разделы ленты",
-                    modifier = Modifier.size(UiScale.scaled(18.dp)),
-                )
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                FeedFilter.values().forEach { f ->
-                    DropdownMenuItem(
-                        text = { Text(f.label) },
-                        leadingIcon = if (f == currentFilter) {
-                            { Icon(Icons.Outlined.Check, null) }
-                        } else null,
-                        onClick = {
-                            expanded = false
-                            if (f != currentFilter) onSelect(f)
-                        },
-                    )
-                }
             }
         }
     }

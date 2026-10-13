@@ -854,10 +854,17 @@ fun VkMintNavHost(
     val bottomHiddenKeys: Set<String> = remember(prefsSnap?.bottomBarItemsHidden) {
         parseRoutesJson(prefsSnap?.bottomBarItemsHidden).toSet()
     }
-    // Нормализованный список PanelItem для рендера нижней панели: порядок из prefs, скрытые убраны.
+    // Нормализованный список PanelItem для рендера нижней панели: порядок из prefs, скрытые убраны, до 5 вкладок (как в оригинальном VK).
     val visibleBottomItems: List<PanelItem> = remember(bottomOrderKeys, bottomHiddenKeys) {
         normalizePanelKeys(bottomOrderKeys, PanelItems.all)
             .filter { it.key !in bottomHiddenKeys }
+            .take(5)
+    }
+    val bottomRoutes: Set<String> = remember(visibleBottomItems) {
+        visibleBottomItems.map { it.destinationRoute }.toSet()
+    }
+    val servicesSubRoutes: Set<String> = remember {
+        (drawerScreens.map { it.route } + listOf(Screen.CallsHistory.route, Screen.About.route)).toSet()
     }
     var showLogoutDialog by remember { mutableStateOf(false) }
     // Fix #370 #LOGOUT-HOLDER-CLEAR: обёртка над onLogout — ПЕРЕД сменой аккаунта
@@ -875,6 +882,7 @@ fun VkMintNavHost(
         FeedScrollHolder.clear()
         FeedDataHolder.clear()
         StoriesHolder.clear()
+        vk.mint.ui.screens.superapp.ServicesProfileCache.clear()
         onLogout()
     }
     // #247: отдельный диалог выхода из приложения (не из аккаунта).
@@ -1096,7 +1104,11 @@ fun VkMintNavHost(
                                 if (override != null) {
                                     override()
                                 } else {
-                                    val isRootTab = currentRoute in dockScreens.map { it.route }
+                                    val isRootTab = if (bottomRoutes.isNotEmpty()) {
+                                        currentRoute in bottomRoutes
+                                    } else {
+                                        currentRoute in dockScreens.map { it.route }
+                                    }
                                     if (!isRootTab) {
                                         IconButton(onClick = {
                                             if (!nav.popBackStack()) {
@@ -1215,11 +1227,20 @@ fun VkMintNavHost(
                                         } else {
                                             0
                                         }
-                                        val isSelected = currentRoute == itemDest
+                                        val isServicesSubScreen = item.key == "services" &&
+                                            currentRoute !in bottomRoutes &&
+                                            currentRoute in servicesSubRoutes
+                                        val isSelected = currentRoute == itemDest || isServicesSubScreen
                                         NavigationBarItem(
                                             selected = isSelected,
                                             onClick = {
-                                                nav.navigatePanelItem(item)
+                                                if (isServicesSubScreen) {
+                                                    if (!nav.popBackStack(Screen.Services.route, inclusive = false)) {
+                                                        nav.navigatePanelItem(item)
+                                                    }
+                                                } else {
+                                                    nav.navigatePanelItem(item)
+                                                }
                                             },
                                             icon = {
                                                 if (navIcon != null) {
@@ -1972,7 +1993,13 @@ composable(Screen.CallsHistory.route) {
                 composable(Screen.Services.route)      {
                     ServicesScreen(
                         onOpenSection = { screen ->
-                            nav.navigate(screen.navRoute())
+                            if (screen.route in bottomRoutes) {
+                                nav.navigate(screen.navRoute(), nav.panelItemNavOptions())
+                            } else {
+                                nav.navigate(screen.navRoute()) {
+                                    launchSingleTop = true
+                                }
+                            }
                         },
                         onLogout = { showLogoutDialog = true },
                         onExitApp = { showExitAppDialog = true },

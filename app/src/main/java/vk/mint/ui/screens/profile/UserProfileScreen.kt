@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -72,12 +73,15 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import vk.mint.VkMintApp
 import vk.mint.data.model.Post
+import vk.mint.data.model.Track
 import vk.mint.data.model.UserProfile
 import vk.mint.data.model.Video
+import vk.mint.media.PlayerConnection
 import vk.mint.ui.components.PhotoViewer
 import vk.mint.ui.components.ScrollToTopFab
 import vk.mint.ui.components.ShareSheet
 import vk.mint.util.AppLog
+import vk.mint.util.openUrlExternal
 
 /**
  * Sprint 1, P0-2 (#74): Экран чужого профиля.
@@ -203,6 +207,48 @@ fun UserProfileScreen(
     val reportingPost = remember { mutableStateOf<Post?>(null) }
     var reportInFlight by remember { mutableStateOf(false) }
 
+    // Вкладки разделов контента профиля (Записи, Фото, Видео, Клипы, Музыка, Статьи) —
+    // единая логика разделов VK, переиспользующая секции из ProfileScreen.kt.
+    var selectedContentTab by remember(userId) { mutableStateOf(PROFILE_TAB_WALL) }
+    var contentRetryTick by remember(userId) { mutableStateOf(0) }
+    val musicPlayerState by PlayerConnection.playerState.collectAsState()
+
+    var musicTracks by remember(userId) { mutableStateOf<List<Track>>(emptyList()) }
+    var musicLoading by remember(userId) { mutableStateOf(false) }
+    var musicLoaded by remember(userId) { mutableStateOf(false) }
+    var musicError by remember(userId) { mutableStateOf<String?>(null) }
+    var musicServerOffset by remember(userId) { mutableStateOf(0) }
+    var musicHasMore by remember(userId) { mutableStateOf(false) }
+    var musicLoadingMore by remember(userId) { mutableStateOf(false) }
+    var musicTotal by remember(userId) { mutableStateOf(0) }
+
+    var videos by remember(userId) { mutableStateOf<List<Video>>(emptyList()) }
+    var videoLoading by remember(userId) { mutableStateOf(false) }
+    var videoLoaded by remember(userId) { mutableStateOf(false) }
+    var videoError by remember(userId) { mutableStateOf<String?>(null) }
+    var videoServerOffset by remember(userId) { mutableStateOf(0) }
+    var videoHasMore by remember(userId) { mutableStateOf(false) }
+    var videoLoadingMore by remember(userId) { mutableStateOf(false) }
+
+    var photos by remember(userId) { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var photoLoading by remember(userId) { mutableStateOf(false) }
+    var photoLoaded by remember(userId) { mutableStateOf(false) }
+    var photoError by remember(userId) { mutableStateOf<String?>(null) }
+    var photoServerOffset by remember(userId) { mutableStateOf(0) }
+    var photoHasMore by remember(userId) { mutableStateOf(false) }
+    var photoLoadingMore by remember(userId) { mutableStateOf(false) }
+    val photoGridUrls = remember(photos) { photos.mapNotNull { extractPhotoAllUrl(it) } }
+
+    var clips by remember(userId) { mutableStateOf<List<Video>>(emptyList()) }
+    var clipsLoading by remember(userId) { mutableStateOf(false) }
+    var clipsLoaded by remember(userId) { mutableStateOf(false) }
+    var clipsError by remember(userId) { mutableStateOf<String?>(null) }
+
+    var articles by remember(userId) { mutableStateOf<List<JsonObject>>(emptyList()) }
+    var articlesLoading by remember(userId) { mutableStateOf(false) }
+    var articlesLoaded by remember(userId) { mutableStateOf(false) }
+    var articlesError by remember(userId) { mutableStateOf<String?>(null) }
+
     // Свой профиль? Если да — не показываем «Добавить в друзья».
     val currentUserId = app.exchangeAuthRepository.userId()
     val isSelf = userId == currentUserId
@@ -240,6 +286,169 @@ fun UserProfileScreen(
                 errorText = "Ошибка: ${e.message}"
             } finally {
                 loading = false
+            }
+        }
+    }
+
+    // Ленивая подгрузка выбранной вкладки контента профиля.
+    LaunchedEffect(selectedContentTab, contentRetryTick, userId) {
+        when (selectedContentTab) {
+            PROFILE_TAB_MUSIC -> if (!musicLoaded && !musicLoading) {
+                musicLoading = true
+                musicError = null
+                try {
+                    val (total, page) = app.apiClient.audioGetWithCount(PROFILE_MUSIC_PAGE, 0, userId)
+                    if (total < 0 && page.isEmpty()) {
+                        musicError = if (app.networkObserver.isOffline()) {
+                            "Нет сети. Подключитесь к интернету и повторите."
+                        } else {
+                            "Не удалось загрузить музыку: ${app.apiClient.lastApiErrorHuman() ?: "неизвестная причина"}"
+                        }
+                    } else {
+                        if (total > 0) musicTotal = total
+                        musicServerOffset = page.size
+                        musicTracks = page.filter { it.id > 0L && !it.url.isNullOrBlank() }
+                        musicHasMore = page.isNotEmpty()
+                        musicLoaded = true
+                    }
+                } catch (e: Exception) {
+                    AppLog.e("UserProfileScreen", "Music tab load failed", e)
+                    musicError = "Ошибка: ${e.message}"
+                } finally {
+                    musicLoading = false
+                }
+            }
+            PROFILE_TAB_VIDEO -> if (!videoLoaded && !videoLoading) {
+                videoLoading = true
+                videoError = null
+                try {
+                    val page = app.apiClient.videoGet(ownerId = userId, count = PROFILE_VIDEO_PAGE)
+                    videoServerOffset = page.size
+                    videos = page.filter { it.id > 0L }
+                    videoHasMore = page.size >= PROFILE_VIDEO_PAGE
+                    videoLoaded = true
+                } catch (e: Exception) {
+                    AppLog.e("UserProfileScreen", "Video tab load failed", e)
+                    videoError = "Ошибка: ${e.message}"
+                } finally {
+                    videoLoading = false
+                }
+            }
+            PROFILE_TAB_PHOTO -> if (!photoLoaded && !photoLoading) {
+                photoLoading = true
+                photoError = null
+                try {
+                    photos = app.apiClient.photosGetAll(ownerId = userId, count = PROFILE_PHOTO_PAGE, offset = 0)
+                    photoServerOffset = photos.size
+                    photoHasMore = photos.size >= PROFILE_PHOTO_PAGE
+                    photoLoaded = true
+                } catch (e: Exception) {
+                    AppLog.e("UserProfileScreen", "Photo tab load failed", e)
+                    photoError = "Ошибка: ${e.message}"
+                } finally {
+                    photoLoading = false
+                }
+            }
+            PROFILE_TAB_CLIPS -> if (!clipsLoaded && !clipsLoading) {
+                clipsLoading = true
+                clipsError = null
+                try {
+                    clips = app.apiClient.shortVideoGetOwnerVideos(ownerId = userId, count = 30)
+                        .filter { it.id > 0L }
+                    clipsLoaded = true
+                } catch (e: Exception) {
+                    AppLog.e("UserProfileScreen", "Clips tab load failed", e)
+                    clipsError = "Ошибка: ${e.message}"
+                } finally {
+                    clipsLoading = false
+                }
+            }
+            PROFILE_TAB_ARTICLES -> if (!articlesLoaded && !articlesLoading) {
+                articlesLoading = true
+                articlesError = null
+                try {
+                    articles = app.apiClient.articlesGetOwnerPublished(ownerId = userId, count = 20)
+                    articlesLoaded = true
+                } catch (e: Exception) {
+                    AppLog.e("UserProfileScreen", "Articles tab load failed", e)
+                    articlesError = "Ошибка: ${e.message}"
+                } finally {
+                    articlesLoading = false
+                }
+            }
+        }
+    }
+
+    fun loadMoreMusicPage() {
+        if (musicLoadingMore || musicLoading || !musicHasMore) return
+        scope.launch {
+            musicLoadingMore = true
+            try {
+                val (total, page) = app.apiClient.audioGetWithCount(
+                    PROFILE_MUSIC_PAGE, musicServerOffset, userId
+                )
+                if (total > 0) musicTotal = total
+                musicServerOffset += page.size
+                val fresh = page.filter { it.id > 0L && !it.url.isNullOrBlank() }
+                    .filter { nv -> musicTracks.none { it.ownerId == nv.ownerId && it.id == nv.id } }
+                musicTracks = musicTracks + fresh
+                musicHasMore = page.isNotEmpty() || total < 0
+                var hops = 0
+                while (!musicHasMore && hops < 5 && musicTotal > 0 && musicServerOffset < musicTotal) {
+                    hops++
+                    val hopOffset = musicServerOffset + 1
+                    val (hopTotal, hopPage) = app.apiClient.audioGetWithCount(
+                        PROFILE_MUSIC_PAGE, hopOffset, userId
+                    )
+                    if (hopTotal > 0) musicTotal = hopTotal
+                    musicServerOffset = hopOffset + hopPage.size
+                    val hopFresh = hopPage.filter { it.id > 0L && !it.url.isNullOrBlank() }
+                        .filter { nv -> musicTracks.none { it.ownerId == nv.ownerId && it.id == nv.id } }
+                    if (hopPage.isNotEmpty()) musicTracks = musicTracks + hopFresh
+                    musicHasMore = hopPage.isNotEmpty() || hopTotal < 0
+                }
+            } catch (e: Exception) {
+                AppLog.w("UserProfileScreen", "Music loadMore failed: ${e.message}")
+            } finally {
+                musicLoadingMore = false
+            }
+        }
+    }
+
+    fun loadMoreVideoPage() {
+        if (videoLoadingMore || videoLoading || !videoHasMore) return
+        scope.launch {
+            videoLoadingMore = true
+            try {
+                val page = app.apiClient.videoGet(
+                    ownerId = userId, count = PROFILE_VIDEO_PAGE, offset = videoServerOffset
+                )
+                videoServerOffset += page.size
+                videos = videos + page.filter { it.id > 0L }
+                videoHasMore = page.size >= PROFILE_VIDEO_PAGE
+            } catch (e: Exception) {
+                AppLog.w("UserProfileScreen", "Video loadMore failed: ${e.message}")
+            } finally {
+                videoLoadingMore = false
+            }
+        }
+    }
+
+    fun loadMorePhotoPage() {
+        if (photoLoadingMore || photoLoading || !photoHasMore) return
+        scope.launch {
+            photoLoadingMore = true
+            try {
+                val page = app.apiClient.photosGetAll(
+                    ownerId = userId, count = PROFILE_PHOTO_PAGE, offset = photoServerOffset
+                )
+                photoServerOffset += page.size
+                photos = photos + page
+                photoHasMore = page.size >= PROFILE_PHOTO_PAGE
+            } catch (e: Exception) {
+                AppLog.w("UserProfileScreen", "Photo loadMore failed: ${e.message}")
+            } finally {
+                photoLoadingMore = false
             }
         }
     }
@@ -320,8 +529,9 @@ fun UserProfileScreen(
         }
     }
 
-    // Fix #86: триггер пагинации.
-    LaunchedEffect(listState, posts.size) {
+    // Fix #86: триггер пагинации (только когда открыта вкладка «Записи»).
+    LaunchedEffect(listState, posts.size, selectedContentTab) {
+        if (selectedContentTab != PROFILE_TAB_WALL) return@LaunchedEffect
         snapshotFlow {
             val info = listState.layoutInfo
             val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
@@ -582,6 +792,9 @@ fun UserProfileScreen(
                     // «Друзья» НЕ проводим: глобальный Screen.Friends показывает
                     // СВОИХ друзей (отклонение — KDoc экрана выше).
                     onFollowersClick = { onFollowersClick(p.id) },
+                    onPhotosClick = { selectedContentTab = PROFILE_TAB_PHOTO },
+                    onVideosClick = { selectedContentTab = PROFILE_TAB_VIDEO },
+                    onAudiosClick = { selectedContentTab = PROFILE_TAB_MUSIC },
                 )
             }
             // П-7-AB: строка «Подписки» собеседника (чипа в CountersRow нет —
@@ -764,74 +977,216 @@ fun UserProfileScreen(
                 }
             }
 
-            val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
-            val filteredPosts = if (stopWords.isEmpty()) posts else posts.filterNot { it.containsAnyWord(stopWords) }
-
-            item {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                ) {
-                    Text(
-                        text = "Записи (${filteredPosts.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-            }
-
-            items(filteredPosts, key = { "${it.ownerId}_${it.id}" }) { post ->
-                WallPostCard(
-                    post = post,
-                    authorName = p.fullName,
-                    authorPhoto = p.photo200 ?: p.photo100,
-                    carouselEnabled = carouselEnabled,
-                    onVideoClick = onVideoClick,
-                    onPostClick = onPostClick,
-                    onPhotoClick = { urls, idx -> photoViewerState.value = urls to idx },
-                    onRepostClick = { repostPost.value = it },
-                    // Шаг 5 (#32e): тап по комментарию → onCommentClick → PostDetailScreen.
-                    onCommentClick = onCommentClick,
-                    // П-7-AB: «Пожаловаться» на записях ЧУЖОЙ стены (wall.markAsSpam).
-                    // showActions по-прежнему false (П-6а: manage-пункты только на
-                    // своём профиле) → меню открывается с одним «Пожаловаться».
-                    showReport = !isSelf,
-                    onReportSpam = { reportingPost.value = it },
+            // Вкладки разделов контента профиля (Записи / Фото / Видео / Клипы / Музыка / Статьи).
+            item(key = "user_content_tabs") {
+                ProfileChipsRow(
+                    options = USER_PROFILE_CONTENT_TABS,
+                    selected = selectedContentTab,
+                    onSelect = { selectedContentTab = it },
                 )
             }
-            // Fix #86: футер пагинации.
-            item {
-                when {
-                    loadingMore -> {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(20.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        }
-                    }
-                    endReached && filteredPosts.isNotEmpty() -> {
+
+            if (selectedContentTab == PROFILE_TAB_WALL) {
+                val stopWords = if (app.prefsSnapshot?.newsStopWordsEnabled == true) app.prefsSnapshot?.newsStopWords.orEmpty() else emptySet()
+                val filteredPosts = if (stopWords.isEmpty()) posts else posts.filterNot { it.containsAnyWord(stopWords) }
+
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    ) {
                         Text(
-                            text = "Это все записи",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            text = "Записи (${filteredPosts.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
                         )
                     }
                 }
-            }
 
-            if (filteredPosts.isEmpty()) {
+                items(filteredPosts, key = { "${it.ownerId}_${it.id}" }) { post ->
+                    WallPostCard(
+                        post = post,
+                        authorName = p.fullName,
+                        authorPhoto = p.photo200 ?: p.photo100,
+                        carouselEnabled = carouselEnabled,
+                        onVideoClick = onVideoClick,
+                        onPostClick = onPostClick,
+                        onPhotoClick = { urls, idx -> photoViewerState.value = urls to idx },
+                        onRepostClick = { repostPost.value = it },
+                        // Шаг 5 (#32e): тап по комментарию → onCommentClick → PostDetailScreen.
+                        onCommentClick = onCommentClick,
+                        // П-7-AB: «Пожаловаться» на записях ЧУЖОЙ стены (wall.markAsSpam).
+                        // showActions по-прежнему false (П-6а: manage-пункты только на
+                        // своём профиле) → меню открывается с одним «Пожаловаться».
+                        showReport = !isSelf,
+                        onReportSpam = { reportingPost.value = it },
+                    )
+                }
+                // Fix #86: футер пагинации.
                 item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(24.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "На стене нет записей",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    when {
+                        loadingMore -> {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            }
+                        }
+                        endReached && filteredPosts.isNotEmpty() -> {
+                            Text(
+                                text = "Это все записи",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            )
+                        }
+                    }
+                }
+
+                if (filteredPosts.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "На стене нет записей",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            } else if (selectedContentTab == PROFILE_TAB_PHOTO) {
+                val photoErr = photoError
+                if (photoLoading) {
+                    item(key = "user_photo_progress") { TabProgressRow() }
+                } else if (photoErr != null) {
+                    item(key = "user_photo_error") {
+                        TabErrorRow(message = photoErr, onRetry = { contentRetryTick++ })
+                    }
+                } else if (photoGridUrls.isEmpty()) {
+                    item(key = "user_photo_empty") {
+                        TabEmptyRow("Нет фотографий")
+                    }
+                } else {
+                    val photoRows = photoGridUrls.chunked(3)
+                    itemsIndexed(
+                        photoRows,
+                        key = { rowIdx, _ -> "user_photo_row_$rowIdx" },
+                    ) { rowIdx, rowUrls ->
+                        PhotoGridRow(
+                            urls = rowUrls,
+                            startIndex = rowIdx * 3,
+                            fullList = photoGridUrls,
+                            onPhotoClick = { urls, idx -> photoViewerState.value = urls to idx },
                         )
                     }
+                    if (photoHasMore) {
+                        item(key = "user_photo_more") {
+                            TabShowMoreRow(loading = photoLoadingMore, onClick = { loadMorePhotoPage() })
+                        }
+                    }
+                }
+            } else if (selectedContentTab == PROFILE_TAB_VIDEO) {
+                val videoErr = videoError
+                if (videoLoading) {
+                    item(key = "user_video_progress") { TabProgressRow() }
+                } else if (videoErr != null) {
+                    item(key = "user_video_error") {
+                        TabErrorRow(message = videoErr, onRetry = { contentRetryTick++ })
+                    }
+                } else if (videos.isEmpty()) {
+                    item(key = "user_video_empty") {
+                        TabEmptyRow("Нет видео")
+                    }
+                } else {
+                    val videoRows = videos.chunked(2)
+                    itemsIndexed(
+                        videoRows,
+                        key = { rowIdx, _ -> "user_video_row_$rowIdx" },
+                    ) { _, rowVideos ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            rowVideos.forEach { video ->
+                                ProfileVideoCard(
+                                    video = video,
+                                    onClick = { onVideoClick(video) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            repeat(2 - rowVideos.size) { Spacer(modifier = Modifier.weight(1f)) }
+                        }
+                    }
+                    if (videoHasMore) {
+                        item(key = "user_video_more") {
+                            TabShowMoreRow(loading = videoLoadingMore, onClick = { loadMoreVideoPage() })
+                        }
+                    }
+                }
+            } else if (selectedContentTab == PROFILE_TAB_CLIPS) {
+                item(key = "user_clips_section") {
+                    ClipsTabSection(
+                        clips = clips,
+                        loading = clipsLoading,
+                        error = clipsError,
+                        onRetry = { contentRetryTick++ },
+                        onClipClick = onVideoClick,
+                        emptyText = "Нет клипов",
+                    )
+                }
+            } else if (selectedContentTab == PROFILE_TAB_MUSIC) {
+                val musicErr = musicError
+                if (musicLoading) {
+                    item(key = "user_music_progress") { TabProgressRow() }
+                } else if (musicErr != null) {
+                    item(key = "user_music_error") {
+                        TabErrorRow(message = musicErr, onRetry = { contentRetryTick++ })
+                    }
+                } else if (musicTracks.isEmpty()) {
+                    item(key = "user_music_empty") {
+                        TabEmptyRow("Нет аудиозаписей")
+                    }
+                } else {
+                    itemsIndexed(
+                        musicTracks,
+                        key = { idx, track -> "user_music_${idx}_${track.ownerId}_${track.id}" },
+                    ) { idx, track ->
+                        val current = musicPlayerState.currentTrack
+                        val isCurrent = current != null &&
+                            track.id == current.id &&
+                            track.ownerId == current.ownerId
+                        ProfileTrackRow(
+                            track = track,
+                            isPlaying = isCurrent && musicPlayerState.isPlaying,
+                            onClick = {
+                                if (isCurrent) {
+                                    PlayerConnection.togglePlayPause()
+                                } else {
+                                    PlayerConnection.playTrackList(musicTracks, idx)
+                                }
+                            },
+                        )
+                    }
+                    if (musicHasMore) {
+                        item(key = "user_music_more") {
+                            TabShowMoreRow(loading = musicLoadingMore, onClick = { loadMoreMusicPage() })
+                        }
+                    }
+                }
+            } else if (selectedContentTab == PROFILE_TAB_ARTICLES) {
+                item(key = "user_articles_section") {
+                    ArticlesTabSection(
+                        articles = articles,
+                        loading = articlesLoading,
+                        error = articlesError,
+                        onRetry = { contentRetryTick++ },
+                        onOpenArticle = { url -> openUrlExternal(context, url) },
+                        emptyText = "Нет статей",
+                    )
                 }
             }
         }

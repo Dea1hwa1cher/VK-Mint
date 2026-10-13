@@ -141,29 +141,32 @@ import vk.mint.util.openUrlExternal
 import vk.mint.util.toCountString
 import vk.mint.util.toRelativeTime
 
-// П-1 (#PROFILE-SNAP): вкладки контента профиля. Статический набор — web-набор
-// users.getContentTabs известен (инвентарь §1.1.3: music,videos,photos,…),
-// вызывать usersGetContentTabs для этого не обязательно.
-private const val PROFILE_TAB_WALL = "wall"
-private const val PROFILE_TAB_MUSIC = "music"
-private const val PROFILE_TAB_VIDEO = "video"
-private const val PROFILE_TAB_PHOTO = "photo"
+// П-1 (#PROFILE-SNAP): вкладки контента профиля (порядок и названия как в мобильном VK).
+internal const val PROFILE_TAB_WALL = "wall"
+internal const val PROFILE_TAB_PHOTO = "photo"
+internal const val PROFILE_TAB_VIDEO = "video"
+internal const val PROFILE_TAB_CLIPS = "clips"
+internal const val PROFILE_TAB_MUSIC = "music"
+internal const val PROFILE_TAB_ARTICLES = "articles"
+internal const val PROFILE_TAB_BOOKMARKS = "bookmarks"
 
-// П-6b (#PROFILE-GAP-6b): остаток вкладок §3.2 снапшота — Клипы/Статьи/Закладки.
-private const val PROFILE_TAB_CLIPS = "clips"
-private const val PROFILE_TAB_ARTICLES = "articles"
-private const val PROFILE_TAB_BOOKMARKS = "bookmarks"
-
-private val PROFILE_CONTENT_TABS: List<Pair<String, String>> = listOf(
-    PROFILE_TAB_WALL to "Стена",
-    PROFILE_TAB_MUSIC to "Музыка",
-    PROFILE_TAB_VIDEO to "Видео",
+internal val PROFILE_CONTENT_TABS: List<Pair<String, String>> = listOf(
+    PROFILE_TAB_WALL to "Записи",
     PROFILE_TAB_PHOTO to "Фото",
-    // П-6b (#PROFILE-GAP-6b): закрытие остатка плана (инвентарь §5 п.2 —
-    // «секции правой колонки (…клипы/статьи)» и §3.2 Клипы/Статьи/Закладки).
+    PROFILE_TAB_VIDEO to "Видео",
     PROFILE_TAB_CLIPS to "Клипы",
+    PROFILE_TAB_MUSIC to "Музыка",
     PROFILE_TAB_ARTICLES to "Статьи",
     PROFILE_TAB_BOOKMARKS to "Закладки",
+)
+
+internal val USER_PROFILE_CONTENT_TABS: List<Pair<String, String>> = listOf(
+    PROFILE_TAB_WALL to "Записи",
+    PROFILE_TAB_PHOTO to "Фото",
+    PROFILE_TAB_VIDEO to "Видео",
+    PROFILE_TAB_CLIPS to "Клипы",
+    PROFILE_TAB_MUSIC to "Музыка",
+    PROFILE_TAB_ARTICLES to "Статьи",
 )
 
 // П-1: подвкладки стены — значения wall.get(filter) по канонике users.getWallTabs
@@ -175,9 +178,9 @@ private const val WALL_FILTER_ARCHIVED = "archived"
 
 // W33-c: страницы пагинации вкладок профиля («разделы целиком» — запрос
 // юзера волны 33: раньше Музыка=10/Видео=9/Фото=12 жёстко обрезались).
-private const val PROFILE_MUSIC_PAGE = 100
-private const val PROFILE_VIDEO_PAGE = 20
-private const val PROFILE_PHOTO_PAGE = 60
+internal const val PROFILE_MUSIC_PAGE = 100
+internal const val PROFILE_VIDEO_PAGE = 20
+internal const val PROFILE_PHOTO_PAGE = 60
 private const val PROFILE_GIFTS_PAGE = 10
 
 @Composable
@@ -2962,7 +2965,7 @@ private fun ActionIcon(
 
 /** Единый ряд чипов (вкладки контента + подвкладки стены). */
 @Composable
-private fun ProfileChipsRow(
+internal fun ProfileChipsRow(
     options: List<Pair<String, String>>,
     selected: String,
     onSelect: (String) -> Unit,
@@ -2972,28 +2975,28 @@ private fun ProfileChipsRow(
     // они помещаются, скролл просто не активен).
     Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         options.forEach { (value, label) ->
             val isSelected = value == selected
-            Card(
-                modifier = Modifier.clip(CircleShape).clickable { onSelect(value) },
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-                ),
-                elevation = CardDefaults.cardElevation(0.dp),
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                        else MaterialTheme.colorScheme.surfaceContainerHigh
+                    )
+                    .clickable { onSelect(value) }
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = label,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                     color = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimary
+                        MaterialTheme.colorScheme.onSecondaryContainer
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
@@ -3015,7 +3018,7 @@ private fun WallFilterRow(selected: String, showArchive: Boolean, onSelect: (Str
 }
 
 @Composable
-private fun TabProgressRow() {
+internal fun TabProgressRow() {
     Box(
         modifier = Modifier.fillMaxWidth().padding(24.dp),
         contentAlignment = Alignment.Center,
@@ -3025,7 +3028,7 @@ private fun TabProgressRow() {
 }
 
 @Composable
-private fun TabErrorRow(message: String, onRetry: () -> Unit) {
+internal fun TabErrorRow(message: String, onRetry: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -3041,7 +3044,7 @@ private fun TabErrorRow(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun TabEmptyRow(message: String) {
+internal fun TabEmptyRow(message: String) {
     Box(
         modifier = Modifier.fillMaxWidth().padding(24.dp),
         contentAlignment = Alignment.Center,
@@ -3058,7 +3061,7 @@ private fun TabEmptyRow(message: String) {
  *  виртуализируется общим LazyColumn профиля; тап — playTrackList всей
  *  загруженной очереди, семантика плейлиста волны 31 #AUDIO-QUEUE-PLAYLIST). */
 @Composable
-private fun ProfileTrackRow(track: Track, isPlaying: Boolean, onClick: () -> Unit) {
+internal fun ProfileTrackRow(track: Track, isPlaying: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -3117,7 +3120,7 @@ private fun ProfileTrackRow(track: Track, isPlaying: Boolean, onClick: () -> Uni
 /** W33-c: строка «Показать ещё» пагинации вкладок профиля (честные
  *  состояния: спиннер при дозагрузке, кнопка — когда есть что грузить). */
 @Composable
-private fun TabShowMoreRow(loading: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun TabShowMoreRow(loading: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
@@ -3133,7 +3136,7 @@ private fun TabShowMoreRow(loading: Boolean, onClick: () -> Unit, modifier: Modi
 /** W33-c: карточка видео сетки раздела «Видео» (вертикальная сетка 2 колонки;
  *  ширина задаёт вызывающий через [modifier] — weight(1f) в строке-чанке). */
 @Composable
-private fun ProfileVideoCard(
+internal fun ProfileVideoCard(
     video: Video,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -3198,7 +3201,7 @@ private fun ProfileVideoCard(
  *  LazyColumn (виртуализация полного раздела). Тап открывает PhotoViewer
  *  с ПОЛНЫМ списком URL и глобальным индексом ([startIndex] + колонка). */
 @Composable
-private fun PhotoGridRow(
+internal fun PhotoGridRow(
     urls: List<String>,
     startIndex: Int,
     fullList: List<String>,
@@ -3229,7 +3232,7 @@ private fun PhotoGridRow(
 }
 
 /** URL лучшего размера из item photos.getAll (sizes[] — max по площади). */
-private fun extractPhotoAllUrl(photo: JsonObject): String? {
+internal fun extractPhotoAllUrl(photo: JsonObject): String? {
     return try {
         var bestUrl: String? = null
         var bestArea = 0L
@@ -3472,17 +3475,18 @@ private fun ProfileSuggestionCard(
  * не превью-заглушка.
  */
 @Composable
-private fun ClipsTabSection(
+internal fun ClipsTabSection(
     clips: List<Video>,
     loading: Boolean,
     error: String?,
     onRetry: () -> Unit,
     onClipClick: (Video) -> Unit,
+    emptyText: String = "У вас пока нет клипов",
 ) {
     when {
         loading -> TabProgressRow()
         error != null -> TabErrorRow(message = error, onRetry = onRetry)
-        clips.isEmpty() -> TabEmptyRow("У вас пока нет клипов")
+        clips.isEmpty() -> TabEmptyRow(emptyText)
         else -> {
             LazyRow(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -3562,18 +3566,19 @@ private fun ProfileClipCard(clip: Video, onClick: () -> Unit) {
  * сайдбара); здесь вкладка — полноценный список, запрашивается страница из 20.
  */
 @Composable
-private fun ArticlesTabSection(
+internal fun ArticlesTabSection(
     articles: List<JsonObject>,
     loading: Boolean,
     error: String?,
     onRetry: () -> Unit,
     onOpenArticle: (String) -> Unit,
+    emptyText: String = "У вас пока нет статей",
 ) {
     val items = remember(articles) { articles.mapNotNull { extractArticleInfo(it) } }
     when {
         loading -> TabProgressRow()
         error != null -> TabErrorRow(message = error, onRetry = onRetry)
-        items.isEmpty() -> TabEmptyRow("У вас пока нет статей")
+        items.isEmpty() -> TabEmptyRow(emptyText)
         else -> Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
