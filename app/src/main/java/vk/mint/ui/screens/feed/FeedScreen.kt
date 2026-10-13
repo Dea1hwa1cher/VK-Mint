@@ -158,10 +158,20 @@ import vk.mint.ui.navigation.FeedOpenRequest
 import vk.mint.ui.navigation.FeedPanelState
 import vk.mint.ui.navigation.ScreenTopBar
 import vk.mint.ui.navigation.ScrollPosition
+import androidx.compose.foundation.shape.RoundedCornerShape
+import vk.mint.ui.components.VkReactionPill
+import vk.mint.ui.components.VkSearch
+import vk.mint.ui.components.VkSubnavigationBar
+import vk.mint.ui.components.formatVkCount
+import vk.mint.ui.icons.VkIcons
 import vk.mint.ui.theme.UiScale
 import vk.mint.ui.theme.avatarShape
 import vk.mint.ui.theme.titleMediumEmphasized
 import vk.mint.ui.theme.titleSmallEmphasized
+import vk.mint.ui.theme.vkFootnote
+import vk.mint.ui.theme.vkHeadline2
+import vk.mint.ui.theme.vkParagraph
+import vk.mint.ui.theme.vkSubhead
 import vk.mint.util.AppLog
 import vk.mint.util.createCameraImageUri
 import vk.mint.util.toCountString
@@ -1144,19 +1154,21 @@ fun FeedScreen(
                         reloadFeed()
                     }) {
                         Icon(
-                            Icons.Outlined.Search,
+                            VkIcons.Search24,
                             contentDescription = "Поиск по новостям",
                             tint = if (feedFilter == FeedFilter.SEARCH) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                     IconButton(onClick = {
                         onFeedPanelNavigate(Screen.Notifications)
                     }) {
                         Icon(
-                            Icons.Outlined.Notifications,
+                            VkIcons.NotificationsOutline28,
                             contentDescription = "Уведомления",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                     IconButton(onClick = {
@@ -1638,76 +1650,45 @@ fun FeedScreen(
             onRefresh = { refreshFeed() },
             modifier = Modifier.fillMaxSize(),
         ) {
-            LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                state = listState,
+            ) {
             item(key = "stories_row") {
-                Column {
-                    // #FEED-FILTER-SEARCH: поле поиска для вкладки «Поиск».
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+                        ),
+                ) {
+                    // #FEED-FILTER-SEARCH: поле поиска для вкладки «Поиск» (VKUI Search 36dp × M3E).
                     if (feedFilter == FeedFilter.SEARCH) {
-                        OutlinedTextField(
+                        VkSearch(
                             value = feedSearchQuery,
-                            onValueChange = { feedSearchQuery = it },
-                            placeholder = { Text("Поиск по новостям…") },
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.extraLarge,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 4.dp),
-                            keyboardOptions = KeyboardOptions(
-                                imeAction = ImeAction.Search,
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onSearch = { reloadFeed() },
-                            ),
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Outlined.Search,
-                                    contentDescription = "Поиск",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            onValueChange = {
+                                val wasNotEmpty = feedSearchQuery.isNotEmpty()
+                                feedSearchQuery = it
+                                if (wasNotEmpty && it.isEmpty()) reloadFeed()
                             },
-                            trailingIcon = {
-                                Row {
-                                    if (feedSearchQuery.isNotEmpty()) {
-                                        IconButton(onClick = {
-                                            feedSearchQuery = ""
-                                            reloadFeed()
-                                        }) {
-                                            Icon(Icons.Outlined.Close, contentDescription = "Очистить")
-                                        }
-                                    }
-                                    IconButton(onClick = { reloadFeed() }) {
-                                        Icon(
-                                            Icons.Outlined.Search,
-                                            contentDescription = "Искать",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                }
-                            },
+                            placeholder = "Поиск по новостям…",
+                            onSearch = { reloadFeed() },
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         )
                     }
-                    // #FEED-REACTIONS: подтабы для раздела «Реакции».
+                    // #FEED-REACTIONS: подтабы для раздела «Реакции» (VKUI SubnavigationBar × M3E).
                     if (feedFilter == FeedFilter.LIKES) {
-                        ScrollableTabRow(
-                            selectedTabIndex = LikesFilter.entries.indexOf(likesFilter),
-                            edgePadding = 12.dp,
+                        VkSubnavigationBar(
+                            items = LikesFilter.entries,
+                            selectedItem = likesFilter,
+                            onItemSelected = { lf -> likesFilterName = lf.name },
+                            label = { it.label },
                             modifier = Modifier.fillMaxWidth(),
-                            divider = {},
-                        ) {
-                            LikesFilter.entries.forEachIndexed { index, lf ->
-                                Tab(
-                                    selected = likesFilter == lf,
-                                    onClick = { likesFilterName = lf.name },
-                                    text = { Text(lf.label, maxLines = 1) },
-                                )
-                            }
-                        }
+                        )
                     }
                     // #STORY-TOGGLE: раздел «Истории» скрывается настройкой
                     // (storiesShown == false). StoriesRow сам тянет данные через
@@ -2025,10 +2006,6 @@ fun FeedScreen(
                         }
                     },
                 )
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(1.dp).padding(horizontal = 16.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                )
             }
             // Sprint 1, P0-4 (#77): футер пагинации — spinner при загрузке или
             // «Это все записи» когда next_from==null.
@@ -2171,49 +2148,24 @@ fun FeedScreen(
     }
 }
 
-// Горизонтальная панель разделов ленты в стиле оригинального мобильного VK:
+// Горизонтальная панель разделов ленты по стандарту VKUI SubnavigationBar × M3E:
 // «Новости», «Для вас», «Друзья», «Фото», «Реакции», «Поиск».
 @Composable
 private fun FeedFilterBar(
     currentFilter: FeedFilter,
     onSelect: (FeedFilter) -> Unit,
 ) {
-    val scrollState = rememberScrollState()
-    Row(
+    VkSubnavigationBar(
+        items = FeedFilter.entries,
+        selectedItem = currentFilter,
+        onItemSelected = { f ->
+            if (f != currentFilter) onSelect(f)
+        },
+        label = { it.label },
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .horizontalScroll(scrollState)
-            .padding(horizontal = UiScale.scaled(12.dp), vertical = UiScale.scaled(6.dp)),
-        horizontalArrangement = Arrangement.spacedBy(UiScale.scaled(8.dp)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        FeedFilter.entries.forEach { f ->
-            val active = f == currentFilter
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(
-                        if (active) MaterialTheme.colorScheme.secondaryContainer
-                        else MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-                    .clickable {
-                        if (!active) onSelect(f)
-                    }
-                    .padding(horizontal = UiScale.scaled(14.dp), vertical = UiScale.scaled(7.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = f.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (active) MaterialTheme.colorScheme.onSecondaryContainer
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-        }
-    }
+            .background(MaterialTheme.colorScheme.surface),
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -2293,7 +2245,10 @@ private fun PostCard(
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
@@ -2302,7 +2257,7 @@ private fun PostCard(
             if (post.isAd) {
                 Text(
                     text = "Реклама",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.vkFootnote,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
                 )
@@ -2311,24 +2266,21 @@ private fun PostCard(
             if (post.postType in listOf("suggest", "suggested")) {
                 Text(
                     text = "Рекомендуемое",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.vkFootnote,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = if (post.isAd) 0.dp else 8.dp),
                 )
             }
-            // ─── VKUI: vkit-OaLCik vkuiFlex__host vkuiFlex__alignCenter ───
-            // post-header: avatar(link) + name(link) + spacer + context-menu(44x44)
-            // VKUI: NO time in header — time ONLY in footer as post_date_block_preview
+            // ─── VKUI v8 × M3E: Post Header (SimpleCell-like island header) ───
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 // VKUI: vkuiAvatar__host 40x40, clickable link to author profile (M3 standard target)
-                // vkuiImageBase__imgObjectFitCover
                 Box(
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
@@ -2358,60 +2310,52 @@ private fun PostCard(
                         }
                     }
                 }
-                // VKUI: vkit-rQKpzS vkuiFlex__directionColumn, gap 0px
                 Column(modifier = Modifier.weight(1f)) {
-                    // VKUI: vkuiSubhead__densityCompact vkuiTypography__weight2 vkuiTypography__accent
-                    // vkuiLink__withUnderline — ALL names are accent-colored clickable links
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(
                             text = authorName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.vkHeadline2,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.clickable { onAuthorClick(post) },
                         )
-                        // Бейдж верификации (без дополнительного padding)
+                        // Бейдж верификации (@vkontakte/icons verified_16)
                         if (post.fromId < 0) {
                             val g = groups[-post.fromId]
                             if (g != null && g.verified == 1) {
                                 Icon(
-                                    Icons.Outlined.Verified,
+                                    VkIcons.Verified16,
                                     contentDescription = "Верифицировано",
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(14.dp),
+                                    modifier = Modifier.size(16.dp),
                                 )
                             }
                         }
                     }
-                    if (signerName != null) {
-                        Text(
-                            text = signerName,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
+                    val subtitleText = if (signerName != null) "$timeStr · $signerName" else timeStr
+                    Text(
+                        text = subtitleText,
+                        style = MaterialTheme.typography.vkFootnote,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
                 // #FEED-SUBSCRIBE (IMP-FEED-1, п.2): компактная кнопка подписки
                 // в хедере карточки (снапшот: post-header-subscription-button,
                 // раздел «Реакции»). Чип-стиль (pill, primary-текст). Скрыта на
                 // своих постах (fromId == myUserId) и у постов без автора.
-                // Состояние: override из subscriptionState; absent → дефолт
-                // «Подписаться» (для сообществ — из GroupInfo.isMember, если
-                // VK отдал is_member; для юзеров newsfeed.get состояние не отдаёт).
                 if (post.fromId != 0L && post.fromId != myUserId) {
                     val subscribed: Boolean? = subscriptionState[post.fromId.toString()]
                         ?: if (post.fromId < 0) groups[-post.fromId]?.let { it.isMember == 1 } else null
                     Text(
                         text = if (subscribed == true) "Отписаться" else "Подписаться",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.vkFootnote,
                         fontWeight = FontWeight.Medium,
                         color = if (subscribed == true) MaterialTheme.colorScheme.onSurfaceVariant
                         else MaterialTheme.colorScheme.primary,
@@ -2426,18 +2370,17 @@ private fun PostCard(
                             .padding(horizontal = 10.dp, vertical = 4.dp),
                     )
                 }
-                // VKUI: flex-grow spacer (pushes menu to right)
-                // VKUI: vkuiIconButton__densityCompact 44x44, more_horizontal_24
+                // VKUI: vkuiIconButton 36x36, more_horizontal_20
                 Box {
                     IconButton(
                         onClick = { showMenu = true },
-                        modifier = Modifier.size(44.dp),
+                        modifier = Modifier.size(36.dp),
                     ) {
                         Icon(
-                            Icons.Outlined.MoreHoriz,
+                            VkIcons.MoreHorizontal20,
                             contentDescription = "Действия",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                     DropdownMenu(
@@ -2446,7 +2389,7 @@ private fun PostCard(
                     ) {
                         DropdownMenuItem(
                             text = { Text(if (post.isFavoriteBool) "Убрать из закладок" else "В закладки") },
-                            leadingIcon = { Icon(if (post.isFavoriteBool) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder, null) },
+                            leadingIcon = { Icon(if (post.isFavoriteBool) VkIcons.BookmarkFill20 else VkIcons.BookmarkOutline20, null) },
                             onClick = { showMenu = false; onToggleBookmark(post) },
                         )
                         if (post.canEditBool) {
@@ -2474,10 +2417,6 @@ private fun PostCard(
                             onClick = { showMenu = false; onBanSource(post) },
                         )
                         // П-7-AB (IMP-FEED-1, п.1): «Пожаловаться» — wall.markAsSpam
-                        // (снапшот §1.6: global_report_spam; VK-семантика — ЧУЖАЯ
-                        // запись, гейт ownerId != myUserId как в ProfileScreen).
-                        // Диалог подтверждения и вызов — на уровне экрана (П-7
-                        // паттерн 1:1). Disabled-поведение — в диалоге (reportInFlight).
                         if (post.ownerId != myUserId) {
                             DropdownMenuItem(
                                 text = { Text("Пожаловаться") },
@@ -2499,20 +2438,18 @@ private fun PostCard(
             if (post.isPinnedBool) {
                 Text(
                     text = "Закреплённый пост",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.vkFootnote,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp),
                 )
             }
             // VK_MINT_lenta: индикатор копирайта-источника.
-            // #ARCH-CONTAINERS 3.7-1: модели в :core:data — smart cast чужого модуля
-            // невозможен; захват в локальный val.
             val copyrightName = post.copyright?.name
             if (copyrightName != null) {
                 Text(
                     text = copyrightName,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.vkFootnote,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp),
@@ -2520,11 +2457,10 @@ private fun PostCard(
                 )
             }
             // VK_MINT_lenta: индикатор Donut-заглушки.
-            // #ARCH-CONTAINERS 3.7-1: donut/placeholder в :core:data — захват ДО проверки.
             val donutPlaceholder = post.donut?.placeholder
             if (post.isDonut && donutPlaceholder != null) {
                 Text(text = donutPlaceholder,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.vkSubhead,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -2547,24 +2483,21 @@ private fun PostCard(
                 } else fullText
                 Text(
                     text = if (needsExpand && !expanded) collapsedText else fullText,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.vkParagraph,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onPostClick(post) }
-                        .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                        .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 6.dp),
                 )
-                // VKUI: vkit-b0dQw7 vkuiLink__withUnderline vkuiTypography__weight3 vkuiTypography__accent
-                // "Показать ещё" — underline link style
                 if (needsExpand && !expanded) {
                     Text(
                         text = "Показать ещё",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.vkSubhead,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
+                            .padding(start = 12.dp, end = 12.dp, bottom = 6.dp)
                             .clickable { expanded = true },
                     )
                 }
@@ -2739,27 +2672,23 @@ private fun PostCard(
             val copyHistory = post.copyHistory
             if (!copyHistory.isNullOrEmpty()) {
                 val original = copyHistory.first()
-                // VKUI: repost header — 24dp avatar, repost_outline_16 icon, 8px gap
-                // padding: 4px 8px 0px
+                // VKUI: repost header — 24dp avatar, repost_outline_20 icon, 8px gap
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                        .clip(MaterialTheme.shapes.small)
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         // Fix #365: репост-карточка ЦЕЛИКОМ открывает оригинальный
                         // пост (тот же колбэк onPostClick, что у тела поста:
                         // saveScrollPosition → PostHolder.last → PostDetail).
-                        // clickable ПОСЛЕ clip — риппл по скруглению; вложенные
-                        // клики (имя автора ниже, ссылки в тексте) перехватываются
-                        // раньше — потомки кликабельнее родителя по умолчанию.
                         .clickable { onPostClick(original) }
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
                     elevation = CardDefaults.cardElevation(0.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                     ),
                 ) {
-                    Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp)) {
+                    Column(modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)) {
                         val origName: String
                         val origPhoto: String?
                         if (original.fromId > 0) {
@@ -2775,9 +2704,8 @@ private fun PostCard(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            // VKUI: repost_outline_16 icon
                             Icon(
-                                Icons.Outlined.Repeat,
+                                VkIcons.RepostOutline20,
                                 contentDescription = "Репост",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp),
@@ -2803,13 +2731,11 @@ private fun PostCard(
                                     )
                                 }
                             }
-                            // VKUI: h4, vkuiSubhead__densityCompact vkuiTypography__weight2 vkuiTypography__accent
                             Text(
                                 text = origName,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.primary,
-                                textDecoration = TextDecoration.Underline,
+                                style = MaterialTheme.typography.vkSubhead,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
@@ -2819,11 +2745,6 @@ private fun PostCard(
                         }
                         if (original.text.isNotBlank()) {
                             Spacer(modifier = Modifier.height(4.dp))
-                            // Fix #365: текст репоста разворачивается на месте —
-                            // паттерн Fix #345 (CommunityScreen): «Показать ещё»
-                            // только при реальном переполнении (hasVisualOverflow);
-                            // тап по свёрнутому тексту = развернуть, по развёрнутому
-                            // (и по короткому) = открыть пост целиком.
                             var repostExpanded by remember { mutableStateOf(false) }
                             var repostOverflowed by remember { mutableStateOf(false) }
                             Text(
@@ -2832,7 +2753,7 @@ private fun PostCard(
                                     linkColor = MaterialTheme.colorScheme.primary,
                                     onUrlClick = { url -> vk.mint.util.openUrlExternal(ctx, url) },
                                 ),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.vkParagraph,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2850,13 +2771,11 @@ private fun PostCard(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             if (repostOverflowed && !repostExpanded) {
-                                // Стиль «Показать ещё» — как у основного текста поста выше.
                                 Text(
                                     text = "Показать ещё",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.vkSubhead,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.primary,
-                                    textDecoration = TextDecoration.Underline,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 2.dp)
@@ -2867,7 +2786,7 @@ private fun PostCard(
                         // Фото из оригинального поста.
                         val origPhotos = original.attachments?.filter { it.type == "photo" && it.photo != null }.orEmpty()
                         if (origPhotos.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             val origUrls = origPhotos.mapNotNull { it.photo?.largestUrl }
                             if (origUrls.isNotEmpty()) {
                                 AsyncImage(
@@ -2876,7 +2795,7 @@ private fun PostCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .heightIn(max = 160.dp)
-                                        .clip(MaterialTheme.shapes.extraSmall),
+                                        .clip(RoundedCornerShape(8.dp)),
                                     contentScale = ContentScale.Crop,
                                 )
                             }
@@ -2884,55 +2803,85 @@ private fun PostCard(
                     }
                 }
             }
-            // ─── VKUI: post footer — vkuiFlex__justifySpaceBetween, 4px vertical padding ───
-            // Actions: 8px row gap, 16px column gap. Date: post_date_block_preview (right, accent, underline)
+            // ─── VKUI v8 × M3E: Post Footer (VkReactionPill + Views + Bookmark) ───
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                var showReactions by remember { mutableStateOf(false) }
-                Box {
-                    ActionIcon(
-                        icon = if (isLiked) Icons.Outlined.Favorite else Icons.Outlined.FavoriteBorder,
-                        count = likeCount,
-                        tint = if (isLiked) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        onClick = { onLikeToggle(post) },
-                        onLongClick = { showReactions = true },
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    var showReactions by remember { mutableStateOf(false) }
+                    Box {
+                        VkReactionPill(
+                            icon = if (isLiked) VkIcons.LikeFill20 else VkIcons.LikeOutline20,
+                            count = likeCount,
+                            active = isLiked,
+                            onClick = { onLikeToggle(post) },
+                            onLongClick = { showReactions = true },
+                        )
+                        if (showReactions) {
+                            Box(
+                                modifier = Modifier
+                                    .offset(y = (-48).dp)
+                                    .zIndex(10f),
+                            ) {
+                                ReactionPicker(
+                                    onDismiss = { showReactions = false },
+                                    onSelect = { reaction ->
+                                        onReaction(post, reaction)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    VkReactionPill(
+                        icon = VkIcons.CommentOutline20,
+                        count = post.comments?.count ?: 0,
+                        onClick = { onCommentClick(post) },
                     )
-                    if (showReactions) {
-                        Box(
-                            modifier = Modifier
-                                .offset(y = (-48).dp)
-                                .zIndex(10f),
+                    VkReactionPill(
+                        icon = VkIcons.RepostOutline20,
+                        count = post.reposts?.count ?: 0,
+                        onClick = { onRepostClick(post) },
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    val viewsCount = post.views?.count ?: 0
+                    if (viewsCount > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            ReactionPicker(
-                                onDismiss = { showReactions = false },
-                                onSelect = { reaction ->
-                                    onReaction(post, reaction)
-                                },
+                            Icon(
+                                imageVector = VkIcons.View16,
+                                contentDescription = "Просмотры",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(
+                                text = formatVkCount(viewsCount),
+                                style = MaterialTheme.typography.vkFootnote,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
+                    Icon(
+                        imageVector = if (post.isFavoriteBool) VkIcons.BookmarkFill20 else VkIcons.BookmarkOutline20,
+                        contentDescription = "Закладка",
+                        tint = if (post.isFavoriteBool) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { onToggleBookmark(post) },
+                    )
                 }
-                ActionIcon(
-                    icon = Icons.Outlined.ChatBubbleOutline,
-                    count = post.comments?.count ?: 0,
-                    onClick = { onCommentClick(post) },
-                )
-                ActionIcon(
-                    icon = Icons.Outlined.Repeat,
-                    count = post.reposts?.count ?: 0,
-                    onClick = { onRepostClick(post) },
-                )
-                // Время поста — обычный текст, без ссылки
-                Text(
-                    text = timeStr,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
     }

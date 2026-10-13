@@ -712,6 +712,7 @@ fun VkCounterBadge(
  *  - В активном состоянии (например, лайк) окрашивается в деликатный тинт `#FF3347` с пружинным
  *    отскоком масштаба [M3ExpressiveMotion.fastSpatial].
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun VkReactionPill(
     icon: ImageVector,
@@ -722,6 +723,7 @@ fun VkReactionPill(
     activeContainerColor: Color = VkMintColors.VkLikeRed.copy(alpha = 0.14f),
     activeContentColor: Color = VkMintColors.VkLikeRed,
     contentDescription: String? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -757,10 +759,11 @@ fun VkReactionPill(
             }
             .clip(CircleShape)
             .background(containerColor)
-            .clickable(
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
+                onLongClick = onLongClick,
             )
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,

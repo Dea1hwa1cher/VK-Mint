@@ -63,6 +63,11 @@ import androidx.compose.runtime.collectAsState
 import vk.mint.ui.anim.LocalAnimScale
 import vk.mint.ui.anim.M3ExpressiveMotion
 import vk.mint.ui.anim.expressiveSpringScaled
+import vk.mint.ui.components.VkSeparator
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.theme.VkMintColors
+import vk.mint.ui.theme.vkCaption2
+import vk.mint.ui.theme.vkTitle2
 import vk.mint.ui.anim.tweenScaled
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -310,15 +315,15 @@ private fun BottomNavScrollButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val navIcon = item.icon
+    val navIcon = if (selected) (item.selectedIcon ?: item.icon) else item.icon
     val unreadCount = if (item.destinationRoute == Screen.Messages.route) {
         vk.mint.realtime.UnreadMessagesCounter.unreadCount.collectAsState().value
     } else {
         0
     }
-    val iconColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+    val iconColor = if (selected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
-    val textColor = if (selected) MaterialTheme.colorScheme.onSurface
+    val textColor = if (selected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
     val pillWidth by animateDpAsState(
         targetValue = if (selected) 56.dp else 28.dp,
@@ -346,7 +351,7 @@ private fun BottomNavScrollButton(
                     modifier = Modifier
                         .size(height = 30.dp, width = pillWidth)
                         .background(
-                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = pillAlpha),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = pillAlpha * 0.65f),
                             shape = CircleShape,
                         ),
                 )
@@ -355,14 +360,19 @@ private fun BottomNavScrollButton(
                 if (item.destinationRoute == Screen.Messages.route && unreadCount > 0) {
                     BadgedBox(
                         badge = {
-                            Badge { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
+                            Badge(
+                                containerColor = VkMintColors.VkLikeRed,
+                                contentColor = Color.White,
+                            ) {
+                                Text(if (unreadCount > 99) "99+" else unreadCount.toString())
+                            }
                         },
                     ) {
                         Icon(
                             navIcon,
                             contentDescription = item.title,
                             tint = iconColor,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(26.dp),
                         )
                     }
                 } else {
@@ -370,7 +380,7 @@ private fun BottomNavScrollButton(
                         navIcon,
                         contentDescription = item.title,
                         tint = iconColor,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(26.dp),
                     )
                 }
             }
@@ -378,11 +388,11 @@ private fun BottomNavScrollButton(
         Spacer(Modifier.height(3.dp))
         Text(
             text = if (item.key == "messenger") "Чаты" else item.title,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.vkCaption2,
             color = textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )
     }
 }
@@ -1098,7 +1108,14 @@ fun VkMintNavHost(
                         TopAppBar(
                             // Fix #256: экраны могут переопределить title (например,
                             // TextField для поиска) или navigationIcon (back button).
-                            title = ScreenTopBar.titleOverride ?: { Text(currentTitle) },
+                            title = ScreenTopBar.titleOverride ?: {
+                                Text(
+                                    text = currentTitle,
+                                    style = MaterialTheme.typography.vkTitle2,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
                             navigationIcon = {
                                 val override = ScreenTopBar.navigationIconOverride
                                 if (override != null) {
@@ -1121,7 +1138,7 @@ fun VkMintNavHost(
                                             }
                                         }) {
                                             Icon(
-                                                Icons.AutoMirrored.Filled.ArrowBack,
+                                                VkIcons.ArrowBack24,
                                                 contentDescription = "Назад",
                                             )
                                         }
@@ -1135,7 +1152,7 @@ fun VkMintNavHost(
                             },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.surface,
-                                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                scrolledContainerColor = MaterialTheme.colorScheme.surface,
                                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                                 navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                                 actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1145,6 +1162,8 @@ fun VkMintNavHost(
                         )
                         // Fix #256: subBar — контент под TopAppBar (filter chips, tabs).
                         ScreenTopBar.subBar?.invoke()
+                        // VKUI PanelHeader delimiter (0.5dp hairline)
+                        VkSeparator(insetStart = 0.dp, insetEnd = 0.dp)
                     }
                 }
             },
@@ -1203,117 +1222,128 @@ fun VkMintNavHost(
                                 ),
                             ),
                         ) {
-                            // #BOTTOM-SCROLL (2026-08-01): если на нижней панели
-                            // больше 5 кнопок (пользователь включил доп. пункты
-                            // через «Редактор панелей») — панель становится
-                            // горизонтально прокручиваемой. Каждая кнопка получает
-                            // фиксированную ширину 80.dp (как стандартный
-                            // NavigationBarItem при 5 элементах), Row скроллится.
-                            // При ≤5 кнопок — обычный NavigationBar (кнопки
-                            // распределяются по всей ширине через weight).
-                            if (visibleBottomItems.size <= 5) {
-                                // Fix #COMPILE: NavigationBarItem вызывается INLINE
-                                // внутри NavigationBar{ } content-scope (как в старом
-                                // коде до #BOTTOM-SCROLL). В M3 BOM 2025.06 вызов
-                                // NavigationBarItem из отдельной @Composable fun
-                                // давал 'Unresolved reference' — внутри NavigationBar{}
-                                // scope резолвится корректно.
-                                NavigationBar {
-                                    visibleBottomItems.forEach { item ->
-                                        val itemDest = item.destinationRoute
-                                        val navIcon = item.icon
-                                        val unreadCount = if (itemDest == Screen.Messages.route) {
-                                            vk.mint.realtime.UnreadMessagesCounter.unreadCount.collectAsState().value
-                                        } else {
-                                            0
-                                        }
-                                        val isServicesSubScreen = item.key == "services" &&
-                                            currentRoute !in bottomRoutes &&
-                                            currentRoute in servicesSubRoutes
-                                        val isSelected = currentRoute == itemDest || isServicesSubScreen
-                                        NavigationBarItem(
-                                            selected = isSelected,
-                                            onClick = {
-                                                if (isServicesSubScreen) {
-                                                    if (!nav.popBackStack(Screen.Services.route, inclusive = false)) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                // VKUI Tabbar top hairline separator (0.5dp)
+                                VkSeparator(insetStart = 0.dp, insetEnd = 0.dp)
+                                // #BOTTOM-SCROLL (2026-08-01): если на нижней панели
+                                // больше 5 кнопок (пользователь включил доп. пункты
+                                // через «Редактор панелей») — панель становится
+                                // горизонтально прокручиваемой. Каждая кнопка получает
+                                // фиксированную ширину 80.dp (как стандартный
+                                // NavigationBarItem при 5 элементах), Row скроллится.
+                                // При ≤5 кнопок — обычный NavigationBar (кнопки
+                                // распределяются по всей ширине через weight).
+                                if (visibleBottomItems.size <= 5) {
+                                    // Fix #COMPILE: NavigationBarItem вызывается INLINE
+                                    // внутри NavigationBar{ } content-scope (как в старом
+                                    // коде до #BOTTOM-SCROLL). В M3 BOM 2025.06 вызов
+                                    // NavigationBarItem из отдельной @Composable fun
+                                    // давал 'Unresolved reference' — внутри NavigationBar{}
+                                    // scope резолвится корректно.
+                                    NavigationBar(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                        tonalElevation = 0.dp,
+                                    ) {
+                                        visibleBottomItems.forEach { item ->
+                                            val itemDest = item.destinationRoute
+                                            val isServicesSubScreen = item.key == "services" &&
+                                                currentRoute !in bottomRoutes &&
+                                                currentRoute in servicesSubRoutes
+                                            val isSelected = currentRoute == itemDest || isServicesSubScreen
+                                            val navIcon = if (isSelected) (item.selectedIcon ?: item.icon) else item.icon
+                                            val unreadCount = if (itemDest == Screen.Messages.route) {
+                                                vk.mint.realtime.UnreadMessagesCounter.unreadCount.collectAsState().value
+                                            } else {
+                                                0
+                                            }
+                                            NavigationBarItem(
+                                                selected = isSelected,
+                                                onClick = {
+                                                    if (isServicesSubScreen) {
+                                                        if (!nav.popBackStack(Screen.Services.route, inclusive = false)) {
+                                                            nav.navigatePanelItem(item)
+                                                        }
+                                                    } else {
                                                         nav.navigatePanelItem(item)
                                                     }
-                                                } else {
-                                                    nav.navigatePanelItem(item)
-                                                }
-                                            },
-                                            icon = {
-                                                if (navIcon != null) {
-                                                    if (itemDest == Screen.Messages.route && unreadCount > 0) {
-                                                        BadgedBox(
-                                                            badge = {
-                                                                Badge { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
-                                                            },
-                                                        ) {
+                                                },
+                                                icon = {
+                                                    if (navIcon != null) {
+                                                        if (itemDest == Screen.Messages.route && unreadCount > 0) {
+                                                            BadgedBox(
+                                                                badge = {
+                                                                    Badge(
+                                                                        containerColor = VkMintColors.VkLikeRed,
+                                                                        contentColor = Color.White,
+                                                                    ) {
+                                                                        Text(if (unreadCount > 99) "99+" else unreadCount.toString())
+                                                                    }
+                                                                },
+                                                            ) {
+                                                                Icon(
+                                                                    navIcon,
+                                                                    contentDescription = item.title,
+                                                                    modifier = Modifier.size(26.dp),
+                                                                )
+                                                            }
+                                                        } else {
                                                             Icon(
                                                                 navIcon,
                                                                 contentDescription = item.title,
-                                                                modifier = Modifier.size(24.dp),
+                                                                modifier = Modifier.size(26.dp),
                                                             )
                                                         }
-                                                    } else {
-                                                        Icon(
-                                                            navIcon,
-                                                            contentDescription = item.title,
-                                                            modifier = Modifier.size(24.dp),
-                                                        )
                                                     }
-                                                }
-                                            },
-                                            label = {
-                                                Text(
-                                                    text = if (item.key == "messenger") "Чаты" else item.title,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                )
-                                            },
-                                            alwaysShowLabel = true,
-                                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                                                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                                                indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            ),
-                                        )
-                                    }
-                                }
-                            } else {
-                                val bottomScrollState = rememberScrollState()
-                                Surface(
-                                    color = NavigationBarDefaults.containerColor,
-                                    contentColor = androidx.compose.material3.contentColorFor(
-                                        NavigationBarDefaults.containerColor
-                                    ),
-                                    tonalElevation = NavigationBarDefaults.Elevation,
-                                    shadowElevation = 0.dp,
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .horizontalScroll(bottomScrollState)
-                                            .windowInsetsPadding(NavigationBarDefaults.windowInsets)
-                                            .height(UiScale.scaled(80.dp))
-                                            .padding(horizontal = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        visibleBottomItems.forEach { item ->
-                                            BottomNavScrollButton(
-                                                item = item,
-                                                selected = currentRoute == item.destinationRoute,
-                                                onClick = {
-                                                    nav.navigatePanelItem(item)
                                                 },
-                                                modifier = Modifier.width(80.dp),
+                                                label = {
+                                                    Text(
+                                                        text = if (item.key == "messenger") "Чаты" else item.title,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        style = MaterialTheme.typography.vkCaption2,
+                                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                                                    )
+                                                },
+                                                alwaysShowLabel = true,
+                                                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                ),
                                             )
+                                        }
+                                    }
+                                } else {
+                                    val bottomScrollState = rememberScrollState()
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surface,
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                        tonalElevation = 0.dp,
+                                        shadowElevation = 0.dp,
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .horizontalScroll(bottomScrollState)
+                                                .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+                                                .height(UiScale.scaled(80.dp))
+                                                .padding(horizontal = 4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            visibleBottomItems.forEach { item ->
+                                                BottomNavScrollButton(
+                                                    item = item,
+                                                    selected = currentRoute == item.destinationRoute,
+                                                    onClick = {
+                                                        nav.navigatePanelItem(item)
+                                                    },
+                                                    modifier = Modifier.width(80.dp),
+                                                )
+                                            }
                                         }
                                     }
                                 }

@@ -1,11 +1,7 @@
 package vk.mint.ui.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.ui.graphics.vector.ImageVector
+import vk.mint.ui.icons.VkIcons
 
 // ══════════════════════════════════════════════════════════════════════
 //  Fix #PANELEDIT: «Редактор панелей» — единый канонический набор пунктов
@@ -44,14 +40,16 @@ sealed class PanelAction {
  * @param key стабильный идентификатор для VkMintPrefs (не Screen.route —
  *            допускает дубли/соседние экраны и спец-действие «реакции»).
  * @param title подпись в панели/редакторе.
- * @param icon иконка (null → пункт рисуется без иконки).
+ * @param icon иконка в невыбранном состоянии (null → пункт рисуется без иконки).
  * @param action поведение при тапе.
+ * @param selectedIcon иконка в выбранном состоянии (VKUI Fill28/Fill20; по умолчанию равна [icon]).
  */
 data class PanelItem(
     val key: String,
     val title: String,
     val icon: ImageVector?,
     val action: PanelAction,
+    val selectedIcon: ImageVector? = icon,
 ) {
     /** Конечный destination-route для подсветки выбранного состояния. */
     val destinationRoute: String
@@ -71,24 +69,117 @@ data class PanelItem(
  */
 object PanelItems {
 
-    /** Канонический порядок + полный набор пунктов панелей. */
+    /** Канонический порядок + полный набор пунктов панелей (VKUI v8 `@vkontakte/icons` 28dp/24dp/20dp). */
     val all: List<PanelItem> = listOf(
-        PanelItem("feed", "Главная", Icons.Filled.Home, PanelAction.Route(Screen.Feed)),
-        PanelItem("services", "Сервисы", Screen.Services.icon ?: Icons.Filled.Home, PanelAction.Route(Screen.Services)),
-        PanelItem("messenger", "Мессенджер", Icons.AutoMirrored.Filled.Chat, PanelAction.Route(Screen.Messages)),
-        PanelItem("clips", "Клипы", Screen.Clips.icon, PanelAction.Route(Screen.Clips)),
-        PanelItem("profile", "Профиль", Icons.Filled.AccountCircle, PanelAction.Route(Screen.Profile)),
-        PanelItem("notifications", "Уведомления", Screen.Notifications.icon, PanelAction.Route(Screen.Notifications)),
-        PanelItem("music", "Музыка", Screen.Music.icon, PanelAction.Route(Screen.Music)),
-        PanelItem("video", "Видео", Screen.Video.icon, PanelAction.Route(Screen.Video)),
-        PanelItem("groups", "Сообщества", Screen.Groups.icon, PanelAction.Route(Screen.Groups)),
-        PanelItem("photos", "Фотографии", Screen.Photos.icon, PanelAction.Route(Screen.Photos)),
-        PanelItem("friends", "Друзья", Screen.Friends.icon, PanelAction.Route(Screen.Friends)),
-        PanelItem("bookmarks", "Закладки", Screen.Bookmarks.icon, PanelAction.Route(Screen.Bookmarks)),
-        PanelItem("files", "Файлы", Screen.Documents.icon, PanelAction.Route(Screen.Documents)),
-        PanelItem("search", "Поиск", Screen.Search.icon, PanelAction.Route(Screen.Search)),
-        PanelItem("reactions", "Реакции", Icons.Filled.ThumbUp, PanelAction.FeedFilter("LIKES")),
-        PanelItem("logs", "Логи", Screen.Logs.icon, PanelAction.Route(Screen.Logs)),
+        PanelItem(
+            key = "feed",
+            title = "Главная",
+            icon = VkIcons.NewsfeedOutline28,
+            action = PanelAction.Route(Screen.Feed),
+            selectedIcon = VkIcons.NewsfeedFill28,
+        ),
+        PanelItem(
+            key = "services",
+            title = "Сервисы",
+            icon = VkIcons.ServicesOutline28,
+            action = PanelAction.Route(Screen.Services),
+            selectedIcon = VkIcons.ServicesFill28,
+        ),
+        PanelItem(
+            key = "messenger",
+            title = "Мессенджер",
+            icon = VkIcons.MessagesOutline28,
+            action = PanelAction.Route(Screen.Messages),
+            selectedIcon = VkIcons.MessagesFill28,
+        ),
+        PanelItem(
+            key = "clips",
+            title = "Клипы",
+            icon = VkIcons.ClipsOutline28,
+            action = PanelAction.Route(Screen.Clips),
+            selectedIcon = VkIcons.ClipsFill28,
+        ),
+        PanelItem(
+            key = "profile",
+            title = "Профиль",
+            icon = VkIcons.ProfileOutline28,
+            action = PanelAction.Route(Screen.Profile),
+            selectedIcon = VkIcons.ProfileFill28,
+        ),
+        PanelItem(
+            key = "notifications",
+            title = "Уведомления",
+            icon = VkIcons.NotificationsOutline28,
+            action = PanelAction.Route(Screen.Notifications),
+            selectedIcon = VkIcons.NotificationsFill28,
+        ),
+        PanelItem(
+            key = "music",
+            title = "Музыка",
+            icon = VkIcons.MusicOutline28,
+            action = PanelAction.Route(Screen.Music),
+            selectedIcon = VkIcons.MusicFill28,
+        ),
+        PanelItem(
+            key = "video",
+            title = "Видео",
+            icon = VkIcons.VideoOutline28,
+            action = PanelAction.Route(Screen.Video),
+            selectedIcon = VkIcons.VideoFill28,
+        ),
+        PanelItem(
+            key = "groups",
+            title = "Сообщества",
+            icon = VkIcons.UsersOutline28,
+            action = PanelAction.Route(Screen.Groups),
+            selectedIcon = VkIcons.UsersFill28,
+        ),
+        PanelItem(
+            key = "photos",
+            title = "Фотографии",
+            icon = Screen.Photos.icon,
+            action = PanelAction.Route(Screen.Photos),
+        ),
+        PanelItem(
+            key = "friends",
+            title = "Друзья",
+            icon = VkIcons.UsersOutline28,
+            action = PanelAction.Route(Screen.Friends),
+            selectedIcon = VkIcons.UsersFill28,
+        ),
+        PanelItem(
+            key = "bookmarks",
+            title = "Закладки",
+            icon = VkIcons.BookmarkOutline20,
+            action = PanelAction.Route(Screen.Bookmarks),
+            selectedIcon = VkIcons.BookmarkFill20,
+        ),
+        PanelItem(
+            key = "files",
+            title = "Файлы",
+            icon = Screen.Documents.icon,
+            action = PanelAction.Route(Screen.Documents),
+        ),
+        PanelItem(
+            key = "search",
+            title = "Поиск",
+            icon = VkIcons.Search24,
+            action = PanelAction.Route(Screen.Search),
+            selectedIcon = VkIcons.Search24,
+        ),
+        PanelItem(
+            key = "reactions",
+            title = "Реакции",
+            icon = VkIcons.LikeOutline20,
+            action = PanelAction.FeedFilter("LIKES"),
+            selectedIcon = VkIcons.LikeFill20,
+        ),
+        PanelItem(
+            key = "logs",
+            title = "Логи",
+            icon = Screen.Logs.icon,
+            action = PanelAction.Route(Screen.Logs),
+        ),
     )
 
     /** По key → PanelItem (для маппинга из VkMintPrefs). */

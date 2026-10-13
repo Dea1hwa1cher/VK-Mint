@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.ui.graphics.vector.ImageVector
+import vk.mint.ui.icons.VkIcons
 
 /**
  * Navigation routes for VK Mint 2.0.
@@ -37,11 +38,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
  */
 sealed class Screen(val route: String, val title: String, val icon: ImageVector?) {
     // Dock
-    object Feed          : Screen("feed",          "Лента",        Icons.Default.Dashboard)
-    object Messages      : Screen("messages",      "Сообщения",    Icons.Default.Email)
-    object Music         : Screen("music",         "Музыка",       Icons.Default.LibraryMusic)
-    object Video         : Screen("video",         "Видео",        Icons.Default.PlayCircle)
-    object Profile       : Screen("profile",       "Профиль",      Icons.Default.Person)
+    object Feed          : Screen("feed",          "Лента",        VkIcons.NewsfeedOutline28)
+    object Messages      : Screen("messages",      "Сообщения",    VkIcons.MessagesOutline28)
+    object Music         : Screen("music",         "Музыка",       VkIcons.MusicOutline28)
+    object Video         : Screen("video",         "Видео",        VkIcons.VideoOutline28)
+    object Profile       : Screen("profile",       "Профиль",      VkIcons.ProfileOutline28)
 
     /**
      * П-3 (#PROFILE-SNAP): полноэкранный редактор своего профиля —
@@ -389,14 +390,14 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object StoryViewer : Screen("story_viewer", "Истории", null)
 
     // Drawer — основные разделы социальной сети
-    object Friends       : Screen("friends",       "Друзья",       Icons.Default.Group)
-    object Groups        : Screen("groups",        "Сообщества",   Icons.Outlined.Groups)
+    object Friends       : Screen("friends",       "Друзья",       VkIcons.UsersOutline28)
+    object Groups        : Screen("groups",        "Сообщества",   VkIcons.UsersOutline28)
     object Photos        : Screen("photos",        "Фото",         Icons.Outlined.Image)
-    object Search        : Screen("search",        "Поиск",        Icons.Default.Search)
-    object Bookmarks     : Screen("bookmarks",     "Закладки",     Icons.Outlined.Bookmark)
+    object Search        : Screen("search",        "Поиск",        VkIcons.Search24)
+    object Bookmarks     : Screen("bookmarks",     "Закладки",     VkIcons.BookmarkOutline20)
     object Documents     : Screen("documents",     "Документы",    Icons.Outlined.Description)
     /** §37.12 Phase 6: VK Clips — короткие вертикальные видео. */
-    object Clips         : Screen("clips",         "Клипы",        Icons.Outlined.VideoLibrary)
+    object Clips         : Screen("clips",         "Клипы",        VkIcons.ClipsOutline28)
     /**
      * Клипы автора (лента клипов конкретного пользователя/сообщества).
      * Принимает ownerId как path-параметр (положительный — пользователь,
@@ -422,7 +423,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     }
 
     // Drawer — системные разделы
-    object Services      : Screen("services",      "Сервисы",      Icons.Default.Apps)
+    object Services      : Screen("services",      "Сервисы",      VkIcons.ServicesOutline28)
     /**
      * #FEED-MENU-NOTIF (2026-10-01): Экран уведомлений с категорийным сайдбаром.
      * КАТЕГОРИИ уведомлений VK web (notifications.getRedesign) передаются как
@@ -433,14 +434,14 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
      * Note: параметризованный маршрут НЕ сохраняется в lastRoute (см. VkMintNavHost
      * mainRoutes) — иначе холодный старт получил бы литеральный паттерн "{category}".
      */
-    object Notifications : Screen("notifications/{category}", "Уведомления", Icons.Default.AlternateEmail) {
+    object Notifications : Screen("notifications/{category}", "Уведомления", VkIcons.NotificationsOutline28) {
         const val ARG_CATEGORY = "category"
         const val DEFAULT_CATEGORY = "all"
         fun buildRoute(category: String = DEFAULT_CATEGORY): String =
             "notifications/${android.net.Uri.encode(category)}"
     }
     object Settings      : Screen("settings",      "Настройки",    Icons.Default.Settings)
-    object NotificationSettings : Screen("notification_settings", "Настройки уведомлений", Icons.Default.Notifications)
+    object NotificationSettings : Screen("notification_settings", "Настройки уведомлений", VkIcons.NotificationsOutline28)
 
     /**
      * §PROFILE-P4 (этап П-4, инвентарь §4.1 п.10 / §5 п.5): VK-приватность на
