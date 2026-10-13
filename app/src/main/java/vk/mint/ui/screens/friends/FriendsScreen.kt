@@ -102,25 +102,23 @@ fun FriendsScreen(
 
     // Загрузка списка друзей (первая страница).
     LaunchedEffect(Unit) {
-        scope.launch {
-            loading = true
-            endReached = false
-            errorText = null
-            try {
-                val list = app.apiClient.friendsGet(count = pageSize)
-                // Fix #53: защитная дедупликация.
-                friends = list.distinctBy { it.id }
-                if (list.size < pageSize) endReached = true
-                AppLog.i("FriendsScreen", "Loaded ${list.size} friends")
-                if (list.isEmpty()) {
-                    errorText = app.apiClient.lastApiError ?: "Список друзей пуст"
-                }
-            } catch (e: Exception) {
-                AppLog.e("FriendsScreen", "Failed to load friends", e)
-                errorText = "Ошибка: ${e.message}"
-            } finally {
-                loading = false
+        loading = true
+        endReached = false
+        errorText = null
+        try {
+            val list = app.apiClient.friendsGet(count = pageSize)
+            // Fix #53: защитная дедупликация.
+            friends = list.distinctBy { it.id }
+            if (list.size < pageSize) endReached = true
+            AppLog.i("FriendsScreen", "Loaded ${list.size} friends")
+            if (list.isEmpty()) {
+                errorText = app.apiClient.lastApiError ?: "Список друзей пуст"
             }
+        } catch (e: Exception) {
+            AppLog.e("FriendsScreen", "Failed to load friends", e)
+            errorText = "Ошибка: ${e.message}"
+        } finally {
+            loading = false
         }
     }
 
@@ -180,15 +178,13 @@ fun FriendsScreen(
     // переключении на вкладку «Заявки» (#43). Загружаем один раз и кэшируем.
     LaunchedEffect(tab) {
         if (tab == 2 && requests.isEmpty()) {
-            scope.launch {
-                try {
-                    val list = app.apiClient.friendsGetRequests(count = 100)
-                    // Fix #53: защитная дедупликация.
-                    requests = list.distinctBy { it.id }
-                    AppLog.i("FriendsScreen", "Loaded ${list.size} friend requests")
-                } catch (e: Exception) {
-                    AppLog.e("FriendsScreen", "Failed to load requests", e)
-                }
+            try {
+                val list = app.apiClient.friendsGetRequests(count = 100)
+                // Fix #53: защитная дедупликация.
+                requests = list.distinctBy { it.id }
+                AppLog.i("FriendsScreen", "Loaded ${list.size} friend requests")
+            } catch (e: Exception) {
+                AppLog.e("FriendsScreen", "Failed to load requests", e)
             }
         }
     }

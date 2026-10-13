@@ -169,25 +169,23 @@ private fun AlbumsTabContent(onAlbumClick: (Album) -> Unit) {
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
-        scope.launch {
-            loadingAlbums = true
-            errorText = null
-            try {
-                val list = deps.photosApi.photosGetAlbums()
-                // Fix #53: защитная дедупликация — LazyColumn keys должны быть уникальны.
-                albums = list
-                    .filter { it.id > 0 && it.ownerId != 0L }
-                    .distinctBy { "${it.ownerId}_${it.id}" }
-                AppLog.i("PhotosScreen", "Loaded ${list.size} albums")
-                if (list.isEmpty()) {
-                    errorText = deps.photosApi.lastApiError ?: "Нет альбомов"
-                }
-            } catch (e: Exception) {
-                AppLog.e("PhotosScreen", "Failed to load albums", e)
-                errorText = "Ошибка: ${e.message}"
-            } finally {
-                loadingAlbums = false
+        loadingAlbums = true
+        errorText = null
+        try {
+            val list = deps.photosApi.photosGetAlbums()
+            // Fix #53: защитная дедупликация — LazyColumn keys должны быть уникальны.
+            albums = list
+                .filter { it.id > 0 && it.ownerId != 0L }
+                .distinctBy { "${it.ownerId}_${it.id}" }
+            AppLog.i("PhotosScreen", "Loaded ${list.size} albums")
+            if (list.isEmpty()) {
+                errorText = deps.photosApi.lastApiError ?: "Нет альбомов"
             }
+        } catch (e: Exception) {
+            AppLog.e("PhotosScreen", "Failed to load albums", e)
+            errorText = "Ошибка: ${e.message}"
+        } finally {
+            loadingAlbums = false
         }
     }
 
@@ -552,31 +550,29 @@ private fun AlbumPhotosView(album: Album, onBack: () -> Unit) {
     val photoViewerState = remember { mutableStateOf<Pair<List<String>, Int>?>(null) }
 
     LaunchedEffect(album.id) {
-        scope.launch {
-            loading = true
-            endReached = false
-            errorText = null
-            try {
-                val list = deps.photosApi.photosGet(
-                    ownerId = album.ownerId,
-                    albumId = album.id.toString(),
-                    count = pageSize,
-                )
-                // Fix #53: защитная дедупликация — LazyColumn keys должны быть уникальны.
-                photos = list
-                    .filter { it.id > 0 && it.ownerId != 0L }
-                    .distinctBy { "${it.ownerId}_${it.id}" }
-                if (list.size < pageSize) endReached = true
-                AppLog.i("PhotosScreen", "Loaded ${list.size} photos from album ${album.id}")
-                if (list.isEmpty()) {
-                    errorText = deps.photosApi.lastApiError ?: "В альбоме нет фото"
-                }
-            } catch (e: Exception) {
-                AppLog.e("PhotosScreen", "Failed to load photos", e)
-                errorText = "Ошибка: ${e.message}"
-            } finally {
-                loading = false
+        loading = true
+        endReached = false
+        errorText = null
+        try {
+            val list = deps.photosApi.photosGet(
+                ownerId = album.ownerId,
+                albumId = album.id.toString(),
+                count = pageSize,
+            )
+            // Fix #53: защитная дедупликация — LazyColumn keys должны быть уникальны.
+            photos = list
+                .filter { it.id > 0 && it.ownerId != 0L }
+                .distinctBy { "${it.ownerId}_${it.id}" }
+            if (list.size < pageSize) endReached = true
+            AppLog.i("PhotosScreen", "Loaded ${list.size} photos from album ${album.id}")
+            if (list.isEmpty()) {
+                errorText = deps.photosApi.lastApiError ?: "В альбоме нет фото"
             }
+        } catch (e: Exception) {
+            AppLog.e("PhotosScreen", "Failed to load photos", e)
+            errorText = "Ошибка: ${e.message}"
+        } finally {
+            loading = false
         }
     }
 

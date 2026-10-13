@@ -3657,34 +3657,34 @@ fun ChatDetailScreen(
                 else -> true
             }
             if (!shouldFetch) return@collect
-            scope.launch {
-                try {
-                    val targetCount = maxOf(messages.size, pageSize)
-                    val fresh = app.apiClient.messagesGetHistory(peerId, count = targetCount)
-                        .distinctBy { it.id }
-                    if (fresh.isNotEmpty()) {
-                        messages = fresh
-                        errorText = null
-                        if (isPinnedToNewest) {
-                            listState.animateScrollToItem(0)
-                            // FIX (P5.2): помечаем новые сообщения как прочитанные,
-                            // пока пользователь в чате и видит последние сообщения.
-                            // Если пользователь прокрутил вверх (не pinned to newest) —
-                            // НЕ помечаем, чтобы он сам увидел непрочитанные при возврате.
-                            val newestId = fresh.maxOf { it.id }
-                            try {
-                                val ok = app.apiClient.messagesMarkAsRead(peerId, newestId)
-                                AppLog.d("ChatDetailScreen",
-                                    "markAsRead on LP new msg: peer=$peerId upTo=$newestId ok=$ok")
-                            } catch (e: Exception) {
-                                AppLog.w("ChatDetailScreen",
-                                    "markAsRead on LP failed: ${e.message}")
-                            }
+            try {
+                val targetCount = maxOf(messages.size, pageSize)
+                val fresh = app.apiClient.messagesGetHistory(peerId, count = targetCount)
+                    .distinctBy { it.id }
+                if (fresh.isNotEmpty()) {
+                    messages = fresh
+                    errorText = null
+                    if (isPinnedToNewest) {
+                        listState.animateScrollToItem(0)
+                        // FIX (P5.2): помечаем новые сообщения как прочитанные,
+                        // пока пользователь в чате и видит последние сообщения.
+                        // Если пользователь прокрутил вверх (не pinned to newest) —
+                        // НЕ помечаем, чтобы он сам увидел непрочитанные при возврате.
+                        val newestId = fresh.maxOf { it.id }
+                        try {
+                            val ok = app.apiClient.messagesMarkAsRead(peerId, newestId)
+                            AppLog.d("ChatDetailScreen",
+                                "markAsRead on LP new msg: peer=$peerId upTo=$newestId ok=$ok")
+                        } catch (e: Exception) {
+                            AppLog.w("ChatDetailScreen",
+                                "markAsRead on LP failed: ${e.message}")
                         }
                     }
-                } catch (e: Exception) {
-                    AppLog.w("ChatDetailScreen", "LongPoll re-fetch error: ${e.message}")
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.w("ChatDetailScreen", "LongPoll re-fetch error: ${e.message}")
             }
         }
     }

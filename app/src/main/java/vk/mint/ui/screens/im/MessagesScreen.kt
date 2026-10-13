@@ -359,7 +359,7 @@ fun MessagesScreen(
     // CHAN-PREFS: грузим, только если включён показ «Рекомендаций в каналах».
     LaunchedEffect(activeTab, s.channelRecEnabled) {
         if (activeTab == 1 && s.channelRecEnabled && !channelRecsLoaded && channelRecs.isEmpty()) {
-            scope.launch { loadChannelRecs(channelRecsCount) }
+            loadChannelRecs(channelRecsCount)
         }
     }
 
@@ -770,7 +770,7 @@ fun MessagesScreen(
             // NULL-EXPLICIT: захват var-делегата в val — явная проверка вместо ?.
             val refetchJob = lpRefetchJob
             if (refetchJob != null) refetchJob.cancel()
-            lpRefetchJob = scope.launch {
+            lpRefetchJob = launch {
                 try {
                     // Fix #395 #IM-FAST-LIST: канальный скан (getItems-пагинация,
                     // до ~2.3с — логкат 14.09 22:17) стартует ПАРАЛЛЕЛЬНО с

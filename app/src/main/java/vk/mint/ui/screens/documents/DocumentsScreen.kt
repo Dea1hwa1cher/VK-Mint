@@ -77,27 +77,25 @@ fun DocumentsScreen() {
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
-        scope.launch {
-            loading = true
-            endReached = false
-            errorText = null
-            try {
-                val list = app.apiClient.docsGet(count = pageSize)
-                // Fix #53: защитная дедупликация — LazyColumn keys должны быть уникальны.
-                docs = list
-                    .filter { it.id > 0 && it.ownerId != 0L }
-                    .distinctBy { "${it.ownerId}_${it.id}" }
-                if (list.size < pageSize) endReached = true
-                AppLog.i("DocumentsScreen", "Loaded ${list.size} docs")
-                if (list.isEmpty()) {
-                    errorText = app.apiClient.lastApiError ?: "Нет документов"
-                }
-            } catch (e: Exception) {
-                AppLog.e("DocumentsScreen", "Failed to load docs", e)
-                errorText = "Ошибка: ${e.message}"
-            } finally {
-                loading = false
+        loading = true
+        endReached = false
+        errorText = null
+        try {
+            val list = app.apiClient.docsGet(count = pageSize)
+            // Fix #53: защитная дедупликация — LazyColumn keys должны быть уникальны.
+            docs = list
+                .filter { it.id > 0 && it.ownerId != 0L }
+                .distinctBy { "${it.ownerId}_${it.id}" }
+            if (list.size < pageSize) endReached = true
+            AppLog.i("DocumentsScreen", "Loaded ${list.size} docs")
+            if (list.isEmpty()) {
+                errorText = app.apiClient.lastApiError ?: "Нет документов"
             }
+        } catch (e: Exception) {
+            AppLog.e("DocumentsScreen", "Failed to load docs", e)
+            errorText = "Ошибка: ${e.message}"
+        } finally {
+            loading = false
         }
     }
 

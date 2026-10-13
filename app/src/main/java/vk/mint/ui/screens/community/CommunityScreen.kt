@@ -286,33 +286,31 @@ fun CommunityScreen(
     var docsEndReached by remember { mutableStateOf(false) }
 
     LaunchedEffect(groupId) {
-        scope.launch {
-            loading = true
-            errorText = null
-            try {
-                val groups = app.apiClient.groupsGetById(listOf(groupId))
-                groupInfo = groups.firstOrNull()
-                isMember = groupInfo?.isMember == 1
-                if (groupInfo == null) {
-                    errorText = app.apiClient.lastApiError ?: "Сообщество не найдено (id=$groupId)"
-                } else {
-                    // wall.get с owner_id = -groupId (VK convention: группы — отрицательные).
-                    // #POST-SIGNER: extended=1 — вместе с постами приходят профили
-                    // (имена авторов подписи).
-                    val wallPage = app.apiClient.wallGetExtended(ownerId = -groupId, count = 30)
-                    posts = wallPage.posts
-                        .filter { it.id > 0 && it.ownerId != 0L }
-                        .distinctBy { "${it.ownerId}_${it.id}" }
-                    signerNames = wallPage.profileNames
-                    endReached = wallPage.posts.size < 30
-                    AppLog.i("CommunityScreen", "Loaded group ${groupInfo?.name} + ${posts.size} posts")
-                }
-            } catch (e: Exception) {
-                AppLog.e("CommunityScreen", "Failed to load community", e)
-                errorText = "Ошибка: ${e.message}"
-            } finally {
-                loading = false
+        loading = true
+        errorText = null
+        try {
+            val groups = app.apiClient.groupsGetById(listOf(groupId))
+            groupInfo = groups.firstOrNull()
+            isMember = groupInfo?.isMember == 1
+            if (groupInfo == null) {
+                errorText = app.apiClient.lastApiError ?: "Сообщество не найдено (id=$groupId)"
+            } else {
+                // wall.get с owner_id = -groupId (VK convention: группы — отрицательные).
+                // #POST-SIGNER: extended=1 — вместе с постами приходят профили
+                // (имена авторов подписи).
+                val wallPage = app.apiClient.wallGetExtended(ownerId = -groupId, count = 30)
+                posts = wallPage.posts
+                    .filter { it.id > 0 && it.ownerId != 0L }
+                    .distinctBy { "${it.ownerId}_${it.id}" }
+                signerNames = wallPage.profileNames
+                endReached = wallPage.posts.size < 30
+                AppLog.i("CommunityScreen", "Loaded group ${groupInfo?.name} + ${posts.size} posts")
             }
+        } catch (e: Exception) {
+            AppLog.e("CommunityScreen", "Failed to load community", e)
+            errorText = "Ошибка: ${e.message}"
+        } finally {
+            loading = false
         }
     }
 
@@ -470,40 +468,36 @@ fun CommunityScreen(
     // photosLoaded предотвращает повторные запросы при переключении туда-обратно.
     LaunchedEffect(selectedTab, groupId) {
         if (selectedTab != 1 || photosLoaded || photosLoading) return@LaunchedEffect
-        scope.launch {
-            photosLoading = true
-            photosError = null
-            try {
-                // VK convention: owner_id группы — отрицательный.
-                photos = app.apiClient.photosGet(ownerId = -groupId, albumId = "wall", count = 50)
-                photosLoaded = true
-                AppLog.i("CommunityScreen", "Loaded ${photos.size} photos for group $groupId")
-            } catch (e: Exception) {
-                AppLog.e("CommunityScreen", "photosGet failed", e)
-                photosError = "Ошибка: ${e.message}"
-            } finally {
-                photosLoading = false
-            }
+        photosLoading = true
+        photosError = null
+        try {
+            // VK convention: owner_id группы — отрицательный.
+            photos = app.apiClient.photosGet(ownerId = -groupId, albumId = "wall", count = 50)
+            photosLoaded = true
+            AppLog.i("CommunityScreen", "Loaded ${photos.size} photos for group $groupId")
+        } catch (e: Exception) {
+            AppLog.e("CommunityScreen", "photosGet failed", e)
+            photosError = "Ошибка: ${e.message}"
+        } finally {
+            photosLoading = false
         }
     }
 
     // Шаг 2 (#32b): первая загрузка видео сообщества при переходе на вкладку 2.
     LaunchedEffect(selectedTab, groupId) {
         if (selectedTab != 2 || videosLoaded || videosLoading) return@LaunchedEffect
-        scope.launch {
-            videosLoading = true
-            videosError = null
-            try {
-                videos = app.apiClient.videoGet(ownerId = -groupId, count = 30, offset = 0)
-                videosLoaded = true
-                videosEndReached = videos.size < 30
-                AppLog.i("CommunityScreen", "Loaded ${videos.size} videos for group $groupId")
-            } catch (e: Exception) {
-                AppLog.e("CommunityScreen", "videoGet failed", e)
-                videosError = "Ошибка: ${e.message}"
-            } finally {
-                videosLoading = false
-            }
+        videosLoading = true
+        videosError = null
+        try {
+            videos = app.apiClient.videoGet(ownerId = -groupId, count = 30, offset = 0)
+            videosLoaded = true
+            videosEndReached = videos.size < 30
+            AppLog.i("CommunityScreen", "Loaded ${videos.size} videos for group $groupId")
+        } catch (e: Exception) {
+            AppLog.e("CommunityScreen", "videoGet failed", e)
+            videosError = "Ошибка: ${e.message}"
+        } finally {
+            videosLoading = false
         }
     }
 
@@ -546,19 +540,17 @@ fun CommunityScreen(
     // #GROUP-CLIPS: загрузка клипов сообщества при переходе на вкладку 3.
     LaunchedEffect(selectedTab, groupId) {
         if (selectedTab != 3 || clipsLoaded || clipsLoading) return@LaunchedEffect
-        scope.launch {
-            clipsLoading = true
-            clipsError = null
-            try {
-                clips = app.apiClient.shortVideoGetOwnerVideos(ownerId = -groupId, count = 30)
-                clipsLoaded = true
-                AppLog.i("CommunityScreen", "Loaded ${clips.size} clips for group $groupId")
-            } catch (e: Exception) {
-                AppLog.e("CommunityScreen", "shortVideoGetOwnerVideos failed", e)
-                clipsError = "Ошибка: ${e.message}"
-            } finally {
-                clipsLoading = false
-            }
+        clipsLoading = true
+        clipsError = null
+        try {
+            clips = app.apiClient.shortVideoGetOwnerVideos(ownerId = -groupId, count = 30)
+            clipsLoaded = true
+            AppLog.i("CommunityScreen", "Loaded ${clips.size} clips for group $groupId")
+        } catch (e: Exception) {
+            AppLog.e("CommunityScreen", "shortVideoGetOwnerVideos failed", e)
+            clipsError = "Ошибка: ${e.message}"
+        } finally {
+            clipsLoading = false
         }
     }
 
@@ -566,27 +558,25 @@ fun CommunityScreen(
     // #AUDIO-PAGING-ALL: первая страница (100 треков) — дальше догрузка по скроллу.
     LaunchedEffect(selectedTab, groupId) {
         if (selectedTab != 4 || tracksLoaded || tracksLoading) return@LaunchedEffect
-        scope.launch {
-            tracksLoading = true
-            tracksError = null
-            try {
-                val (total, page) = app.apiClient.audioGetWithCount(
-                    count = 100, offset = 0, ownerId = -groupId)
-                tracks = page.filter { it.id > 0L && it.ownerId != 0L }
-                    .distinctBy { "${it.ownerId}_${it.id}" }
-                tracksServerOffset = page.size
-                // #AUDIO-PAGING-HOLE (волна 41): НЕпустая страница (даже короткая)
-                // ≠ конец списка — VK режет листинг на «битой» записи (прецедент
-                // стопа 149/3239). Сбой (total=-1) — hasMore сохраняется для повтора.
-                tracksHasMore = page.isNotEmpty() || total < 0
-                tracksLoaded = true
-                AppLog.i("CommunityScreen", "Loaded ${tracks.size}/${page.size} tracks for group $groupId (total=$total hasMore=$tracksHasMore)")
-            } catch (e: Exception) {
-                AppLog.e("CommunityScreen", "audioGet failed", e)
-                tracksError = "Ошибка: ${e.message}"
-            } finally {
-                tracksLoading = false
-            }
+        tracksLoading = true
+        tracksError = null
+        try {
+            val (total, page) = app.apiClient.audioGetWithCount(
+                count = 100, offset = 0, ownerId = -groupId)
+            tracks = page.filter { it.id > 0L && it.ownerId != 0L }
+                .distinctBy { "${it.ownerId}_${it.id}" }
+            tracksServerOffset = page.size
+            // #AUDIO-PAGING-HOLE (волна 41): НЕпустая страница (даже короткая)
+            // ≠ конец списка — VK режет листинг на «битой» записи (прецедент
+            // стопа 149/3239). Сбой (total=-1) — hasMore сохраняется для повтора.
+            tracksHasMore = page.isNotEmpty() || total < 0
+            tracksLoaded = true
+            AppLog.i("CommunityScreen", "Loaded ${tracks.size}/${page.size} tracks for group $groupId (total=$total hasMore=$tracksHasMore)")
+        } catch (e: Exception) {
+            AppLog.e("CommunityScreen", "audioGet failed", e)
+            tracksError = "Ошибка: ${e.message}"
+        } finally {
+            tracksLoading = false
         }
     }
 
@@ -631,19 +621,17 @@ fun CommunityScreen(
     // Шаг 4 (#32d): загрузка тем обсуждений при переходе на вкладку 5.
     LaunchedEffect(selectedTab, groupId) {
         if (selectedTab != 5 || topicsLoaded || topicsLoading) return@LaunchedEffect
-        scope.launch {
-            topicsLoading = true
-            topicsError = null
-            try {
-                topics = app.apiClient.boardGetTopics(groupId = groupId, count = 30, offset = 0)
-                topicsLoaded = true
-                AppLog.i("CommunityScreen", "Loaded ${topics.size} topics for group $groupId")
-            } catch (e: Exception) {
-                AppLog.e("CommunityScreen", "boardGetTopics failed", e)
-                topicsError = "Ошибка: ${e.message}"
-            } finally {
-                topicsLoading = false
-            }
+        topicsLoading = true
+        topicsError = null
+        try {
+            topics = app.apiClient.boardGetTopics(groupId = groupId, count = 30, offset = 0)
+            topicsLoaded = true
+            AppLog.i("CommunityScreen", "Loaded ${topics.size} topics for group $groupId")
+        } catch (e: Exception) {
+            AppLog.e("CommunityScreen", "boardGetTopics failed", e)
+            topicsError = "Ошибка: ${e.message}"
+        } finally {
+            topicsLoading = false
         }
     }
 
@@ -652,20 +640,18 @@ fun CommunityScreen(
     // 30 за раз, догрузка по скроллу — см. loadMoreDocs ниже.
     LaunchedEffect(selectedTab, groupId) {
         if (selectedTab != 6 || docsLoaded || docsLoading) return@LaunchedEffect
-        scope.launch {
-            docsLoading = true
-            docsError = null
-            try {
-                docs = app.apiClient.docsGet(ownerId = -groupId, count = 30, offset = 0)
-                docsLoaded = true
-                docsEndReached = docs.size < 30
-                AppLog.i("CommunityScreen", "Loaded ${docs.size} docs for group $groupId")
-            } catch (e: Exception) {
-                AppLog.e("CommunityScreen", "docsGet failed", e)
-                docsError = "Ошибка: ${e.message}"
-            } finally {
-                docsLoading = false
-            }
+        docsLoading = true
+        docsError = null
+        try {
+            docs = app.apiClient.docsGet(ownerId = -groupId, count = 30, offset = 0)
+            docsLoaded = true
+            docsEndReached = docs.size < 30
+            AppLog.i("CommunityScreen", "Loaded ${docs.size} docs for group $groupId")
+        } catch (e: Exception) {
+            AppLog.e("CommunityScreen", "docsGet failed", e)
+            docsError = "Ошибка: ${e.message}"
+        } finally {
+            docsLoading = false
         }
     }
 

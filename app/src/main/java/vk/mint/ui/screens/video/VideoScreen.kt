@@ -221,32 +221,30 @@ fun VideoScreen(
     val downloads by VideoDownloadManager.downloads.collectAsState()
 
     LaunchedEffect(Unit) {
-        scope.launch {
-            loading = true
-            endReached = false
-            apiErrorMessage = null
-            try {
-                val list = app.apiClient.videoGet(count = pageSize)
-                    // Fix #53: защитная дедупликация.
-                    // Audit #40: порядок ownerId_id (как в остальных экранах).
-                    .filter { it.id > 0 && it.ownerId != 0L }
-                    .distinctBy { "${it.ownerId}_${it.id}" }
-                videos = list
-                if (list.size < pageSize) endReached = true
-                if (videos.isEmpty()) {
-                    val errCode = app.apiClient.lastApiErrorCode
-                    val errStr = app.apiClient.lastApiError
-                    apiErrorMessage = when (errCode) {
-                        5 -> "Токен недействителен или истёк (error 5)."
-                        15 -> "Доступ к видео ограничен VK (error 15)."
-                        else -> if (errStr != null) "Ошибка: $errStr" else "Нет видео"
-                    }
+        loading = true
+        endReached = false
+        apiErrorMessage = null
+        try {
+            val list = app.apiClient.videoGet(count = pageSize)
+                // Fix #53: защитная дедупликация.
+                // Audit #40: порядок ownerId_id (как в остальных экранах).
+                .filter { it.id > 0 && it.ownerId != 0L }
+                .distinctBy { "${it.ownerId}_${it.id}" }
+            videos = list
+            if (list.size < pageSize) endReached = true
+            if (videos.isEmpty()) {
+                val errCode = app.apiClient.lastApiErrorCode
+                val errStr = app.apiClient.lastApiError
+                apiErrorMessage = when (errCode) {
+                    5 -> "Токен недействителен или истёк (error 5)."
+                    15 -> "Доступ к видео ограничен VK (error 15)."
+                    else -> if (errStr != null) "Ошибка: $errStr" else "Нет видео"
                 }
-            } catch (e: Exception) {
-                AppLog.e("VideoScreen", "Failed to load videos", e)
-            } finally {
-                loading = false
             }
+        } catch (e: Exception) {
+            AppLog.e("VideoScreen", "Failed to load videos", e)
+        } finally {
+            loading = false
         }
     }
 

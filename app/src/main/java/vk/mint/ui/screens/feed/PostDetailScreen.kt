@@ -432,20 +432,18 @@ fun PostDetailScreen(
             }
         }
         if (p == null) return@LaunchedEffect
-        scope.launch {
-            loadingComments = true
-            try {
-                val result = app.apiClient.wallGetComments(p.ownerId, p.id, count = 50, sort = activeSortOrder)
-                comments = result.comments
-                profiles = result.profiles
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                // Fix #252: корректная отмена (пользователь ушёл со экрана)
-                throw e
-            } catch (e: Exception) {
-                AppLog.e("PostDetail", "load comments error", e)
-            } finally {
-                loadingComments = false
-            }
+        loadingComments = true
+        try {
+            val result = app.apiClient.wallGetComments(p.ownerId, p.id, count = 50, sort = activeSortOrder)
+            comments = result.comments
+            profiles = result.profiles
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Fix #252: корректная отмена (пользователь ушёл со экрана)
+            throw e
+        } catch (e: Exception) {
+            AppLog.e("PostDetail", "load comments error", e)
+        } finally {
+            loadingComments = false
         }
     }
 
@@ -524,45 +522,44 @@ fun PostDetailScreen(
             .distinctUntilChanged()
             .filter { it }
             .collect {
-                if (post == null || endReached || loadingMore) return@collect
-                scope.launch {
-                    loadingMore = true
-                    try {
-                        // Fix #233 (P1-7): pagination offset = только comments.size,
-                        // БЕЗ localComments.size. localComments — это optimistic
-                        // комментарии, которые уже отображены, но НЕ учтены на
-                        // сервере. Сервер возвращает комментарии по offset от
-                        // начала списка — localComments не смещают server offset.
-                        // Раньше offset = comments.size + localComments.size →
-                        // пропускали N реальных комментариев после optimistic send.
-                        val offset = comments.size
-                        val result = app.apiClient.wallGetComments(
-                            post.ownerId, post.id,
-                            count = 30, offset = offset,
-                            sort = activeSortOrder,
-                        )
-                        if (result.comments.isEmpty()) {
-                            endReached = true
-                        } else {
-                            comments = comments + result.comments
-                            profiles += result.profiles
-                            // Fix #233 (P1-7): если сервер вернул комментарии,
-                            // которые уже есть в localComments (по server ID после
-                            // замены optimisticId → serverCommentId) — удаляем
-                            // их из localComments чтобы избежать дублирования.
-                            val serverIds = result.comments.map { it.id }.toHashSet()
-                            if (localComments.any { it.id in serverIds }) {
-                                localComments = localComments.filterNot { it.id in serverIds }
-                            }
+                val current = post ?: return@collect
+                if (endReached || loadingMore) return@collect
+                loadingMore = true
+                try {
+                    // Fix #233 (P1-7): pagination offset = только comments.size,
+                    // БЕЗ localComments.size. localComments — это optimistic
+                    // комментарии, которые уже отображены, но НЕ учтены на
+                    // сервере. Сервер возвращает комментарии по offset от
+                    // начала списка — localComments не смещают server offset.
+                    // Раньше offset = comments.size + localComments.size →
+                    // пропускали N реальных комментариев после optimistic send.
+                    val offset = comments.size
+                    val result = app.apiClient.wallGetComments(
+                        current.ownerId, current.id,
+                        count = 30, offset = offset,
+                        sort = activeSortOrder,
+                    )
+                    if (result.comments.isEmpty()) {
+                        endReached = true
+                    } else {
+                        comments = comments + result.comments
+                        profiles += result.profiles
+                        // Fix #233 (P1-7): если сервер вернул комментарии,
+                        // которые уже есть в localComments (по server ID после
+                        // замены optimisticId → serverCommentId) — удаляем
+                        // их из localComments чтобы избежать дублирования.
+                        val serverIds = result.comments.map { it.id }.toHashSet()
+                        if (localComments.any { it.id in serverIds }) {
+                            localComments = localComments.filterNot { it.id in serverIds }
                         }
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        // Fix #252: корректная отмена (пользователь ушёл со экрана)
-                        throw e
-                    } catch (e: Exception) {
-                        AppLog.e("PostDetail", "load more comments error", e)
-                    } finally {
-                        loadingMore = false
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    // Fix #252: корректная отмена (пользователь ушёл со экрана)
+                    throw e
+                } catch (e: Exception) {
+                    AppLog.e("PostDetail", "load more comments error", e)
+                } finally {
+                    loadingMore = false
                 }
             }
     }

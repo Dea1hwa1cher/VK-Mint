@@ -158,24 +158,21 @@ fun LyricsSheet(
     onSeekTo: (Long) -> Unit = {},
 ) {
     val app = VkMintApp.get()
-    val scope = rememberCoroutineScope()
     var lyrics by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(lyricsId) {
-        scope.launch {
-            loading = true
-            error = null
-            try {
-                val text = app.apiClient.audioGetLyrics(lyricsId)
-                lyrics = text
-                if (text.isNullOrBlank()) error = "Текст песни недоступен"
-            } catch (e: Exception) {
-                error = "Ошибка: ${e.message}"
-            } finally {
-                loading = false
-            }
+        loading = true
+        error = null
+        try {
+            val text = app.apiClient.audioGetLyrics(lyricsId)
+            lyrics = text
+            if (text.isNullOrBlank()) error = "Текст песни недоступен"
+        } catch (e: Exception) {
+            error = "Ошибка: ${e.message}"
+        } finally {
+            loading = false
         }
     }
 

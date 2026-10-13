@@ -87,19 +87,17 @@ fun BoardTopicScreen(
 
     // Первая загрузка.
     LaunchedEffect(groupId, topicId) {
-        scope.launch {
-            loading = true
-            errorText = null
-            try {
-                comments = app.apiClient.boardGetComments(groupId = groupId, topicId = topicId, count = 30, offset = 0)
-                endReached = comments.size < 30
-                AppLog.i("BoardTopicScreen", "Loaded ${comments.size} comments for topic $topicId")
-            } catch (e: Exception) {
-                AppLog.e("BoardTopicScreen", "boardGetComments failed", e)
-                errorText = "Ошибка: ${e.message}"
-            } finally {
-                loading = false
-            }
+        loading = true
+        errorText = null
+        try {
+            comments = app.apiClient.boardGetComments(groupId = groupId, topicId = topicId, count = 30, offset = 0)
+            endReached = comments.size < 30
+            AppLog.i("BoardTopicScreen", "Loaded ${comments.size} comments for topic $topicId")
+        } catch (e: Exception) {
+            AppLog.e("BoardTopicScreen", "boardGetComments failed", e)
+            errorText = "Ошибка: ${e.message}"
+        } finally {
+            loading = false
         }
     }
 

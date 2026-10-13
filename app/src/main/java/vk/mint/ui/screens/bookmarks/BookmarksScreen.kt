@@ -148,29 +148,27 @@ fun BookmarksScreen(
     // Загрузка закладок — перезапускается при смене тега; только в разделе «Закладки VK».
     LaunchedEffect(selectedTagId, section) {
         if (section != 0) return@LaunchedEffect
-        scope.launch {
-            loading = true
-            endReached = false
-            errorText = null
-            try {
-                val list = app.apiClient.faveGet(count = pageSize, tagId = selectedTagId)
-                // Fix #53: защитная дедупликация — LazyColumn keys должны быть уникальны.
-                bookmarks = list.distinctBy { bookmarkKey(it) }
-                if (list.size < pageSize) endReached = true
-                AppLog.i("BookmarksScreen", "Loaded ${list.size} bookmarks (tag=$selectedTagId)")
-                if (list.isEmpty()) {
-                    // #BOOKMARKS-FIX (2026-09-12): вместо сырой английской VK-ошибки
-                    // («Access denied…» — «пишет какую-то ошибку на англ») — понятная
-                    // русская причина с кодом; сырое значение остаётся в AppLog.
-                    val human = app.apiClient.lastApiErrorHuman()
-                    errorText = if (human != null) "Закладки не загрузились: $human" else "Нет закладок"
-                }
-            } catch (e: Exception) {
-                AppLog.e("BookmarksScreen", "Failed to load bookmarks", e)
-                errorText = "Ошибка: ${e.message}"
-            } finally {
-                loading = false
+        loading = true
+        endReached = false
+        errorText = null
+        try {
+            val list = app.apiClient.faveGet(count = pageSize, tagId = selectedTagId)
+            // Fix #53: защитная дедупликация — LazyColumn keys должны быть уникальны.
+            bookmarks = list.distinctBy { bookmarkKey(it) }
+            if (list.size < pageSize) endReached = true
+            AppLog.i("BookmarksScreen", "Loaded ${list.size} bookmarks (tag=$selectedTagId)")
+            if (list.isEmpty()) {
+                // #BOOKMARKS-FIX (2026-09-12): вместо сырой английской VK-ошибки
+                // («Access denied…» — «пишет какую-то ошибку на англ») — понятная
+                // русская причина с кодом; сырое значение остаётся в AppLog.
+                val human = app.apiClient.lastApiErrorHuman()
+                errorText = if (human != null) "Закладки не загрузились: $human" else "Нет закладок"
             }
+        } catch (e: Exception) {
+            AppLog.e("BookmarksScreen", "Failed to load bookmarks", e)
+            errorText = "Ошибка: ${e.message}"
+        } finally {
+            loading = false
         }
     }
 

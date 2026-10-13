@@ -256,39 +256,37 @@ fun UserProfileScreen(
     val isSelf = userId == currentUserId
 
     LaunchedEffect(userId) {
-        scope.launch {
-            loading = true
-            errorText = null
-            try {
-                val p = app.apiClient.usersGetFull(userId)
-                profile = p
-                if (p != null) {
-                    // #FRIEND-COLOR: инициализируем isFriend из profile.friendStatus.
-                    // VK friend_status: 0=не друг, 1=заявка отправлена мной,
-                    // 2=входящая заявка, 3=друг (взаимная дружба).
-                    // Кнопка "Удалить" показывается только если status==3.
-                    // Раньше isFriend всегда=false при загрузке — кнопка показывала
-                    // "В друзья" даже для действительных друзей.
-                    isFriend = (p.friendStatus == 3)
-                    // Этап П-2: начальные состояния подписки/закладок из users.get
-                    // (is_subscribed / is_favorite парсятся в UserProfile с П-0).
-                    subscribed = (p.isSubscribed == 1)
-                    isBookmarked = (p.isFavorite == 1)
-                    val wall = app.apiClient.wallGet(ownerId = userId, count = 20)
-                    posts = wall
-                        .filter { it.id > 0 && it.ownerId != 0L }
-                        .distinctBy { "${it.ownerId}_${it.id}" }
-                    endReached = wall.size < 20
-                    AppLog.i("UserProfileScreen", "Loaded profile uid=$userId + ${wall.size} posts")
-                } else {
-                    errorText = app.apiClient.lastApiError ?: "Профиль не найден"
-                }
-            } catch (e: Exception) {
-                AppLog.e("UserProfileScreen", "Failed to load profile uid=$userId", e)
-                errorText = "Ошибка: ${e.message}"
-            } finally {
-                loading = false
+        loading = true
+        errorText = null
+        try {
+            val p = app.apiClient.usersGetFull(userId)
+            profile = p
+            if (p != null) {
+                // #FRIEND-COLOR: инициализируем isFriend из profile.friendStatus.
+                // VK friend_status: 0=не друг, 1=заявка отправлена мной,
+                // 2=входящая заявка, 3=друг (взаимная дружба).
+                // Кнопка "Удалить" показывается только если status==3.
+                // Раньше isFriend всегда=false при загрузке — кнопка показывала
+                // "В друзья" даже для действительных друзей.
+                isFriend = (p.friendStatus == 3)
+                // Этап П-2: начальные состояния подписки/закладок из users.get
+                // (is_subscribed / is_favorite парсятся в UserProfile с П-0).
+                subscribed = (p.isSubscribed == 1)
+                isBookmarked = (p.isFavorite == 1)
+                val wall = app.apiClient.wallGet(ownerId = userId, count = 20)
+                posts = wall
+                    .filter { it.id > 0 && it.ownerId != 0L }
+                    .distinctBy { "${it.ownerId}_${it.id}" }
+                endReached = wall.size < 20
+                AppLog.i("UserProfileScreen", "Loaded profile uid=$userId + ${wall.size} posts")
+            } else {
+                errorText = app.apiClient.lastApiError ?: "Профиль не найден"
             }
+        } catch (e: Exception) {
+            AppLog.e("UserProfileScreen", "Failed to load profile uid=$userId", e)
+            errorText = "Ошибка: ${e.message}"
+        } finally {
+            loading = false
         }
     }
 
