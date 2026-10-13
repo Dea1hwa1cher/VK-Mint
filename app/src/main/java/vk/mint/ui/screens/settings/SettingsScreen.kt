@@ -106,8 +106,16 @@ import vk.mint.data.model.Track
 import vk.mint.data.model.AvatarShape
 import vk.mint.data.model.SettingsParam
 import vk.mint.data.model.SettingsSection as BffSettingsSection
+import androidx.compose.foundation.layout.PaddingValues
 import vk.mint.ui.components.ExpressiveSegmentedButtonRow
 import vk.mint.ui.components.ExpressiveSwitch
+import vk.mint.ui.components.VkGroup
+import vk.mint.ui.components.VkGroupMode
+import vk.mint.ui.components.VkHeader
+import vk.mint.ui.components.VkHeaderMode
+import vk.mint.ui.components.VkSimpleCell
+import vk.mint.ui.components.VkSubnavigationBar
+import vk.mint.ui.components.VkSubnavigationButton
 import vk.mint.ui.theme.AvatarShapes
 import vk.mint.ui.theme.BubbleColorPresets
 import vk.mint.ui.theme.VkMintColors
@@ -440,19 +448,16 @@ fun SettingsScreen(
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { pages.size })
 
     Column(modifier = Modifier.fillMaxSize()) {
-        PrimaryScrollableTabRow(
-            selectedTabIndex = pagerState.currentPage,
-            edgePadding = 0.dp,
+        VkSubnavigationBar(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
         ) {
             pages.forEachIndexed { index, page ->
-                Tab(
+                VkSubnavigationButton(
+                    text = page.label,
                     selected = pagerState.currentPage == index,
                     onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                    text = { Text(page.label, maxLines = 1) },
-                    icon = {
-                        // Контейнерные секции могут быть без иконки — не падаем.
-                        if (page.icon != null) Icon(page.icon, contentDescription = null)
-                    },
+                    leadingIcon = page.icon,
                 )
             }
         }
@@ -5741,11 +5746,10 @@ private fun VideoDownloadsCard(context: android.content.Context) {
 
 @Composable
 private fun SectionHeader(title: String) {
-    Text(
-        title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp),
+    VkHeader(
+        title = title,
+        mode = VkHeaderMode.Primary,
+        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp),
     )
 }
 
@@ -5762,25 +5766,18 @@ private fun ToggleRow(
     enabled: Boolean = true,
     onToggle: (Boolean) -> Unit,
 ) {
-    Card {
-        ListItem(
-            headlineContent = {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            trailingContent = {
+    VkGroup(
+        mode = VkGroupMode.Card,
+        contentPadding = PaddingValues(0.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        VkSimpleCell(
+            title = title,
+            enabled = enabled,
+            after = {
                 ExpressiveSwitch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
             },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = enabled) { onToggle(!checked) },
+            onClick = if (enabled) { { onToggle(!checked) } } else null,
         )
     }
 }
@@ -5798,32 +5795,19 @@ private fun ToggleRow(
     enabled: Boolean = true,
     onToggle: (Boolean) -> Unit,
 ) {
-    Card {
-        ListItem(
-            headlineContent = {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            supportingContent = {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            trailingContent = {
+    VkGroup(
+        mode = VkGroupMode.Card,
+        contentPadding = PaddingValues(0.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        VkSimpleCell(
+            title = title,
+            subtitle = subtitle,
+            enabled = enabled,
+            after = {
                 ExpressiveSwitch(checked = checked, onCheckedChange = onToggle, enabled = enabled)
             },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(enabled = enabled) { onToggle(!checked) },
+            onClick = if (enabled) { { onToggle(!checked) } } else null,
         )
     }
 }
@@ -5870,36 +5854,24 @@ private fun FeedCarouselToggleRow(
         }
     }
 
-    Card {
-        ListItem(
-            headlineContent = {
-                Text(
-                    "Карусель фото в постах",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            },
-            supportingContent = {
-                Text(
-                    "Лента, сообщества, профили и открытый пост: несколько " +
-                        "фото листаются свайпом и стрелками со счётчиком. " +
-                        "При выключении — прежний вид: 1-2 фото листаются, " +
-                        "3+ показываются сеткой.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            trailingContent = {
+    VkGroup(
+        mode = VkGroupMode.Card,
+        contentPadding = PaddingValues(0.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        VkSimpleCell(
+            title = "Карусель фото в постах",
+            subtitle = "Лента, сообщества, профили и открытый пост: несколько " +
+                "фото листаются свайпом и стрелками со счётчиком. " +
+                "При выключении — прежний вид: 1-2 фото листаются, " +
+                "3+ показываются сеткой.",
+            after = {
                 ExpressiveSwitch(
                     checked = checked,
                     onCheckedChange = { applyToggle(it) },
                 )
             },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { applyToggle(!checked) },
+            onClick = { applyToggle(!checked) },
         )
     }
 }
@@ -7995,38 +7967,27 @@ private fun ToggleRowWithLoading(
     onToggle: (Boolean) -> Unit,
     subtitle: String? = null,
 ) {
-    Card {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    // alpha 0.7 пока идёт запрос — визуально «серое» состояние,
-                    // но не ниже 0.7 чтобы сохранить WCAG AA на тёмной теме.
-                    color = if (loading) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            else MaterialTheme.colorScheme.onSurface,
-                )
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    VkGroup(
+        mode = VkGroupMode.Card,
+        contentPadding = PaddingValues(0.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        VkSimpleCell(
+            title = title,
+            subtitle = subtitle,
+            enabled = !loading,
+            after = {
+                if (loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
                     )
+                } else {
+                    ExpressiveSwitch(checked = checked, onCheckedChange = onToggle)
                 }
-            }
-            if (loading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp,
-                )
-            } else {
-                ExpressiveSwitch(checked = checked, onCheckedChange = onToggle)
-            }
-        }
+            },
+            onClick = if (!loading) { { onToggle(!checked) } } else null,
+        )
     }
 }
 

@@ -158,7 +158,10 @@ import vk.mint.ui.navigation.FeedOpenRequest
 import vk.mint.ui.navigation.FeedPanelState
 import vk.mint.ui.navigation.ScreenTopBar
 import vk.mint.ui.navigation.ScrollPosition
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.RoundedCornerShape
+import vk.mint.ui.components.VkGroup
+import vk.mint.ui.components.VkGroupMode
 import vk.mint.ui.components.VkReactionPill
 import vk.mint.ui.components.VkSearch
 import vk.mint.ui.components.VkSubnavigationBar
@@ -2244,13 +2247,12 @@ private fun PostCard(
     // VK_MINT_lenta: состояние меню
     var showMenu by remember { mutableStateOf(false) }
 
-    Card(
+    VkGroup(
+        mode = VkGroupMode.Card,
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        contentPadding = PaddingValues(0.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Метка «Реклама» для рекламных постов.
@@ -2259,7 +2261,7 @@ private fun PostCard(
                     text = "Реклама",
                     style = MaterialTheme.typography.vkFootnote,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                 )
             }
             // Метка для рекомендованных постов.
@@ -2269,14 +2271,14 @@ private fun PostCard(
                     style = MaterialTheme.typography.vkFootnote,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = if (post.isAd) 0.dp else 8.dp),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = if (post.isAd) 0.dp else 8.dp),
                 )
             }
             // ─── VKUI v8 × M3E: Post Header (SimpleCell-like island header) ───
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -2441,7 +2443,7 @@ private fun PostCard(
                     style = MaterialTheme.typography.vkFootnote,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp),
                 )
             }
             // VK_MINT_lenta: индикатор копирайта-источника.
@@ -2452,7 +2454,7 @@ private fun PostCard(
                     style = MaterialTheme.typography.vkFootnote,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp),
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -2461,7 +2463,7 @@ private fun PostCard(
             if (post.isDonut && donutPlaceholder != null) {
                 Text(text = donutPlaceholder,
                     style = MaterialTheme.typography.vkSubhead,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (post.text.isNotBlank()) {
@@ -2487,7 +2489,7 @@ private fun PostCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onPostClick(post) }
-                        .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 6.dp),
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 6.dp),
                 )
                 if (needsExpand && !expanded) {
                     Text(
@@ -2497,7 +2499,7 @@ private fun PostCard(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 12.dp, end = 12.dp, bottom = 6.dp)
+                            .padding(start = 16.dp, end = 16.dp, bottom = 6.dp)
                             .clickable { expanded = true },
                     )
                 }
@@ -2676,7 +2678,7 @@ private fun PostCard(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
                         .clip(RoundedCornerShape(12.dp))
                         // Fix #365: репост-карточка ЦЕЛИКОМ открывает оригинальный
                         // пост (тот же колбэк onPostClick, что у тела поста:
@@ -2807,7 +2809,7 @@ private fun PostCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
