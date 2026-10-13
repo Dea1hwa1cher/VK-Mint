@@ -102,6 +102,7 @@ import vk.mint.ui.navigation.CommunityRestoreHolder
 import vk.mint.util.AppLog
 import vk.mint.util.toAbsoluteTime
 import vk.mint.util.toCountString
+import vk.mint.util.toMemberCountString
 import java.util.Locale
 import android.widget.Toast
 import vk.mint.ui.components.VkGroup
@@ -1804,19 +1805,7 @@ fun CommunityScreen(
 
 
 /** Formats member count in VK style: "1,2 млн", "345 тыс", "42". */
-private fun formatMemberCount(n: Int): String {
-    if (n >= 1_000_000) {
-        val v = n / 1_000_000.0
-        val formatted = if (v == v.toLong().toDouble()) v.toLong().toString() else String.format(Locale.US, "%.1f", v)
-        return "$formatted млн"
-    }
-    if (n >= 1_000) {
-        val v = n / 1_000.0
-        val formatted = if (v == v.toLong().toDouble()) v.toLong().toString() else String.format(Locale.US, "%.1f", v)
-        return "$formatted тыс"
-    }
-    return n.toString()
-}
+private fun formatMemberCount(n: Int): String = n.toMemberCountString()
 
 /**
  * Шаг 4 (#32d): строка темы обсуждения в списке вкладки «Обсуждения».

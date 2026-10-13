@@ -276,6 +276,7 @@ import vk.mint.util.toDayKey
 import vk.mint.util.toMsgTime
 import vk.mint.util.toRecordingTimeString
 import vk.mint.util.toFileSizeString
+import vk.mint.util.toCompactMetricString
 import androidx.activity.compose.rememberLauncherForActivityResult
 import java.io.File
 import java.text.SimpleDateFormat
@@ -8397,19 +8398,7 @@ HorizontalDivider(
 
 /** #CHANNEL-DONUT: компактный формат счётчика канального поста — как web-снапшот:
  *  round тысячи → «80K», неточные → «1,2K» (запятая), <1000 → «999», млн → «1,5M». */
-private fun channelCounterString(n: Int): String = when {
-    n >= 1_000_000 -> compactMetric(n / 1_000_000.0, "M")
-    n >= 1_000 -> compactMetric(n / 1_000.0, "K")
-    else -> n.toString()
-}
-
-/** Одна значащая цифра после запятой; целые тысячи/миллионы — без хвоста (80K),
- *  дробные — с запятой (1,2K). */
-private fun compactMetric(value: Double, suffix: String): String {
-    val s = String.format(java.util.Locale.US, "%.1f", value)
-    val trimmed = if (s.endsWith(".0")) s.dropLast(2) else s
-    return trimmed.replace('.', ',') + suffix
-}
+private fun channelCounterString(n: Int): String = n.toCompactMetricString(useComma = true)
 
 /** Пикер реакций — горизонтальная панель эмодзи. */
 @Composable

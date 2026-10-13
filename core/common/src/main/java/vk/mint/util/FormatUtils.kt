@@ -31,11 +31,11 @@ fun Long.toDurationString(): String {
     return totalSec.toDurationString()
 }
 
-/** Короткое относительное время для скачанного офлайн-контента (timestamp в миллисекундах) */
-fun Long.toOfflineDownloadedAtString(): String {
+/** Короткое относительное время (timestamp в секундах): "только что", "5 мин назад", "2 ч назад", "3 д назад" */
+fun Long.toRelativeShortTime(): String {
     if (this == 0L) return ""
-    val now = System.currentTimeMillis()
-    val diff = (now - this) / 1000
+    val now = System.currentTimeMillis() / 1000
+    val diff = now - this
     return when {
         diff < 60 -> "только что"
         diff < 3600 -> "${diff / 60} мин назад"
@@ -43,6 +43,9 @@ fun Long.toOfflineDownloadedAtString(): String {
         else -> "${diff / 86400} д назад"
     }
 }
+
+/** Короткое относительное время для скачанного офлайн-контента (timestamp в миллисекундах) */
+fun Long.toOfflineDownloadedAtString(): String = (this / 1000).toRelativeShortTime()
 
 /** Форматирование времени записи голосового: 90 → "1:30", 45 → "0:45" */
 fun Int.toRecordingTimeString(): String {
@@ -133,12 +136,43 @@ fun Long.toDateString(): String {
     return SimpleDateFormat("d MMM yyyy", RU_LOCALE).format(Date(this * 1000))
 }
 
+/** Форматирование длительности из секунд (Long): 195L → "3:15" */
+fun Long.toDurationSecondsString(): String = this.toInt().toDurationString()
+
 // ─── Счётчики ─────────────────────────────────────────────────
 
-/** Форматирование счётчика: 999 → "999", 1500 → "1.5K", 2300000 → "2.3M" */
+/** Компактная метрика со срезанием .0: целые без хвоста ("80K"), дробные ("1.2K") */
+fun compactMetricValue(value: Double, suffix: String): String {
+    val s = String.format(Locale.US, "%.1f", value)
+    val trimmed = if (s.endsWith(".0")) s.dropLast(2) else s
+    return trimmed + suffix
+}
+
+/** Форматирование счётчика: 999 → "999", 1500 → "1.5K", 2300000 → "2.3M", целые → "80K", "2M" */
 fun Int.toCountString(): String = when {
-    this >= 1_000_000 -> String.format(Locale.US, "%.1fM", this / 1_000_000.0)
-    this >= 1_000 -> String.format(Locale.US, "%.1fK", this / 1_000.0)
+    this >= 1_000_000 -> compactMetricValue(this / 1_000_000.0, "M")
+    this >= 1_000 -> compactMetricValue(this / 1_000.0, "K")
+    else -> this.toString()
+}
+
+/** Форматирование счётчика в стиле ВКонтакте с опциональной запятой: 1200 -> "1,2K" */
+fun Int.toCompactMetricString(useComma: Boolean = false): String {
+    val s = toCountString()
+    return if (useComma) s.replace('.', ',') else s
+}
+
+/** Форматирование количества участников/подписчиков сообщества ("1,2 млн", "345 тыс", "42") */
+fun Int.toMemberCountString(): String = when {
+    this >= 1_000_000 -> {
+        val v = this / 1_000_000.0
+        val formatted = if (v == v.toLong().toDouble()) v.toLong().toString() else String.format(Locale.US, "%.1f", v).replace('.', ',')
+        "$formatted млн"
+    }
+    this >= 1_000 -> {
+        val v = this / 1_000.0
+        val formatted = if (v == v.toLong().toDouble()) v.toLong().toString() else String.format(Locale.US, "%.1f", v).replace('.', ',')
+        "$formatted тыс"
+    }
     else -> this.toString()
 }
 

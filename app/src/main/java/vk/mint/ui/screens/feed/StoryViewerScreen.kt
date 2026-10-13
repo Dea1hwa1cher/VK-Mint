@@ -108,6 +108,7 @@ import vk.mint.data.model.StoryGroup
 import vk.mint.VkMintApp
 import vk.mint.util.AppLog
 import vk.mint.util.VkUserAgent
+import vk.mint.util.toRelativeShortTime
 import vk.mint.media.VideoPlayerConfig
 import vk.mint.media.StoryVideoDownloadManager
 import androidx.media3.datasource.DefaultDataSource
@@ -1391,17 +1392,7 @@ private fun StoryReplyField(
     }
 }
 
-private fun formatStoryDate(timestamp: Long): String {
-    if (timestamp == 0L) return ""
-    val now = System.currentTimeMillis() / 1000
-    val diff = now - timestamp
-    return when {
-        diff < 60 -> "только что"
-        diff < 3600 -> "${diff / 60} мин назад"
-        diff < 86400 -> "${diff / 3600} ч назад"
-        else -> "${diff / 86400} д назад"
-    }
-}
+private fun formatStoryDate(timestamp: Long): String = timestamp.toRelativeShortTime()
 
 /**
  * B3 (tap-zones): point-in-polygon (ray casting) — попадает ли точка (в координатах

@@ -38,6 +38,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
+import vk.mint.util.toCountString
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -825,16 +826,7 @@ fun VkSeparator(
 }
 
 /** Форматирование счётчиков реакций/просмотров в стиле ВКонтакте (`1.2K`, `15K`, `1.4M`). */
-fun formatVkCount(count: Int): String = when {
-    count >= 1_000_000 -> "%.1fM".format(java.util.Locale.US, count / 1_000_000f).let {
-        if (it.endsWith(".0M")) it.removeSuffix(".0M") + "M" else it
-    }
-    count >= 10_000 -> "${count / 1_000}K"
-    count >= 1_000 -> "%.1fK".format(java.util.Locale.US, count / 1_000f).let {
-        if (it.endsWith(".0K")) it.removeSuffix(".0K") + "K" else it
-    }
-    else -> count.toString()
-}
+fun formatVkCount(count: Int): String = count.toCountString()
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  7. VkPanelHeader — Шапка экрана (VKUI PanelHeader × M3E TopBar)

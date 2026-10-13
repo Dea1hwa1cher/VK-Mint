@@ -178,6 +178,7 @@ import vk.mint.service.VideoPlaybackBus
 import vk.mint.util.AppLog
 import vk.mint.util.HevcSupport
 import vk.mint.util.VkUserAgent
+import vk.mint.util.toDurationString
 import androidx.compose.material.icons.outlined.VerifiedUser
 
 // ── AnimatedVisibility wrapper — обходит ColumnScope ambiguity ──
@@ -1714,18 +1715,7 @@ fun VideoPlayerScreen(
     }
 
     // Format time
-    fun formatTime(ms: Float): String {
-        if (ms <= 0) return "0:00"
-        val totalSec = (ms / 1000).toLong()
-        val h = totalSec / 3600
-        val m = (totalSec % 3600) / 60
-        val s = totalSec % 60
-        return if (h > 0) {
-            String.format("%d:%02d:%02d", h, m, s)
-        } else {
-            String.format("%d:%02d", m, s)
-        }
-    }
+    fun formatTime(ms: Float): String = ms.toLong().toDurationString()
 
     // Fullscreen toggle helper
     fun toggleFullscreen() {
