@@ -1,6 +1,7 @@
 package vk.mint.util
 
 import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -180,8 +181,11 @@ fun Int.toMemberCountString(): String = when {
 
 /** Форматирование размера файла: 1024 -> "1 КБ", 1048576 -> "1 МБ", 1073741824 -> "1 ГБ" */
 fun Long.toFileSizeString(): String {
-    if (this < 1024) return "$this Б"
-    if (this < 1024 * 1024) return DecimalFormat("#.#").format(this / 1024.0) + " КБ"
-    if (this < 1024L * 1024 * 1024) return DecimalFormat("#.#").format(this / (1024.0 * 1024.0)) + " МБ"
-    return DecimalFormat("#.#").format(this / (1024.0 * 1024.0 * 1024.0)) + " ГБ"
+    val b = this.coerceAtLeast(0L)
+    if (b < 1024) return "$b Б"
+    val symbols = DecimalFormatSymbols(Locale.US)
+    val df = DecimalFormat("#.#", symbols)
+    if (b < 1024 * 1024) return "${df.format(b / 1024.0)} КБ"
+    if (b < 1024L * 1024 * 1024) return "${df.format(b / (1024.0 * 1024.0))} МБ"
+    return "${df.format(b / (1024.0 * 1024.0 * 1024.0))} ГБ"
 }

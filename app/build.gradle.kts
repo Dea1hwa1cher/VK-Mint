@@ -284,4 +284,6 @@ dependencies {
     // "audio_inline") и компосабл-рендерер аудио-вложений AudioInlineRenderer
     // (хост-маппинг в ChatDetailScreen).
     implementation(project(":feature:audio"))
+
+    testImplementation("junit:junit:4.13.2")
 }

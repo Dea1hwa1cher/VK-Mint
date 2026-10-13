@@ -1,6 +1,5 @@
 package vk.mint.data.local
 
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Резолвер локальных псевдонимов пользователей.
@@ -11,12 +10,12 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object UserAliasResolver {
 
-    private val cache = ConcurrentHashMap<Long, String>()
+    @Volatile
+    private var cache: Map<Long, String> = emptyMap()
 
     /** Обновить карту псевдонимов из снапшота настроек. */
     fun update(aliases: Map<Long, String>) {
-        cache.clear()
-        cache.putAll(aliases)
+        cache = aliases
     }
 
     /** Получить псевдоним пользователя или null, если он не задан. */

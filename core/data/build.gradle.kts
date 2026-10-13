@@ -42,4 +42,6 @@ dependencies {
     // Task 22 (2026-09-03): UserProfile (vk.mint.data.model) использует
     // @SerializedName — фасады CallsApi (:feature:calls) ссылаются на его тип.
     implementation(libs.gson)
+
+    testImplementation("junit:junit:4.13.2")
 }

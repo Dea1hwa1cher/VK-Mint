@@ -42,4 +42,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     // #TRAFFIC-COMPRESSION: Native Zstandard (ZSTD) decompression & compression (16KB aligned AAR).
     api("com.github.luben:zstd-jni:1.5.7-3@aar")
+
+    testImplementation("junit:junit:4.13.2")
 }

@@ -1,7 +1,7 @@
 package vk.mint.media
 
+import android.util.Base64
 import com.google.gson.JsonParser
-import java.util.Base64
 
 /**
  * #CALLS: декодер conversation params входящего звонка VK.
@@ -77,6 +77,15 @@ object ConversationParamsDecoder {
         return out
     }
 
+    private fun decodeBase64(b64: String): ByteArray {
+        return try {
+            Base64.decode(b64, Base64.DEFAULT)
+        } catch (_: Throwable) {
+            // Фолбэк для JVM Unit-тестов без Android SDK рантайма
+            java.util.Base64.getDecoder().decode(b64)
+        }
+    }
+
     /**
      * Декодирует conversation params из payload LP 115.
      * @return Params или null при ошибке.
@@ -87,11 +96,11 @@ object ConversationParamsDecoder {
             if (colon <= 0) return null
             val len = payload.substring(0, colon).toIntOrNull() ?: return null
             val b64 = payload.substring(colon + 1)
-            val raw = Base64.getDecoder().decode(b64)
+            val raw = decodeBase64(b64)
             val decompressed = lz4Decompress(raw, len)
             val json = String(decompressed, Charsets.UTF_8)
             parseJson(json)
-        } catch (e: Exception) {
+        } catch (_: Throwable) {
             null
         }
     }

@@ -23,7 +23,7 @@ dev.log
 *.log
 dev.out.log
 server.log
-test
+/test
 prompt
 local-*
 .claude
