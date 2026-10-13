@@ -7,6 +7,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -63,7 +64,7 @@ class Queuev4Client(
         const val QUEUE_CALLS = "calls"
     }
 
-    private val scope = CoroutineScope(Job() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var pollJob: Job? = null
     private var credential: QueueCredential? = null
 
@@ -196,10 +197,11 @@ class Queuev4Client(
                     val code = ev[0]?.takeIf { it.isJsonPrimitive }?.asInt ?: continue
                     when (code) {
                         LP_HISTORY_LOST, LP_KEY_EXPIRED -> {
-                            AppLog.w(TAG, "LP code $code — credential expired, re-request")
+                            AppLog.w(TAG, "LP code $code — credential expired, stopping pollLoop for re-subscribe")
                             // Останавливаемся — нужен новый credential (ресинк).
-                            // Не ставим ts=0 бесконечно; положим паузу и попробуем заново.
+                            credential = null
                             _events.emit(QueueEvent(queueId = "lp", ts = ts, payload = mapOf("code" to code.toLong())))
+                            return
                         }
                         LP_INCOMING_CALL -> {
                             // [115, payload] — payload = строка conversation params

@@ -597,8 +597,9 @@ object VkNotificationsNotifier {
 
             applyDisplayPrefs(builder, snap)
 
-            // Summary ID = negative offset from base (чтобы не конфликтовать с индивидуальными).
-            val summaryId = NOTIFICATION_ID_BASE - 1 - (groupKey.hashCode() and 0x0FFF)
+            // Summary ID = negative offset from base в диапазоне 4000..4999
+            // (чтобы не конфликтовать с индивидуальными 5000+, MessageNotifier 1000+ и foreground services 2001..2005).
+            val summaryId = NOTIFICATION_ID_BASE - 1 - ((groupKey.hashCode() and 0x7FFFFFFF) % 1000)
             NotificationManagerCompat.from(ctx).notify(summaryId, builder.build())
             AppLog.d(TAG, "Group summary shown: key=$groupKey count=$count title='$title'")
         } catch (e: Exception) {

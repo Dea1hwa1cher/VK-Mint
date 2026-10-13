@@ -1694,7 +1694,10 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
         keepAliveScope.launch {
             queuev4Client.events.collect { ev ->
                 try {
-                    if (ev.queueId == vk.mint.realtime.Queuev4Client.QUEUE_CALLS) {
+                    if (ev.queueId == "lp") {
+                        delay(2_000L)
+                        startCallSignaling()
+                    } else if (ev.queueId == vk.mint.realtime.Queuev4Client.QUEUE_CALLS) {
                         val payload = ev.payload["payload"] as? String
                         AppLog.i("VkMintApp", "INCOMING_CALL (queuev4): payload.len=${payload?.length ?: 0}")
                         // #CALLS-NO-DOUBLE-CALLSCREEN: guard перезаписи (см. LP 115 выше).
@@ -1713,6 +1716,11 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
         keepAliveScope.launch {
             eventsQueuev4Client.events.collect { ev ->
                 try {
+                    if (ev.queueId == "lp") {
+                        delay(2_000L)
+                        startCallSignaling()
+                        return@collect
+                    }
                     val payload = ev.payload["payload"] as? String
                     if (ev.queueId == vk.mint.realtime.Queuev4Client.QUEUE_CALLS || !payload.isNullOrBlank()) {
                         AppLog.i("VkMintApp", "INCOMING_CALL (events_queue): queue=${ev.queueId} payload.len=${payload?.length ?: 0}")
@@ -1779,7 +1787,7 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
      * Если credential уже задан вручную (VkMintPrefs callsQueueKey/Ts) — используем его.
      */
     fun startCallSignaling() {
-        if (queuev4Client.isRunning()) return
+        if (queuev4Client.isRunning() && eventsQueuev4Client.isRunning()) return
         // #CALLS-DEBUG: включаем CALLS-логи (иначе Queuev4Client INFO/DEBUG скрыты).
         runCatching { vk.mint.util.AppLog.setCategoryEnabled(vk.mint.util.AppLog.LogCategory.CALLS, true) }
         keepAliveScope.launch {
@@ -1789,57 +1797,66 @@ class VkMintApp : Application(), SingletonImageLoader.Factory, CallsDependencies
                 ensureCallsSessionKey(force = false)
                 // 1) Сначала — автоматический queue.subscribe (свежий credential).
                 val callsUid = exchangeAuthRepository.userId()
-                val cred = apiClient.queueSubscribe(
-                    userId = 0L,
-                    queueIdSuffix = vk.mint.api.VKEndpoints.multiaccountQueueId(callsUid),
-                )
-                if (cred != null) {
-                    AppLog.i("VkMintApp", "queue.subscribe OK (key=${cred.key.take(8)}… ts=${cred.ts})")
-                    queuev4Client.setCredential(cred)
-                    queuev4Client.start()
+                val cred = if (!queuev4Client.isRunning()) {
+                    val c = apiClient.queueSubscribe(
+                        userId = 0L,
+                        queueIdSuffix = vk.mint.api.VKEndpoints.multiaccountQueueId(callsUid),
+                    )
+                    if (c != null) {
+                        AppLog.i("VkMintApp", "queue.subscribe OK (key=${c.key.take(8)}… ts=${c.ts})")
+                        queuev4Client.setCredential(c)
+                        queuev4Client.start()
+                    }
+                    c
+                } else {
+                    null
                 }
                 // 1b) events_queue<uid> / nccts<uid> — сюда приходят полные conversation
                 //     params звонка (payload с tkn для WebSocket-сигналинга).
                 //     Имя очереди из im_m_comms_key localStorage: "nccts<uid>".
                 //     events_queue<uid> — из queue_connection_events_queue<uid>.
-                try {
-                    val uid = exchangeAuthRepository.userId()
-                    var eventsCred = apiClient.queueSubscribe(
-                        userId = 0L,
-                        queueIdSuffix = vk.mint.api.VKEndpoints.countersQueueId(uid),
-                    )
-                    if (eventsCred == null) {
-                        eventsCred = apiClient.queueSubscribe(
+                if (!eventsQueuev4Client.isRunning()) {
+                    try {
+                        val uid = exchangeAuthRepository.userId()
+                        var eventsCred = apiClient.queueSubscribe(
                             userId = 0L,
-                            queueIdSuffix = vk.mint.api.VKEndpoints.multiaccountQueueId(uid),
+                            queueIdSuffix = vk.mint.api.VKEndpoints.countersQueueId(uid),
                         )
+                        if (eventsCred == null) {
+                            eventsCred = apiClient.queueSubscribe(
+                                userId = 0L,
+                                queueIdSuffix = vk.mint.api.VKEndpoints.multiaccountQueueId(uid),
+                            )
+                        }
+                        if (eventsCred != null) {
+                            AppLog.i("VkMintApp", "events_queue.subscribe OK (key=${eventsCred.key.take(8)}… ts=${eventsCred.ts})")
+                            eventsQueuev4Client.setCredential(eventsCred)
+                            eventsQueuev4Client.start()
+                        } else {
+                            AppLog.w("VkMintApp", "events_queue subscribe вернул null")
+                        }
+                    } catch (e: Exception) {
+                        AppLog.w("VkMintApp", "events_queue subscribe error: ${e.message}")
                     }
-                    if (eventsCred != null) {
-                        AppLog.i("VkMintApp", "events_queue.subscribe OK (key=${eventsCred.key.take(8)}… ts=${eventsCred.ts})")
-                        eventsQueuev4Client.setCredential(eventsCred)
-                        eventsQueuev4Client.start()
-                    } else {
-                        AppLog.w("VkMintApp", "events_queue subscribe вернул null")
-                    }
-                } catch (e: Exception) {
-                    AppLog.w("VkMintApp", "events_queue subscribe error: ${e.message}")
                 }
-                // 2) Fallback: ручной credential из VkMintPrefs.
-                val snap = prefs.data.first()
-                if (snap.callsQueueKey.isNotBlank() && snap.callsQueueTs > 0L) {
-                    val uid = exchangeAuthRepository.userId()
-                    queuev4Client.setCredential(
-                        vk.mint.data.model.QueueCredential(
-                            key = snap.callsQueueKey,
-                            ts = snap.callsQueueTs,
-                            url = "https://queuev4.vk.ru/im1180",
-                            userId = uid,
+                // 2) Fallback: ручной credential из VkMintPrefs (только если queuev4Client ещё не запущен).
+                if (!queuev4Client.isRunning() && cred == null) {
+                    val snap = prefs.data.first()
+                    if (snap.callsQueueKey.isNotBlank() && snap.callsQueueTs > 0L) {
+                        val uid = exchangeAuthRepository.userId()
+                        queuev4Client.setCredential(
+                            vk.mint.data.model.QueueCredential(
+                                key = snap.callsQueueKey,
+                                ts = snap.callsQueueTs,
+                                url = "https://queuev4.vk.ru/im1180",
+                                userId = uid,
+                            )
                         )
-                    )
-                    queuev4Client.start()
-                    AppLog.i("VkMintApp", "queuev4 started with manual credential")
-                } else {
-                    AppLog.w("VkMintApp", "queue.subscribe failed и нет manual credential — входящие звонки недоступны")
+                        queuev4Client.start()
+                        AppLog.i("VkMintApp", "queuev4 started with manual credential")
+                    } else {
+                        AppLog.w("VkMintApp", "queue.subscribe failed и нет manual credential — входящие звонки недоступны")
+                    }
                 }
             } catch (e: Exception) {
                 AppLog.e("VkMintApp", "startCallSignaling failed", e)

@@ -564,15 +564,9 @@ object TrackDownloadManager {
                     } else {
                         refreshFromDisk()
                     }
-} catch (ce: kotlinx.coroutines.CancellationException) {
-                throw ce
-            } catch (inv: InvalidDownloadedFileException) {
-                // #AUDIO-INTEGRITY: контент «битый» — повтор с тем же url бесполезен
-                // (сервер отдал целый, но невалидный ответ). НЕ делаем внутренний
-                // 3×backoff, сразу пробрасываем наверх — processTrackFromQueue возьмёт
-                // СВЕЖИЙ url через audioGetById и повторит с нуля.
-                throw inv
-            } catch (e: Exception) {
+                } catch (ce: kotlinx.coroutines.CancellationException) {
+                    throw ce
+                } catch (e: Exception) {
                     AppLog.e(TAG, "init: background init failed — app stays on internal dir", e)
                     runCatching { refreshFromDisk() }
                 }
@@ -628,8 +622,10 @@ object TrackDownloadManager {
             tracks.forEach { enqueueRequest(DownloadRequest(it), silent = false) }
             return
         }
-        writeTracklist(subDir, tracks)
-        downloadPlaylistCover(subDir, coverUrl)
+        scope.launch(Dispatchers.IO) {
+            writeTracklist(subDir, tracks)
+            downloadPlaylistCover(subDir, coverUrl)
+        }
         tracks.forEachIndexed { i, track ->
             enqueueRequest(DownloadRequest(track, subDirName, i + 1, tracks.size), silent = false)
         }
@@ -1809,6 +1805,13 @@ object TrackDownloadManager {
                 return
             } catch (ce: kotlinx.coroutines.CancellationException) {
                 throw ce
+            } catch (inv: InvalidDownloadedFileException) {
+                // #AUDIO-INTEGRITY: контент «битый» — повтор с тем же url бесполезен
+                // (сервер отдал целый, но невалидный ответ). НЕ делаем внутренний
+                // 3×backoff, удаляем битый tempFile и сразу пробрасываем наверх —
+                // processTrackFromQueue возьмёт СВЕЖИЙ url через audioGetById и повторит с нуля.
+                tempFile.delete()
+                throw inv
             } catch (e: Exception) {
                 // НЕ удаляем tempFile — он позволит Range-resume на следующей попытке.
                 if (attempt >= maxRetries) {

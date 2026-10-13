@@ -41,30 +41,33 @@ object GeniusLyricsFetcher {
      *
      * @return текст песни (многострочный) или null если не найдено/ошибка.
      */
-    suspend fun fetchLyrics(artist: String, title: String): String? {
-        if (artist.isBlank() || title.isBlank()) return null
+    suspend fun fetchLyrics(artist: String, title: String): String? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (artist.isBlank() || title.isBlank()) return@withContext null
 
-        // Очищаем title от лишнего: "(Official Video)", "[Remix]", feat. и т.д.
-        val cleanTitle = cleanTrackTitle(title)
-        val query = "$artist $cleanTitle".trim()
+            // Очищаем title от лишнего: "(Official Video)", "[Remix]", feat. и т.д.
+            val cleanTitle = cleanTrackTitle(title)
+            val query = "$artist $cleanTitle".trim()
 
-        return try {
-            val songUrl = searchFirstSongUrl(query)
-            if (songUrl == null) {
-                AppLog.d(TAG, "fetchLyrics: no search results for '$query'")
-                return null
+            try {
+                val songUrl = searchFirstSongUrl(query)
+                if (songUrl == null) {
+                    AppLog.d(TAG, "fetchLyrics: no search results for '$query'")
+                    return@withContext null
+                }
+                val lyrics = fetchLyricsFromPage(songUrl)
+                if (lyrics != null && lyrics.length > MAX_LYRICS_LEN) {
+                    lyrics.substring(0, MAX_LYRICS_LEN)
+                } else {
+                    lyrics
+                }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (e: Exception) {
+                AppLog.w(TAG, "fetchLyrics: failed for '$query': ${e.message}")
+                null
             }
-            val lyrics = fetchLyricsFromPage(songUrl)
-            if (lyrics != null && lyrics.length > MAX_LYRICS_LEN) {
-                lyrics.substring(0, MAX_LYRICS_LEN)
-            } else {
-                lyrics
-            }
-        } catch (e: Exception) {
-            AppLog.w(TAG, "fetchLyrics: failed for '$query': ${e.message}")
-            null
         }
-    }
 
     /** Поиск первой песни на Genius, возврат URL её страницы. */
     private suspend fun searchFirstSongUrl(query: String): String? {

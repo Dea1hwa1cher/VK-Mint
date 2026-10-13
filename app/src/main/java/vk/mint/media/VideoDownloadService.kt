@@ -16,6 +16,7 @@ class VideoDownloadService : BaseMediaDownloadService() {
     override val logTag: String get() = TAG
     override val notificationId: Int get() = NOTIFICATION_ID
     override val channelId: String get() = NOTIFICATION_CHANNEL_ID
+    override val downloadsFlow get() = VideoDownloadManager.downloads
 
     override val channelNameRes: Int get() = R.string.video_download_channel_name
     override val channelDescRes: Int get() = R.string.video_download_channel_description

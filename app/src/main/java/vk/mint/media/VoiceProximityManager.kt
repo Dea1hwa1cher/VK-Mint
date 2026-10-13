@@ -51,6 +51,9 @@ class VoiceProximityManager(context: Context) : SensorEventListener {
 
     private var isListening: Boolean = false
     private var isNear: Boolean = false
+    private var nearModeEngaged: Boolean = false
+    private var savedAudioMode: Int = AudioManager.MODE_NORMAL
+    private var savedSpeakerphoneOn: Boolean = false
     private var isHeadsetConnected: Boolean = false
 
     init {
@@ -102,7 +105,7 @@ class VoiceProximityManager(context: Context) : SensorEventListener {
     }
 
     /**
-     * Остановка отслеживания и сброс аудио-роутинга на громкую связь.
+     * Остановка отслеживания и сброс аудио-роутинга (если переключались на разговорный динамик).
      */
     fun stop() {
         if (isNear) {
@@ -120,9 +123,11 @@ class VoiceProximityManager(context: Context) : SensorEventListener {
             AppLog.d(TAG, "Proximity listener unregistered")
         }
 
-        // Страховочный сброс локов и AudioManager
+        // Страховочный сброс локов и AudioManager (только если включали near mode)
         releaseWakeLock()
-        resetAudioRouting()
+        if (nearModeEngaged) {
+            resetAudioRouting()
+        }
 
         activePlayer = null
         isNear = false
@@ -189,6 +194,12 @@ class VoiceProximityManager(context: Context) : SensorEventListener {
         try {
             val am = audioManager
             if (am != null) {
+                if (!nearModeEngaged) {
+                    savedAudioMode = am.mode
+                    @Suppress("DEPRECATION")
+                    savedSpeakerphoneOn = am.isSpeakerphoneOn
+                }
+                nearModeEngaged = true
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     val earpiece = am.availableCommunicationDevices.firstOrNull {
                         it.type == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
@@ -212,6 +223,7 @@ class VoiceProximityManager(context: Context) : SensorEventListener {
 
     private fun disengageNearMode() {
         AppLog.d(TAG, "Proximity FAR -> switching back to loudspeaker & screen on")
+        isNear = false
 
         // 1. Экран включается
         releaseWakeLock()
@@ -254,15 +266,17 @@ class VoiceProximityManager(context: Context) : SensorEventListener {
     }
 
     private fun resetAudioRouting() {
+        if (!nearModeEngaged) return
+        nearModeEngaged = false
         try {
             val am = audioManager
             if (am != null) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     am.clearCommunicationDevice()
                 }
-                am.mode = AudioManager.MODE_NORMAL
+                am.mode = savedAudioMode
                 @Suppress("DEPRECATION")
-                am.isSpeakerphoneOn = true
+                am.isSpeakerphoneOn = savedSpeakerphoneOn
             }
         } catch (e: Exception) {
             AppLog.w(TAG, "resetAudioRouting failed: ${e.message}")

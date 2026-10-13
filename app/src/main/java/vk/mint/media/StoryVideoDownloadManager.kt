@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -365,12 +366,15 @@ object StoryVideoDownloadManager {
         check(initialized) { "StoryVideoDownloadManager not initialized. Call init(context) in VkMintApp.onCreate." }
     }
 
+    @Volatile
+    private var lastProgressTs: Long = 0L
+
     private fun updateState(key: String, state: DownloadState) {
-        _downloads.value = _downloads.value + (key to state)
+        _downloads.update { current -> current + (key to state) }
     }
 
     private fun removeState(key: String) {
-        _downloads.value = _downloads.value - key
+        _downloads.update { current -> current - key }
     }
 
     /**
@@ -511,6 +515,8 @@ object StoryVideoDownloadManager {
                 AppLog.w(TAG, "refreshStoryUrl: story $ownerId/$storyId not found in fresh storiesGet (expired on VK?)")
                 null
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             AppLog.w(TAG, "refreshStoryUrl failed: ${e.message}", e)
             null
@@ -564,17 +570,27 @@ object StoryVideoDownloadManager {
                         if (totalBytes > 0) {
                             val progress = ((bytesRead.toFloat() / totalBytes.toFloat()) * 100f)
                                 .toInt().coerceIn(0, 100)
-                            updateState(key, DownloadState(
-                                trackId = storyId.toLong(),
-                                status = DownloadStatus.DOWNLOADING,
-                                progress = progress,
-                                title = title,
-                                artist = title,
-                                ownerId = ownerId,
-                            ))
+                            val nowMs = System.currentTimeMillis()
+                            val lastProg = _downloads.value[key]?.progress ?: -1
+                            val delta = progress - lastProg
+                            val enoughTime = nowMs - lastProgressTs >= 500L
+                            if (progress != lastProg && (delta >= 2 || delta <= -2 || enoughTime)) {
+                                lastProgressTs = nowMs
+                                updateState(key, DownloadState(
+                                    trackId = storyId.toLong(),
+                                    status = DownloadStatus.DOWNLOADING,
+                                    progress = progress,
+                                    title = title,
+                                    artist = title,
+                                    ownerId = ownerId,
+                                ))
+                            }
                         }
                     }
                 }
+            }
+            if (totalBytes > 0L && bytesRead < totalBytes) {
+                throw java.io.IOException("Incomplete story download: read $bytesRead of $totalBytes bytes")
             }
         }
     }

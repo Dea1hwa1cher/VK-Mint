@@ -831,6 +831,9 @@ object VideoDownloadManager {
                     }
                 }
             }
+            if (totalBytes > 0L && bytesRead < totalBytes) {
+                throw java.io.IOException("Incomplete video download: read $bytesRead of $totalBytes bytes")
+            }
         }
     }
 

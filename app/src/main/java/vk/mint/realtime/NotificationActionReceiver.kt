@@ -114,15 +114,19 @@ class NotificationActionReceiver : BroadcastReceiver() {
             }
         }
 
-        // 2. Помечаем как прочитанное на сервере (async, не блокируем receiver).
+        // 2. Помечаем как прочитанное на сервере (async с goAsync(), чтобы процесс не убили до ответа).
         // notificationsMarkAsRead() — без параметров (отмечает все прочитанными).
+        val pendingResult = runCatching { goAsync() }.getOrNull()
+        val appCtx = context.applicationContext
         scope.launch {
             try {
-                val app = VkMintApp.get(context.applicationContext)
+                val app = VkMintApp.get(appCtx)
                 app.apiClient.notificationsMarkAsRead()
                 AppLog.d(TAG, "markAsRead OK")
             } catch (e: Exception) {
                 AppLog.w(TAG, "markAsRead failed: ${e.message}")
+            } finally {
+                runCatching { pendingResult?.finish() }
             }
         }
     }
@@ -163,66 +167,71 @@ class NotificationActionReceiver : BroadcastReceiver() {
             return
         }
 
-        // Отправляем комментарий (async, не блокируем receiver — у него ~10с window).
+        // Отправляем комментарий (async с goAsync() — держит процесс живым на время HTTP-вызова до ~10с).
+        val pendingResult = runCatching { goAsync() }.getOrNull()
+        val appCtx = context.applicationContext
         scope.launch {
-            val app = VkMintApp.get(context.applicationContext)
-            val api = app.apiClient
-            var success = false
-            var errorMsg: String? = null
-
             try {
-                success = when (targetType) {
-                    "photo" -> {
-                        api.photosCreateComment(ownerId, itemId, replyText)
-                    }
-                    "video" -> {
-                        // §48 #VIDEO-BOARD-COMMENT: video.createComment с
-                        // reply_to_comment для threaded replies.
-                        val commentIdResult = api.videoCreateComment(
-                            ownerId = ownerId,
-                            videoId = itemId,
-                            message = replyText,
-                            replyToComment = if (commentId > 0L) commentId else null,
-                        )
-                        commentIdResult > 0L
-                    }
-                    "topic" -> {
-                        // §48 #VIDEO-BOARD-COMMENT: board.createComment для
-                        // обсуждений групп. ownerId отрицательный = группа,
-                        // itemId = topic_id. reply_to_comment не поддерживается
-                        // board API (нет threaded replies в discussions).
-                        api.boardCreateComment(ownerId, itemId, replyText)
-                    }
-                    else -> {
-                        // "wall" — wall.createComment с reply_to_comment если есть.
-                        val commentIdResult = api.wallCreateComment(
-                            ownerId = ownerId,
-                            postId = itemId,
-                            message = replyText,
-                            replyToComment = if (commentId > 0L) commentId else null,
-                        )
-                        commentIdResult > 0L
-                    }
-                }
-            } catch (e: Exception) {
-                AppLog.e(TAG, "REPLY: send failed", e)
-                errorMsg = e.message
-            }
+                val app = VkMintApp.get(appCtx)
+                val api = app.apiClient
+                var success = false
+                var errorMsg: String? = null
 
-            AppLog.i(TAG, "REPLY: result=$success errorMsg=$errorMsg")
-
-            // Обновляем notification: показываем результат вместо спиннера.
-            // §46: используем updateReplyResultNotification чтобы показать
-            // «Отправлено» / «Ошибка» и через 3с cancel.
-            try {
-                val ctx = context.applicationContext
-                if (success) {
-                    ReplyResultNotifier.showSuccess(ctx, notifId, replyText)
-                } else {
-                    ReplyResultNotifier.showError(ctx, notifId, errorMsg)
+                try {
+                    success = when (targetType) {
+                        "photo" -> {
+                            api.photosCreateComment(ownerId, itemId, replyText)
+                        }
+                        "video" -> {
+                            // §48 #VIDEO-BOARD-COMMENT: video.createComment с
+                            // reply_to_comment для threaded replies.
+                            val commentIdResult = api.videoCreateComment(
+                                ownerId = ownerId,
+                                videoId = itemId,
+                                message = replyText,
+                                replyToComment = if (commentId > 0L) commentId else null,
+                            )
+                            commentIdResult > 0L
+                        }
+                        "topic" -> {
+                            // §48 #VIDEO-BOARD-COMMENT: board.createComment для
+                            // обсуждений групп. ownerId отрицательный = группа,
+                            // itemId = topic_id. reply_to_comment не поддерживается
+                            // board API (нет threaded replies в discussions).
+                            api.boardCreateComment(ownerId, itemId, replyText)
+                        }
+                        else -> {
+                            // "wall" — wall.createComment с reply_to_comment если есть.
+                            val commentIdResult = api.wallCreateComment(
+                                ownerId = ownerId,
+                                postId = itemId,
+                                message = replyText,
+                                replyToComment = if (commentId > 0L) commentId else null,
+                            )
+                            commentIdResult > 0L
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "REPLY: send failed", e)
+                    errorMsg = e.message
                 }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "REPLY: result notification failed: ${e.message}")
+
+                AppLog.i(TAG, "REPLY: result=$success errorMsg=$errorMsg")
+
+                // Обновляем notification: показываем результат вместо спиннера.
+                // §46: используем updateReplyResultNotification чтобы показать
+                // «Отправлено» / «Ошибка» и через 3с cancel.
+                try {
+                    if (success) {
+                        ReplyResultNotifier.showSuccess(appCtx, notifId, replyText)
+                    } else {
+                        ReplyResultNotifier.showError(appCtx, notifId, errorMsg)
+                    }
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "REPLY: result notification failed: ${e.message}")
+                }
+            } finally {
+                runCatching { pendingResult?.finish() }
             }
         }
     }

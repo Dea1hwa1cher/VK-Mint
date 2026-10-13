@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -336,12 +337,15 @@ object ClipVideoDownloadManager {
         check(initialized) { "ClipVideoDownloadManager not initialized. Call init(context) in VkMintApp.onCreate." }
     }
 
+    @Volatile
+    private var lastProgressTs: Long = 0L
+
     private fun updateState(key: String, state: DownloadState) {
-        _downloads.value = _downloads.value + (key to state)
+        _downloads.update { current -> current + (key to state) }
     }
 
     private fun removeState(key: String) {
-        _downloads.value = _downloads.value - key
+        _downloads.update { current -> current - key }
     }
 
     // ─── Foreground Service ─────────────────────────────────────────
@@ -379,13 +383,14 @@ object ClipVideoDownloadManager {
         val videoId = video.id
         val ownerId = video.ownerId
         val title = video.title.ifBlank { authorName ?: "Клип $ownerId" }
+        val artistName = authorName ?: ""
 
         updateState(key, DownloadState(
             trackId = videoId,
             status = DownloadStatus.DOWNLOADING,
             progress = 0,
             title = title,
-            artist = authorName ?: "",
+            artist = artistName,
             ownerId = ownerId,
         ))
 
@@ -398,7 +403,7 @@ object ClipVideoDownloadManager {
         while (true) {
             attempt++
             try {
-                downloadWithResume(currentUrl, tempFile, key, videoId, ownerId, title)
+                downloadWithResume(currentUrl, tempFile, key, videoId, ownerId, title, artistName)
                 if (!tempFile.renameTo(targetFile)) {
                     tempFile.copyTo(targetFile, overwrite = true)
                     tempFile.delete()
@@ -409,7 +414,7 @@ object ClipVideoDownloadManager {
                     status = DownloadStatus.COMPLETED,
                     progress = 100,
                     title = title,
-                    artist = authorName ?: "",
+                    artist = artistName,
                     ownerId = ownerId,
                 ))
                 AppLog.i(TAG, "Clip video key=$key downloaded (attempt $attempt)")
@@ -480,6 +485,8 @@ object ClipVideoDownloadManager {
                 AppLog.w(TAG, "refreshClipUrl: clip $ownerId/$videoId not found via videoGetClipById (deleted on VK?)")
                 null
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             AppLog.w(TAG, "refreshClipUrl failed: ${e.message}", e)
             null
@@ -493,6 +500,7 @@ object ClipVideoDownloadManager {
         videoId: Long,
         ownerId: Long,
         title: String,
+        artist: String,
     ) {
         val existingBytes = if (tempFile.exists()) tempFile.length() else 0L
         val requestBuilder = Request.Builder().url(url)
@@ -533,17 +541,27 @@ object ClipVideoDownloadManager {
                         if (totalBytes > 0) {
                             val progress = ((bytesRead.toFloat() / totalBytes.toFloat()) * 100f)
                                 .toInt().coerceIn(0, 100)
-                            updateState(key, DownloadState(
-                                trackId = videoId,
-                                status = DownloadStatus.DOWNLOADING,
-                                progress = progress,
-                                title = title,
-                                artist = title,
-                                ownerId = ownerId,
-                            ))
+                            val nowMs = System.currentTimeMillis()
+                            val lastProg = _downloads.value[key]?.progress ?: -1
+                            val delta = progress - lastProg
+                            val enoughTime = nowMs - lastProgressTs >= 500L
+                            if (progress != lastProg && (delta >= 2 || delta <= -2 || enoughTime)) {
+                                lastProgressTs = nowMs
+                                updateState(key, DownloadState(
+                                    trackId = videoId,
+                                    status = DownloadStatus.DOWNLOADING,
+                                    progress = progress,
+                                    title = title,
+                                    artist = artist,
+                                    ownerId = ownerId,
+                                ))
+                            }
                         }
                     }
                 }
+            }
+            if (totalBytes > 0L && bytesRead < totalBytes) {
+                throw java.io.IOException("Incomplete clip download: read $bytesRead of $totalBytes bytes")
             }
         }
     }

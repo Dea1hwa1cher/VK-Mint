@@ -169,8 +169,15 @@ object SirenTranscoder {
 
         // Ждём завершения с таймаутом. Если за FFMPEG_TIMEOUT_MS ffmpeg не успел —
         // отменяем сессию вручную (native поток убивается через FFmpegKit.cancel).
-        val result: Boolean? = kotlinx.coroutines.withTimeoutOrNull(FFMPEG_TIMEOUT_MS) {
-            completion.await()
+        val result: Boolean? = try {
+            kotlinx.coroutines.withTimeoutOrNull(FFMPEG_TIMEOUT_MS) {
+                completion.await()
+            }
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            AppLog.w(TAG, "transcodeToM4a: cancelled — cancelling session ${session.sessionId}")
+            FFmpegKit.cancel(session.sessionId)
+            outputM4a.delete()
+            throw ce
         }
 
         if (result != null) {

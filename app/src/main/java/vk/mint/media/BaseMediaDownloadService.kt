@@ -14,6 +14,10 @@ import android.os.IBinder
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import vk.mint.data.model.DownloadState
+import vk.mint.data.model.DownloadStatus
 import vk.mint.ui.MainActivity
 import vk.mint.util.AppLog
 
@@ -30,6 +34,7 @@ abstract class BaseMediaDownloadService : Service() {
     abstract val logTag: String
     abstract val notificationId: Int
     abstract val channelId: String
+    abstract val downloadsFlow: kotlinx.coroutines.flow.StateFlow<Map<String, DownloadState>>
 
     @get:StringRes abstract val channelNameRes: Int
     @get:StringRes abstract val channelDescRes: Int
@@ -37,16 +42,31 @@ abstract class BaseMediaDownloadService : Service() {
     @get:StringRes abstract val activeTitleRes: Int
     @get:StringRes abstract val progressTextRes: Int
 
+    private val serviceScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate
+    )
+    private var collectorJob: kotlinx.coroutines.Job? = null
+
     override fun onCreate() {
         AppLog.i(logTag, "onCreate()")
         ensureChannel()
         super.onCreate()
+        startObservingDownloads()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         AppLog.i(logTag, "onStartCommand")
         try {
-            startForegroundCompat(notificationId, buildNotification(0, 0))
+            val active = downloadsFlow.value.values.filter {
+                it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.QUEUED
+            }
+            val initialCount = active.size.coerceAtLeast(1)
+            val initialProgress = if (active.isNotEmpty()) {
+                active.sumOf { it.progress } / active.size
+            } else {
+                0
+            }
+            startForegroundCompat(notificationId, buildNotification(initialCount, initialProgress))
         } catch (e: Exception) {
             AppLog.e(logTag, "startForeground() failed: ${e.javaClass.simpleName}: ${e.message}", e)
             stopSelf()
@@ -54,16 +74,45 @@ abstract class BaseMediaDownloadService : Service() {
         return START_NOT_STICKY
     }
 
+    private fun startObservingDownloads() {
+        if (collectorJob != null) return
+        collectorJob = serviceScope.launch {
+            downloadsFlow.collect { map ->
+                val active = map.values.filter {
+                    it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.QUEUED
+                }
+                if (active.isNotEmpty()) {
+                    val avgProgress = active.sumOf { it.progress } / active.size
+                    updateNotification(active.size, avgProgress)
+                }
+            }
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         AppLog.i(logTag, "onDestroy")
+        collectorJob?.cancel()
+        collectorJob = null
+        serviceScope.cancel()
+        try {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            nm?.cancel(notificationId)
+        } catch (e: Exception) {
+            AppLog.w(logTag, "onDestroy cleanup failed: ${e.message}")
+        }
         super.onDestroy()
     }
 
     fun updateNotification(activeCount: Int, progressPercent: Int) {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
-        nm.notify(notificationId, buildNotification(activeCount, progressPercent))
+        try {
+            nm.notify(notificationId, buildNotification(activeCount, progressPercent))
+        } catch (e: Exception) {
+            AppLog.w(logTag, "updateNotification failed: ${e.message}")
+        }
     }
 
     protected open fun buildNotification(activeCount: Int, progressPercent: Int): Notification {

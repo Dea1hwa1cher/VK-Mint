@@ -49,7 +49,11 @@ class TrackBookmarksRepository(private val prefs: VkMintPrefs) {
     val tracks: StateFlow<List<Track>> = _tracks
 
     init {
-        scope.launch { ensureLoaded() }
+        scope.launch {
+            mutex.withLock {
+                ensureLoaded()
+            }
+        }
     }
 
     private suspend fun ensureLoaded() {

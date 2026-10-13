@@ -48,8 +48,9 @@ object NetworkInterceptors {
 
         override fun intercept(chain: Interceptor.Chain): Response {
             val url = chain.request().url.toString()
-            val snap = runBlocking { prefs.data.first() }
-            if (snap.netAdBlock && networkMods.isAdDomain(url)) {
+            if (!networkMods.isAdDomain(url)) return chain.proceed(chain.request())
+            val snap = vk.mint.VkMintApp.getOrNull()?.prefsSnapshot ?: runBlocking { prefs.data.first() }
+            if (snap.netAdBlock) {
                 AppLog.d(TAG, "AdBlock: blocked $url")
                 return Response.Builder()
                     .request(chain.request())
@@ -83,9 +84,9 @@ object NetworkInterceptors {
         override fun intercept(chain: Interceptor.Chain): Response {
             val original = chain.request()
             val url = original.url.toString()
-            val snap = runBlocking { prefs.data.first() }
-            if (!snap.netAwayBypass) return chain.proceed(original)
             if (!networkMods.isAwayRedirect(url)) return chain.proceed(original)
+            val snap = vk.mint.VkMintApp.getOrNull()?.prefsSnapshot ?: runBlocking { prefs.data.first() }
+            if (!snap.netAwayBypass) return chain.proceed(original)
 
             val unwrapped = networkMods.unwrapAway(url)
             if (unwrapped == url) return chain.proceed(original)

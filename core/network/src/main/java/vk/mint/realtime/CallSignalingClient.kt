@@ -155,7 +155,7 @@ class CallSignalingClient(
         val candidateSdpMLineIndex: Int? = null,
     )
 
-    private val scope = CoroutineScope(Job() + Dispatchers.IO)
+    private val scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
     private var webSocket: WebSocket? = null
     private var connectJob: Job? = null
     private var running = false
