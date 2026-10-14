@@ -15,6 +15,7 @@ import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import vk.mint.data.model.DownloadState
 import vk.mint.data.model.DownloadStatus
@@ -77,13 +78,20 @@ abstract class BaseMediaDownloadService : Service() {
     private fun startObservingDownloads() {
         if (collectorJob != null) return
         collectorJob = serviceScope.launch {
+            var hadActive = false
             downloadsFlow.collect { map ->
                 val active = map.values.filter {
                     it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.QUEUED
                 }
                 if (active.isNotEmpty()) {
+                    hadActive = true
                     val avgProgress = active.sumOf { it.progress } / active.size
                     updateNotification(active.size, avgProgress)
+                } else if (hadActive) {
+                    hadActive = false
+                    updateNotification(0, 100)
+                    delay(1000)
+                    stopSelf()
                 }
             }
         }

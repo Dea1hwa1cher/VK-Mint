@@ -107,6 +107,7 @@ import vk.mint.data.model.AvatarShape
 import vk.mint.data.model.SettingsParam
 import vk.mint.data.model.SettingsSection as BffSettingsSection
 import androidx.compose.foundation.layout.PaddingValues
+import vk.mint.ui.components.BffParamRow
 import vk.mint.ui.components.ExpressiveSegmentedButtonRow
 import vk.mint.ui.components.ExpressiveSwitch
 import vk.mint.ui.components.VkGroup
@@ -9137,7 +9138,7 @@ private fun EmailNotifyCard(app: VkMintApp) {
                             )
                         }
                         section.params.forEach { param ->
-                            EmailParamRow(
+                            BffParamRow(
                                 param = param,
                                 onToggle = { p, newValue ->
                                     val prevSections = sections
@@ -9180,143 +9181,6 @@ private fun EmailNotifyCard(app: VkMintApp) {
                             )
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-/**
- * #SETTINGS-FIX (P2-5): минимальный честный рендер одного BFF-параметра email-страницы.
- * Зеркало приватного ParamRow из NotificationSettingsScreen (выносить в общий файл —
- * вне зоны волны; дублирование сознательное и задокументировано).
- *  - toggle/custom_toggle → Switch + settingsGeneralToggleNotify (запись работает);
- *  - select/radio С ОПЦИЯМИ → dropdown + settingsGeneralSetNotifySettings;
- *  - select/radio БЕЗ опций, button, warning, неизвестные типы → read-only значение
- *    (no-stub: пустой dropdown не открываем, действия не имитируем — см. аудит ⚠️5/§5.5);
- *  - тач-таргеты ≥ 44dp (defaultMinSize).
- */
-@Composable
-private fun EmailParamRow(
-    param: SettingsParam,
-    onToggle: (SettingsParam, Boolean) -> Unit,
-    onSelect: (SettingsParam, String) -> Unit,
-) {
-    var dropdownExpanded by remember { mutableStateOf(false) }
-    when (param.type) {
-        "toggle", "custom_toggle" -> {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 44.dp)
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    param.title?.let { Text(it) }
-                    param.description?.let {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(top = 2.dp),
-                        )
-                    }
-                }
-                ExpressiveSwitch(
-                    checked = param.isChecked == true,
-                    onCheckedChange = { onToggle(param, it) },
-                )
-            }
-        }
-        "select", "radio" -> {
-            val canEdit = param.options.isNotEmpty()
-            Box {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 44.dp)
-                        .padding(vertical = 4.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .then(
-                            if (canEdit) {
-                                Modifier.clickable { dropdownExpanded = true }
-                            } else {
-                                Modifier // честный read-only: options нет — клик/dropdown не открываем
-                            },
-                        ),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        param.title?.let { Text(it) }
-                        param.description?.let {
-                            Text(
-                                it,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(top = 2.dp),
-                            )
-                        }
-                        val selectedLabel = param.options.firstOrNull { it.value == param.value }?.label
-                            ?: param.value ?: "—"
-                        Text(
-                            selectedLabel,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                    if (canEdit) {
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Выбрать")
-                    }
-                }
-                if (canEdit) {
-                    DropdownMenu(
-                        expanded = dropdownExpanded,
-                        onDismissRequest = { dropdownExpanded = false },
-                    ) {
-                        param.options.forEach { opt ->
-                            DropdownMenuItem(
-                                text = { Text(opt.label) },
-                                onClick = {
-                                    dropdownExpanded = false
-                                    onSelect(param, opt.value)
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        else -> {
-            // button/warning/прочее — read-only отображение (per-key action-методов
-            // для email-страницы в BFF-бандлах нет — честный отказ, аудит §5.5).
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 44.dp)
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    param.title?.let { Text(it) }
-                    param.description?.let { it1 ->
-                        Text(
-                            it1,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(top = 2.dp),
-                        )
-                    }
-                }
-                param.value?.let { v ->
-                    Text(
-                        v,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
                 }
             }
         }

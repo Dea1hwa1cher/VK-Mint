@@ -43,6 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import vk.mint.ui.components.ExpressiveSwitch
+import vk.mint.ui.components.BffParamRow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -254,7 +255,7 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
                             }
                         }
                         items(section.params, key = { "${section.id}_${it.key}" }) { param ->
-                            ParamRow(
+                            BffParamRow(
                                 param = param,
                                 onToggle = { p, newValue ->
                                     // Optimistic update
@@ -504,165 +505,6 @@ private fun SilentModeCard(
 private fun SnoozeButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     OutlinedButton(onClick = onClick, modifier = modifier) {
         Text(text, fontSize = 12.sp)
-    }
-}
-
-/**
- * Рендерит один параметр настройки в зависимости от его `type`.
- * - "toggle" / "custom_toggle" → Switch row
- * - "select" / "radio" → row с dropdown из param.options
- * - "button" → TextButton row (action)
- * - "warning" → карточка с amber-фоном
- * - прочее → просто title
- */
-@Composable
-private fun ParamRow(
-    param: SettingsParam,
-    onToggle: (SettingsParam, Boolean) -> Unit,
-    onSelect: (SettingsParam, String) -> Unit,
-) {
-    var dropdownExpanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    when (param.type) {
-        "toggle", "custom_toggle" -> {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    param.title?.let { Text(it) }
-                    param.description?.let {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(top = 2.dp),
-                        )
-                    }
-                }
-                ExpressiveSwitch(
-                    checked = param.isChecked == true,
-                    onCheckedChange = { onToggle(param, it) },
-                )
-            }
-        }
-        "select", "radio" -> {
-            // #SETTINGS-FIX (P3-8, аудит настроек ⚠️5): select/radio БЕЗ options —
-            // рендер значения БЕЗ шеврона/кликабельности/dropdown (пустой dropdown
-            // выглядел как баг). legacy-исключения «…кроме N друзей» в BFF не приходят
-            // (al_settings.php, no-stub §5.6) — честный просмотр значения.
-            val canEdit = param.options.isNotEmpty()
-            Box {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                        .defaultMinSize(minHeight = 44.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .then(
-                            if (canEdit) {
-                                Modifier.clickable { dropdownExpanded = true }
-                            } else {
-                                Modifier // read-only: options нет — dropdown не открываем
-                            },
-                        ),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        param.title?.let { Text(it) }
-                        param.description?.let {
-                            Text(
-                                it,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(top = 2.dp),
-                            )
-                        }
-                        val selectedLabel = param.options.firstOrNull { it.value == param.value }?.label
-                            ?: param.value ?: "—"
-                        Text(
-                            selectedLabel,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                    if (canEdit) {
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Выбрать")
-                    }
-                }
-                if (canEdit) {
-                    DropdownMenu(
-                        expanded = dropdownExpanded,
-                        onDismissRequest = { dropdownExpanded = false },
-                    ) {
-                        param.options.forEach { opt ->
-                            DropdownMenuItem(
-                                text = { Text(opt.label) },
-                                onClick = {
-                                    dropdownExpanded = false
-                                    onSelect(param, opt.value)
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        "button" -> {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                param.description?.let {
-                    Text(
-                        it,
-                        Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 13.sp,
-                    )
-                }
-                TextButton(onClick = {
-                    // Per-key actions (e.g. change_notify_email) — не реализованы в этом экране.
-                    Toast.makeText(
-                        context,
-                        "Действие «${param.title ?: param.key}» недоступно",
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }) {
-                    Text(param.title ?: "Действие")
-                }
-            }
-        }
-        "warning" -> {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFFFC107).copy(alpha = 0.15f),
-                ),
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    param.title?.let { Text(it, fontWeight = FontWeight.SemiBold) }
-                    param.description?.let {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
-                    }
-                }
-            }
-        }
-        else -> {
-            param.title?.let {
-                Text(
-                    it,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                )
-            }
-        }
     }
 }
 
