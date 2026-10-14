@@ -206,7 +206,7 @@ import kotlin.math.roundToInt
 //   друзья»; блок рекомендаций над лентой УДАЛЕН — #FEED-MENU-VKWEB Fix #353,
 //   в VK web раздел «Друзья» — чистая лента постов друзей).
 // SEARCH → newsfeed.search.
-private enum class FeedFilter(val label: String, val apiFilters: String?, val recommended: Boolean) {
+enum class FeedFilter(val label: String, val apiFilters: String?, val recommended: Boolean) {
     ALL("Новости", "post,photo,video", false),
     RECOMMENDED("Для вас", null, true),
     FRIENDS("Друзья", null, false),
@@ -576,24 +576,21 @@ fun FeedScreen(
         )
     )
 
-    var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
-    // Все загруженные посты (до клиентской фильтрации).
-    // Используем separate state чтобы фильтр не терял посты при переключении настроек.
-    // Fix #100: инициализируем из FeedDataHolder — переживает навигацию к VideoPlayer.
-    var allPosts by remember { mutableStateOf(FeedDataHolder.allPosts ?: emptyList()) }
-    var profiles by remember { mutableStateOf(FeedDataHolder.profiles ?: emptyMap()) }
-    var groups by remember { mutableStateOf(FeedDataHolder.groups ?: emptyMap()) }
-    // Skeleton показывается только при самом первом запуске (кэш пуст).
-    // При возврате из VideoPlayer — кэш есть, loading=false, LazyColumn сразу отрисовывается.
-    var loading by remember { mutableStateOf(FeedDataHolder.allPosts == null) }
-    var errorText by remember { mutableStateOf<String?>(null) }
-    // Защита от флуда: один одновременный запрос ленты
-    var feedJobRunning by remember { mutableStateOf(false) }
-    // Sprint 1, P0-4 (#77): пагинация ленты через newsfeed.get start_from/next_from.
-    var nextFrom by remember { mutableStateOf(FeedDataHolder.nextFrom) }
-    var isRefreshing by remember { mutableStateOf(false) }
-    var loadingMore by remember { mutableStateOf(false) }
-    var endReached by remember { mutableStateOf(FeedDataHolder.endReached) }  // nextFrom==null && уже загружали
+    val feedViewModel: FeedViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = remember { FeedViewModel.provideFactory(app.apiClient) }
+    )
+    val feedUiState by feedViewModel.uiState.collectAsState()
+    val filterConfig = remember(feedPrefs) { FeedFilterConfig.from(feedPrefs) }
+
+    val posts = feedUiState.posts
+    val allPosts = feedUiState.allPosts
+    val profiles = feedUiState.profiles
+    val groups = feedUiState.groups
+    val loading = feedUiState.loading
+    val errorText = feedUiState.errorText
+    val isRefreshing = feedUiState.isRefreshing
+    val loadingMore = feedUiState.loadingMore
+    val endReached = feedUiState.endReached
 
     // #FEED-FILTER: активный раздел ленты (VK rightmenu). Храним имя enum-а в
     // rememberSaveable — переживает навигацию (VideoPlayer/PostDetail) и поворот.
@@ -887,55 +884,7 @@ fun FeedScreen(
         }
     }
 
-    // Загрузка одной страницы ленты по текущему разделу.
-    // Читает feedFilterName напрямую (не через derived feedFilter) — так при
-    // смене раздела в onSelect (feedFilterName = f.name; reloadFeed()) запрос
-    // уходит уже с НОВЫМ фильтром, не дожидаясь рекомпозиции.
-    suspend fun fetchFeedPage(count: Int, startFrom: String?): VKApiClient.NewsfeedResult {
-        val f = runCatching { FeedFilter.valueOf(feedFilterName) }.getOrDefault(FeedFilter.ALL)
-        when {
-            f.recommended -> return app.apiClient.newsfeedGetRecommended(count, startFrom)
-            f == FeedFilter.LIKES -> {
-                return VKApiClient.NewsfeedResult(emptyList(), emptyMap(), emptyMap(), null)
-            }
-            f == FeedFilter.FRIENDS -> {
-                // #FEED-FRIENDS-FEED (IMP-FEED-1, п.5): «Друзья» = лента постов
-                // друзей (снапшот §1.2: vk.ru/feed?section=friends — посты
-                // друзей, НЕ «возможные друзья»). Моб. аналог: newsfeed.get с
-                // source_ids из friends.get (аддитивный параметр newsfeedGet).
-                // ЛИМИТ VK API: source_ids ≤ 100 id — берём первых 100 друзей
-                // (friends.get c count=1000, сортировка order=hints как везде);
-                // при >100 друзей лента покрывает первых 100 — задокументированное
-                // ограничение (выше требует execute-батчей, вне скоупа IMP-FEED-1).
-                // Ошибка/пусто friendsGet → пустой NewsfeedResult: caller
-                // (reloadFeed/refreshFeed) покажет честное состояние
-                // «Ошибка API: …»/«Лента пуста» через lastApiError-гейт.
-                val friendIds = try {
-                    app.apiClient.friendsGet(count = 1000).map { it.id }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLog.e("FeedScreen", "friendsGet for friends feed failed", e)
-                    emptyList()
-                }
-                if (friendIds.isEmpty()) {
-                    return VKApiClient.NewsfeedResult(emptyList(), emptyMap(), emptyMap(), null)
-                }
-                return app.apiClient.newsfeedGet(
-                    count = count,
-                    startFrom = startFrom,
-                    filters = "post,photo,video",
-                    sourceIds = friendIds.distinct().take(100),
-                )
-            }
-            f == FeedFilter.SEARCH -> {
-                if (feedSearchQuery.isBlank()) return VKApiClient.NewsfeedResult(emptyList(), emptyMap(), emptyMap(), null)
-                val (_, posts) = app.apiClient.newsfeedSearch(feedSearchQuery, count)
-                return VKApiClient.NewsfeedResult(posts, emptyMap(), emptyMap(), null)
-            }
-        }
-        return app.apiClient.newsfeedGet(count, startFrom, f.apiFilters ?: "post,photo,video")
-    }
+    // P3: Загрузка страниц ленты и фильтрация инкапсулированы в FeedViewModel.
 
     // Состояния лайков и комментариев (mutable state map по post key).
     // Храним локально — оптимистичное обновление UI.
@@ -1036,121 +985,36 @@ fun FeedScreen(
     // убран по запросу пользователя. Раньше было два эффекта
     // (allPosts→baseFilteredPosts→posts±sourceFilter), теперь — один: posts
     // = allPosts после ad/repost/promo фильтрации, без source-разделения.
-    LaunchedEffect(allPosts, feedPrefs, feedFilterName) {
-        // #FEED-FILTER-FIX: PHOTOS → посты с фото-вложениями (клиентский фильтр).
-        // LIKES → теперь через likes.getList API (выше), не клиентская фильтрация.
-        posts = allPosts.mapNotNull { post ->
-            if (feedPrefs.newsAdsBlocked && post.isAd) return@mapNotNull null
-            if (feedPrefs.newsPromoHidden && (post.postType == "promo" || post.postType == "ad_promo")) return@mapNotNull null
-
-            // Фильтрация по чёрному списку слов (Fenrir containInWords: text, copy_history, attachments)
-            if (feedPrefs.newsStopWordsEnabled && feedPrefs.newsStopWords.isNotEmpty() && post.containsAnyWord(feedPrefs.newsStopWords)) {
-                return@mapNotNull null
-            }
-
-            // Если включено полное сокрытие репостов — отбрасываем любые посты с copyHistory.
-            if (feedPrefs.newsRepostsHidden && post.hasCopyHistory) {
-                return@mapNotNull null
-            }
-
-            // Если включено вырезание репостов (Fenrir isStrip_news_repost):
-            // - Чистый репост (без текста и без вложений автора) скрывается из ленты целиком.
-            // - Пост с комментарием/вложениями автора сохраняется, но вложенный блок репоста вырезается.
-            val processedPost = if (feedPrefs.newsStripReposts && post.hasCopyHistory) {
-                if (post.isOnlyRepost) {
-                    return@mapNotNull null
-                } else {
-                    post.strippedRepost()
+    LaunchedEffect(allPosts) {
+        allPosts.forEach { post ->
+            val key = "${post.ownerId}_${post.id}"
+            if (!likesState.containsKey(key)) {
+                post.likes?.let { l ->
+                    likesState[key] = (l.userLikes == 1) to l.count
                 }
-            } else {
-                post
-            }
-
-            when (feedFilterName) {
-                FeedFilter.PHOTOS.name -> if (processedPost.attachments?.any { it.type == "photo" } == true) processedPost else null
-                else -> processedPost
             }
         }
     }
 
+    LaunchedEffect(feedFilterName) {
+        feedViewModel.setFeedFilter(feedFilter, filterConfig)
+    }
+
+    LaunchedEffect(filterConfig) {
+        feedViewModel.applyPreferences(filterConfig)
+    }
+
     // Функция перезагрузки ленты — используется после создания поста и при pull-to-refresh.
     fun reloadFeed() {
-        if (feedJobRunning) return
-        feedJobRunning = true
-        // Fix #100: сбрасываем кэш + позицию — после reload индексы могут не совпадать.
         FeedDataHolder.clear()
         scrollRestored = false
-        // Fix #51-B: инкрементируем feedReloadKey → rememberSaveable пересоздаёт
-        // LazyListState с (0,0). Также сбрасываем FeedScrollHolder (backup механизм).
         feedReloadKey++
         FeedScrollHolder.position = ScrollPosition(0, 0)
-        // Fix #52-B: сбрасываем кэш историй при reload/refresh — dirtyKey++
-        // триггерит перезагрузку в StoriesRow (LaunchedEffect(dirtyKey)).
         vk.mint.ui.navigation.StoriesHolder.clear()
-        // #FEED-REACTIONS-REFRESH: см. refreshFeed — в разделе «Реакции» reload
-        // тоже должен перезапускать отдельный загрузчик реакций (не только
-        // fetchFeedPage, который для LIKES возвращает пусто). Перезапуск даже
-        // когда смена раздела уже дёрнула LaunchedEffect — безвреден: у
-        // loadReactions собственный likesLoading-гард от параллельных запусков.
         if (feedFilterName == FeedFilter.LIKES.name) {
             reactionsReloadKey++
         }
-        scope.launch {
-            loading = true
-            endReached = false
-            errorText = null
-            try {
-                val result = fetchFeedPage(30, null)
-                // Fix #53: защитная дедупликация на уровне UI — даже если API вернёт
-                // дубликаты, LazyColumn не упадёт с "Key X was already used".
-                allPosts = result.posts
-                    .filter { it.id > 0 && it.ownerId != 0L }
-                    .distinctBy { "${it.ownerId}_${it.id}" }
-                profiles = result.profiles
-                groups = result.groups
-                // DIAG: логируем мапу групп и проверяем каждый пост
-                AppLog.d("FeedScreen", "reloadFeed: groups map keys=${groups.keys}, size=${groups.size}")
-                allPosts.forEach { post ->
-                    if (post.fromId < 0) {
-                        val gKey = -post.fromId
-                        val g = groups[gKey]
-                        AppLog.d("FeedScreen", "  POST_LOOKUP: fromId=${post.fromId} groupKey=$gKey found=${g != null} name=${g?.name ?: "NULL"}")
-                    }
-                }
-                // Sprint 1, P0-4 (#77): курсор пагинации.
-                nextFrom = result.nextFrom
-                if (nextFrom == null) endReached = true
-                allPosts.forEach { post ->
-                    val key = "${post.ownerId}_${post.id}"
-                    post.likes?.let { l ->
-                        likesState[key] = (l.userLikes == 1) to l.count
-                    }
-                }
-                // Fix #100: синхронизируем кэш для следующего возврата из VideoPlayer.
-                FeedDataHolder.snapshot(allPosts, profiles, groups, nextFrom, endReached)
-                // Fix #358 #FEED-SECTION-EMPTY-GATE: разделы Реакции (LIKES) и Поиск
-                // (SEARCH) УМЫШЛЕННО возвращают пустой NewsfeedResult из fetchFeedPage
-                // (Реакции грузятся отдельным LaunchedEffect через likes.getList,
-                // Поиск ждёт запрос по полю ввода). Ставить сюда «Лента пуста» =
-                // убивать гейтом (errorText != null && posts.isEmpty()) весь UI
-                // раздела — поле поиска и подтабы Реакций становились недостижимы
-                // («в меню ленты поиск и реакции не работает ни то не другое»).
-                // Пусто в этих разделах — НОРМАЛЬНОЕ состояние; свои ошибки их
-                // loader'ы показывают сами (likesLoading/apiErrorMessage).
-                if (allPosts.isEmpty() &&
-                    feedFilterName != FeedFilter.LIKES.name &&
-                    feedFilterName != FeedFilter.SEARCH.name
-                ) {
-                    val err = app.apiClient.lastApiError
-                    errorText = if (err != null) "Ошибка API: $err" else "Лента пуста"
-                }
-            } catch (e: Exception) {
-                AppLog.e("FeedScreen", "reloadFeed failed", e)
-            } finally {
-                loading = false
-                feedJobRunning = false
-            }
-        }
+        feedViewModel.loadFeed(filterConfig, force = true)
     }
 
     // Иконки быстрого доступа на глобальной верхней панели в разделе «Главная» (как в мобильном VK:
@@ -1228,8 +1092,6 @@ fun FeedScreen(
 
     // Sprint 1, P0-4 (#77): pull-to-refresh — перезагрузка ленты с spinner'ом.
     fun refreshFeed() {
-        if (feedJobRunning) return
-        feedJobRunning = true
         // Fix #100: pull-to-refresh сбрасывает кэш + позицию.
         FeedDataHolder.clear()
         scrollRestored = false
@@ -1240,136 +1102,30 @@ fun FeedScreen(
         // Fix #52-B: сбрасываем кэш историй при reload/refresh — dirtyKey++
         // триггерит перезагрузку в StoriesRow (LaunchedEffect(dirtyKey)).
         vk.mint.ui.navigation.StoriesHolder.clear()
-        // #FEED-REACTIONS-REFRESH: в разделе «Реакции» fetchFeedPage возвращает
-        // пусто (раздел грузит отдельным загрузчиком loadReactions). Инкремент
-        // reactionsReloadKey перезапускает LaunchedEffect(feedFilterName,
-        // likesFilterName, reactionsReloadKey) → реакций/фото перезагружаются
-        // при pull-to-refresh, иначе обновление ничего не делало (сам класс
-        // бага, что Fix #358: раздел «застревал» на старых данных).
+        // #FEED-REACTIONS-REFRESH: перезапуск реакций при pull-to-refresh
         if (feedFilterName == FeedFilter.LIKES.name) {
             reactionsReloadKey++
         }
-        scope.launch {
-            isRefreshing = true
-            try {
-                val result = fetchFeedPage(30, null)
-                allPosts = result.posts
-                    .filter { it.id > 0 && it.ownerId != 0L }
-                    .distinctBy { "${it.ownerId}_${it.id}" }
-                profiles = result.profiles
-                groups = result.groups
-                nextFrom = result.nextFrom
-                endReached = (nextFrom == null)
-                allPosts.forEach { post ->
-                    val key = "${post.ownerId}_${post.id}"
-                    post.likes?.let { l ->
-                        likesState[key] = (l.userLikes == 1) to l.count
-                    }
-                }
-                // Fix #100: синхронизируем кэш.
-                FeedDataHolder.snapshot(allPosts, profiles, groups, nextFrom, endReached)
-                errorText = null
-            } catch (e: Exception) {
-                AppLog.w("FeedScreen", "refreshFeed failed: ${e.message}")
-            } finally {
-                isRefreshing = false
-                feedJobRunning = false
-            }
-        }
+        feedViewModel.refreshFeed(filterConfig)
     }
 
     // Sprint 1, P0-4 (#77): пагинация — загрузка следующей страницы.
     fun loadMore() {
-        if (loadingMore || endReached || nextFrom == null) return
-        scope.launch {
-            loadingMore = true
-            try {
-                val result = fetchFeedPage(30, nextFrom)
-                val newPosts = result.posts
-                    .filter { it.id > 0 && it.ownerId != 0L }
-                    // Дедупликация против уже загруженных.
-                    .filter { np -> allPosts.none { it.ownerId == np.ownerId && it.id == np.id } }
-                if (newPosts.isNotEmpty()) {
-                    allPosts = (allPosts + newPosts).distinctBy { "${it.ownerId}_${it.id}" }
-                    // Мёржим profiles/groups — новые могут добавить неизвестных авторов.
-                    profiles = profiles + result.profiles
-                    groups = groups + result.groups
-                    newPosts.forEach { post ->
-                        val key = "${post.ownerId}_${post.id}"
-                        post.likes?.let { l ->
-                            likesState[key] = (l.userLikes == 1) to l.count
-                        }
-                    }
-                }
-                nextFrom = result.nextFrom
-                if (nextFrom == null || newPosts.isEmpty()) endReached = true
-                // Fix #100: синхронизируем кэш после пагинации.
-                FeedDataHolder.snapshot(allPosts, profiles, groups, nextFrom, endReached)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e // scope отменён — нормально при пересоздании Activity
-            } catch (e: Exception) {
-                AppLog.w("FeedScreen", "loadMore failed: ${e.message}")
-            } finally {
-                loadingMore = false
-            }
-        }
+        feedViewModel.loadMore(filterConfig)
     }
 
     LaunchedEffect(Unit) {
-        // Fix #100: первичная загрузка только если кэша НЕТ.
-        // При возврате из VideoPlayer FeedDataHolder уже содержит allPosts —
-        // LazyColumn сразу отрисуется с восстановленной позицией, без skeleton.
-        // LaunchedEffect(Unit) перезапускается каждый раз при возвращении composition
-        // в активное состояние (Compose Navigation отменяет корутину при уходе с экрана),
-        // поэтому без этой проверки лента будет перезагружаться каждый возврат.
-        if (FeedDataHolder.allPosts != null) {
-            AppLog.d("FeedScreen", "LaunchedEffect(Unit): cache exists — skip load")
-            return@LaunchedEffect
-        }
-        // FIX: используем корутину LaunchedEffect напрямую вместо scope.launch,
-        // чтобы избежать ForgottenCoroutineScopeException при пересоздании Activity
-        // (например, после авторизации).
-        loading = true
-        endReached = false
-        errorText = null
-        try {
-            val result = fetchFeedPage(30, null)
-            // Fix #53: защитная дедупликация на уровне UI.
-            allPosts = result.posts
-                .filter { it.id > 0 && it.ownerId != 0L }
-                .distinctBy { "${it.ownerId}_${it.id}" }
-            profiles = result.profiles
-            groups = result.groups
-            // Sprint 1, P0-4 (#77): курсор пагинации.
-            nextFrom = result.nextFrom
-            if (nextFrom == null) endReached = true
-            // Инициализируем состояние лайков из данных постов.
-            allPosts.forEach { post ->
-                val key = "${post.ownerId}_${post.id}"
-                post.likes?.let { l ->
-                    likesState[key] = (l.userLikes == 1) to l.count
-                }
-            }
-            // Fix #358 #FEED-SECTION-EMPTY-GATE: тот же гейт, что в reloadFeed —
-            // первичная загрузка тоже может стартовать в разделе LIKES/SEARCH
-            // (feedFilterName — rememberSaveable, переживает process death).
-            if (allPosts.isEmpty() &&
-                feedFilterName != FeedFilter.LIKES.name &&
-                feedFilterName != FeedFilter.SEARCH.name
-            ) {
-                val err = app.apiClient.lastApiError
-                errorText = if (err != null) "Ошибка API: $err" else "Лента пуста"
-            }
-            // Fix #100: сохраняем снимок в кэш.
-            FeedDataHolder.snapshot(allPosts, profiles, groups, nextFrom, endReached)
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            // Fix #252: корректная отмена (пользователь ушёл со экрана)
-            throw e
-        } catch (e: Exception) {
-            AppLog.e("FeedScreen", "Failed to load feed", e)
-            errorText = "Не удалось загрузить ленту: ${e.message}"
-        } finally {
-            loading = false
+        // Fix #100: первичная инициализация из кэша либо загрузка через FeedViewModel
+        feedViewModel.initFromCache(
+            cachedPosts = FeedDataHolder.allPosts,
+            cachedProfiles = FeedDataHolder.profiles,
+            cachedGroups = FeedDataHolder.groups,
+            cachedNextFrom = FeedDataHolder.nextFrom,
+            cachedEndReached = FeedDataHolder.endReached,
+            filterConfig = filterConfig,
+        )
+        if (FeedDataHolder.allPosts == null) {
+            feedViewModel.loadFeed(filterConfig)
         }
     }
 
@@ -1927,10 +1683,7 @@ fun FeedScreen(
                                 app.apiClient.faveAdd("post", p.ownerId, p.id)
                             }
                             if (ok) {
-                                allPosts = allPosts.map {
-                                    if (it.ownerId == p.ownerId && it.id == p.id) it.copy(isFavorite = newFav) else it
-                                }
-                                FeedDataHolder.allPosts = allPosts
+                                feedViewModel.updatePost(p.ownerId, p.id) { it.copy(isFavorite = newFav) }
                             }
                             AppLog.d("FeedScreen", "bookmark toggle: ok=$ok")
                         }
@@ -1939,9 +1692,7 @@ fun FeedScreen(
                         scope.launch {
                             val ok = app.apiClient.wallDelete(p.ownerId, p.id)
                             if (ok) {
-                                allPosts = allPosts.filter { it.ownerId != p.ownerId || it.id != p.id }
-                                posts = posts.filter { it.ownerId != p.ownerId || it.id != p.id }
-                                FeedDataHolder.allPosts = allPosts
+                                feedViewModel.removePost(p.ownerId, p.id)
                             }
                             AppLog.d("FeedScreen", "delete post: ok=$ok")
                         }
@@ -1955,10 +1706,7 @@ fun FeedScreen(
                                 app.apiClient.wallPin(p.ownerId, p.id)
                             }
                             if (ok) {
-                                allPosts = allPosts.map {
-                                    if (it.ownerId == p.ownerId && it.id == p.id) it.copy(isPinned = newPin) else it
-                                }
-                                FeedDataHolder.allPosts = allPosts
+                                feedViewModel.updatePost(p.ownerId, p.id) { it.copy(isPinned = newPin) }
                             }
                             AppLog.d("FeedScreen", "pin toggle: ok=$ok")
                         }
@@ -1968,9 +1716,7 @@ fun FeedScreen(
                         scope.launch {
                             val ok = app.apiClient.newsfeedIgnoreItem("wall", p.ownerId, p.id)
                             if (ok) {
-                                allPosts = allPosts.filter { it.ownerId != p.ownerId || it.id != p.id }
-                                posts = posts.filter { it.ownerId != p.ownerId || it.id != p.id }
-                                FeedDataHolder.allPosts = allPosts
+                                feedViewModel.removePost(p.ownerId, p.id)
                             }
                             AppLog.d("FeedScreen", "hide from feed: ok=$ok")
                         }
@@ -1983,9 +1729,7 @@ fun FeedScreen(
                                 app.apiClient.newsfeedAddBan(userIds = listOf(p.fromId))
                             }
                             if (ok) {
-                                allPosts = allPosts.filter { it.fromId != p.fromId }
-                                posts = posts.filter { it.fromId != p.fromId }
-                                FeedDataHolder.allPosts = allPosts
+                                feedViewModel.removePostsFromAuthor(p.fromId)
                             }
                             AppLog.d("FeedScreen", "ban source: ok=$ok")
                         }
@@ -2165,13 +1909,7 @@ fun FeedScreen(
                             friendsOnly = friendsOnly,
                         )
                         if (ok) {
-                            allPosts = allPosts.map {
-                                if (it.ownerId == ep.ownerId && it.id == ep.id) it.copy(text = message) else it
-                            }
-                            posts = posts.map {
-                                if (it.ownerId == ep.ownerId && it.id == ep.id) it.copy(text = message) else it
-                            }
-                            FeedDataHolder.allPosts = allPosts
+                            feedViewModel.updatePost(ep.ownerId, ep.id) { it.copy(text = message) }
                             android.widget.Toast.makeText(app.applicationContext, "Запись сохранена", android.widget.Toast.LENGTH_SHORT).show()
                             editingPost.value = null
                         } else {
@@ -2196,13 +1934,7 @@ fun FeedScreen(
                             friendsOnly = friendsOnly,
                         )
                         if (ok) {
-                            allPosts = allPosts.map {
-                                if (it.ownerId == ep.ownerId && it.id == ep.id) it.copy(text = message) else it
-                            }
-                            posts = posts.map {
-                                if (it.ownerId == ep.ownerId && it.id == ep.id) it.copy(text = message) else it
-                            }
-                            FeedDataHolder.allPosts = allPosts
+                            feedViewModel.updatePost(ep.ownerId, ep.id) { it.copy(text = message) }
                             android.widget.Toast.makeText(app.applicationContext, "Запись сохранена", android.widget.Toast.LENGTH_SHORT).show()
                             editingPost.value = null
                         } else {

@@ -180,6 +180,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameMillis
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -484,17 +485,8 @@ private fun hostAudioRendererComposable(
  * @param upToCmid  cmid из LP event (ev[2])
  * @return true если сообщение считается прочитанным
  */
-private fun isReadUpTo(msg: Message, upToCmid: Long): Boolean {
-    val cmid = msg.conversationMessageId
-    return if (cmid != null && cmid > 0) {
-        cmid <= upToCmid
-    } else {
-        // Fallback: message_id. Положительные id — реальные серверные.
-        // Отрицательные (optimistic id = -System.currentTimeMillis())
-        // никогда не считаем прочитанными — ждём серверного подтверждения.
-        msg.id > 0 && msg.id <= upToCmid
-    }
-}
+private fun isReadUpTo(msg: Message, upToCmid: Long): Boolean =
+    ChatDetailViewModel.isReadUpTo(msg, upToCmid)
 
 /**
  * P1.1: Элемент списка чата — sealed class для унифицированного рендера
@@ -635,8 +627,17 @@ fun ChatDetailScreen(
     // VideoMessageCreateScreen для текущего чата. Хост (VkMintNavHost) передаёт
     // навигацию с peerId; дефолт — no-op (пункт не появляется в старых вызовах).
     onVideoMessage: (peerId: Long) -> Unit = {},
+    chatViewModel: ChatDetailViewModel = viewModel(
+        key = "chat_$peerId",
+        factory = ChatDetailViewModel.provideFactory(
+            apiClient = VkMintApp.get().apiClient,
+            exchangeAuthRepo = VkMintApp.get().exchangeAuthRepository,
+            longPollClient = VkMintApp.get().longPollClient,
+        ),
+    ),
 ) {
     val app = VkMintApp.get()
+    val chatUiState by chatViewModel.uiState.collectAsState()
     // Fix #133: peerTitle/peerPhoto приходят из nav arguments (передаются из
     // списка диалогов). Если список не смог зарезолвить имя/аватарку (VK не
     // отдал profiles[]/groups[] для этого пира, а resolveMissingPeerInfo тоже
@@ -665,6 +666,46 @@ fun ChatDetailScreen(
     var endReached by remember { mutableStateOf(false) }
     // Пользователь у низу (новые сообщения). reverseLayout=true: индекс 0 = внизу.
     var isPinnedToNewest by remember { mutableStateOf(true) }
+
+    // Синхронизация состояния с ChatDetailViewModel (P3: Архитектурная модернизация UI ➔ ViewModel)
+    LaunchedEffect(chatUiState.messages) {
+        if (chatUiState.messages.isNotEmpty()) {
+            messages = chatUiState.messages
+        }
+    }
+    LaunchedEffect(chatUiState.chatProfiles) {
+        if (chatUiState.chatProfiles.isNotEmpty()) {
+            chatProfiles = chatUiState.chatProfiles
+        }
+    }
+    LaunchedEffect(chatUiState.loading) {
+        if (!chatUiState.loading && messages.isNotEmpty()) {
+            loading = false
+        }
+    }
+    LaunchedEffect(chatUiState.loadingOlder) {
+        loadingOlder = chatUiState.loadingOlder
+    }
+    LaunchedEffect(chatUiState.endReached) {
+        if (chatUiState.endReached) {
+            endReached = true
+        }
+    }
+    LaunchedEffect(chatUiState.errorText) {
+        if (chatUiState.errorText != null) {
+            errorText = chatUiState.errorText
+        }
+    }
+    LaunchedEffect(chatUiState.currentTitle) {
+        if (chatUiState.currentTitle.isNotBlank() && chatUiState.currentTitle != "Диалог") {
+            currentTitle = chatUiState.currentTitle
+        }
+    }
+    LaunchedEffect(chatUiState.currentPhoto) {
+        if (!chatUiState.currentPhoto.isNullOrBlank()) {
+            currentPhoto = chatUiState.currentPhoto
+        }
+    }
     // Sprint 3: ID сообщения для контекстного меню.
     var contextMsgId by remember { mutableStateOf<Long?>(null) }
     // Sprint 3: Показывать ли пикер реакций.
@@ -916,6 +957,19 @@ fun ChatDetailScreen(
     // поэтому стартовое значение заполняется из серверного unread_count при
     // загрузке chat info (messagesGetConversationsById, см. ниже).
     var hasUnreadMark by remember { mutableStateOf(false) }
+    LaunchedEffect(chatUiState.muted) {
+        muted = chatUiState.muted
+    }
+    LaunchedEffect(chatUiState.pinnedMessage) {
+        if (chatUiState.pinnedMessage != null) {
+            pinnedMessage = chatUiState.pinnedMessage
+        }
+    }
+    LaunchedEffect(chatUiState.lastActivity) {
+        if (chatUiState.lastActivity != null) {
+            lastActivity = chatUiState.lastActivity
+        }
+    }
     // P3.1: ChatInfo screen — отдельный экран информации о чате.
     val chatInfoEnabled by app.prefs.data
         .map { it.msgChatInfo }
@@ -1091,19 +1145,7 @@ fun ChatDetailScreen(
     }
 
     fun reloadMessages() {
-        scope.launch {
-            try {
-                val targetCount = maxOf(messages.size, pageSize)
-                val fresh = app.apiClient.messagesGetHistory(peerId, count = targetCount)
-                    .distinctBy { it.id }
-                if (fresh.isNotEmpty()) {
-                    messages = fresh
-                    errorText = null
-                }
-            } catch (e: Exception) {
-                AppLog.w("ChatDetailScreen", "reload error: ${e.message}")
-            }
-        }
+        chatViewModel.reloadMessages(peerId, pageSize)
     }
 
     // P0.25 #VOICE-ASR-FETCH: запрос transcript (расшифровки ASR) для voice-сообщений.
@@ -1727,127 +1769,14 @@ fun ChatDetailScreen(
         }
     }
 
-    // Реакция на сообщение.
-    // #REACTION-WEB-API (волна 32): web-методы messages.sendReaction /
-    // messages.deleteReaction (parity VK web, параметры сверены по бандлу
-    // снапшота: {cmid, peer_id, reaction_id} / {cmid, peer_id}) вместо legacy
-    // messages.react. Тап по реакции — toggle: если своя реакция совпадает
-    // (reactions.user_reaction == id) — снимаем, иначе ставим.
-    // Оптимистичный UI: локальный стейт сообщения обновляется сразу; при
-    // сбое/ошибке — сброс перезагрузкой истории. На успех НЕ перезагружаем
-    // (иначе лагающий getHistory мог бы «мигнуть» реакцию обратно).
+    // Реакция на сообщение (делегировано в ChatDetailViewModel).
     fun reactToMessage(messageId: Long, reactionId: Int) {
-        val msg = messages.firstOrNull { it.id == messageId }
-        if (msg == null) {
-            AppLog.w("ChatDetailScreen", "#IM-REACTION skipped: msg id=$messageId not in loaded history")
-            return
-        }
-        val msgCmid = msg.conversationMessageId
-        // cmid — правильный идентификатор для messages.* (семантика Audit #40 /
-        // Fix #207); для записей без cmid — честный фолбэк на message_id.
-        val ref = if (msgCmid != null && msgCmid > 0) msgCmid else messageId
-        if (msgCmid == null || msgCmid <= 0) {
-            AppLog.w("ChatDetailScreen", "#IM-REACTION cmid missing for msg id=$messageId, fallback to message_id")
-        }
-        val msgReactions = msg.reactions
-        val myReaction = if (msgReactions != null) msgReactions.userReaction else null
-        val isToggleOff = myReaction != null && myReaction != 0 && myReaction == reactionId
-        // Оптимистичное обновление (лайк-паттерн: тап → сразу в списке).
-        // #CHANNEL-POST-UI: вместе с count/userReaction пересчитываем и
-        // разбивку items (эмодзи-чипы VK) — чипы не «мигают» назад при тоггле.
-        messages = messages.map { m ->
-            if (m.id != messageId) m else {
-                val old = m.reactions
-                val oldCount = if (old != null) old.count else 0
-                val oldUser = if (old != null) old.userReaction else null
-                val hadUser = oldUser != null && oldUser != 0
-                val currentItems = if (old != null) old.items else emptyList()
-                val newItems: List<ReactionItem> = if (isToggleOff) {
-                    // Снимаем: уменьшаем счётчик своего чипа, при 0 — убираем чип.
-                    currentItems.mapNotNull { item ->
-                        if (item.id == reactionId) {
-                            if (item.count > 1) item.copy(count = item.count - 1) else null
-                        } else item
-                    }
-                } else {
-                    // Ставим/меняем: при замене другой своей реакции снимаем её с
-                    // чипа, затем инкремент (или добавление) целевого чипа.
-                    val afterRemove = if (oldUser != null && oldUser != reactionId) {
-                        currentItems.mapNotNull { item ->
-                            if (item.id == oldUser) {
-                                if (item.count > 1) item.copy(count = item.count - 1) else null
-                            } else item
-                        }
-                    } else currentItems
-                    val found = afterRemove.any { it.id == reactionId }
-                    if (found) {
-                        afterRemove.map { if (it.id == reactionId) it.copy(count = it.count + 1) else it }
-                    } else {
-                        afterRemove + ReactionItem(id = reactionId, count = 1)
-                    }
-                }
-                val newReaction = MessageReaction(
-                    count = if (isToggleOff) {
-                        if (oldCount > 0) oldCount - 1 else 0
-                    } else {
-                        if (hadUser) oldCount else oldCount + 1
-                    },
-                    userReaction = if (isToggleOff) null else reactionId,
-                    items = newItems,
-                )
-                m.copy(reactions = newReaction)
-            }
-        }
-        scope.launch {
-            try {
-                if (isToggleOff) {
-                    AppLog.i("ChatDetailScreen", "#IM-REACTION delete cmid=$ref")
-                    val ok = app.apiClient.messagesDeleteReaction(peerId, ref)
-                    if (!ok) {
-                        AppLog.w("ChatDetailScreen", "#IM-REACTION delete failed: peer=$peerId cmid=$ref — rollback")
-                        reloadMessages()
-                    }
-                } else {
-                    AppLog.i("ChatDetailScreen", "#IM-REACTION send id=$reactionId cmid=$ref")
-                    val ok = app.apiClient.messagesSendReaction(peerId, ref, reactionId)
-                    if (!ok) {
-                        AppLog.w("ChatDetailScreen", "#IM-REACTION send failed: peer=$peerId cmid=$ref id=$reactionId — rollback")
-                        reloadMessages()
-                    }
-                }
-            } catch (e: Exception) {
-                AppLog.e("ChatDetailScreen", "#IM-REACTION error — rollback", e)
-                reloadMessages()
-            }
-        }
+        chatViewModel.reactToMessage(peerId, messageId, reactionId)
     }
 
-    // Удаление сообщения.
+    // Удаление сообщения (делегировано в ChatDetailViewModel).
     fun deleteMessage(message: vk.mint.data.model.Message) {
-        val cmid = message.conversationMessageId
-        val msgId = message.id
-        scope.launch {
-            try {
-                // Fix #207: VK API 5.221+ — удаление по conversation_message_id
-                // (cmid). Старый message_id не работает для чатов → сообщение
-                // «висит» после удаления и появляется снова при перезаходе.
-                // Если cmid=null (редкий случай — service-сообщения) — fallback
-                // на старый messagesDelete по message_id.
-                val ok = if (cmid != null && cmid > 0) {
-                    app.apiClient.messagesDeleteByCmid(peerId, cmid, deleteForAll = true)
-                } else {
-                    AppLog.w("ChatDetailScreen", "deleteMessage: cmid is null for msg id=$msgId, fallback to message_id")
-                    app.apiClient.messagesDelete(msgId, deleteForAll = true)
-                }
-                if (ok) {
-                    messages = messages.filter { it.id != msgId }
-                } else {
-                    AppLog.w("ChatDetailScreen", "delete failed for msg id=$msgId cmid=$cmid")
-                }
-            } catch (e: Exception) {
-                AppLog.e("ChatDetailScreen", "delete error", e)
-            }
-        }
+        chatViewModel.deleteMessage(peerId, message)
     }
 
     // Редактирование сообщения.
@@ -2071,47 +2000,14 @@ fun ChatDetailScreen(
         showForwardDialog = true
     }
 
-    // P3.2 + Fix #122: mute/unmute chat — optimistic toggle, Toast feedback,
-    // обновление state из ответа API (а не только из optimistic update).
-    // Если API вернул PushSettings — используем их (точное состояние сервера).
-    // Если API вернул null — откатываем optimistic update + Toast об ошибке.
+    // P3.2 + Fix #122: mute/unmute chat — делегировано в ChatDetailViewModel.
     fun toggleMute() {
-        val newState = !muted
-        muted = newState
-        scope.launch {
-            try {
-                val newSettings = app.apiClient.messagesSetConversationPushSettings(peerId, disabled = newState)
-                if (newSettings != null) {
-                    // API успех + вернул настройки — обновляем state из ответа
-                    // (точное состояние сервера, включая disabled_forever/no_sound).
-                    muted = newSettings.isMuted()
-                    AppLog.i("ChatDetailScreen", "mute toggled: $newState (server-confirmed: ${muted})")
-                    Toast.makeText(
-                        ctx,
-                        if (muted) "Уведомления выключены" else "Уведомления включены",
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                } else {
-                    // API вернул null — ошибка (token invalid, network, etc.)
-                    muted = !newState
-                    AppLog.w("ChatDetailScreen", "mute toggle failed (api returned null)")
-                    Toast.makeText(
-                        ctx,
-                        if (newState) "Не удалось выключить уведомления" else "Не удалось включить уведомления",
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-            } catch (ce: kotlinx.coroutines.CancellationException) {
-                throw ce
-            } catch (e: Exception) {
-                muted = !newState
-                AppLog.e("ChatDetailScreen", "mute toggle error", e)
-                Toast.makeText(
-                    ctx,
-                    "Ошибка: ${e.message ?: "network error"}",
-                    Toast.LENGTH_SHORT,
-                ).show()
-            }
+        chatViewModel.toggleMute(peerId) { serverMuted ->
+            Toast.makeText(
+                ctx,
+                if (serverMuted) "Уведомления выключены" else "Уведомления включены",
+                Toast.LENGTH_SHORT,
+            ).show()
         }
     }
 
@@ -2996,7 +2892,7 @@ fun ChatDetailScreen(
                 // Fix #137: пробрасываем replyMessage для немедленного бейджа.
                 replyMessage = replyTarget,
             )
-            messages = listOf(optimistic) + messages
+            messages = ChatDetailViewModel.applyOptimisticMessage(messages, optimistic)
             inputText = ""
             listState.animateScrollToItem(0) // индекс 0 = внизу (новое сообщение)
             try {
@@ -3034,7 +2930,7 @@ fun ChatDetailScreen(
                     if (isChannelWriteDeny) {
                         Toast.makeText(ctx, errorText, Toast.LENGTH_LONG).show()
                     }
-                    messages = messages.filterNot { it.id == optimistic.id }
+                    messages = ChatDetailViewModel.removeMessageById(messages, optimistic.id)
                     inputText = text
                     AppLog.w("ChatDetailScreen", "send failed (id=$id, errCode=$sendErrCode) — optimistic message rolled back, text restored to input (Fix #233)")
                 }
@@ -3042,7 +2938,7 @@ fun ChatDetailScreen(
                 AppLog.e("ChatDetailScreen", "send error", e)
                 errorText = "Ошибка отправки: ${e.message}"
                 // Fix #233 (P1-5): откатываем optimistic и при exception.
-                messages = messages.filterNot { it.id == optimistic.id }
+                messages = ChatDetailViewModel.removeMessageById(messages, optimistic.id)
                 inputText = text
                 AppLog.w("ChatDetailScreen", "send exception — optimistic message rolled back, text restored (Fix #233)")
             } finally {
@@ -3172,10 +3068,13 @@ fun ChatDetailScreen(
             }
         }
         try {
+            // P3: Архитектурная модернизация — первичная синхронизация через ChatDetailViewModel
+            chatViewModel.loadHistory(peerId, currentTitle, currentPhoto, pageSize)
             // #74: используем messagesGetHistoryWithProfiles — возвращает профили для аватарок
             val result = app.apiClient.messagesGetHistoryWithProfiles(peerId, count = pageSize)
             messages = result.messages.distinctBy { it.id }
             chatProfiles = result.profiles
+            chatViewModel.setMessages(messages)
             if (result.messages.size < pageSize) endReached = true
             if (result.messages.isEmpty()) {
                 // #IM-EMPTY-HONEST (волна 36): failure от VKApiClient имеет
@@ -3417,45 +3316,12 @@ fun ChatDetailScreen(
 
     fun loadOlder() {
         if (loadingOlder || endReached || messages.isEmpty()) return
-        scope.launch {
-            loadingOlder = true
-            val firstIdx = listState.firstVisibleItemIndex
-            val firstOffset = listState.firstVisibleItemScrollOffset
-            try {
-                val older: List<Message> = if (channelHistoryMode) {
-                    // Task 67 #CHANNELS-HIST: старая страница канала —
-                    // channels.getHistory со start_cmid = минимальный cmid текущей
-                    // (граница «старее этого»; дедуп по id покрывает и
-                    // inclusive-семантику start_cmid). messages.getHistory для
-                    // каналов пуст — обычная offset-пагинация дала бы пустоту.
-                    val oldest = messages.minOf { it.id }
-                    // #CHANNEL-FILTERS (Task #CHANNELS-UI): пагинация «старее»
-                    // сохраняет активный фильтр ленты (иначе подмешались бы
-                    // посты других типов). null = «Всё».
-                    app.apiClient.channelsGetHistory(
-                        peerId,
-                        count = pageSize,
-                        startCmid = oldest,
-                        filter = channelFeedFilter,
-                    ).messages
-                } else {
-                    app.apiClient.messagesGetHistory(
-                        peerId, count = pageSize, offset = messages.size,
-                    )
-                }.filter { np -> messages.none { it.id == np.id } }
-                if (older.isEmpty()) {
-                    endReached = true
-                } else {
-                    // Старые сообщения добавляем в конец (высокий индекс = вверху при reverseLayout).
-                    messages = (messages + older).distinctBy { it.id }
-                    if (older.size < pageSize) endReached = true
-                }
-            } catch (e: Exception) {
-                AppLog.w("ChatDetailScreen", "loadOlder failed: ${e.message}")
-            } finally {
-                loadingOlder = false
-            }
-        }
+        chatViewModel.loadOlder(
+            peerId = peerId,
+            pageSize = pageSize,
+            isChannelMode = channelHistoryMode,
+            channelFilter = channelFeedFilter,
+        )
     }
 
     /**
@@ -3605,7 +3471,7 @@ fun ChatDetailScreen(
         }
     }
 
-    // LongPoll real-time.
+    // LongPoll real-time: обработка делегирована в ChatDetailViewModel.
     LaunchedEffect(peerId) {
         app.longPollClient.events.collect { ev ->
             val relevant = when (ev) {
@@ -3617,76 +3483,9 @@ fun ChatDetailScreen(
                 else -> false
             }
             if (!relevant) return@collect
-            // #IM-CHANNEL-OPEN: у канала (peerId<0, wall-режим) НЕТ messages-истории —
-            // LP-события (Reset/«сообщение» канала) не должны дёргать
-            // messages.getHistory для негативного пира (VK вернёт ошибку:
-            // мусорные вызовы + error-спам). Контент канала — только wall.get.
             if (isChannel) return@collect
             if (loading || loadingOlder) return@collect
-            // P2.6 + Fix #296: ReadOutbox/ReadInbox — обновляем readState локально
-            // без re-fetch. Это даёт мгновенное обновление ✓→✓✓ в UI.
-            //
-            // Fix #296 («нет двух галочек когда сообщение просмотрено»):
-            // VK LongPoll code 7 (ReadOutbox) и code 6 (ReadInbox) возвращают
-            // в ev[2] conversation_message_id (cmid), НЕ message_id. Раньше
-            // сравнение было `msg.id <= ev.upToMsgId` — msg.id это message_id
-            // (глобальный счётчик), а ev.upToMsgId это cmid (локальный для
-            // диалога). В 1-1 диалогах message_id ≠ cmid (разные счётчики),
-            // в групповых чатах — тоже. Сравнение никогда не срабатывало →
-            // readState оставался 0 → ✓✓ не появлялись (только ✓).
-            // Теперь сравниваем по cmid (приоритет), с fallback на msg.id для
-            // старых сообщений без cmid.
-            when (ev) {
-                is LongPollEvent.ReadOutbox -> {
-                    AppLog.d("ChatDetailScreen", "LP ReadOutbox: peer=${ev.peerId} upTo(cmid)=${ev.upToMsgId}")
-                    messages = messages.map { msg ->
-                        if (msg.isOut && isReadUpTo(msg, ev.upToMsgId)) msg.copy(readState = 1) else msg
-                    }
-                    return@collect
-                }
-                is LongPollEvent.ReadInbox -> {
-                    AppLog.d("ChatDetailScreen", "LP ReadInbox: peer=${ev.peerId} upTo(cmid)=${ev.upToMsgId}")
-                    messages = messages.map { msg ->
-                        if (!msg.isOut && isReadUpTo(msg, ev.upToMsgId)) msg.copy(readState = 1) else msg
-                    }
-                    return@collect
-                }
-                else -> {}
-            }
-            val shouldFetch = when (ev) {
-                is LongPollEvent.NewMessage -> isPinnedToNewest
-                else -> true
-            }
-            if (!shouldFetch) return@collect
-            try {
-                val targetCount = maxOf(messages.size, pageSize)
-                val fresh = app.apiClient.messagesGetHistory(peerId, count = targetCount)
-                    .distinctBy { it.id }
-                if (fresh.isNotEmpty()) {
-                    messages = fresh
-                    errorText = null
-                    if (isPinnedToNewest) {
-                        listState.animateScrollToItem(0)
-                        // FIX (P5.2): помечаем новые сообщения как прочитанные,
-                        // пока пользователь в чате и видит последние сообщения.
-                        // Если пользователь прокрутил вверх (не pinned to newest) —
-                        // НЕ помечаем, чтобы он сам увидел непрочитанные при возврате.
-                        val newestId = fresh.maxOf { it.id }
-                        try {
-                            val ok = app.apiClient.messagesMarkAsRead(peerId, newestId)
-                            AppLog.d("ChatDetailScreen",
-                                "markAsRead on LP new msg: peer=$peerId upTo=$newestId ok=$ok")
-                        } catch (e: Exception) {
-                            AppLog.w("ChatDetailScreen",
-                                "markAsRead on LP failed: ${e.message}")
-                        }
-                    }
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                AppLog.w("ChatDetailScreen", "LongPoll re-fetch error: ${e.message}")
-            }
+            chatViewModel.onLongPollEvent(peerId, ev, isPinnedToNewest)
         }
     }
 
