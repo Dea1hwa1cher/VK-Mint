@@ -69,9 +69,6 @@ private const val MS_EPOCH_THRESHOLD = 100_000_000_000L
 /** Поля-кандидаты файла расшифровки (факт бандла: doc_url, срез §5/§9.2). */
 private val TRANSCRIPT_DOC_URL_FIELDS = listOf("doc_url", "url", "file_url", "link")
 
-/** Поля-кандидаты размера файла (факт бандла: doc_size — Ns-подпись). */
-private val TRANSCRIPT_DOC_SIZE_FIELDS = listOf("doc_size", "size")
-
 /** Поля-кандидаты текста расшифровки (точное имя полем calls.getAsrTranscriptions не подтверждено). */
 private val TRANSCRIPT_TEXT_FIELDS = listOf(
     "text", "transcription", "transcript", "content", "body", "result",

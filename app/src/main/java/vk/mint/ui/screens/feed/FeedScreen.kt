@@ -2527,28 +2527,6 @@ private fun VideoThumbnail(video: Video, onClick: (Video) -> Unit) {
     }
 }
 
-@Composable
-private fun ActionIcon(
-    icon: ImageVector,
-    count: Int,
-    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    onClick: () -> Unit = {},
-    onLongClick: () -> Unit = {},
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-    ) {
-        Icon(icon, null, modifier = Modifier.size(18.dp), tint = tint)
-        if (count > 0) {
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(count.toCountString(), style = MaterialTheme.typography.labelSmall, color = tint)
-        }
-    }
-}
-
 // Fix #376: internal — карточка link/page-вложений переиспользуется ProfileScreen
 // (паритет постов Профиля с Лентой; подпись/поведение не менялись).
 @Composable

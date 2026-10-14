@@ -27,7 +27,6 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -64,10 +63,6 @@ private fun Modifier.shimmer(
         ),
     )
 }
-
-/** Селектор цвета для shimmer — поддерживает как light, так и dark тему. */
-private val skeletonBase: Color
-    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
 
 // ─── Базовые примитивы ──────────────────────────────────────────────
 
@@ -196,34 +191,6 @@ fun SkeletonPostCard(
             SkeletonText(widthFraction = 0.12f, height = 12.dp)
             SkeletonText(widthFraction = 0.12f, height = 12.dp)
         }
-    }
-}
-
-/** S7-3: Скелетон для карточки трека (MusicScreen). */
-@Composable
-fun SkeletonTrackRow(
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Album art placeholder
-        SkeletonBox(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(MaterialTheme.shapes.small),
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            SkeletonText(widthFraction = 0.6f, height = 15.dp)
-            Spacer(modifier = Modifier.height(6.dp))
-            SkeletonText(widthFraction = 0.4f, height = 13.dp)
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        SkeletonText(widthFraction = 0.1f, height = 12.dp)
     }
 }
 

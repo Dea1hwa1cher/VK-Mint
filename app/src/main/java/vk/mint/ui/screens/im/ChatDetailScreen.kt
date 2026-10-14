@@ -10900,18 +10900,6 @@ private fun ChannelPhotoGridItem(
     )
 }
 
-/** #CHANNEL-PHOTOS: русская плюрализация числа фото в альбоме. */
-private fun channelPhotoCountLabel(count: Int): String {
-    val mod10 = count % 10
-    val mod100 = count % 100
-    return when {
-        mod10 == 1 && mod100 != 11 -> "$count фотография"
-        mod10 in 2..4 && (mod100 < 12 || mod100 > 14) -> "$count фотографии"
-        else -> "$count фотографий"
-    }
-}
-
-
 /** #CHANNEL-PHOTOS-FEED (2026-10-04, P0.6): панель «Фотографии» канала —
  *  фото сообщества через photosGet(albumId="wall", ownerId=-abs(peerId)),
  *  offset-пагинация. Сетка 3 колонки, тап по фото → onPhotoClick(список URL,

@@ -17847,11 +17847,6 @@ class VKApiClient(
         val nextFrom: Long?,
     )
 
-    /** W35-b: безопасное чтение Int из вложенного JsonObject (stats.get). */
-    private fun statInt(obj: com.google.gson.JsonElement?, key: String): Int =
-        obj?.takeIf { it.isJsonObject }?.asJsonObject
-            ?.get(key)?.takeIf { !it.isJsonNull }?.asInt ?: 0
-
     /**
      * #ADMIN-STATS-FIX (2026-09-25): нормализация конверта response web-шлюза.
      *

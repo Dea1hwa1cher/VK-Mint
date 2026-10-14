@@ -47,7 +47,7 @@ import kotlin.random.Random
 // Task 20: реализует CallsQueue (фасад :feature:calls) — события/креденшелы queue.
 class Queuev4Client(
     private val httpClient: OkHttpClient,
-    private val apiClient: VKApiClient,
+    @Suppress("UNUSED_PARAMETER") apiClient: VKApiClient? = null,
 ) : CallsQueue {
     companion object {
         private const val TAG = "Queuev4Client"

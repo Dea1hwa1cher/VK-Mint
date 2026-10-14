@@ -392,8 +392,6 @@ private val VK_CONTROL_TEXT = Color(0xFFB8B8BC)
 private val VK_RED = Color(0xFFFF3347)
 private val VK_TEXT_SECONDARY = Color(0xFFA8A8AA)
 private val VK_SETTINGS_BG = Color(0xB8000000) // rgba(0,0,0,.72)
-private val VK_SETTINGS_HOVER = Color(0x14FFFFFF) // hsla(0,0%,100%,.08)
-private val VK_NOTIFICATION_BG = Color(0xFF2C2D2E)
 private val VK_GREEN = Color(0xFF4CAF50)
 private val VK_SLIDER_BG = Color(0x66FFFFFF) // hsla(0,0%,100%,.4)
 
