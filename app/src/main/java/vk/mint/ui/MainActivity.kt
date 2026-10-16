@@ -1502,24 +1502,20 @@ class MainActivity : ComponentActivity() {
      */
     private fun saveOAuthTokenFromPayload(payload: String, source: String): Boolean {
         try {
-            val params = payload.split("&").mapNotNull { pair ->
-                val parts = pair.split("=", limit = 2)
-                if (parts.size == 2) parts[0] to parts[1] else null
-            }.toMap()
-
-            // Обработка ошибки от VK (user denied, invalid client, etc.)
-            val error = params["error"]
-            val errorDesc = params["error_description"]
-            if (error != null) {
-                AppLog.w("MainActivity", "OAuth error ($source): $error — $errorDesc")
+            val token = OAuthTokenUtils.parse(payload)
+            if (token == null) {
+                val lowerPayload = payload.lowercase()
+                val hasError = lowerPayload.contains("error=")
+                if (hasError) {
+                    AppLog.w("MainActivity", "OAuth error in payload ($source): ${payload.take(200)}")
+                } else {
+                    AppLog.w("MainActivity", "saveOAuthTokenFromPayload ($source): no valid token in payload — ${payload.take(100)}")
+                }
                 return false
             }
-
-            val at = params["access_token"] ?: return false
-            val uid = params["user_id"]?.toLongOrNull() ?: return false
-            val expIn = params["expires_in"]?.toLongOrNull() ?: 0L
-            val scope = params["scope"]
-            val expiresAt = if (expIn == 0L) 0L else System.currentTimeMillis() + expIn * 1000L
+            val uid = token.userId
+            val at = token.accessToken
+            val expiresAt = if (token.expiresIn == 0L) 0L else System.currentTimeMillis() + token.expiresIn * 1000L
 
             val app = VkMintApp.get(this)
             app.tokenStorage.save(
@@ -1527,10 +1523,11 @@ class MainActivity : ComponentActivity() {
                     accessToken = at,
                     userId = uid,
                     expiresAt = expiresAt,
-                    scope = scope,
+                    scope = null,
                 ),
             )
-            AppLog.i("MainActivity", "OAuth token saved ($source) for user $uid")
+            AppLog.i("MainActivity", "OAuth token saved ($source) for user $uid" +
+                " at=${OAuthTokenUtils.maskTokenPrefix(at)}")
             authVersion++  // триггерим recompose
 
             // В фоне получаем exchange_token для refresh-поддержки.
@@ -1590,21 +1587,8 @@ class MainActivity : ComponentActivity() {
                 AppLog.d("MainActivity", "Clipboard OAuth token already saved (fingerprint match) — skip (#DOUBLE-FLICKER)")
                 return false
             }
-            // Извлекаем payload: после '#' или '?' или вся строка если raw params.
-            val trimmed = text.trim()
-            val hashIdx = trimmed.lastIndexOf('#')
-            val payload: String = if (hashIdx >= 0 && hashIdx < trimmed.length - 1) {
-                trimmed.substring(hashIdx + 1)
-            } else {
-                val qIdx = trimmed.indexOf('?')
-                if (qIdx >= 0 && qIdx < trimmed.length - 1) {
-                    trimmed.substring(qIdx + 1)
-                } else {
-                    trimmed
-                }
-            }
             AppLog.i("MainActivity", "Clipboard OAuth token detected — saving directly (#DOUBLE-FLICKER)")
-            val saved = saveOAuthTokenFromPayload(payload, source = "clipboard-pre-check-#DOUBLE-FLICKER")
+            val saved = saveOAuthTokenFromPayload(text, source = "clipboard-pre-check-#DOUBLE-FLICKER")
             if (saved) {
                 lastSavedClipFingerprint = fingerprint
             }
@@ -1872,14 +1856,11 @@ class MainActivity : ComponentActivity() {
         // share-to-chat. Пользователь в браузере: «Поделиться» → выбрал VK Mint →
         // мы получили URL вида https://oauth.vk.com/blank.html#access_token=...
         if (text != null && containsOAuthToken(text)) {
-            val payload = extractOAuthPayload(text)
-            if (payload != null) {
-                AppLog.i("MainActivity", "Share: OAuth token detected — saving (Fix #191)")
-                val saved = saveOAuthTokenFromPayload(payload, source = "share")
-                if (saved) {
-                    Toast.makeText(this, "VK Mint: вход выполнен ✓", Toast.LENGTH_LONG).show()
-                    return
-                }
+            AppLog.i("MainActivity", "Share: OAuth token detected — saving (Fix #191)")
+            val saved = saveOAuthTokenFromPayload(text, source = "share")
+            if (saved) {
+                Toast.makeText(this, "VK Mint: вход выполнен ✓", Toast.LENGTH_LONG).show()
+                return
             }
         }
 

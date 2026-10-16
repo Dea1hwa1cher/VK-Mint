@@ -474,7 +474,7 @@ private fun ManualPasteBlock(
             OutlinedButton(
                 onClick = {
                     val clip = clipboardManager.primaryClip
-                    val text = clip?.getItemAt(0)?.text?.toString()
+                    val text = clip?.getItemAt(0)?.coerceToText(context)?.toString()
                     if (!text.isNullOrEmpty()) pastedText = text
                 },
                 enabled = !isLoading,
@@ -496,77 +496,18 @@ private fun ManualPasteBlock(
 /**
  * Fix #190: парсит access_token + user_id из вставленной строки.
  *
- * Принимает любой из форматов:
- *  - Полный URL: https://oauth.vk.com/blank.html#access_token=vk1.a.XXX&user_id=123&expires_in=0
- *  - Фрагмент: #access_token=vk1.a.XXX&user_id=123&expires_in=0
- *  - Только параметры: access_token=vk1.a.XXX&user_id=123&expires_in=0
- *  - URL-encoded варианты (%23 вместо # и т.д.)
- *
- * Возвращает null если не найдены access_token ИЛИ user_id.
- * (user_id нужен обязательно — без него токен бесполезен для VK API.)
+ * Делегирует единому валидатору [OAuthTokenUtils.parse].
+ * Принимает любой из форматов (полный URL, фрагмент # или %23, query ?, raw params, текст со ссылкой).
  */
 internal fun parseExternalBrowserToken(input: String): ParsedToken? {
-    val trimmed = input.trim()
-    if (trimmed.isEmpty()) return null
-
-    // Собираем все key=value пары из строки. Ищем и в fragment (#), и в query (?),
-    // и в просто тексте (если юзер вставил только параметры).
-    val params = mutableMapOf<String, String>()
-
-    // 1. Если есть "#" (fragment) — берём всё после него.
-    //    Также обрабатываем URL-encoded "#": "%23".
-    val fragmentCandidates = listOf("#", "%23")
-    for (sep in fragmentCandidates) {
-        val idx = trimmed.lastIndexOf(sep)
-        if (idx >= 0) {
-            val frag = trimmed.substring(idx + sep.length)
-            parseParams(frag, params)
-        }
-    }
-
-    // 2. Если есть "?" (query) — тоже парсим (на случай error-redirect).
-    val qIdx = trimmed.indexOf("?")
-    if (qIdx >= 0) {
-        val query = trimmed.substring(qIdx + 1).substringBefore("#")
-        parseParams(query, params)
-    }
-
-    // 3. Если params всё ещё пустой (нет ни # ни ?) — парсим всю строку
-    //    как параметры (юзер мог вставить только "access_token=...&user_id=...").
-    if (params.isEmpty()) {
-        parseParams(trimmed, params)
-    }
-
-    val at = params["access_token"] ?: return null
-    val uid = params["user_id"]?.toLongOrNull() ?: return null
-    val expIn = params["expires_in"]?.toLongOrNull() ?: 0L
-    if (at.isBlank() || at.length < 10) return null  // слишком короткий — явно не токен
-    return ParsedToken(accessToken = at, userId = uid, expiresIn = expIn)
+    val token = OAuthTokenUtils.parse(input) ?: return null
+    return ParsedToken(
+        accessToken = token.accessToken,
+        userId = token.userId,
+        expiresIn = token.expiresIn,
+    )
 }
 
-/**
- * Парсит "key1=val1&key2=val2" в map. Декодирует URL-encoding (%26 → &, + → space).
- */
-internal fun parseParams(payload: String, out: MutableMap<String, String>) {
-    // Сначала режем по "&" (но не по URL-encoded "&" = "%26").
-    for (pair in payload.split("&")) {
-        val eq = pair.indexOf("=")
-        if (eq < 0) continue
-        val key = urlDecode(pair.substring(0, eq)).lowercase()
-        val value = urlDecode(pair.substring(eq + 1))
-        if (key.isNotEmpty() && value.isNotEmpty()) {
-            out[key] = value
-        }
-    }
-}
-
-internal fun urlDecode(s: String): String {
-    return try {
-        java.net.URLDecoder.decode(s, "UTF-8")
-    } catch (_: Exception) {
-        s.replace("+", " ")
-    }
-}
 
 /** Результат парсинга вставленного токена. */
 internal data class ParsedToken(

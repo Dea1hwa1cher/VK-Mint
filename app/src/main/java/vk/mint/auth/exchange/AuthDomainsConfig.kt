@@ -248,15 +248,21 @@ object AuthDomainsConfig {
     ): String {
         val cfg = current
         val revokeParam = if (silent && !cfg.forceRevoke) "" else "&revoke=1"
+        // Fix #REDIRECT-URI-ENCODE: redirect_uri должен быть URL-encoded в query string
+        // (RFC 3986 §3.4). Без encoding VK OAuth принимает запрос, но некоторые
+        // промежуточные конфигурации (CloudFront, anti-DDOS слой) могут отвергать
+        // символы `:` и `/` в значениях query-параметров без encoding.
+        val encodedRedirectUri = java.net.URLEncoder.encode(redirectUri, "UTF-8")
         return "https://oauth.vk.com/authorize?" +
             "client_id=$clientId" +
             "&scope=$scope" +
-            "&redirect_uri=$redirectUri" +
+            "&redirect_uri=$encodedRedirectUri" +
             "&display=page" +
             "&response_type=token" +
             "&v=$apiVersion" +
             revokeParam
     }
+
 
     /**
      * OAuth blank redirect URL — https://oauth.vk.com/blank.html

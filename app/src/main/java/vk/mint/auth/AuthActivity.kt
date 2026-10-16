@@ -185,25 +185,22 @@ class AuthActivity : ComponentActivity() {
         // за 6 сек (cr_ChildProcessConn failed), вызываем reload().
 
         // Fix #197: защита от авто-входа после logout через stale clipboard.
-        // Сценарий: юзер вошёл через внешний браузер → в буфере остался URL
-        // с access_token → юзер жмёт «Выйти» → AuthActivity запускается →
-        // onWindowFocusChanged (Fix #195b) находит токен в буфере → входит
-        // обратно. MainActivity пытается очистить буфер при logout, но если
-        // это не сработало (permission, старый Android) — запасной вариант:
-        // помечаем текущий буфер как «already processed» при onCreate, чтобы
-        // onWindowFocusChanged его не обработал. Юзер должен САМ скопировать
-        // новый токен (или Share → VK Mint) для входа — старый не подхватится.
-        try {
-            val cm = getSystemService(android.content.ClipboardManager::class.java)
-            if (cm != null && cm.hasPrimaryClip()) {
-                val text = cm.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString()
-                if (text != null && containsOAuthToken(text)) {
-                    lastProcessedClipFingerprint = text.hashCode()
-                    AppLog.i(TAG, "onCreate: clipboard already contains OAuth token — marked as processed (Fix #197). User must copy fresh token or Share to login.")
+        // Защита активна ТОЛЬКО при явном logout (clearStoredWebToken = true).
+        // При обычном старте или пересоздании AuthActivity после внешнего браузера
+        // НЕ блокируем свежий токен, который пользователь только что скопировал в браузере.
+        if (clearStoredWebToken) {
+            try {
+                val cm = getSystemService(android.content.ClipboardManager::class.java)
+                if (cm != null && cm.hasPrimaryClip()) {
+                    val text = cm.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString()
+                    if (text != null && containsOAuthToken(text)) {
+                        lastProcessedClipFingerprint = text.hashCode()
+                        AppLog.i(TAG, "onCreate: logout mode — clipboard already contains OAuth token — marked as processed (Fix #197).")
+                    }
                 }
+            } catch (e: Exception) {
+                AppLog.d(TAG, "onCreate: clipboard pre-check failed: ${e.message}")
             }
-        } catch (e: Exception) {
-            AppLog.d(TAG, "onCreate: clipboard pre-check failed: ${e.message}")
         }
 
         setContent {
@@ -371,14 +368,11 @@ class AuthActivity : ComponentActivity() {
                         if (lastProcessedClipFingerprint != fingerprint) {
                             lastProcessedClipFingerprint = fingerprint
                             AppLog.i(TAG, "onWindowFocusChanged: OAuth token found in clipboard — auto-saving (Fix #191/#195b)")
-                            val payload = extractOAuthPayload(text)
-                            if (payload != null) {
-                                val parsed = parsePayloadToToken(payload)
-                                if (parsed != null) {
-                                    AppLog.i(TAG, "onWindowFocusChanged: clipboard token parsed — user_id=${parsed.first}, at=${parsed.second.take(12)}...")
-                                    viewModel.submitOAuthToken(parsed.second, parsed.first)
-                                    return
-                                }
+                            val parsed = OAuthTokenUtils.parse(text)
+                            if (parsed != null) {
+                                AppLog.i(TAG, "onWindowFocusChanged: clipboard token parsed — user_id=${parsed.userId}, at=${OAuthTokenUtils.maskTokenPrefix(parsed.accessToken)}")
+                                viewModel.submitOAuthToken(parsed.accessToken, parsed.userId)
+                                return
                             }
                         }
                     }
