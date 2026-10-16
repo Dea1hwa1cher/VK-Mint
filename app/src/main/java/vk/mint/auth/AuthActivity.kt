@@ -270,6 +270,7 @@ class AuthActivity : ComponentActivity() {
                 }
                 // Global log viewer dialog — overlays the auth screen.
                 LogViewerDialog()
+                vk.mint.ui.components.CaptchaDialog()
             }
         }
     }
@@ -435,7 +436,7 @@ class AuthActivity : ComponentActivity() {
     }
 }
 
-private enum class AuthPhase { LANDING, WEBVIEW, TWO_FA, SUCCESS }
+private enum class AuthPhase { LANDING, WEBVIEW, TWO_FA, CREDENTIALS, SUCCESS }
 
 /** Результат проверки внешнего браузера — определяется один раз при показе LandingScreen. */
 private data class BrowserAuthCheck(
@@ -525,8 +526,8 @@ private fun AuthScreen(
                 onSuccess()
             }
             is AuthState.Idle -> {
-                // User tapped "Back" from 2FA -> return to landing.
-                if (phase == AuthPhase.TWO_FA) phase = AuthPhase.LANDING
+                // User tapped "Back" from 2FA or Credentials -> return to landing.
+                if (phase == AuthPhase.TWO_FA || phase == AuthPhase.CREDENTIALS) phase = AuthPhase.LANDING
             }
             is AuthState.Error -> {
                 // Fix #107 → #AUTH-TOAST-STATUS (2026-09-24): silent re-login не удался
@@ -624,6 +625,7 @@ private fun AuthScreen(
                     },
                     showManualPaste = showManualPaste,
                     onShowManualPaste = { showManualPaste = true },
+                    onStartDirectAuth = { phase = AuthPhase.CREDENTIALS },
                     modifier = Modifier.fillMaxSize(),
                 )
                 // Fix #189: шестерёнка с настройками VK доменов — доступна
@@ -636,6 +638,15 @@ private fun AuthScreen(
                     vk.mint.auth.exchange.AuthDomainsSettingsIcon()
                 }
             }
+            AuthPhase.CREDENTIALS -> DirectAuthForm(
+                state = state,
+                onSubmit = { login, password -> viewModel.submitCredentials(login, password) },
+                onBack = {
+                    viewModel.cancel()
+                    phase = AuthPhase.LANDING
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
             AuthPhase.WEBVIEW -> VkAuthWebViewScreenV2(
                 isLoading = state is AuthState.Loading,
                 // #VKID-ONLY (vk.id.md F-apply): кнопка «Войти через VK» → старт

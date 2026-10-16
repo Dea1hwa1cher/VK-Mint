@@ -2,6 +2,9 @@
 package vk.mint.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,13 +12,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,30 +36,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import vk.mint.VkMintApp
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.theme.M3ExpressiveShapes
+import vk.mint.ui.theme.vkSubhead
+import vk.mint.ui.theme.vkTitle3
 
 /**
- * Sprint 1, P0-3 (#76): Диалог ввода VK Captcha.
- *
- * Подписывается на [vk.mint.captcha.UiCaptchaHandler.challenge] (StateFlow).
- * Когда challenge != null — показывает AlertDialog с:
- *  — картинкой captcha (captcha_img, ~130x50 px, aspect ratio ~2.6:1)
- *  — полем ввода (4-5 символов, обычно латиница/цифры)
- *  — кнопками «Отправить» и «Отмена»
- *
- * `Отправить` → `challenge.submit(key)` → `CompletableDeferred.complete(key)` →
- * `VKApiClient.callInternal` retries с captcha_sid+captcha_key.
- *
- * `Отмена` → `challenge.cancel()` → `solve()` возвращает null → запрос отменён
- * (VKApiClient возвращает null, caller видит ошибку).
- *
- * Диалог рендерится на верхнем уровне (в [vk.mint.ui.navigation.VkMintNavHost]),
- * поверх всех экранов — captcha может потребоваться в любом запросе.
- *
- * Autocomplete disabled, keyboardType=None — VK captcha чувствительна к регистру
- * и регистру символов. Пользователь вводит как видит.
+ * Sprint 1, P0-3 (#76) + MD3E Redesign:
+ * Диалог ввода VK Captcha в каноничной оболочке **Material 3 Expressive (MD3E)**:
+ *  - Контейнер: тональный остров `surfaceContainerHigh` со скруглением `28.dp` ([M3ExpressiveShapes.extraLarge]).
+ *  - Картинка капчи в карточке со скруглением `12.dp` и контуром `outlineVariant`.
+ *  - Тактильное поле ввода [VkInputField] с фокусным пружинным морфингом, центрированным текстом и кнопкой очистки.
+ *  - Экспрессивные кнопки [VkButton] (`Primary` / `Secondary`) с морфингом углов при нажатии.
  */
 @Composable
 fun CaptchaDialog() {
@@ -63,37 +68,81 @@ fun CaptchaDialog() {
     var input by remember(challenge.sid) { mutableStateOf("") }
     var submitting by remember(challenge.sid) { mutableStateOf(false) }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = {
-            // Запрещаем dismiss по тапу вне диалога — нужно явное решение.
-            // Пользователь должен либо ввести код, либо отменить кнопкой.
+            // Запрещаем dismiss по тапу вне диалога — нужно явное решение (ввести код или «Отмена»).
         },
-        title = {
-            Text(
-                text = "Введите код с картинки",
-                fontWeight = FontWeight.SemiBold,
-            )
-        },
-        text = {
+        properties = DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false,
+        ),
+    ) {
+        Surface(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .widthIn(max = 380.dp)
+                .fillMaxWidth(),
+            shape = M3ExpressiveShapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp,
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(
-                    text = "VK требует подтверждения, что вы не робот. " +
-                        "Введите символы с картинки ниже.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(12.dp))
+                // Иконка щита / безопасности в тональном круге
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = VkIcons.Verified16,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
 
-                // Картинка captcha. VK отдаёт ~130x50 px.
+                Spacer(Modifier.height(14.dp))
+
+                Text(
+                    text = "Код с картинки",
+                    style = MaterialTheme.typography.vkTitle3,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                Text(
+                    text = "Подтвердите, что вы не робот. Введите символы с картинки ниже:",
+                    style = MaterialTheme.typography.vkSubhead,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // Картинка captcha. VK отдаёт ~130x50 px (aspect ratio ~2.6:1).
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(2.6f)  // ~130/50
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        .aspectRatio(2.6f)
+                        .clip(M3ExpressiveShapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = M3ExpressiveShapes.medium,
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     AsyncImage(
@@ -104,64 +153,104 @@ fun CaptchaDialog() {
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
 
-                OutlinedTextField(
+                VkInputField(
                     value = input,
                     onValueChange = { input = it.trim().take(10) },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Код с картинки") },
-                    singleLine = true,
-                    isError = false,
+                    placeholder = "Код",
+                    label = "Символы с картинки",
                     enabled = !submitting,
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                        textAlign = TextAlign.Center,
+                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            val key = input.trim()
+                            if (key.isNotBlank() && !submitting) {
+                                submitting = true
+                                challenge.submit(key)
+                            }
+                        },
+                    ),
+                    trailingIcon = if (input.isNotEmpty() && !submitting) {
+                        {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .clickable { input = "" },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = VkIcons.Clear16,
+                                    contentDescription = "Очистить",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    } else null,
                 )
 
                 if (submitting) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.width(16.dp).height(16.dp),
+                            modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = "Проверяем…",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.vkSubhead,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    VkButton(
+                        onClick = {
+                            submitting = false
+                            challenge.cancel()
+                        },
+                        text = "Отмена",
+                        mode = VkButtonMode.Secondary,
+                        size = VkButtonSize.Medium,
+                        enabled = !submitting,
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    VkButton(
+                        onClick = {
+                            val key = input.trim()
+                            if (key.isBlank()) return@VkButton
+                            submitting = true
+                            challenge.submit(key)
+                        },
+                        text = "Отправить",
+                        mode = VkButtonMode.Primary,
+                        size = VkButtonSize.Medium,
+                        enabled = input.isNotBlank() && !submitting,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val key = input.trim()
-                    if (key.isBlank()) return@TextButton
-                    submitting = true
-                    // submit завершает CompletableDeferred → solve() возвращает key
-                    // → VKApiClient делает retry. Диалог закроется когда challenge
-                    // станет null (в finally блоке solve()).
-                    challenge.submit(key)
-                },
-                enabled = input.isNotBlank() && !submitting,
-            ) {
-                Text("Отправить")
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = {
-                    submitting = false
-                    challenge.cancel()
-                },
-                enabled = !submitting,
-            ) {
-                Text("Отмена")
-            }
-        },
-    )
+        }
+    }
 }

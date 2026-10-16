@@ -1,8 +1,12 @@
 package vk.mint.auth
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -10,18 +14,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,27 +32,36 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import vk.mint.auth.exchange.AuthState
 import vk.mint.auth.exchange.ValidationType
+import vk.mint.ui.components.VkButton
+import vk.mint.ui.components.VkButtonMode
+import vk.mint.ui.components.VkButtonSize
+import vk.mint.ui.components.VkGroup
+import vk.mint.ui.components.VkGroupMode
+import vk.mint.ui.components.VkInputField
+import vk.mint.ui.icons.VkIcons
+import vk.mint.ui.theme.vkSubhead
+import vk.mint.ui.theme.vkTitle3
 
 /**
  * 2FA code input form (SMS / Push / Email / IVR / Call / Telegram / Messenger / Passkey).
  *
- * Показывается когда AuthState = NeedValidation. Содержит:
- *  - OutlinedTextField для ввода кода (digits/letters, max 8 символов)
- *  - Кнопку «Подтвердить» (enabled когда codeRaw.length >= 4)
- *  - Кнопку «Назад» (возврат на LandingScreen)
- *  - Опциональные кнопки re-send (SMS/Push/Email) из validation.allowedWays
- *  - Опциональную кнопку «Подтвердить через Push» (grant_type=without_password)
- *
- * P2-12 #AUTH-AUDIT: вынесен из AuthActivity.kt в отдельный файл.
+ * Переведено в каноничную оболочку **Material 3 Expressive (MD3E)**:
+ *  - Островной контейнер [VkGroup] со скруглением `16.dp` на фоне `surface`.
+ *  - Поле ввода кода [VkInputField] с центрированным крупным шрифтом, пружинным фокус-морфингом и очисткой.
+ *  - Тактильные кнопки [VkButton] с пружинным морфингом радиусов ([VkButtonMode.Primary], [VkButtonMode.Secondary], [VkButtonMode.Tonal]).
+ *  - Деликатный тональный блок отображения ошибок сервера.
  *
  * @param validation данные 2FA из AuthState.NeedValidation (тип, phone mask, allowed ways)
  * @param state текущий AuthState (для Loading/Error отображения)
@@ -85,168 +95,217 @@ internal fun ValidationCodeForm(
 
     val keyboard = LocalSoftwareKeyboardController.current
     val codeFocus = remember { FocusRequester() }
-
-    val codeDisplay = codeRaw
     val canSubmit = !isLoading && codeRaw.length >= 4
 
     LaunchedEffect(Unit) {
         codeFocus.requestFocus()
     }
 
-    // NOTE: imePadding() применяется только на внешнем Box в AuthScreen.
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 24.dp)
-            .widthIn(max = 480.dp),
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+            .widthIn(max = 440.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.Center,
     ) {
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
 
-        Text(
-            text = "Подтверждение входа",
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-
-        Text(
-            text = hint,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        // NOTE: Raw code as value to avoid Compose "mirrored input" bug.
-        OutlinedTextField(
-            value = codeDisplay,
-            onValueChange = { typed ->
-                codeRaw = typed.filter { it.isLetterOrDigit() }.take(8)
-            },
-            label = { Text("Код подтверждения") },
-            placeholder = { Text("123456") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    if (canSubmit) {
-                        keyboard?.hide()
-                        onSubmit(CodeFormatter.parse(codeRaw))
-                    }
-                },
-            ),
-            enabled = !isLoading,
-            shape = OutlinedTextFieldDefaults.shape,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(codeFocus),
-        )
-
-        if (errorMessage != null) {
-            Text(
-                text = errorMessage,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center,
+        VkGroup(
+            mode = VkGroupMode.Card,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentPadding = PaddingValues(20.dp),
+        ) {
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-            )
-        }
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // Иконка безопасности в тональном круге M3E
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = VkIcons.Verified16,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
 
-        Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(16.dp))
 
-        Button(
-            onClick = {
-                keyboard?.hide()
-                onSubmit(CodeFormatter.parse(codeRaw))
-            },
-            enabled = canSubmit,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            } else {
-                Text("Подтвердить", style = MaterialTheme.typography.titleMedium)
-            }
-        }
-
-        OutlinedButton(
-            onClick = onBack,
-            enabled = !isLoading,
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.onBackground,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-            ),
-            border = BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.outline,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-        ) {
-            Text("Назад", style = MaterialTheme.typography.titleMedium)
-        }
-
-        // Re-send code options — mirrors VK's supported_ways selection.
-        // VK allows the user to switch between SMS, push, and email for 2FA.
-        if (allowedWays.isNotEmpty() && !isLoading) {
-            val resendOptions = buildList {
-                if (canResendViaPush) add(ValidationType.PUSH to "Отправить Push")
-                if (canResendViaSms) add(ValidationType.SMS to "Отправить SMS")
-                if (canResendViaEmail) add(ValidationType.EMAIL to "Отправить Email")
-            }
-            if (resendOptions.isNotEmpty()) {
                 Text(
-                    text = "Получить код другим способом:",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "Подтверждение входа",
+                    style = MaterialTheme.typography.vkTitle3,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
                 )
-                resendOptions.forEach { (type, label) ->
-                    TextButton(
-                        onClick = { onResend(type) },
-                        enabled = !isLoading,
-                        modifier = Modifier.fillMaxWidth(),
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.vkSubhead,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                VkInputField(
+                    value = codeRaw,
+                    onValueChange = { typed ->
+                        codeRaw = typed.filter { it.isLetterOrDigit() }.take(8)
+                    },
+                    label = "Код подтверждения",
+                    placeholder = "123456",
+                    singleLine = true,
+                    enabled = !isLoading,
+                    isError = errorMessage != null,
+                    textStyle = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 4.sp,
+                        textAlign = TextAlign.Center,
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (canSubmit) {
+                                keyboard?.hide()
+                                onSubmit(CodeFormatter.parse(codeRaw))
+                            }
+                        },
+                    ),
+                    trailingIcon = if (codeRaw.isNotEmpty() && !isLoading) {
+                        {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .clickable { codeRaw = "" },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = VkIcons.Clear16,
+                                    contentDescription = "Очистить",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    } else null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(codeFocus),
+                )
+
+                if (errorMessage != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(label, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.vkSubhead,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                        )
                     }
                 }
-            }
-        }
 
-        // Push-approval button (grant_type=without_password).
-        // If the user already approved via push in the VK app.
-        if (canResendViaPush && !isLoading) {
-            OutlinedButton(
-                onClick = onWithoutPassword,
-                enabled = !isLoading,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                ),
-                border = BorderStroke(
-                    1.dp, MaterialTheme.colorScheme.outline,
-                ),
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-            ) {
-                Text("Подтвердить через Push в VK", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(20.dp))
+
+                // Кнопка «Подтвердить»
+                VkButton(
+                    onClick = {
+                        keyboard?.hide()
+                        onSubmit(CodeFormatter.parse(codeRaw))
+                    },
+                    text = if (isLoading) null else "Подтвердить",
+                    mode = VkButtonMode.Primary,
+                    size = VkButtonSize.Large,
+                    enabled = canSubmit,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                // Кнопка «Назад»
+                VkButton(
+                    onClick = onBack,
+                    text = "Назад",
+                    mode = VkButtonMode.Secondary,
+                    size = VkButtonSize.Large,
+                    enabled = !isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                // Кнопка «Подтвердить через Push в VK»
+                if (canResendViaPush && !isLoading) {
+                    Spacer(Modifier.height(10.dp))
+                    VkButton(
+                        onClick = onWithoutPassword,
+                        text = "Подтвердить через Push в VK",
+                        mode = VkButtonMode.Tonal,
+                        size = VkButtonSize.Medium,
+                        enabled = !isLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                // Опции повторной отправки кода
+                if (allowedWays.isNotEmpty() && !isLoading) {
+                    val resendOptions = buildList {
+                        if (canResendViaPush) add(ValidationType.PUSH to "Отправить Push")
+                        if (canResendViaSms) add(ValidationType.SMS to "Отправить SMS")
+                        if (canResendViaEmail) add(ValidationType.EMAIL to "Отправить Email")
+                    }
+                    if (resendOptions.isNotEmpty()) {
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = "Получить код другим способом:",
+                            style = MaterialTheme.typography.vkSubhead,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                        ) {
+                            resendOptions.forEach { (type, label) ->
+                                VkButton(
+                                    onClick = { onResend(type) },
+                                    text = label,
+                                    mode = VkButtonMode.Tonal,
+                                    size = VkButtonSize.Small,
+                                    enabled = !isLoading,
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 

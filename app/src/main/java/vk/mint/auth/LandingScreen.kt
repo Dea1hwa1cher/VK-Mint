@@ -45,6 +45,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import vk.mint.auth.exchange.AuthState
+import vk.mint.ui.components.VkButton
+import vk.mint.ui.components.VkButtonMode
+import vk.mint.ui.components.VkButtonSize
+import vk.mint.ui.components.VkInputField
 
 /**
  * Landing screen — экран входа с кнопками «Войти через VK» (WebView),
@@ -82,6 +86,7 @@ internal fun LandingScreen(
     onCancelTokenPaste: () -> Unit = {},
     showManualPaste: Boolean = false,
     onShowManualPaste: () -> Unit = {},
+    onStartDirectAuth: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isLoading = state is AuthState.Loading
@@ -202,6 +207,18 @@ internal fun LandingScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
         )
+
+        // Tertiary — «Войти по логину и паролю» (Direct Auth)
+        TextButton(
+            onClick = onStartDirectAuth,
+            enabled = !isLoading,
+        ) {
+            Text(
+                text = "Войти по логину и паролю",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         // Fix #191: показываем «Поделиться»-инструкцию после запуска браузера.
         // Это основной способ — юзер жмёт Share в браузере → выбирает VK Mint.
@@ -444,18 +461,12 @@ private fun ManualPasteBlock(
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        VkInputField(
             value = pastedText,
             onValueChange = { pastedText = it },
-            label = { Text("Ссылка из адресной строки") },
-            placeholder = {
-                Text(
-                    text = "https://oauth.vk.com/blank.html#access_token=...",
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                )
-            },
+            label = "Ссылка из адресной строки",
+            placeholder = "https://oauth.vk.com/blank.html#access_token=...",
             modifier = Modifier.fillMaxWidth(),
             enabled = !isLoading,
             minLines = 2,
@@ -469,26 +480,28 @@ private fun ManualPasteBlock(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            OutlinedButton(
+            VkButton(
                 onClick = {
                     val clip = clipboardManager.primaryClip
                     val text = clip?.getItemAt(0)?.coerceToText(context)?.toString()
                     if (!text.isNullOrEmpty()) pastedText = text
                 },
+                text = "Из буфера",
+                mode = VkButtonMode.Secondary,
+                size = VkButtonSize.Medium,
                 enabled = !isLoading,
-                modifier = Modifier.weight(1f).height(44.dp),
-            ) {
-                Text("Из буфера", style = MaterialTheme.typography.bodySmall)
-            }
-            Button(
+                modifier = Modifier.weight(1f),
+            )
+            VkButton(
                 onClick = { onSubmit(pastedText) },
+                text = "Войти",
+                mode = VkButtonMode.Primary,
+                size = VkButtonSize.Medium,
                 enabled = !isLoading && pastedText.isNotBlank(),
-                modifier = Modifier.weight(1f).height(44.dp),
-            ) {
-                Text("Войти", style = MaterialTheme.typography.bodyMedium)
-            }
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

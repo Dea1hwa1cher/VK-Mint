@@ -1436,6 +1436,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 LogViewerDialog()
+                vk.mint.ui.components.CaptchaDialog()
 
                 // Fix #154 full forwarding: показываем пикер чата если есть
                 // pending share контент. После выбора диалога и отправки (или

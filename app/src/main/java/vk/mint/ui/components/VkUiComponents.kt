@@ -11,6 +11,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -1048,6 +1049,157 @@ fun VkButton(
                 Spacer(modifier = Modifier.width(6.dp))
                 after()
             }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  9. VkInputField — Текстовое поле ввода (VKUI Input × M3E Focus Morph)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Тактильное поле ввода по стандарту **VKUI v8 × M3E**:
+ *  - Высота от `52.dp` (эргономичный размер для мобильного ввода).
+ *  - Заливка `--vkui--color_field_background` (`surfaceVariant`: `#F2F3F5` в Light и `#232324` в Dark).
+ *  - При фокусе: пружинный морфинг радиуса (`12.dp -> 16.dp`) через [M3ExpressiveMotion.fastSpatial],
+ *    акцентная подсветка контура `primary` и плавный переход заливки в `surfaceContainerHighest`.
+ *  - При ошибке: рамка и текст ошибки в цвете `error`.
+ *  - Слоты [leadingIcon] (слева) и [trailingIcon] (справа — например, очистка или глазок пароля).
+ */
+@Composable
+fun VkInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    label: String? = null,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = true,
+    maxLines: Int = 1,
+    minLines: Int = 1,
+    enabled: Boolean = true,
+    isError: Boolean = false,
+    errorMessage: String? = null,
+    textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.vkText,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isFocused) 16.dp else 12.dp,
+        animationSpec = M3ExpressiveMotion.fastSpatial(),
+        label = "VkInputFieldCorner",
+    )
+
+    val bgColor by animateColorAsState(
+        targetValue = when {
+            !enabled -> containerColor.copy(alpha = 0.5f)
+            isFocused -> MaterialTheme.colorScheme.surfaceContainerHighest
+            else -> containerColor
+        },
+        animationSpec = M3ExpressiveMotion.fastEffects(),
+        label = "VkInputFieldBg",
+    )
+
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            isError -> MaterialTheme.colorScheme.error
+            isFocused -> MaterialTheme.colorScheme.primary
+            else -> Color.Transparent
+        },
+        animationSpec = M3ExpressiveMotion.fastEffects(),
+        label = "VkInputFieldBorder",
+    )
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        if (!label.isNullOrBlank()) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.vkSubheadMedium,
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 52.dp)
+                .clip(RoundedCornerShape(cornerRadius))
+                .background(bgColor)
+                .then(
+                    if (isFocused || isError) {
+                        Modifier.border(
+                            width = if (isFocused) 1.5.dp else 1.dp,
+                            color = borderColor,
+                            shape = RoundedCornerShape(cornerRadius),
+                        )
+                    } else Modifier
+                )
+                .padding(horizontal = 14.dp, vertical = if (singleLine) 0.dp else 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (leadingIcon != null) {
+                Box(
+                    modifier = Modifier.size(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    leadingIcon()
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+            }
+
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                if (value.isEmpty() && placeholder != null) {
+                    Text(
+                        text = placeholder,
+                        style = textStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                        maxLines = maxLines,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled,
+                    singleLine = singleLine,
+                    maxLines = maxLines,
+                    minLines = minLines,
+                    textStyle = textStyle.copy(
+                        color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    ),
+                    cursorBrush = SolidColor(if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary),
+                    keyboardOptions = keyboardOptions,
+                    keyboardActions = keyboardActions,
+                    visualTransformation = visualTransformation,
+                    interactionSource = interactionSource,
+                )
+            }
+
+            if (trailingIcon != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                trailingIcon()
+            }
+        }
+
+        if (!errorMessage.isNullOrBlank()) {
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.vkCaption1,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 6.dp, top = 4.dp),
+            )
         }
     }
 }
