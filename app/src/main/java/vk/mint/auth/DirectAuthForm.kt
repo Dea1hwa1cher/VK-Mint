@@ -138,6 +138,29 @@ internal fun DirectAuthForm(
                     textAlign = TextAlign.Center,
                 )
 
+                Spacer(Modifier.height(12.dp))
+
+                // Fix #331 UX: предупреждение о том что VK отключил парольный вход для
+                // сторонних приложений (grant_type=password, client_id=2274003).
+                // Без этого баннера юзер вводит данные → получает ошибку → непонимание.
+                // Отображаем до попытки входа, чтобы ожидания были реалистичными.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                ) {
+                    Text(
+                        text = "⚠ VK ограничил вход по паролю для сторонних приложений. " +
+                            "Попробуйте — иногда работает, но если получите ошибку, " +
+                            "используйте «Войти через VK» (WebView) или «Войти через Яндекс / Chrome».",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        textAlign = TextAlign.Start,
+                    )
+                }
+
                 Spacer(Modifier.height(20.dp))
 
                 // Поле Логин / Телефон

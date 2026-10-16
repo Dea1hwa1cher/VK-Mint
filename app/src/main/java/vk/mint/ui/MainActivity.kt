@@ -1531,6 +1531,18 @@ class MainActivity : ComponentActivity() {
                 " at=${OAuthTokenUtils.maskTokenPrefix(at)}")
             authVersion++  // триггерим recompose
 
+            // Fix #BROWSER-FINISH: сигнализируем AuthActivity завершить себя (если она
+            // в back-стеке). Это решает случай «пользователь нажал Share → VK Mint
+            // в браузере → MainActivity получает onNewIntent → токен сохранён →
+            // authVersion++ → но AuthActivity всё ещё видима над MainActivity».
+            // Broadcast внутренний (packageName-ограничен), не может быть перехвачен
+            // внешними приложениями. Регистрация в AuthActivity.onStart/onStop.
+            val authSuccessIntent = Intent(vk.mint.auth.AuthActivity.ACTION_AUTH_SUCCESS).apply {
+                setPackage(packageName)  // только наш процесс
+            }
+            sendBroadcast(authSuccessIntent)
+            AppLog.i("MainActivity", "ACTION_AUTH_SUCCESS broadcast sent ($source) — AuthActivity will self-finish if in backstack (Fix #BROWSER-FINISH)")
+
             // В фоне получаем exchange_token для refresh-поддержки.
             app.appScope.launch {
                 try {
@@ -1844,6 +1856,9 @@ class MainActivity : ComponentActivity() {
         if (intent?.action != Intent.ACTION_SEND) return
         val type = intent.type ?: ""
         val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+            ?: intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+            ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()
+            ?: intent.data?.toString()
         val streamUri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
         } else {

@@ -2,9 +2,11 @@ package vk.mint.auth
 
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,21 +17,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,17 +38,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import vk.mint.auth.exchange.AuthState
 import vk.mint.ui.components.VkButton
 import vk.mint.ui.components.VkButtonMode
 import vk.mint.ui.components.VkButtonSize
+import vk.mint.ui.components.VkGroup
+import vk.mint.ui.components.VkGroupMode
 import vk.mint.ui.components.VkInputField
+import vk.mint.ui.theme.M3ExpressiveShapes
+import vk.mint.ui.theme.vkSubhead
+import vk.mint.ui.theme.vkTitle3
 
 /**
  * Landing screen — экран входа с кнопками «Войти через VK» (WebView),
@@ -150,23 +158,21 @@ internal fun LandingScreen(
         // Полный cookie capture (9 remix-ключей) → submitWebToken. Path 1.5
         // silentRefreshViaRemixsid удерживает сессию при смене IP (remixsid +
         // httoken + remixnsid + p cookie ... в storage). Авторизация ТОЛЬКО через VK ID.
-        Button(
+        VkButton(
             onClick = onStartWebView,
+            text = "Войти через VK",
+            mode = VkButtonMode.Primary,
+            size = VkButtonSize.Large,
             enabled = !isLoading,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ),
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Login,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text("Войти через VK", style = MaterialTheme.typography.titleMedium)
-        }
+            modifier = Modifier.fillMaxWidth(),
+            before = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Login,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
+            },
+        )
 
         Text(
             text = "Вход через VK ID. Сессия удерживается при смене сети — " +
@@ -184,19 +190,21 @@ internal fun LandingScreen(
         // Fix #190: redirect_uri=https://oauth.vk.com/blank.html. После входа
         // браузер покажет пустую страницу с access_token в URL — пользователь
         // «Поделиться» → VK Mint.
-        OutlinedButton(
+        VkButton(
             onClick = { showBrowserConfirmDialog = true },
+            text = "Войти через Яндекс / Chrome",
+            mode = VkButtonMode.Secondary,
+            size = VkButtonSize.Large,
             enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Public,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text("Войти через Яндекс / Chrome", style = MaterialTheme.typography.titleMedium)
-        }
+            modifier = Modifier.fillMaxWidth(),
+            before = {
+                Icon(
+                    imageVector = Icons.Outlined.Public,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
+            },
+        )
 
         Text(
             text = "Вход через браузер, где вы уже залогинены в VK. " +
@@ -209,16 +217,13 @@ internal fun LandingScreen(
         )
 
         // Tertiary — «Войти по логину и паролю» (Direct Auth)
-        TextButton(
+        VkButton(
             onClick = onStartDirectAuth,
+            text = "Войти по логину и паролю",
+            mode = VkButtonMode.Tonal,
+            size = VkButtonSize.Small,
             enabled = !isLoading,
-        ) {
-            Text(
-                text = "Войти по логину и паролю",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        )
 
         // Fix #191: показываем «Поделиться»-инструкцию после запуска браузера.
         // Это основной способ — юзер жмёт Share в браузере → выбирает VK Mint.
@@ -235,74 +240,109 @@ internal fun LandingScreen(
     }
 
     // Fix #194b: диалог подтверждения перед запуском внешнего браузера.
-    // Пользователь должен успеть прочитать инструкцию ДО того, как браузер
-    // перекроет экран приложения — иначе он не поймёт, что делать дальше
-    // (выбрать браузер → после входа нажать «Поделиться» → выбрать VK Mint).
+    // Выполнен в каноничной MD3E оболочке:
+    //  - Контейнер: surfaceContainerHigh со скруглением extraLarge (28dp).
+    //  - Иконка в тональном круге, заголовок vkTitle3.
+    //  - Экспрессивные кнопки VkButton (Primary / Secondary) с тактильным откликом.
     if (showBrowserConfirmDialog) {
-        androidx.compose.material3.AlertDialog(
+        Dialog(
             onDismissRequest = { showBrowserConfirmDialog = false },
-            title = {
-                Text(
-                    text = "Вход через внешний браузер",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Surface(
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .widthIn(max = 420.dp)
+                    .fillMaxWidth(),
+                shape = M3ExpressiveShapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Public,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
                     Text(
-                        text = "Сейчас откроется выбор браузера.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
+                        text = "Вход через внешний браузер",
+                        style = MaterialTheme.typography.vkTitle3,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
                     )
+
+                    Spacer(Modifier.height(10.dp))
+
                     Text(
-                        text = "1. Выберите браузер, где вы уже залогинились в VK (Яндекс, Chrome и т.д.).\n" +
+                        text = "Сейчас откроется выбор браузера:\n\n" +
+                               "1. Выберите браузер, где вы уже залогинились в VK (Яндекс, Chrome и др.).\n" +
                                "2. Если вы залогинены — ВК предложит «Продолжить как …», нажмите её.\n" +
                                "3. После входа нажмите «Поделиться» (⤴) в меню браузера.\n" +
                                "4. Выберите VK Mint в списке — вход произойдёт автоматически.",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.vkSubhead,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Text(
-                        text = "Если «Поделиться» не работает — скопируйте адрес из адресной строки браузера и вернитесь в приложение: оно само распознает токен из буфера.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    )
-                    // Fix #196: примечание про 405 — VK сервер нестабильно отдаёт
-                    // 405 на /blank.html, хотя токен уже в URL. Юзер пугается,
-                    // хотя всё работает. Объясняем что это нормально.
-                    androidx.compose.material3.Surface(
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // Fix #196: примечание про 405
+                    Surface(
                         color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-                        shape = MaterialTheme.shapes.small,
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
                             text = "⚠ Если после входа браузер покажет «405 Method Not Allowed» или пустую страницу — это нормально. Токен уже получен, просто вернитесь в VK Mint (системная кнопка Back или переключатель приложений) — вход произойдёт автоматически.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                         )
                     }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    VkButton(
+                        onClick = {
+                            showBrowserConfirmDialog = false
+                            onLaunchExternalBrowser()
+                        },
+                        text = "Продолжить",
+                        mode = VkButtonMode.Primary,
+                        size = VkButtonSize.Large,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    VkButton(
+                        onClick = { showBrowserConfirmDialog = false },
+                        text = "Отмена",
+                        mode = VkButtonMode.Secondary,
+                        size = VkButtonSize.Large,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = {
-                        showBrowserConfirmDialog = false
-                        onLaunchExternalBrowser()
-                    },
-                ) {
-                    Text("Продолжить", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = { showBrowserConfirmDialog = false },
-                ) {
-                    Text("Отмена")
-                }
-            },
-        )
+            }
+        }
     }
 }
 
@@ -312,21 +352,7 @@ internal fun LandingScreen(
 
 /**
  * Fix #191: секция-подсказка «Поделиться → VK Mint» для external browser auth.
- *
- * После того как пользователь нажал «Войти через Яндекс/Chrome» и выбрал
- * браузер, ВК открывает страницу авторизации. Если сессия активна — ВК
- * сразу редиректит на https://oauth.vk.com/blank.html#access_token=...
- * Браузер показывает пустую страницу.
- *
- * ОСНОВНОЙ СПОСОБ (Fix #191): пользователь нажимает «Поделиться» в браузере
- * и выбирает VK Mint — приложение получает URL через share intent, токен
- * сохраняется автоматически, вход происходит без копирования/вставки.
- *
- * АВТО-FALLBACK: если юзер просто скопировал URL (долгий тап → Копировать),
- * при возврате в VK Mint AuthActivity.onResume проверит буфер и войдёт сам.
- *
- * РУЧНАЯ ВСТАВКА (deep fallback): если ни Share, ни буфер не сработали,
- * пользователь может раскрыть секцию «Вставить вручную» и вставить URL.
+ * Оформлена в MD3E остров [VkGroupMode.Card].
  */
 @Composable
 private fun ExternalBrowserShareHintSection(
@@ -337,18 +363,19 @@ private fun ExternalBrowserShareHintSection(
     onManualPaste: (String) -> Unit,
     onCancel: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-        shape = MaterialTheme.shapes.medium,
+    VkGroup(
+        mode = VkGroupMode.Card,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentPadding = PaddingValues(16.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = "Шаг 2: Поделиться → VK Mint",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.vkTitle3,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -418,25 +445,24 @@ private fun ExternalBrowserShareHintSection(
                     onSubmit = onManualPaste,
                 )
             } else {
-                TextButton(
+                VkButton(
                     onClick = onShowManualPaste,
+                    text = "Не сработало? Вставить ссылку вручную",
+                    mode = VkButtonMode.Tonal,
+                    size = VkButtonSize.Small,
                     enabled = !isLoading,
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        "Не сработало? Вставить ссылку вручную",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
+                )
             }
 
-            TextButton(
+            VkButton(
                 onClick = onCancel,
+                text = "Отмена",
+                mode = VkButtonMode.Secondary,
+                size = VkButtonSize.Small,
                 enabled = !isLoading,
                 modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Отмена", style = MaterialTheme.typography.bodySmall)
-            }
+            )
         }
     }
 }

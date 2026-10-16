@@ -1,8 +1,12 @@
 package vk.mint.auth
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebView
@@ -86,6 +90,53 @@ class AuthActivity : ComponentActivity() {
                 val app = VkMintApp.get(this@AuthActivity)
                 AuthViewModel(app.exchangeAuthRepository)
             }
+        }
+    }
+
+    /**
+     * Fix #BROWSER-FINISH: BroadcastReceiver для внешнего сигнала «токен получен».
+     *
+     * Когда пользователь нажимает «Поделиться» → VK Mint в браузере, система
+     * поднимает MainActivity (root task) через onNewIntent. MainActivity сохраняет
+     * токен через saveOAuthTokenFromPayload и затем рассылает ACTION_AUTH_SUCCESS.
+     * AuthActivity ловит этот broadcast и завершает себя с RESULT_OK — иначе она
+     * остаётся в back-стеке над MainActivity и пользователь видит экран авторизации
+     * вместо главного экрана.
+     *
+     * Аналогичная логика применяется при clipboard-detection в onWindowFocusChanged
+     * (если tokenStorage уже заполнен — сигнал пришёл быстрее).
+     */
+    private val authSuccessReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == ACTION_AUTH_SUCCESS) {
+                AppLog.i(TAG, "authSuccessReceiver: token saved externally (share/deep-link) — finishing with RESULT_OK (Fix #BROWSER-FINISH)")
+                PendingAuthResult.clear()
+                setResult(RESULT_OK)
+                finish()
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Fix #BROWSER-FINISH: регистрируем receiver на время видимости Activity.
+        // RECEIVER_NOT_EXPORTED: broadcast только внутри приложения (не exported).
+        val filter = IntentFilter(ACTION_AUTH_SUCCESS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(authSuccessReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(authSuccessReceiver, filter)
+        }
+        AppLog.d(TAG, "onStart — authSuccessReceiver registered (Fix #BROWSER-FINISH)")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            unregisterReceiver(authSuccessReceiver)
+        } catch (e: Exception) {
+            AppLog.d(TAG, "onStop — authSuccessReceiver already unregistered: ${e.message}")
         }
     }
 
@@ -429,6 +480,18 @@ class AuthActivity : ComponentActivity() {
          * аккаунта (WebTokenAuth.tryReadWebToken берёт первый валидный ключ).
          */
         const val EXTRA_AUTH_REASON = "auth_reason"
+
+        /**
+         * Fix #BROWSER-FINISH: action для broadcast-сигнала «OAuth токен получен».
+         *
+         * MainActivity рассылает этот broadcast после успешного сохранения токена
+         * из share-intent или deep-link. AuthActivity слушает его через
+         * authSuccessReceiver и вызывает finish(RESULT_OK), освобождая стек.
+         *
+         * Broadcast приватный (не exported, отправляется через sendBroadcast
+         * с явным packageName) — внешние приложения не могут его имитировать.
+         */
+        const val ACTION_AUTH_SUCCESS = "vk.mint.action.AUTH_SUCCESS"
 
         fun launch(activity: Activity) {
             activity.startActivity(Intent(activity, AuthActivity::class.java))

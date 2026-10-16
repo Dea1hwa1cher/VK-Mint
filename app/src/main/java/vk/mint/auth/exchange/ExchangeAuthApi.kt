@@ -74,6 +74,8 @@ class ExchangeAuthApi(
         phone: String,
         password: String,
         deviceId: String,
+        captchaSid: String? = null,
+        captchaKey: String? = null,
     ): JsonObject = postLegacyAuthEndpoint(
         form = formBody {
             add("grant_type", "password")
@@ -85,8 +87,35 @@ class ExchangeAuthApi(
             add("client_id", BuildConfig.VK_CLIENT_ID)
             add("client_secret", BuildConfig.VK_CLIENT_SECRET)
             add("device_id", deviceId)
+            if (!captchaSid.isNullOrBlank() && !captchaKey.isNullOrBlank()) {
+                add("captcha_sid", captchaSid)
+                add("captcha_key", captchaKey)
+            }
         },
     )
+
+    /**
+     * Проверяет валидность токена реальным вызовом к VK API (users.get).
+     * В отличие от API.auth.getExchangeToken (который падает на сторонних клиентах),
+     * users.get работает для ЛЮБЫХ токенов (Direct Auth, OAuth web-client, Kate и др.).
+     */
+    suspend fun verifyTokenWithUsersGet(accessToken: String): Boolean {
+        return try {
+            val json = postForm(
+                url = "${BuildConfig.VK_API_HOST}/method/users.get",
+                form = formBody {
+                    add("access_token", accessToken)
+                    add("v", BuildConfig.VK_API_VERSION)
+                },
+            )
+            val hasResponse = json.has("response")
+            val errCode = json.getAsJsonObject("error")?.get("error_code")?.asInt ?: 0
+            hasResponse && errCode == 0
+        } catch (e: Exception) {
+            AppLog.w(TAG, "verifyTokenWithUsersGet network error: ${e.message}")
+            true // при сетевом сбое считаем токен валидным (best effort)
+        }
+    }
 
     // =====================================================================
     // 2FA code — VkAuthState.b(sid!=null) / VkAuthState.d(z=false)

@@ -160,9 +160,7 @@ class ExchangeAuthRepository(
 
         return try {
             // #NETWORK-RESILIENCE: backoff на password login (3 попытки, 1/2/4 сек).
-            // Один SocketTimeout при логине больше НЕ прерывает вход — пользователь
-            // вводит пароль один раз, backoff даёт VK шанс ответить.
-            val json = ExponentialBackoff.retryOnTransient(
+            var json = ExponentialBackoff.retryOnTransient(
                 strategy = ExponentialBackoff.AUTH_DEFAULT,
                 tag = "authByPassword",
             ) {
@@ -171,60 +169,43 @@ class ExchangeAuthRepository(
                 AuthErrorKind.NETWORK,
                 "Нет связи с VK. Проверьте подключение и попробуйте снова.",
             )
+
+            // Проверяем, вернул ли VK запрос капчи (need_captcha).
+            val errObj = json.getAsJsonObject("error")
+            val errorStr = errObj?.get("error")?.asString ?: json.get("error")?.asString
+            if (errorStr.equals("need_captcha", ignoreCase = true)) {
+                val sid = errObj?.get("captcha_sid")?.asString ?: json.get("captcha_sid")?.asString ?: ""
+                val img = errObj?.get("captcha_img")?.asString ?: json.get("captcha_img")?.asString ?: ""
+                if (sid.isNotBlank() && img.isNotBlank()) {
+                    AppLog.i(TAG, "signIn: VK запросил капчу (sid=$sid) — открываем MD3E CaptchaDialog")
+                    val app = vk.mint.VkMintApp.getOrNull()
+                    val key = app?.captchaHandler?.solve(sid, img)
+                    if (!key.isNullOrBlank()) {
+                        AppLog.i(TAG, "signIn: капча введена пользователем — повторяем запрос с ответом")
+                        val retryJson = api.authByPassword(phone, password, deviceId, captchaSid = sid, captchaKey = key)
+                        json = retryJson
+                    } else {
+                        return AuthState.Error(AuthErrorKind.TOO_MANY_ATTEMPTS, "Ввод капчи отменён")
+                    }
+                }
+            }
+
             val parsed = parseAuthResponse(json)
-            // Fix #331: post-login валидация Direct Auth токена.
-            //
-            // Сценарий: VK отдаёт через Direct Auth (grant_type=password,
-            // client_id=2274003) только web-токен vk1.a.* БЕЗ secret, БЕЗ
-            // exchange_token, БЕЗ trusted_hash. Этот токен формально валиден
-            // (parseAuthResponse возвращает Success), но VK API отвергает
-            // его на чувствительных методах (messages.getLongPollServer,
-            // newsfeed.get) с err=1117 "Access token has expired" —
-            // misleading сообщение, на самом деле VK distinguishing
-            // «настоящий VK-клиент» (по APK signing hash) от third-party.
-            //
-            // Без этой проверки токен сохраняется, юзер видит «успех», но
-            // первый же API-запрос падает с 1117 → notifyTokenInvalidated
-            // → AuthActivity loop. Пользователь застревает.
-            //
-            // Решение: после parseAuthResponse Success, если токен
-            // vk1.a.* И exchange_token отсутствует (значит VK его не выдал
-            // для этого клиента) — проверяем токен через
-            // getExchangeTokenDetailed. Если err=5 — возвращаем понятную
-            // ошибку, НЕ сохраняя токен.
+
+            // Валидация токена через users.get:
+            // Если токен получен, проверяем реальную работоспособность через API.
             if (parsed is AuthState.Success) {
                 val token = parsed.result.accessToken
-                val hasExchange = !parsed.result.exchangeToken.isNullOrBlank()
-                val isWebToken = vk.mint.api.VkSigner.isWebToken(token)
-                if (isWebToken && !hasExchange) {
-                    AppLog.w(TAG, "signIn: web-token without exchange_token detected — " +
-                        "validating via getExchangeTokenDetailed (Fix #331)")
-                    val verify = try {
-                        api.getExchangeTokenDetailed(token)
-                    } catch (e: Exception) {
-                        AppLog.w(TAG, "signIn: validation network error: ${e.message}")
-                        ExchangeTokenResult.Unavailable
-                    }
-                    if (verify is ExchangeTokenResult.TokenInvalid) {
-                        AppLog.e(TAG, "signIn: Direct Auth token rejected by VK (err=5) — " +
-                            "VK disabled password grant for third-party clients. " +
-                            "NOT saving. User must use WebView/external browser.")
-                        // НЕ сохраняем мёртвый токен.
-                        storage.clearAccessToken()
-                        return AuthState.Error(
-                            AuthErrorKind.EXPIRED,
-                            "VK отключил парольный вход для сторонних приложений. " +
-                                "Войдите через кнопку «Войти через Яндекс / Chrome» выше — " +
-                                "это официальный и поддерживаемый способ.",
-                        )
-                    }
-                    // Если Unavailable (err=3/network) — возможно токен
-                    // всё-таки рабочий. Сохраняем как есть, юзер увидит
-                    // результат на первом API-запросе. Это безопаснее чем
-                    // блокировать вход в случае кратковременной ошибки сети.
-                    AppLog.i(TAG, "signIn: validation inconclusive ($verify) — " +
-                        "saving token as-is, will be verified on first API call")
+                val isValid = api.verifyTokenWithUsersGet(token)
+                if (!isValid) {
+                    AppLog.e(TAG, "signIn: Direct Auth token rejected by VK API (users.get failed) — clearing")
+                    storage.clearAccessToken()
+                    return AuthState.Error(
+                        AuthErrorKind.EXPIRED,
+                        "Вход не удался: токен отклонён VK API. Войдите через «Войти через VK» или внешний браузер.",
+                    )
                 }
+                AppLog.i(TAG, "signIn: Direct Auth token verified successfully via users.get ✓")
             }
             parsed
         } catch (e: VKAuthException) {
@@ -383,18 +364,23 @@ class ExchangeAuthRepository(
             // на ЛЮБУЮ ошибку → токен сохранялся ВСЕГДА, даже когда VK его уже
             // отклонил → вечный цикл err=5 → AuthActivity → clipboard auto-save
             // → сохранение того же мёртвого токена → повтор.
-            val exchangeResult = try {
-                api.getExchangeTokenDetailed(accessToken)
-            } catch (e: Exception) {
-                AppLog.w(TAG, "getExchangeTokenDetailed from OAuth token failed: ${e.message}")
+            val isWeb = vk.mint.api.VkSigner.isWebToken(accessToken)
+            val exchangeResult = if (!isWeb) {
+                try {
+                    api.getExchangeTokenDetailed(accessToken)
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "getExchangeTokenDetailed from OAuth token failed: ${e.message}")
+                    ExchangeTokenResult.Unavailable
+                }
+            } else {
+                // Web-токены (client_id 6287487) принципиально не имеют exchange_token —
+                // API.auth.getExchangeToken для них всегда возвращает err=5/15. Не вызываем.
                 ExchangeTokenResult.Unavailable
             }
 
-            if (exchangeResult is ExchangeTokenResult.TokenInvalid) {
-                // VK уже отклонил access_token (err=5). Сохранять его бессмысленно —
-                // каждый последующий API-вызов вернёт err=5 → notifyTokenInvalidated
-                // → AuthActivity → clipboard loop. Возвращаем Error, НЕ сохраняем.
-                AppLog.e(TAG, "saveOAuthToken: access_token rejected by VK (err=5) — NOT saving. User must re-login from scratch.")
+            if (!isWeb && exchangeResult is ExchangeTokenResult.TokenInvalid) {
+                // VK отклонил access_token (err=5).
+                AppLog.e(TAG, "saveOAuthToken: access_token rejected by VK (err=5) — NOT saving.")
                 return AuthState.Error(
                     AuthErrorKind.EXPIRED,
                     "Токен отклонён ВКонтакте (смена IP). Войдите заново.",
@@ -411,15 +397,10 @@ class ExchangeAuthRepository(
                 scope = "friends,messages,offline,photos,audio,video,docs,wall,groups",
             )
             storage.saveAuthResult(result, storage.deviceId())
+            storage.updateAccessToken(accessToken, 0L, result.scope, exchangeToken)
+            storage.setUserId(userId)
 
-            // #SESSION-WEB-MECHANISM (2026-09-24): session cookies живут в
-            // CookieManager (единственный источник сессии) — storage-копии больше
-            // не храним, backfillRemixsidFromCookieManager удалён.
-
-            // #AUTO-OFFLINE-REMOVAL (W41): сброс privacyOfflineMode при авторизации
-            // (Fix #211) удалён вместе с авто-офлайном #38 — преф больше не пишется,
-            // застрявший из старых версий чистит миграция в VkMintApp.
-            AppLog.i(TAG, "OAuth WebView auth success — user_id=$userId, exchange_token=${if (exchangeToken != null) "yes" else "no"}")
+            AppLog.i(TAG, "OAuth auth success — user_id=$userId, isWeb=$isWeb, exchange_token=${if (exchangeToken != null) "yes" else "no"}")
             AuthState.Success(result)
         } catch (e: Exception) {
             AppLog.e(TAG, "saveOAuthToken error", e)
