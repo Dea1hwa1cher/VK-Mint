@@ -329,42 +329,39 @@ internal fun humanizeError(raw: String): String {
             "VK отклонил запрос на получение токена. " +
             "Возможно, m.vk.ru не завершил авторизацию. Попробуйте войти заново."
 
-        // Fix #331: VK отключил парольный вход (Direct Auth) для сторонних
-        // клиентов. Вместо нечитаемого «1117 Access token has expired»
-        // показываем понятное объяснение и подсказку использовать WebView.
-        s.contains("VK отключил парольный вход", ignoreCase = true) ||
+        // 2FA code validation errors.
+        s.contains("wrong code", ignoreCase = true) ||
+        s.contains("invalid code", ignoreCase = true) ||
+        s.contains("неверный код", ignoreCase = true) ||
+        s.contains("code expired", ignoreCase = true) ||
+        s.contains("код устарел", ignoreCase = true) ->
+            "Неверный или устаревший код подтверждения. Попробуйте ещё раз."
+
+        // VK error status messages.
         s.contains("отклонён ВКонтакте", ignoreCase = true) ||
         s.contains("сторонних приложений", ignoreCase = true) ->
-            s  // уже человекочитаемое сообщение из AuthState.Error
+            s
 
-        // Fix #331: 1117 «Access token has expired» приходит от API-методов
-        // сразу после Direct Auth (парольный вход). VK misleading — на самом
-        // деле это не истечение, а rejecting third-party web-токена.
+        // 1117 / rejected token.
         s.contains("1117", ignoreCase = true) ||
         s.contains("Access token has expired", ignoreCase = true) ->
-            "VK отклонил токен входа по паролю. Это известное ограничение VK — " +
-            "парольный вход отключён для сторонних приложений. " +
-            "Войдите через кнопку «Войти через Яндекс / Chrome» выше — " +
-            "это официальный и поддерживаемый способ."
+            "VK временно ограничил доступ по паролю. Подождите пару минут и попробуйте снова."
 
-        // Flood control — частая проблема при парольном входе на client_id=2274003.
-        // VK блокирует на ~15 минут после 3-5 попыток.
+        // Flood control.
         s.contains("too_many_attempts", ignoreCase = true) ||
         s.contains("Слишком много попыток", ignoreCase = true) ->
-            "Слишком много попыток входа. VK временно заблокировал парольный вход " +
-            "(~15 минут). Войдите через браузер VK — кнопка ниже."
+            "Слишком много попыток входа. VK временно ограничил доступ (~15 минут). Подождите немного."
 
         s.contains("rate_limit", ignoreCase = true) ->
-            "Превышен лимит запросов. Войдите через браузер VK — кнопка ниже."
+            "Превышен лимит запросов. Подождите пару минут и попробуйте снова."
 
         s.contains("need_captcha", ignoreCase = true) ->
-            "VK требует капчу. Войдите через браузер VK — кнопка ниже " +
-            "(капча будет показана прямо в форме VK)."
+            "Требуется подтверждение капчи."
 
         s.contains("<html", ignoreCase = true) ||
         s.contains("<!DOCTYPE", ignoreCase = true) ||
         s.contains("<title>", ignoreCase = true) ->
-            "Сервер VK вернул HTML-ошибку. Endpoint недоступен — проверьте client_id/secret."
+            "Сервер VK вернул ошибку сервиса. Проверьте подключение и повторите попытку."
 
         s.startsWith("HTTP ", ignoreCase = true) ->
             "Ошибка сети: ${s.take(80)}"
@@ -378,11 +375,6 @@ internal fun humanizeError(raw: String): String {
             "Превышен таймаут запроса. Попробуйте ещё раз."
 
         s.length > 120 -> s.take(120) + "…"
-
-        // VK API error 3: Unknown method passed — auth.getExchangeToken
-        // недоступен для данного client_id или версии API. Не фатально.
-        s.contains("Unknown method", ignoreCase = true) ->
-            "VK API метод недоступен (error 3). Войдите через браузер VK."
 
         else -> s
     }

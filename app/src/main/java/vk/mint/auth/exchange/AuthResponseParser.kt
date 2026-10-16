@@ -79,7 +79,7 @@ object AuthResponseParser {
             // Bad credentials.
             errorStr.equals("invalid_grant", ignoreCase = true) ||
             errorStr.equals("invalid_credentials", ignoreCase = true) ->
-                AuthState.Error(AuthErrorKind.INVALID_CREDENTIALS, "Неверный логин или пароль")
+                AuthState.Error(AuthErrorKind.INVALID_CREDENTIALS, errDesc ?: "Неверный логин или пароль")
 
             // Captcha.
             errorStr.equals("need_captcha", ignoreCase = true) ->

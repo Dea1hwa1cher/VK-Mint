@@ -223,7 +223,7 @@ class ExchangeAuthRepository(
         return try {
             // #NETWORK-RESILIENCE: backoff на 2FA code submit.
             // SMS код действует ~60 сек — backoff (3 попытки за 7 сек) не превысит lifetime.
-            val json = ExponentialBackoff.retryOnTransient(
+            var json = ExponentialBackoff.retryOnTransient(
                 strategy = ExponentialBackoff.AUTH_DEFAULT,
                 tag = "authBy2FaCode",
             ) {
@@ -232,7 +232,44 @@ class ExchangeAuthRepository(
                 AuthErrorKind.NETWORK,
                 "Нет связи с VK. Код действителен — попробуйте ещё раз.",
             )
-            parseAuthResponse(json)
+
+            // Проверяем, вернул ли VK запрос капчи (need_captcha).
+            val errObj = json.getAsJsonObject("error")
+            val errorStr = errObj?.get("error")?.asString ?: json.get("error")?.asString
+            if (errorStr.equals("need_captcha", ignoreCase = true)) {
+                val captchaSid = errObj?.get("captcha_sid")?.asString ?: json.get("captcha_sid")?.asString ?: ""
+                val img = errObj?.get("captcha_img")?.asString ?: json.get("captcha_img")?.asString ?: ""
+                if (captchaSid.isNotBlank() && img.isNotBlank()) {
+                    AppLog.i(TAG, "submit2FaCode: VK запросил капчу (sid=$captchaSid) — открываем MD3E CaptchaDialog")
+                    val app = vk.mint.VkMintApp.getOrNull()
+                    val key = app?.captchaHandler?.solve(captchaSid, img)
+                    if (!key.isNullOrBlank()) {
+                        AppLog.i(TAG, "submit2FaCode: капча введена пользователем — повторяем запрос с ответом")
+                        val retryJson = api.authBy2FaCode(phone, sid, code, deviceId, captchaSid = captchaSid, captchaKey = key)
+                        json = retryJson
+                    } else {
+                        return AuthState.Error(AuthErrorKind.TOO_MANY_ATTEMPTS, "Ввод капчи отменён")
+                    }
+                }
+            }
+
+            val parsed = parseAuthResponse(json)
+
+            // Валидация 2FA токена через users.get
+            if (parsed is AuthState.Success) {
+                val token = parsed.result.accessToken
+                val isValid = api.verifyTokenWithUsersGet(token)
+                if (!isValid) {
+                    AppLog.e(TAG, "submit2FaCode: 2FA token rejected by VK API (users.get failed) — clearing")
+                    storage.clearAccessToken()
+                    return AuthState.Error(
+                        AuthErrorKind.EXPIRED,
+                        "Вход не удался: токен отклонён VK API.",
+                    )
+                }
+                AppLog.i(TAG, "submit2FaCode: 2FA token verified successfully via users.get ✓")
+            }
+            parsed
         } catch (e: VKAuthException) {
             AppLog.e(TAG, "submit2FaCode auth error: ${e.javaClass.simpleName}", e)
             AuthResponseParser.authStateException(e)
@@ -261,7 +298,21 @@ class ExchangeAuthRepository(
                 AuthErrorKind.NETWORK,
                 "Нет связи с VK. Push-одобрение действительно — попробуйте ещё раз.",
             )
-            parseAuthResponse(json)
+            val parsed = parseAuthResponse(json)
+            if (parsed is AuthState.Success) {
+                val token = parsed.result.accessToken
+                val isValid = api.verifyTokenWithUsersGet(token)
+                if (!isValid) {
+                    AppLog.e(TAG, "authWithoutPassword: token rejected by VK API — clearing")
+                    storage.clearAccessToken()
+                    return AuthState.Error(
+                        AuthErrorKind.EXPIRED,
+                        "Вход не удался: токен отклонён VK API.",
+                    )
+                }
+                AppLog.i(TAG, "authWithoutPassword: token verified successfully via users.get ✓")
+            }
+            parsed
         } catch (e: VKAuthException) {
             AppLog.e(TAG, "authWithoutPassword error: ${e.javaClass.simpleName}", e)
             AuthResponseParser.authStateException(e)

@@ -148,17 +148,21 @@ class AuthViewModel(
     // Step 1 — phone + password
     // =====================================================================
 
+    val savedPhone: String get() = lastPhone
+
     /** Submit phone + password. Mirrors VkAuthState.b(sid=null). */
     fun submitCredentials(phone: String, password: String) {
-        if (phone.isBlank() || password.isBlank()) {
+        val trimmed = phone.trim()
+        val cleaned = if (!trimmed.contains("@")) trimmed.replace(Regex("[\\s\\-\\(\\)]"), "") else trimmed
+        if (cleaned.isBlank() || password.isBlank()) {
             _state.value = AuthState.Error(AuthErrorKind.INVALID_CREDENTIALS, "Введите телефон и пароль")
             return
         }
-        lastPhone = phone
+        lastPhone = cleaned
         lastPassword = password
         _state.value = AuthState.Loading
         currentJob = viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) { repo.signIn(phone, password) }
+            val result = withContext(Dispatchers.IO) { repo.signIn(cleaned, password) }
             handleAuthResult(result)
         }
     }

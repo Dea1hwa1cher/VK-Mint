@@ -130,6 +130,8 @@ class ExchangeAuthApi(
         sid: String,
         code: String,
         deviceId: String,
+        captchaSid: String? = null,
+        captchaKey: String? = null,
     ): JsonObject = postLegacyAuthEndpoint(
         form = formBody {
             add("grant_type", "phone_confirmation_sid")
@@ -142,6 +144,10 @@ class ExchangeAuthApi(
             add("client_id", BuildConfig.VK_CLIENT_ID)
             add("client_secret", BuildConfig.VK_CLIENT_SECRET)
             add("device_id", deviceId)
+            if (!captchaSid.isNullOrBlank() && !captchaKey.isNullOrBlank()) {
+                add("captcha_sid", captchaSid)
+                add("captcha_key", captchaKey)
+            }
         },
     )
 

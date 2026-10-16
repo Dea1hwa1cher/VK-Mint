@@ -69,10 +69,11 @@ import vk.mint.ui.theme.vkTitle3
 internal fun DirectAuthForm(
     state: AuthState,
     onSubmit: (login: String, password: String) -> Unit,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
+    initialLogin: String = "",
     modifier: Modifier = Modifier,
 ) {
-    var login by rememberSaveable { mutableStateOf("") }
+    var login by rememberSaveable { mutableStateOf(initialLogin) }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
@@ -92,7 +93,44 @@ internal fun DirectAuthForm(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
+
+        // Логотип VK Mint
+        androidx.compose.material3.Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(72.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "VK",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = "VK Mint",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(Modifier.height(4.dp))
+
+        Text(
+            text = "Вход по логину и паролю",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(Modifier.height(20.dp))
 
         VkGroup(
             mode = VkGroupMode.Card,
@@ -103,65 +141,14 @@ internal fun DirectAuthForm(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Иконка замка в тональном контейнере
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Lock,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-
-                Spacer(Modifier.height(16.dp))
-
                 Text(
-                    text = "Вход по логину и паролю",
-                    style = MaterialTheme.typography.vkTitle3,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center,
-                )
-
-                Spacer(Modifier.height(6.dp))
-
-                Text(
-                    text = "Введите номер телефона или email и пароль от страницы ВКонтакте",
+                    text = "Введите номер телефона или email и пароль от аккаунта ВКонтакте",
                     style = MaterialTheme.typography.vkSubhead,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
 
-                Spacer(Modifier.height(12.dp))
-
-                // Fix #331 UX: предупреждение о том что VK отключил парольный вход для
-                // сторонних приложений (grant_type=password, client_id=2274003).
-                // Без этого баннера юзер вводит данные → получает ошибку → непонимание.
-                // Отображаем до попытки входа, чтобы ожидания были реалистичными.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f))
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                ) {
-                    Text(
-                        text = "⚠ VK ограничил вход по паролю для сторонних приложений. " +
-                            "Попробуйте — иногда работает, но если получите ошибку, " +
-                            "используйте «Войти через VK» (WebView) или «Войти через Яндекс / Chrome».",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        textAlign = TextAlign.Start,
-                    )
-                }
-
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(16.dp))
 
                 // Поле Логин / Телефон
                 VkInputField(
@@ -301,17 +288,18 @@ internal fun DirectAuthForm(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
-
-                // Кнопка Назад
-                VkButton(
-                    onClick = onBack,
-                    text = "Назад",
-                    mode = VkButtonMode.Secondary,
-                    size = VkButtonSize.Large,
-                    enabled = !isLoading,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                // Кнопка Отмена
+                if (onBack != null) {
+                    Spacer(Modifier.height(10.dp))
+                    VkButton(
+                        onClick = onBack,
+                        text = "Отмена",
+                        mode = VkButtonMode.Secondary,
+                        size = VkButtonSize.Large,
+                        enabled = !isLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
 
