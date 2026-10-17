@@ -15,6 +15,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,6 +59,7 @@ import vk.mint.auth.exchange.WebTokenAuth
 import vk.mint.ui.components.DraggableLogFab
 import vk.mint.ui.components.LogDialogState
 import vk.mint.ui.components.LogViewerDialog
+import vk.mint.ui.components.M3ELoadingIndicator
 import vk.mint.ui.theme.VkMintTheme
 import vk.mint.util.AppLog
 
@@ -426,7 +428,7 @@ class AuthActivity : ComponentActivity() {
     }
 }
 
-private enum class AuthPhase { CREDENTIALS, TWO_FA, VK_ID_WEB, SUCCESS }
+private enum class AuthPhase { VK_ID_WEB, SUCCESS }
 
 @Composable
 private fun AuthScreen(
@@ -440,9 +442,8 @@ private fun AuthScreen(
     val context = LocalContext.current
 
     var phase by rememberSaveable(silentMode) {
-        mutableStateOf(AuthPhase.CREDENTIALS)
+        mutableStateOf(AuthPhase.VK_ID_WEB)
     }
-    var lastValidation by remember { mutableStateOf<AuthState.NeedValidation?>(null) }
 
     LaunchedEffect(Unit) {
         if (silentMode) {
@@ -453,16 +454,9 @@ private fun AuthScreen(
 
     LaunchedEffect(state) {
         when (state) {
-            is AuthState.NeedValidation -> {
-                lastValidation = state as AuthState.NeedValidation
-                phase = AuthPhase.TWO_FA
-            }
             is AuthState.Success -> {
                 phase = AuthPhase.SUCCESS
                 onSuccess()
-            }
-            is AuthState.Idle -> {
-                if (phase == AuthPhase.TWO_FA) phase = AuthPhase.CREDENTIALS
             }
             is AuthState.Error -> {
                 if (silentMode) {
@@ -487,43 +481,12 @@ private fun AuthScreen(
                 phase = AuthPhase.SUCCESS
                 onSuccess()
             }
-            else -> { /* Loading: keep current phase */ }
+            else -> { /* Loading, Idle, etc. */ }
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().imePadding().systemBarsPadding()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         when (phase) {
-            AuthPhase.CREDENTIALS -> {
-                DirectAuthForm(
-                    state = state,
-                    onSubmit = { login, password -> viewModel.submitCredentials(login, password) },
-                    onBack = onCancel,
-                    onOpenVkId = { phase = AuthPhase.VK_ID_WEB },
-                    initialLogin = viewModel.savedPhone,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                // Шестерёнка с настройками VK доменов / прокси
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 8.dp, end = 4.dp),
-                ) {
-                    vk.mint.auth.exchange.AuthDomainsSettingsIcon()
-                }
-            }
-            AuthPhase.TWO_FA -> ValidationCodeForm(
-                validation = lastValidation,
-                state = state,
-                onSubmit = { code -> viewModel.submit2FaCode(code) },
-                onResend = { via -> viewModel.resendCode(via) },
-                onWithoutPassword = { viewModel.submitWithoutPassword() },
-                onBack = {
-                    viewModel.cancel()
-                    phase = AuthPhase.CREDENTIALS
-                },
-                onOpenVkId = { phase = AuthPhase.VK_ID_WEB },
-                modifier = Modifier.fillMaxSize(),
-            )
             AuthPhase.VK_ID_WEB -> VkAuthWebViewScreenV2(
                 isLoading = state is AuthState.Loading,
                 startUrl = AuthDomainsConfig.vkIdLoginUrl(),
@@ -536,11 +499,12 @@ private fun AuthScreen(
                     viewModel.submitWebToken(remixsid, webView)
                 },
                 onBack = {
-                    phase = AuthPhase.CREDENTIALS
+                    viewModel.cancel()
+                    onCancel()
                 },
                 onCancel = {
                     viewModel.cancel()
-                    phase = AuthPhase.CREDENTIALS
+                    onCancel()
                 },
                 onSilentTokenExchanged = { accessToken, userId ->
                     AppLog.i("AuthActivity", "silent_token exchange УСПЕШЕН → user_id=$userId, сохраняем OAuth token")
@@ -574,13 +538,20 @@ private fun AuthScreen(
             )
             AuthPhase.SUCCESS -> {
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text("Вход выполнен", style = MaterialTheme.typography.headlineMedium)
+                    M3ELoadingIndicator(size = 48.dp, contained = true)
                     Spacer(modifier = Modifier.height(16.dp))
-                    CircularProgressIndicator()
+                    Text(
+                        text = "Вход выполнен",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
                 }
             }
         }
