@@ -78,6 +78,7 @@ internal fun ValidationCodeForm(
     onResend: (ValidationType) -> Unit,
     onWithoutPassword: () -> Unit,
     onBack: () -> Unit,
+    onOpenVkId: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var codeRaw by rememberSaveable { mutableStateOf("") }
@@ -305,6 +306,18 @@ internal fun ValidationCodeForm(
                             )
                         }
                     }
+                }
+
+                if (onOpenVkId != null && !isLoading) {
+                    Spacer(Modifier.height(14.dp))
+                    VkButton(
+                        onClick = onOpenVkId,
+                        text = "Не приходит код? Подтвердить через VK ID",
+                        mode = VkButtonMode.Secondary,
+                        size = VkButtonSize.Medium,
+                        enabled = !isLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }

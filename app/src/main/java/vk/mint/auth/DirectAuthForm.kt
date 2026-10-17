@@ -70,6 +70,7 @@ internal fun DirectAuthForm(
     state: AuthState,
     onSubmit: (login: String, password: String) -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenVkId: (() -> Unit)? = null,
     initialLogin: String = "",
     modifier: Modifier = Modifier,
 ) {
@@ -296,6 +297,19 @@ internal fun DirectAuthForm(
                         text = "Отмена",
                         mode = VkButtonMode.Secondary,
                         size = VkButtonSize.Large,
+                        enabled = !isLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                // Вход через VK ID (если пароль не установлен или беспарольный вход)
+                if (onOpenVkId != null && !isLoading) {
+                    Spacer(Modifier.height(14.dp))
+                    VkButton(
+                        onClick = onOpenVkId,
+                        text = "Войти через VK ID",
+                        mode = VkButtonMode.Tonal,
+                        size = VkButtonSize.Medium,
                         enabled = !isLoading,
                         modifier = Modifier.fillMaxWidth(),
                     )

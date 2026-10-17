@@ -226,6 +226,7 @@ class AuthActivity : ComponentActivity() {
                         AuthScreen(
                             viewModel = viewModel,
                             silentMode = silentMode,
+                            clearStoredWebToken = clearStoredWebToken,
                             onSuccess = {
                                 AppLog.i(TAG, "Auth success — finishing with RESULT_OK")
                                 PendingAuthResult.clear()
@@ -425,7 +426,7 @@ class AuthActivity : ComponentActivity() {
     }
 }
 
-private enum class AuthPhase { CREDENTIALS, TWO_FA, SUCCESS }
+private enum class AuthPhase { CREDENTIALS, TWO_FA, VK_ID_WEB, SUCCESS }
 
 @Composable
 private fun AuthScreen(
@@ -433,6 +434,7 @@ private fun AuthScreen(
     onSuccess: () -> Unit,
     onCancel: () -> Unit,
     silentMode: Boolean = false,
+    clearStoredWebToken: Boolean = false,
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -496,6 +498,7 @@ private fun AuthScreen(
                     state = state,
                     onSubmit = { login, password -> viewModel.submitCredentials(login, password) },
                     onBack = onCancel,
+                    onOpenVkId = { phase = AuthPhase.VK_ID_WEB },
                     initialLogin = viewModel.savedPhone,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -518,6 +521,55 @@ private fun AuthScreen(
                     viewModel.cancel()
                     phase = AuthPhase.CREDENTIALS
                 },
+                onOpenVkId = { phase = AuthPhase.VK_ID_WEB },
+                modifier = Modifier.fillMaxSize(),
+            )
+            AuthPhase.VK_ID_WEB -> VkAuthWebViewScreenV2(
+                isLoading = state is AuthState.Loading,
+                startUrl = AuthDomainsConfig.vkIdLoginUrl(),
+                onTokenExchange = { remixsid, _, webView ->
+                    runCatching {
+                        CookieManager.getInstance().flush()
+                    }.onFailure { e ->
+                        AppLog.w("AuthActivity", "#DOZE-COOKIE-FLUSH: flush failed: ${e.message}")
+                    }
+                    viewModel.submitWebToken(remixsid, webView)
+                },
+                onBack = {
+                    phase = AuthPhase.CREDENTIALS
+                },
+                onCancel = {
+                    viewModel.cancel()
+                    phase = AuthPhase.CREDENTIALS
+                },
+                onSilentTokenExchanged = { accessToken, userId ->
+                    AppLog.i("AuthActivity", "silent_token exchange УСПЕШЕН → user_id=$userId, сохраняем OAuth token")
+                    val captured = RemixsidCapturer.snapshotCookies()
+                    if (captured != null) {
+                        AppLog.i("AuthActivity",
+                            "silent_token: cookie-set захвачен (remixsid len=${captured.remixsid.length}, " +
+                                "p=${if (captured.pCookie != null) "yes" else "no"}) — Path 1.5 enabled")
+                        viewModel.submitOAuthToken(
+                            accessToken, userId,
+                            remixsid = captured.remixsid,
+                            pCookie = captured.pCookie,
+                            remixnsid = captured.remixnsid,
+                            httoken = captured.httoken,
+                            remixnttpid = captured.remixnttpid,
+                            remixuacck = captured.remixuacck,
+                            remixuas = captured.remixuas,
+                            remixdmgr = captured.remixdmgr,
+                            remixmvkFp = captured.remixmvkFp,
+                        )
+                    } else {
+                        AppLog.w("AuthActivity",
+                            "silent_token: cookie-set НЕ найден в CookieManager — " +
+                                "Path 1.5 недоступна (нужен in-app WebView login для silent network switch)")
+                        viewModel.submitOAuthToken(accessToken, userId)
+                    }
+                },
+                silentMode = silentMode,
+                clearStoredWebTokenOnLoad = clearStoredWebToken,
                 modifier = Modifier.fillMaxSize(),
             )
             AuthPhase.SUCCESS -> {

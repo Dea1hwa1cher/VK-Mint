@@ -433,15 +433,11 @@ class ExchangeAuthApi(
     /**
      * Request a new 2FA code via a specific method.
      *
-     * Mirrors decompiled VkAuthState.b(username, password, sid, isPhoneConfirmationSid=false):
-     *   grant_type=password (replays the auth with same credentials),
-     *   sid included so VK reuses the active validation session and can switch channel.
-     *
-     * supported_ways lists channels the client can receive through.
-     * For SMS we add force_sms=true (VK API switch).
-     *
-     * Before audit #18 we used grant_type=phone_confirmation_sid (which is for SUBMITTING
-     * the code, not resending) and VK silently fell back to SMS.
+     * VK OAuth contract:
+     *   grant_type=phone_confirmation_sid with resend=1 (requests code dispatch for the active session).
+     *   Password is NOT included — including password re-triggers password_bruteforce_attempt flood control.
+     *   sid included so VK reuses the active validation session.
+     *   force_sms=true forces SMS specifically.
      */
     suspend fun resendValidationCode(
         phone: String,
@@ -451,35 +447,42 @@ class ExchangeAuthApi(
         deviceId: String,
     ): JsonObject = postLegacyAuthEndpoint(
         form = formBody {
-            add("grant_type", "password")
+            add("grant_type", "phone_confirmation_sid")
             add("username", phone)
-            add("password", password)
             add("sid", sid)
+            add("resend", "1")
             add("2fa_supported", "1")
             add("supported_ways", "sms,push,email,callreset,ivr,messenger")
             when (validationType) {
                 ValidationType.SMS -> {
+                    add("force_sms", "true")
                     add("force_sms", "1")
                     add("validation_method", "sms")
                 }
                 ValidationType.PUSH -> {
+                    add("force_push", "true")
                     add("force_push", "1")
                     add("validation_method", "push")
                 }
                 ValidationType.CALL_RESET -> {
+                    add("force_callreset", "true")
                     add("force_callreset", "1")
                     add("validation_method", "callreset")
                 }
                 ValidationType.EMAIL -> {
+                    add("force_email", "true")
                     add("force_email", "1")
                     add("validation_method", "email")
                 }
                 ValidationType.MESSENGER -> {
+                    add("force_messenger", "true")
                     add("force_messenger", "1")
                     add("validation_method", "messenger")
                 }
                 else -> {
+                    add("force_sms", "true")
                     add("force_sms", "1")
+                    add("validation_method", "sms")
                 }
             }
             add("scope", "all")
@@ -502,7 +505,12 @@ class ExchangeAuthApi(
         postForm(url = EXCHANGE_TOKEN_ENDPOINT, form = form)
 
     private suspend fun postForm(url: String, form: FormBody): JsonObject {
-        val req = Request.Builder().url(url).post(form).build()
+        val req = Request.Builder()
+            .url(url)
+            .header("User-Agent", "VKAndroidApp/8.178-17551 (Android 14; SDK 34; arm64-v8a; Mobile; ru)")
+            .header("X-VK-Android-Client", "new")
+            .post(form)
+            .build()
 
         // Логируем запрос (без пароля в логах для безопасности).
         val grantType = formValue(form, "grant_type")
