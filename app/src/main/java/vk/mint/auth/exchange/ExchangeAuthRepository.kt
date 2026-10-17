@@ -63,6 +63,17 @@ class ExchangeAuthRepository(
     private val httpClient: OkHttpClient? = null,
 ) : CallsAuth {
 
+    /**
+     * Auth-code flow (шаги 0..4: get_anonym_token → auth.validateAccount →
+     * ecosystem.*), см. [AuthCodeRepository].
+     *
+     * Живёт поверх тех же [api] и [storage], поэтому отдельного DI не нужно —
+     * ленивая инициализация здесь единственная точка сборки. Финальный обмен
+     * на access_token намеренно остаётся в этом же классе ([signIn]),
+     * чтобы сохранение токена, exchange_token и LongPoll не дублировались.
+     */
+    val authCode: AuthCodeRepository by lazy { AuthCodeRepository(api, storage) }
+
     private val refreshMutex = Mutex()
 
     /**
@@ -879,6 +890,12 @@ class ExchangeAuthRepository(
         // (silentRefreshViaRemixsidLive/saveWebTokenResult/getExchangeTokenDetailed
         // ходят HTTP напрямую, мимо VKApiClient.call).
         return refreshMutex.withLock {
+            // #AUTH-CODE-FLOW: во время ручного входа не тратим попытки на продление
+            // старой сессии — пользователь сейчас введёт новые учётные данные.
+            if (nativeAuthInProgress) {
+                AppLog.i(TAG, "ensureFreshToken: SKIPPED — идёт ручной вход (auth-code)")
+                return@withLock null
+            }
             // #FORCE-REFRESH: force=true (err=5/1130) — токен отвергнут VK,
             // hasValidAccessToken() лжёт (проверяет только timestamp, не IP-binding).
             if (!force && storage.hasValidAccessToken()) {
@@ -1504,6 +1521,22 @@ class ExchangeAuthRepository(
     @Volatile private var lastRefreshSuccessMs: Long = 0L
 
     private val REFRESH_STAMPEDE_WINDOW_MS = 10_000L
+
+    /**
+     * #AUTH-CODE-FLOW: идёт ручной вход через auth-code (шаги 0..5).
+     *
+     * Пока флаг поднят, [ensureFreshToken] НЕ пытается продлить протукшую
+     * сессию: MainActivity остаётся жив за спиной AuthActivity и раз в секунду
+     * дёргает API, а тот в ответ запускает каскад Path 1.5 → HiddenSessionRefresh
+     * (`m.vk.ru/login?app_id=6287487`). Во время ручного входа это бессмысленно —
+     * пользователь всё равно сейчас предъявит новые учётные данные, — но стоит
+     * реальных HTTP-запросов, шума в логах и риска, что фоновой релогин
+     * перебьёт нашу сессию.
+     *
+     * Ставится в [vk.mint.auth.AuthViewModel.beginAccountValidation] и снимается
+     * при уходе с экрана авторизации.
+     */
+    @Volatile var nativeAuthInProgress: Boolean = false
 
     private suspend fun doSilentRefreshHttpLive(
         client: OkHttpClient,
