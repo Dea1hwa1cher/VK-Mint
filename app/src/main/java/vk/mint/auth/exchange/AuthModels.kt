@@ -85,6 +85,7 @@ sealed interface AuthState {
 /** Mirrors com.vk.superapp.core.api.models.ValidationType */
 enum class ValidationType {
     @SerializedName("sms")        SMS,
+    @SerializedName("app")        APP,
     @SerializedName("push")       PUSH,
     @SerializedName("email")      EMAIL,
     @SerializedName("ivr")        IVR,

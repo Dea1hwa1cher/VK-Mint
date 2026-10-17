@@ -90,8 +90,9 @@ internal fun ValidationCodeForm(
     // Allowed re-send ways from VK (e.g. if SMS was sent, user can re-send via push).
     val allowedWays = validation?.allowedWays ?: emptyList()
     val canResendViaPush = allowedWays.any { it == ValidationType.PUSH }
-    val canResendViaSms = allowedWays.any { it == ValidationType.SMS } || allowedWays.isEmpty()
+    val canResendViaSms = allowedWays.any { it == ValidationType.SMS } || allowedWays.isEmpty() || validation?.validationType != ValidationType.SMS
     val canResendViaEmail = allowedWays.any { it == ValidationType.EMAIL }
+    val canResendViaMessenger = allowedWays.any { it == ValidationType.MESSENGER }
 
     val keyboard = LocalSoftwareKeyboardController.current
     val codeFocus = remember { FocusRequester() }
@@ -274,35 +275,34 @@ internal fun ValidationCodeForm(
                     )
                 }
 
-                // Опции повторной отправки кода
-                if (allowedWays.isNotEmpty() && !isLoading) {
-                    val resendOptions = buildList {
-                        if (canResendViaPush) add(ValidationType.PUSH to "Отправить Push")
-                        if (canResendViaSms) add(ValidationType.SMS to "Отправить SMS")
-                        if (canResendViaEmail) add(ValidationType.EMAIL to "Отправить Email")
-                    }
-                    if (resendOptions.isNotEmpty()) {
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            text = "Получить код другим способом:",
-                            style = MaterialTheme.typography.vkSubhead,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                        ) {
-                            resendOptions.forEach { (type, label) ->
-                                VkButton(
-                                    onClick = { onResend(type) },
-                                    text = label,
-                                    mode = VkButtonMode.Tonal,
-                                    size = VkButtonSize.Small,
-                                    enabled = !isLoading,
-                                )
-                            }
+                // Опции повторной / альтернативной отправки кода (SMS, Push, Messenger, Email)
+                val resendOptions = buildList {
+                    if (canResendViaSms) add(ValidationType.SMS to "Отправить SMS")
+                    if (canResendViaPush) add(ValidationType.PUSH to "Отправить Push")
+                    if (canResendViaMessenger) add(ValidationType.MESSENGER to "В мессенджер")
+                    if (canResendViaEmail) add(ValidationType.EMAIL to "Отправить Email")
+                }
+                if (resendOptions.isNotEmpty() && !isLoading) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = if (validation?.validationType == ValidationType.SMS) "Не пришёл код? Отправить повторно:" else "Получить код подтверждения:",
+                        style = MaterialTheme.typography.vkSubhead,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    ) {
+                        resendOptions.forEach { (type, label) ->
+                            VkButton(
+                                onClick = { onResend(type) },
+                                text = label,
+                                mode = VkButtonMode.Tonal,
+                                size = VkButtonSize.Small,
+                                enabled = !isLoading,
+                            )
                         }
                     }
                 }
@@ -392,6 +392,8 @@ internal fun validationHint(type: ValidationType, phoneMask: String?): String {
         ValidationType.SMS_INBOX,
         ValidationType.LIBVERIFY ->
             "На ваш телефон$phoneSuffix отправлен SMS-код. Введите его ниже."
+        ValidationType.APP ->
+            "Введите код из приложения-генератора кодов (VK ID, Google Authenticator) или запросите SMS ниже."
         ValidationType.PUSH ->
             "На ваше устройство отправлено push-уведомление. Подтвердите вход в приложении VK, либо введите код из push ниже."
         ValidationType.EMAIL ->

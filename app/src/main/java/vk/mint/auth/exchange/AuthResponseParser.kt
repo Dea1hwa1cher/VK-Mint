@@ -215,10 +215,16 @@ object AuthResponseParser {
     internal fun parseValidationType(value: String): ValidationType = try {
         ValidationType.valueOf(value.uppercase())
     } catch (_: IllegalArgumentException) {
-        when (value.lowercase()) {
+        when (value.lowercase().trim()) {
+            "2fa_sms", "sms" -> ValidationType.SMS
+            "2fa_app", "app", "totp", "authenticator" -> ValidationType.APP
+            "2fa_libverify", "libverify" -> ValidationType.LIBVERIFY
+            "2fa_push", "push" -> ValidationType.PUSH
             "callreset", "call_reset" -> ValidationType.CALL_RESET
             "sms_inbox", "smsinbox" -> ValidationType.SMS_INBOX
             "tg", "telegram" -> ValidationType.TELEGRAM
+            "messenger", "vk_messenger" -> ValidationType.MESSENGER
+            "mail", "email" -> ValidationType.EMAIL
             else -> ValidationType.UNKNOWN
         }
     }

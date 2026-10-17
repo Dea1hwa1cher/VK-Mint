@@ -82,7 +82,7 @@ class ExchangeAuthApi(
             add("username", phone)
             add("password", password)
             add("2fa_supported", "1")
-            add("supported_ways", "push,email")
+            add("supported_ways", "sms,push,email,callreset,ivr,messenger")
             add("scope", "all")
             add("client_id", BuildConfig.VK_CLIENT_ID)
             add("client_secret", BuildConfig.VK_CLIENT_SECRET)
@@ -144,7 +144,7 @@ class ExchangeAuthApi(
             add("username", phone)
             add("code", code)
             add("2fa_supported", "1")
-            add("supported_ways", "push,email")
+            add("supported_ways", "sms,push,email,callreset,ivr,messenger")
             add("scope", "all")
             add("client_id", BuildConfig.VK_CLIENT_ID)
             add("client_secret", BuildConfig.VK_CLIENT_SECRET)
@@ -176,7 +176,7 @@ class ExchangeAuthApi(
             add("username", phone)
             add("password", "")
             add("2fa_supported", "1")
-            add("supported_ways", "push,email")
+            add("supported_ways", "sms,push,email,callreset,ivr,messenger")
             add("scope", "all")
             add("client_id", BuildConfig.VK_CLIENT_ID)
             add("client_secret", BuildConfig.VK_CLIENT_SECRET)
@@ -456,11 +456,31 @@ class ExchangeAuthApi(
             add("password", password)
             add("sid", sid)
             add("2fa_supported", "1")
-            // supported_ways mirrors VK client: push + email (sms via force_sms flag).
-            add("supported_ways", "push,email")
-            // force_sms is the official VK switch to request SMS specifically.
-            if (validationType == ValidationType.SMS) {
-                add("force_sms", "true")
+            add("supported_ways", "sms,push,email,callreset,ivr,messenger")
+            when (validationType) {
+                ValidationType.SMS -> {
+                    add("force_sms", "1")
+                    add("validation_method", "sms")
+                }
+                ValidationType.PUSH -> {
+                    add("force_push", "1")
+                    add("validation_method", "push")
+                }
+                ValidationType.CALL_RESET -> {
+                    add("force_callreset", "1")
+                    add("validation_method", "callreset")
+                }
+                ValidationType.EMAIL -> {
+                    add("force_email", "1")
+                    add("validation_method", "email")
+                }
+                ValidationType.MESSENGER -> {
+                    add("force_messenger", "1")
+                    add("validation_method", "messenger")
+                }
+                else -> {
+                    add("force_sms", "1")
+                }
             }
             add("scope", "all")
             add("client_id", BuildConfig.VK_CLIENT_ID)
