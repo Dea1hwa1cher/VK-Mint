@@ -213,11 +213,14 @@ class SilentTokenExchanger(
      */
     private fun parseExchangeResponse(json: JsonObject): Result {
         // OAuth2 error format
-        val errorObj = json.getAsJsonObject("error")
-        if (errorObj != null) {
-            val errorCode = errorObj.get("error_code")?.asInt
-            val errorMsg = errorObj.get("error_msg")?.asString
-                ?: errorObj.get("error")?.asString
+        val errElem = json.get("error")
+        val errorObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+        if (errorObj != null || (errElem != null && errElem.isJsonPrimitive)) {
+            val errorCode = errorObj?.get("error_code")?.asInt ?: json.get("error_code")?.asInt
+            val errorMsg = errorObj?.get("error_msg")?.asString
+                ?: errorObj?.get("error")?.asString
+                ?: json.get("error_description")?.asString
+                ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else null)
                 ?: "unknown error"
             AppLog.w(TAG, "exchange API error: code=$errorCode msg=$errorMsg")
             // err=5 = access_token невалиден (для anonym_token-based exchange).

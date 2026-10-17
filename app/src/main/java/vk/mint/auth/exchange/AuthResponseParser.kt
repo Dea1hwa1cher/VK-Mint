@@ -57,6 +57,7 @@ object AuthResponseParser {
                     ?: err.get("sid")?.asString
                     ?: return AuthState.Error(AuthErrorKind.UNKNOWN, "need_validation without sid")
                 val phone = err.get("phone")?.takeIf { !it.isJsonNull }?.asString
+                    ?: err.get("phone_mask")?.takeIf { !it.isJsonNull }?.asString
                 val hint = err.get("next_step")?.takeIf { !it.isJsonNull }?.asString
                 val supportedWays = err.get("supported_ways")?.takeIf { !it.isJsonNull }?.asString
                     ?.split(",")

@@ -171,8 +171,9 @@ class ExchangeAuthRepository(
             )
 
             // Проверяем, вернул ли VK запрос капчи (need_captcha).
-            val errObj = json.getAsJsonObject("error")
-            val errorStr = errObj?.get("error")?.asString ?: json.get("error")?.asString
+            val errElem = json.get("error")
+            val errObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+            val errorStr = if (errElem != null && errElem.isJsonPrimitive) errElem.asString else errObj?.get("error")?.asString
             if (errorStr.equals("need_captcha", ignoreCase = true)) {
                 val sid = errObj?.get("captcha_sid")?.asString ?: json.get("captcha_sid")?.asString ?: ""
                 val img = errObj?.get("captcha_img")?.asString ?: json.get("captcha_img")?.asString ?: ""
@@ -202,7 +203,7 @@ class ExchangeAuthRepository(
                     storage.clearAccessToken()
                     return AuthState.Error(
                         AuthErrorKind.EXPIRED,
-                        "Вход не удался: токен отклонён VK API. Войдите через «Войти через VK» или внешний браузер.",
+                        "Вход не удался: токен отклонён VK API. Попробуйте войти снова через пару минут.",
                     )
                 }
                 AppLog.i(TAG, "signIn: Direct Auth token verified successfully via users.get ✓")
@@ -234,8 +235,9 @@ class ExchangeAuthRepository(
             )
 
             // Проверяем, вернул ли VK запрос капчи (need_captcha).
-            val errObj = json.getAsJsonObject("error")
-            val errorStr = errObj?.get("error")?.asString ?: json.get("error")?.asString
+            val errElem = json.get("error")
+            val errObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+            val errorStr = if (errElem != null && errElem.isJsonPrimitive) errElem.asString else errObj?.get("error")?.asString
             if (errorStr.equals("need_captcha", ignoreCase = true)) {
                 val captchaSid = errObj?.get("captcha_sid")?.asString ?: json.get("captcha_sid")?.asString ?: ""
                 val img = errObj?.get("captcha_img")?.asString ?: json.get("captcha_img")?.asString ?: ""
@@ -661,10 +663,11 @@ class ExchangeAuthRepository(
         return try {
             // Step 1: Validate the token and get user info.
             val profileJson = api.validateWebToken(webToken)
-            val err = profileJson.getAsJsonObject("error")
-            if (err != null) {
-                val errCode = err.get("error_code")?.asInt ?: -1
-                val errMsg = err.get("error_msg")?.asString ?: "Unknown error"
+            val errElem = profileJson.get("error")
+            val err = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+            if (err != null || (errElem != null && errElem.isJsonPrimitive)) {
+                val errCode = err?.get("error_code")?.asInt ?: profileJson.get("error_code")?.asInt ?: -1
+                val errMsg = err?.get("error_msg")?.asString ?: profileJson.get("error_description")?.asString ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else "Unknown error")
                 AppLog.e(TAG, "Web token validation failed: error_code=$errCode msg=$errMsg")
                 return when (errCode) {
                     5 -> AuthState.Error(AuthErrorKind.INVALID_CREDENTIALS, "Токен недействителен или истёк")
@@ -1079,9 +1082,11 @@ class ExchangeAuthRepository(
         }
         return try {
             val json = api.getLongPollServer(token)
-            val err = json.getAsJsonObject("error")
-            if (err != null) {
-                AppLog.e(TAG, "fetchLongPoll API error: ${err.get("error_msg")}")
+            val errElem = json.get("error")
+            val err = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+            if (err != null || (errElem != null && errElem.isJsonPrimitive)) {
+                val errMsg = err?.get("error_msg")?.asString ?: json.get("error_description")?.asString ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else "unknown")
+                AppLog.e(TAG, "fetchLongPoll API error: $errMsg")
                 return null
             }
             val resp = json.getAsJsonObject("response") ?: return null
@@ -1332,24 +1337,21 @@ class ExchangeAuthRepository(
             return AuthState.Success(result)
         }
 
-        // Build error object — merge root-level error_description/error_code
-        // (oauth.vk.com format) into the err object.
-        val err = json.get("error")?.let { elem ->
-            if (elem.isJsonObject) elem.asJsonObject
-            else if (elem.isJsonPrimitive) JsonObject().apply { addProperty("error", elem.asString) }
-            else null
-        } ?: return AuthState.Error(AuthErrorKind.PARSE, "Unexpected response: ${json.toString().take(200)}")
-
-        // oauth.vk.com puts error_description and error_code at root level.
-        if (!err.has("error_description")) {
-            json.get("error_description")?.takeIf { !it.isJsonNull }?.let {
-                err.add("error_description", it)
+        // Build error object — handle nested format ({"error": {...}}),
+        // flat format ({"error": "need_validation", "validation_sid": "...", ...}),
+        // or VK API format ({"error_code": 5, ...}).
+        val err = when {
+            json.get("error")?.isJsonObject == true -> json.getAsJsonObject("error").apply {
+                if (!has("error_description")) {
+                    json.get("error_description")?.takeIf { !it.isJsonNull }?.let { add("error_description", it) }
+                }
+                if (!has("error_code")) {
+                    json.get("error_code")?.takeIf { !it.isJsonNull }?.let { add("error_code", it) }
+                }
             }
-        }
-        if (!err.has("error_code")) {
-            json.get("error_code")?.takeIf { !it.isJsonNull }?.let {
-                err.add("error_code", it)
-            }
+            json.get("error")?.isJsonPrimitive == true -> json
+            json.has("error_code") -> json
+            else -> return AuthState.Error(AuthErrorKind.PARSE, "Unexpected response: ${json.toString().take(200)}")
         }
 
         return AuthResponseParser.parseErrorState(err)

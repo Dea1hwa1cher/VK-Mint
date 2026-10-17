@@ -1180,10 +1180,11 @@ object WebTokenAuth {
                         return@withContext null
                     }
                     val json = JsonParser.parseString(body).asJsonObject
-                    val errorObj = json.getAsJsonObject("error")
-                    if (errorObj != null) {
-                        val errCodeEl = errorObj.get("error_code")
-                        val errMsgEl = errorObj.get("error_msg")
+                    val errElem = json.get("error")
+                    val errorObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+                    if (errorObj != null || (errElem != null && errElem.isJsonPrimitive)) {
+                        val errCodeEl = errorObj?.get("error_code") ?: json.get("error_code")
+                        val errMsgEl = errorObj?.get("error_msg") ?: json.get("error_description") ?: errElem
                         val errCode = if (errCodeEl != null && !errCodeEl.isJsonNull) errCodeEl.asInt else null
                         val errMsg = if (errMsgEl != null && !errMsgEl.isJsonNull) errMsgEl.asString else null
                         AppLog.w(TAG, "tryConnectExchangeViaHttp: VK error — code=$errCode msg=$errMsg")

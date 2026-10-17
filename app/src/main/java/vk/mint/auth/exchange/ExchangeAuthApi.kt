@@ -109,7 +109,12 @@ class ExchangeAuthApi(
                 },
             )
             val hasResponse = json.has("response")
-            val errCode = json.getAsJsonObject("error")?.get("error_code")?.asInt ?: 0
+            val errElem = json.get("error")
+            val errCode = if (errElem != null && errElem.isJsonObject) {
+                errElem.asJsonObject.get("error_code")?.asInt ?: 0
+            } else {
+                json.get("error_code")?.asInt ?: 0
+            }
             hasResponse && errCode == 0
         } catch (e: Exception) {
             AppLog.w(TAG, "verifyTokenWithUsersGet network error: ${e.message}")
@@ -303,11 +308,12 @@ class ExchangeAuthApi(
         }
 
         return try {
-            val errObj = json.getAsJsonObject("error")
-            if (errObj != null) {
-                val errCode = errObj.get("error_code")?.asInt ?: -1
-                val errSubcode = errObj.get("error_subcode")?.asInt ?: 0
-                val errMsg = errObj.get("error_msg")?.asString ?: "unknown"
+            val errElem = json.get("error")
+            val errObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+            if (errObj != null || (errElem != null && errElem.isJsonPrimitive)) {
+                val errCode = errObj?.get("error_code")?.asInt ?: json.get("error_code")?.asInt ?: -1
+                val errSubcode = errObj?.get("error_subcode")?.asInt ?: json.get("error_subcode")?.asInt ?: 0
+                val errMsg = errObj?.get("error_msg")?.asString ?: json.get("error_description")?.asString ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else "unknown")
                 AppLog.w(TAG, "getExchangeTokenDetailed API error $errCode/$errSubcode: $errMsg")
                 // Fix #230: err=5 = access_token невалиден (expired/revoked/IP mismatch).
                 // subcode 1130 = "given to another ip address" — типично при смене IP.

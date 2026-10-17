@@ -2632,7 +2632,7 @@ class VKApiClient(
         if (hqAllowedNow()) args["quality"] = "hq"
         val json = call("audio.get", args)
         if (json != null) {
-            val errorObj = json.getAsJsonObject("error")
+            val errorObj = json.get("error")?.takeIf { it.isJsonObject }?.asJsonObject
             if (errorObj == null) {
                 // Успех — парсим треки + извлекаем response.count.
                 val parsed = parseAudioResponseWithCount(json)
@@ -2784,7 +2784,7 @@ class VKApiClient(
         if (hqAllowedNow()) args["quality"] = "hq"
         val json = call("audio.search", args)
         if (json != null) {
-            val errorObj = json.getAsJsonObject("error")
+            val errorObj = json.get("error")?.takeIf { it.isJsonObject }?.asJsonObject
             if (errorObj == null) {
                 val (total, tracks) = parseAudioResponseWithCount(json)
                 // Фильтруем треки без URL (нельзя проиграть) — если их слишком много,
@@ -8202,7 +8202,11 @@ class VKApiClient(
                 AppLog.w("VKApiClient", "notificationsHideItem: hideNotification returned null (name=$name query=$query)")
                 false
             } else {
-                if (json.has("error")) AppLog.w("VKApiClient", "notificationsHideItem: API error=${json.getAsJsonObject("error").get("error_msg")?.asString}")
+                val errElem = json.get("error")
+                if (errElem != null) {
+                    val msg = if (errElem.isJsonObject) errElem.asJsonObject.get("error_msg")?.asString else errElem.asString
+                    AppLog.w("VKApiClient", "notificationsHideItem: API error=$msg")
+                }
                 true
             }
         } catch (e: Exception) {
@@ -16062,9 +16066,11 @@ class VKApiClient(
         val args = mutableMapOf<String, String>()
         if (!hash.isNullOrBlank()) args["hash"] = hash
         val json = call("accountPersonal.getActivityHistoryDevices", args, forceWebGateway = true) ?: return null
-        val errObj = json.getAsJsonObject("error")
-        if (errObj != null) {
-            AppLog.w("VKApiClient", "getActivityHistoryDevices error: ${errObj.get("error_msg")?.asString}")
+        val errElem = json.get("error")
+        val errObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+        if (errObj != null || (errElem != null && errElem.isJsonPrimitive)) {
+            val msg = errObj?.get("error_msg")?.asString ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else "unknown")
+            AppLog.w("VKApiClient", "getActivityHistoryDevices error: $msg")
             return null
         }
         return try {
@@ -16166,9 +16172,11 @@ class VKApiClient(
         if (!appId.isNullOrBlank()) args["app_id"] = appId
         if (!excludeDeviceId.isNullOrBlank()) args["exclude_device_id"] = excludeDeviceId
         val json = call("accountPersonal.resetSessions", args, forceWebGateway = true) ?: return false
-        val errObj = json.getAsJsonObject("error")
-        if (errObj != null) {
-            AppLog.w("VKApiClient", "resetSessions error: ${errObj.get("error_msg")?.asString}")
+        val errElem = json.get("error")
+        val errObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+        if (errObj != null || (errElem != null && errElem.isJsonPrimitive)) {
+            val msg = errObj?.get("error_msg")?.asString ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else "unknown")
+            AppLog.w("VKApiClient", "resetSessions error: $msg")
             return false
         }
         AppLog.i("VKApiClient", "resetSessions OK: device=$deviceId")
@@ -16200,9 +16208,11 @@ class VKApiClient(
         if (!appId.isNullOrBlank()) args["app_id"] = appId
         if (!excludeDeviceId.isNullOrBlank()) args["exclude_device_id"] = excludeDeviceId
         val json = call("accountPersonal.resetAllSessions", args, forceWebGateway = true) ?: return false
-        val errObj = json.getAsJsonObject("error")
-        if (errObj != null) {
-            AppLog.w("VKApiClient", "resetAllSessions error: ${errObj.get("error_msg")?.asString}")
+        val errElem = json.get("error")
+        val errObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+        if (errObj != null || (errElem != null && errElem.isJsonPrimitive)) {
+            val msg = errObj?.get("error_msg")?.asString ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else "unknown")
+            AppLog.w("VKApiClient", "resetAllSessions error: $msg")
             return false
         }
         AppLog.i("VKApiClient", "resetAllSessions OK (exclude=$excludeDeviceId)")
@@ -16305,9 +16315,11 @@ class VKApiClient(
         val args = mutableMapOf("action" to action)
         if (!hash.isNullOrBlank()) args["hash"] = hash
         val json = call("cua.getValidationMethods", args) ?: return null
-        val errObj = json.getAsJsonObject("error")
-        if (errObj != null) {
-            AppLog.w("VKApiClient", "cua.getValidationMethods error: ${errObj.get("error_msg")?.asString}")
+        val errElem = json.get("error")
+        val errObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+        if (errObj != null || (errElem != null && errElem.isJsonPrimitive)) {
+            val msg = errObj?.get("error_msg")?.asString ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else "unknown")
+            AppLog.w("VKApiClient", "cua.getValidationMethods error: $msg")
             return null
         }
         return try {
@@ -16376,9 +16388,10 @@ class VKApiClient(
         if (!hash.isNullOrBlank()) args["hash"] = hash
         args.putAll(extraParams)
         val json = call(method.apiSendName, args) ?: return vk.mint.data.model.CuaSendResult(false, error = "network")
-        val errObj = json.getAsJsonObject("error")
-        if (errObj != null) {
-            val msg = errObj.get("error_msg")?.asString ?: "unknown"
+        val errElem = json.get("error")
+        val errObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+        if (errObj != null || (errElem != null && errElem.isJsonPrimitive)) {
+            val msg = errObj?.get("error_msg")?.asString ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else "unknown")
             AppLog.w("VKApiClient", "${method.apiSendName} error: $msg")
             return vk.mint.data.model.CuaSendResult(false, error = msg)
         }
@@ -16407,10 +16420,11 @@ class VKApiClient(
         val args = mutableMapOf("code" to code)
         if (!hash.isNullOrBlank()) args["hash"] = hash
         val json = call(method.apiCheckName, args) ?: return vk.mint.data.model.CuaCheckResult(false, error = "network")
-        val errObj = json.getAsJsonObject("error")
-        if (errObj != null) {
-            val msg = errObj.get("error_msg")?.asString ?: "unknown"
-            val codeNum = errObj.get("error_code")?.takeIf { !it.isJsonNull }?.asInt
+        val errElem = json.get("error")
+        val errObj = if (errElem != null && errElem.isJsonObject) errElem.asJsonObject else null
+        if (errObj != null || (errElem != null && errElem.isJsonPrimitive)) {
+            val msg = errObj?.get("error_msg")?.asString ?: (if (errElem != null && errElem.isJsonPrimitive) errElem.asString else "unknown")
+            val codeNum = errObj?.get("error_code")?.takeIf { !it.isJsonNull }?.asInt
             AppLog.w("VKApiClient", "${method.apiCheckName} error: code=$codeNum msg=$msg")
             return vk.mint.data.model.CuaCheckResult(false, error = msg)
         }
