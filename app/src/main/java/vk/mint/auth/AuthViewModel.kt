@@ -9,7 +9,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import vk.mint.auth.exchange.AuthCodeRepository
+import vk.mint.auth.exchange.AuthCodeSession
+import vk.mint.auth.exchange.AuthCodeTokenResult
 import vk.mint.auth.exchange.AuthErrorKind
+import vk.mint.auth.exchange.VkAuthApiException
+import vk.mint.auth.exchange.VerificationMethod
 import vk.mint.auth.exchange.AuthResult
 import vk.mint.auth.exchange.AuthState
 import vk.mint.auth.exchange.ExchangeAuthRepository
@@ -145,7 +150,413 @@ class AuthViewModel(
     }
 
     // =====================================================================
-    // Step 1 — phone + password
+    // Auth-code flow (VK ID «Direct Auth») — шаги 0..5
+    //
+    // Отличие от submitCredentials ниже: здесь сначала спрашиваем у VK, что
+    // делать дальше, и UI рисует нужный экран по ответу, вместо того чтобы
+    // жёстко идти «пароль → код».
+    // Референс: Fenrir-for-VK `DirectAuthIdVKPresenter`.
+    // =====================================================================
+
+    /**
+     * Состояние auth-code сессии между шагами.
+     *
+     * Хранится отдельно от [_state]: тот перезаписывается каждым ответом VK,
+     * а нам нужны обе формы `sid` и хеши для финального обмена.
+     */
+    private var codeSession = AuthCodeSession()
+
+    /**
+     * Попадали ли мы на экран пароля ПОСЛЕ успешного `ecosystem.checkOtp`.
+     *
+     * Определяет `grant_type` финального обмена — см.
+     * [exchangeAuthCodeTokenWithPassword]. Аналог `backToPasswordOnError`
+     * в Fenrir.
+     */
+    private var passwordAfterOtp: Boolean = false
+
+    /**
+     * До какого момента локально запрещаем повторять обмен по паролю.
+     *
+     * Заполняется на `error_type = password_bruteforce_attempt`. Нужен потому,
+     * что каждая попытка продлевает счётчик у VK: без этого пользователь,
+     * нажимающий «Войти» в цикле, только отдаляет разблокировку. Срок условный —
+     * VK точной длительности не сообщает.
+     */
+    private var passwordBlockedUntilMs: Long = 0L
+
+    /**
+     * Шаг 0+1: получить анонимный токен и спросить у VK следующий шаг.
+     *
+     * На выходе [_state] = [AuthState.NeedValidation], в котором лежит
+     * `flowName` / `nextStepMethod` / `supportedMethods` — по ним UI решает,
+     * показать пароль, поле кода или экран выбора способа.
+     */
+    fun beginAccountValidation(login: String) {
+        val clean = login.trim()
+        if (clean.isBlank()) {
+            _state.value = AuthState.Error(AuthErrorKind.INVALID_CREDENTIALS, "Введите телефон или почту")
+            return
+        }
+        lastPhone = clean
+        // Не даём фоновому ensureFreshToken каскадить релогин в скрытом WebView,
+        // пока пользователь вводит учётные данные (см. nativeAuthInProgress).
+        repo.nativeAuthInProgress = true
+        codeSession = AuthCodeSession()
+        passwordAfterOtp = false
+        _state.value = AuthState.Loading
+        currentJob = viewModelScope.launch {
+            try {
+                val code = repo.authCode
+                val result = withContext(Dispatchers.IO) { code.validateAccount(clean) }
+                if (result.flowName == "need_registration") {
+                    _state.value = AuthState.Error(
+                        AuthErrorKind.NEED_SIGNUP,
+                        "Аккаунт не зарегистрирован в VK",
+                    )
+                    return@launch
+                }
+                _state.value = buildNeedValidation(result)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.w(TAG, "beginAccountValidation failed: ${e.message}")
+                _state.value = AuthState.Error(AuthErrorKind.UNKNOWN, e.message ?: "Ошибка validateAccount")
+            }
+        }
+    }
+
+    /** Шаг 3: отправить код выбранным способом (обновляет `sid` и подсказку). */
+    fun sendOtp(method: String) {
+        if (codeSession.sidRaw.isBlank()) return
+        _state.value = AuthState.Loading
+        currentJob = viewModelScope.launch {
+            try {
+                val sent = withContext(Dispatchers.IO) {
+                    repo.authCode.sendOtp(method, codeSession.sidForNextCall())
+                }
+                // sendOtp может вернуть sid в другой форме — принимаем как есть,
+                // но полную форму сохраняем на случай если вернётся короткая.
+                codeSession = codeSession.copy(
+                    sidRaw = sent.sid?.takeIf { it.isNotBlank() } ?: codeSession.sidRaw,
+                    method = method,
+                )
+                pendingSid = codeSession.sidForNextCall()
+                val prev = _state.value as? AuthState.NeedValidation
+                _state.value = (prev ?: defaultNeedValidation(method))
+                    .copy(
+                        validationSid = pendingSid,
+                        nextStepMethod = method,
+                        otpInfo = sent.info,
+                        otpCodeLength = sent.codeLength,
+                    )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = AuthState.Error(AuthErrorKind.UNKNOWN, e.message ?: "Не удалось отправить код")
+            }
+        }
+    }
+
+    /**
+     * Шаг 4: проверить код.
+     *
+     * При успехе либо сразу обмениваем токен (`canSkipPassword`), либо
+     * оставляем пользователя на экране пароля — как решит сервер.
+     */
+    fun checkOtp(method: String, code: String) {
+        val clean = code.trim()
+        if (codeSession.sidRaw.isBlank() || clean.isBlank()) {
+            _state.value = AuthState.Error(AuthErrorKind.INVALID_CREDENTIALS, "Введите код")
+            return
+        }
+        _state.value = AuthState.Loading
+        currentJob = viewModelScope.launch {
+            try {
+                val session = codeSession.copy(method = method)
+                val checked = withContext(Dispatchers.IO) {
+                    repo.authCode.checkOtp(method, clean, session)
+                }
+                // sid из checkOtp может прийти БЕЗ префикса loginvalidate_
+                // (наблюдалось на живом прогоне) — сохраняем ровно как вернул
+                // сервер, не нормализуя, иначе следующий вызов отвергнут.
+                codeSession = session.copy(
+                    sidAfterCheck = checked.sid,
+                    authHash = checked.authHash ?: session.authHash,
+                )
+                pendingSid = codeSession.sidForNextCall()
+                val prev = _state.value as? AuthState.NeedValidation
+                val merged = (prev ?: defaultNeedValidation(method)).copy(
+                    validationSid = pendingSid,
+                    canSkipPassword = checked.canSkipPassword,
+                    nextStepMethod = if (checked.canSkipPassword) null else ValidationMethodNames.PASSWORD,
+                )
+                if (checked.canSkipPassword) {
+                    // Сервер сказал: пароль не нужен, обмениваем сразу (шаг 5).
+                    exchangeAuthCodeToken(AuthCodeRepository.GrantType.WITHOUT_PASSWORD)
+                } else {
+                    // Пароль спросили после кода → финальный grant_type будет
+                    // phone_confirmation_sid, а не password (см. grant_typeChoice).
+                    passwordAfterOtp = true
+                    _state.value = merged
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _state.value = AuthState.Error(AuthErrorKind.INVALID_CREDENTIALS, vkAuthErrorText(e))
+            }
+        }
+    }
+
+    // =====================================================================
+    // Шаг 5 — финальный обмен (auth-code)
+    // =====================================================================
+
+    /**
+     * Обмен на access_token через `{api}/oauth/token`.
+     *
+     * Отличие от легаси [submitCredentials]: уходит с `anonymous_token`,
+     * `flow_type=tg_flow` и sid, принятым последним вызовом `ecosystem.*`.
+     *
+     * Пароль передаётся для всех grant_type, где VK его ждёт, — и для
+     * `password`, и для `phone_confirmation_sid` (в последнем случае sid
+     * уже проверен кодом, пароль идёт как подтверждение, а не как новая
+     * попытка входа).
+     */
+    fun exchangeAuthCodeToken(grantType: String) {
+        if (codeSession.sidRaw.isBlank()) {
+            _state.value = AuthState.Error(AuthErrorKind.UNKNOWN, "Сессия входа потеряна, начните заново")
+            return
+        }
+        _state.value = AuthState.Loading
+        currentJob = viewModelScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    repo.authCode.exchangeToken(
+                        grantType = grantType,
+                        login = lastPhone,
+                        session = codeSession,
+                        password = lastPassword.takeIf { it.isNotBlank() },
+                    )
+                }
+                handleTokenExchangeResult(result)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.w(TAG, "auth-code token exchange failed: ${e.message}")
+                _state.value = AuthState.Error(AuthErrorKind.UNKNOWN, e.message ?: "Не удалось получить токен")
+            }
+        }
+    }
+
+    /**
+     * Экран пароля внутри auth-code сессии: сохраняет пароль и делает обмен (шаг 5).
+     *
+     * `grant_type` выбирается по ТОМУ, как мы попали на экран пароля —
+     * это критично, и неочевидно:
+     *
+     *  - Пароль спросили сразу, без кода (`validateAccount` вернул
+     *    `next_step == null` или `verification_method == "password"`) →
+     *    [AuthCodeRepository.GrantType.PASSWORD]. Ни одного `ecosystem.*` вызова
+     *    не было, подтверждать нечем.
+     *  - Пароль спросили ПОСЛЕ успешного `ecosystem.checkOtp` →
+     *    [AuthCodeRepository.GrantType.PHONE_CONFIRMATION_SID]. Sid уже
+     *    проверен сервером, личность подтверждена кодом, и обмен идёт
+     *    по sid-ветке.
+     *
+     * Почему не всегда `password`: ветка `grant_type=password` у VK защищена
+     * `password_bruteforce_attempt`. На живом прогоне (17.10, 18.10) она
+     * стабильно отвечала `HTTP 401 {"error":"9;Flood control"}` — счётчик
+     * попыток по паролю у аккаунта исчерпан. Sid-ветка тем же запросом
+     * проходит, потому что пароль там не проверяется «с нуля».
+     *
+     * Референс: `DirectAuthIdVKPresenter.doAuth()` — `grantType` выбирается
+     * из `validateMethod?.name == "password"` / `backToPasswordOnError`.
+     */
+    fun exchangeAuthCodeTokenWithPassword(password: String) {
+        val waitMs = passwordBlockedUntilMs - System.currentTimeMillis()
+        if (waitMs > 0) {
+            _state.value = AuthState.Error(
+                AuthErrorKind.TOO_MANY_ATTEMPTS,
+                "VK заблокировал попытки входа по паролю. Повтор доступен через " +
+                    "${(waitMs + 59_999) / 60_000} мин — чаще пробовать не стоит, " +
+                    "счётчик продлевается.",
+            )
+            return
+        }
+        lastPassword = password
+        val grant = if (passwordAfterOtp) {
+            AuthCodeRepository.GrantType.PHONE_CONFIRMATION_SID
+        } else {
+            AuthCodeRepository.GrantType.PASSWORD
+        }
+        AppLog.i(TAG, "#AUTH-CODE-FLOW: обмен паролем, grant_type=$grant (после OTP=$passwordAfterOtp)")
+        exchangeAuthCodeToken(grant)
+    }
+
+    /** Разбор ответа `{api}/oauth/token`: успех сохраняем, отказы показываем. */
+    private suspend fun handleTokenExchangeResult(result: AuthCodeTokenResult) {
+        if (result.isSuccess) {
+            val token = result.accessToken!!
+            _state.value = withContext(Dispatchers.IO) {
+                repo.saveOAuthToken(token, result.userId, null)
+            }
+            return
+        }
+        val error = result.error.orEmpty()
+        // need_validation после обмена — VK всё ещё хоет код (например 2fa_libverify).
+        if (error.contains("need_validation", ignoreCase = true)) {
+            _state.value = AuthState.NeedValidation(
+                validationType = ValidationType.UNKNOWN,
+                validationSid = result.validationSid?.takeIf { it.isNotBlank() }
+                    ?: codeSession.sidForNextCall(),
+                phoneMask = null,
+                nextStepMethod = ValidationMethodNames.SMS,
+            )
+            return
+        }
+        _state.value = when {
+            result.isPasswordBruteforce -> {
+                // Счётчик парольных попыток у аккаунта. Каждая новая попытка его
+                // продлевает, поэтому гасим локальный повтор на [_PASSWORD_COOLDOWN_MS] —
+                // иначе пользователь, тыкающий «Войти», только отдаляет разблокировку.
+                passwordBlockedUntilMs = System.currentTimeMillis() + PASSWORD_COOLDOWN_MS
+                AppLog.w(
+                    TAG,
+                    "#AUTH-CODE-FLOW: password_bruteforce_attempt — локальный повтор " +
+                        "заблокирован на ${PASSWORD_COOLDOWN_MS / 60_000} мин",
+                )
+                AuthState.Error(
+                    AuthErrorKind.TOO_MANY_ATTEMPTS,
+                    "VK заблокировал попытки входа по паролю для этого аккаунта. " +
+                        "Подождите, воспользуйтесь восстановлением пароля или войдите позже.",
+                )
+            }
+            error.contains("captcha", true) ->
+                AuthState.Error(AuthErrorKind.TOO_MANY_ATTEMPTS, "Требуется подтверждение капчи")
+            error.contains("too_many", true) || error.contains("flood", true) ->
+                AuthState.Error(
+                    AuthErrorKind.TOO_MANY_ATTEMPTS,
+                    "Слишком много попыток входа. VK временно ограничил доступ.",
+                )
+            error.contains("invalid_client", true) ->
+                AuthState.Error(AuthErrorKind.UNKNOWN, "VK отклонил приложение. Проверьте client_id.")
+            else -> AuthState.Error(
+                AuthErrorKind.INVALID_CREDENTIALS,
+                humanizeError(result.errorDescription ?: error.ifBlank { "Вход не удался" }),
+            )
+        }
+    }
+
+    /**
+ * Человеческий текст для ошибки шага auth-code.
+ *
+ * VK отдаёт коды без расшифровки («Incorrect code: invalid code for phone»),
+ * поэтому разбираем их здесь. Неизвестный код показываем с текстом VK —
+ * так диагностика не теряется.
+ */
+    private fun vkAuthErrorText(e: Exception): String {
+        if (e !is VkAuthApiException) {
+            return humanizeError(e.message ?: "Неверный код подтверждения")
+        }
+        AppLog.w(TAG, "#AUTH-CODE-FLOW: VK отклонил шаг — code=${e.code} subcode=${e.subcode} ${e.message}")
+        return when (e.code) {
+            1110 -> "Неверный код подтверждения. Проверьте раскладку и попробуйте снова."
+            1116 -> "Требуется подтверждение капчи."
+            9 -> "VK временно ограничил число попыток входа. Подождите и повторите позже."
+            1117 -> "Пароль неверный или вход временно заблокирован."
+            -1 -> humanizeError(e.message ?: "VK отклонил запрос")
+            else -> humanizeError(e.message ?: "Ошибка VK (${e.code})")
+        }
+    }
+
+    /**
+     * Шаг 2: список способов подтверждения (по приоритету VK).
+     *
+     * Вызывается, когда `validateAccount` сказал «способов больше одного», но
+     * список пришёл отдельным вызовом. До этого пользователь видит WAITING_STEP.
+     *
+     * Страховка от залипания: если список не пришёл (пустой или ошибка), мы НЕ
+     * оставляем его на индикаторе — показываем хотя бы `next_step`-метод, который
+     * VK уже назвал в `validateAccount`. Раньше пустой список держал экран
+     * «Проверяем аккаунт» бесконечно (воспроизведено18.10 00:55).
+     */
+    fun loadVerificationMethods() {
+        val sid = codeSession.sidRaw
+        if (sid.isBlank()) return
+        viewModelScope.launch {
+            var loaded = emptyList<VerificationMethod>()
+            try {
+                loaded = withContext(Dispatchers.IO) { repo.authCode.verificationMethods(sid) }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "loadVerificationMethods failed: ${e.message}")
+            }
+            val methods = loaded.ifEmpty {
+                // Откат на next_step: один способ подтверждения точно рабочий.
+                listOfNotNull(
+                    (_state.value as? AuthState.NeedValidation)?.nextStepMethod
+                        ?.takeIf { it != ValidationMethodNames.PASSWORD }
+                        ?.let { name ->
+                            VerificationMethod(name = name, priority = 0, title = null, info = null)
+                        },
+                )
+            }
+            if (methods.isEmpty()) {
+                AppLog.w(TAG, "loadVerificationMethods: ни список, ни next_step — снимаем WAITING_STEP")
+                val prev = _state.value as? AuthState.NeedValidation ?: return@launch
+                _state.value = prev.copy(hasAnotherMethods = false)
+                return@launch
+            }
+            val prev = _state.value as? AuthState.NeedValidation
+            _state.value = (prev ?: defaultNeedValidation(null)).copy(supportedMethods = methods)
+        }
+    }
+
+    private fun buildNeedValidation(result: vk.mint.auth.exchange.ValidateAccountResult):
+        AuthState.NeedValidation {
+        pendingSid = result.sid
+        // sid нормализуем к полной форме: ecosystem.* ждёт именно её, пока
+        // checkOtp не вернёт короткую.
+        codeSession = AuthCodeSession(
+            sidRaw = AuthCodeSession.normalizeFull(result.sid),
+            rememberHash = result.rememberHash,
+        )
+        val nextMethod = result.nextStepMethod
+        return defaultNeedValidation(nextMethod).copy(
+            validationSid = pendingSid,
+            flowName = result.flowName,
+            nextStepMethod = nextMethod,
+            phoneMask = result.phoneMask,
+            canSkipPassword = result.canSkipPassword,
+            hasAnotherMethods = result.hasAnotherMethods,
+        )
+    }
+
+    private fun defaultNeedValidation(method: String?): AuthState.NeedValidation =
+        AuthState.NeedValidation(
+            validationType = ValidationType.UNKNOWN,
+            validationSid = pendingSid,
+            phoneMask = lastPhoneMask(),
+            nextStepMethod = method,
+        )
+
+    private fun lastPhoneMask(): String? = lastPhone.takeIf { it.length >= 4 }?.let {
+        it.take(1) + "******" + it.takeLast(2)
+    }
+
+    /** Имена способов подтверждения, которые VK использует в полях. */
+    object ValidationMethodNames {
+        const val PASSWORD = "password"
+        const val SMS = "sms"
+        const val PUSH = "push"
+        const val EMAIL = "email"
+        const val CALLRESET = "callreset"
+        const val RESERVE_CODE = "reserve_code"
+        const val CODEGEN = "codegen"
+    }
+
+    // =====================================================================
+    // Step 1 — phone + password (legacy direct auth)
     // =====================================================================
 
     val savedPhone: String get() = lastPhone
@@ -570,6 +981,15 @@ class AuthViewModel(
         _state.value = AuthState.Idle
         pendingSid = ""
         lastPassword = ""
+        codeSession = AuthCodeSession()
+        repo.nativeAuthInProgress = false
+    }
+
+    override fun onCleared() {
+        // ViewModel умер вместе с AuthActivity — фоновой refresh должен
+        // снова взвесиваться, иначе приложение останется без обновления токена.
+        repo.nativeAuthInProgress = false
+        super.onCleared()
     }
 
     // =====================================================================
@@ -608,5 +1028,14 @@ class AuthViewModel(
 
     private companion object {
         const val TAG = "AuthViewModel"
+
+        /**
+         * Локальный запрет повторов после `password_bruteforce_attempt`.
+         *
+         * 30 минут — оценочное значение: VK длительность окна не сообщает,
+         * а точная цифра была бы выдумкой. Задача — не дать продлить счётчик
+         * серией нажатий, а не угадать срок разблокировки.
+         */
+        const val PASSWORD_COOLDOWN_MS = 30 * 60 * 1000L
     }
 }

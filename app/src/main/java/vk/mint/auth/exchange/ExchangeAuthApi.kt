@@ -570,6 +570,205 @@ class ExchangeAuthApi(
     private inline fun formBody(builder: FormBody.Builder.() -> Unit): FormBody =
         FormBody.Builder().apply(builder).build()
 
+    // =====================================================================
+    // Auth-code flow (VK ID «Direct Auth») — шаги 0..3
+    //
+    // Отличается от блока выше: сначала спрашиваем у VK, что делать дальше
+    // (auth.validateAccount), и только потом вводим пароль/код. Это снимает
+    // жёсткую привязку UI к порядку «пароль → код» и убирает flood_control,
+    // потому что запрос идёт с anonymous_token.
+    //
+    // Референс: Fenrir-for-VK `IAuthService` / `DirectAuthIdVKPresenter`.
+    // Хосты: /oauth/* → {api}/oauth  (у Fenrir authDomain = "api.vk.ru/oauth"),
+    //        /method/* → {api}/method.
+    // =====================================================================
+
+    /**
+     * Шаг 0 — анонимный токен.
+     *
+     * POST `{api}/oauth/get_anonym_token`. Единственный вызов флоу, где нужен
+     * `client_secret`; результат кэшируется в [AuthCodeRepository].
+     */
+    suspend fun getAnonymToken(deviceId: String): JsonObject = postForm(
+        url = AuthDomainsConfig.apiOauthUrl("get_anonym_token"),
+        form = formBody {
+            add("api_id", BuildConfig.VK_CLIENT_ID)
+            add("client_id", BuildConfig.VK_CLIENT_ID)
+            add("client_secret", BuildConfig.VK_CLIENT_SECRET)
+            add("v", BuildConfig.VK_API_VERSION)
+            add("device_id", deviceId)
+            add("lang", DEVICE_LANG)
+            add("https", "1")
+        },
+    )
+
+    /**
+     * Шаг 1 — «что делать дальше».
+     *
+     * POST `{api}/method/auth.validateAccount`. Возвращает `flow_name`, `sid`
+     * и `next_step.verification_method` — по нему UI выбирает экран.
+     *
+     * @param anonymToken токен из [getAnonymToken]; идёт в поле `access_token`.
+     * @param sakVersion  опциональная anti-fraud строка версии VK Android.
+     *                    По умолчанию НЕ отправляется: подделывать чужую
+     *                    версию клиента без нужды не стоит, а текущий
+     *                    `grant_type=password` работает и без неё.
+     */
+    suspend fun validateAccount(
+        login: String,
+        anonymToken: String,
+        deviceId: String,
+        supportedWays: String = DEFAULT_SUPPORTED_WAYS,
+        sakVersion: String? = BuildConfig.VK_SAK_VERSION,
+        flowType: String = FLOW_WITHOUT_PASSWORD,
+    ): JsonObject = postForm(
+        url = AuthDomainsConfig.apiMethodUrl("auth.validateAccount"),
+        form = formBody {
+            add("api_id", BuildConfig.VK_CLIENT_ID)
+            add("login", login)
+            add("access_token", anonymToken)
+            add("device_id", deviceId)
+            add("lang", DEVICE_LANG)
+            add("v", BuildConfig.VK_API_VERSION)
+            add("https", "1")
+            add("supported_ways", supportedWays)
+            add("force_password", "0")
+            add("passkey_supported", "0")
+            add("flow_type", flowType)
+            if (!sakVersion.isNullOrBlank()) add("sak_version", sakVersion)
+        },
+    )
+
+    /**
+     * Шаг 2 — список доступных способов подтверждения, отсортированный по
+     * приоритету VK. Вызывается, только если `next_step` сообщил, что
+     * альтернативы есть.
+     */
+    suspend fun getEcosystemVerificationMethods(
+        sid: String,
+        anonymToken: String,
+        deviceId: String,
+    ): JsonObject = postForm(
+        url = AuthDomainsConfig.apiMethodUrl("ecosystem.getVerificationMethods"),
+        form = formBody {
+            add("api_id", BuildConfig.VK_CLIENT_ID)
+            add("sid", sid)
+            add("access_token", anonymToken)
+            add("device_id", deviceId)
+            add("lang", DEVICE_LANG)
+            add("v", BuildConfig.VK_API_VERSION)
+            add("https", "1")
+        },
+    )
+
+    /**
+     * Шаг 3 — отправка кода выбранным способом.
+     *
+     * Имя метода собирается из способа: `sms → ecosystem.sendOtpSms`,
+     * `callreset → ecosystem.sendOtpCallreset` и т.д.
+     */
+    suspend fun sendEcosystemOtp(
+        method: String,
+        sid: String,
+        anonymToken: String,
+        deviceId: String,
+    ): JsonObject = postForm(
+        url = AuthDomainsConfig.apiMethodUrl("ecosystem.sendOtp${ecosystemSuffix(method)}"),
+        form = formBody {
+            add("api_id", BuildConfig.VK_CLIENT_ID)
+            add("sid", sid)
+            add("access_token", anonymToken)
+            add("device_id", deviceId)
+            add("lang", DEVICE_LANG)
+            add("v", BuildConfig.VK_API_VERSION)
+            add("https", "1")
+        },
+    )
+
+    /** Шаг 4 — проверка введённого кода. Возвращает новый `sid` и `can_skip_password`. */
+    suspend fun checkEcosystemOtp(
+        method: String,
+        code: String,
+        sid: String,
+        anonymToken: String,
+        deviceId: String,
+    ): JsonObject = postForm(
+        url = AuthDomainsConfig.apiMethodUrl("ecosystem.checkOtp"),
+        form = formBody {
+            add("api_id", BuildConfig.VK_CLIENT_ID)
+            add("sid", sid)
+            add("code", code)
+            add("verification_method", method)
+            add("access_token", anonymToken)
+            add("device_id", deviceId)
+            add("lang", DEVICE_LANG)
+            add("v", BuildConfig.VK_API_VERSION)
+            add("https", "1")
+        },
+    )
+
+    /** `sms → Sms`, `callreset → Callreset` — суффикс имени метода VK. */
+    private fun ecosystemSuffix(method: String): String =
+        method.replaceFirstChar { it.uppercase() }.replace('_', 'E')
+
+    /** Публичный вид [ecosystemSuffix] — для читаемых логов репозитория. */
+    fun ecosystemMethodSuffix(method: String): String = ecosystemSuffix(method)
+
+    /**
+     * Шаг 5 — финальный обмен на access_token.
+     *
+     * POST `{api}/oauth/token`. Набор параметров — один в один с
+     * `IAuthService.directLogin` эталона (Fenrir-for-VK). Отличия от легаси
+     * [postLegacyAuthEndpoint] (`oauth.vk.com/access_token`):
+     *  - `anonymous_token` — токен шага 0;
+     *  - `flow_type=tg_flow`;
+     *  - `sid` в той форме, которую принял последний вызов `ecosystem.*`.
+     *
+     * ВАЖНО: `auth_hash` и `remember_hash` НЕ отправляются, хотя приходят в
+     * ответах `checkOtp` / `validateAccount`. У эталона таких параметров в
+     * `directLogin` нет, и их отсутствие в `IAuthService.directLogin` — не
+     * упущение. Мы их разбираем только для диагностики (см. [AuthCodeSession]).
+     *
+     * Второй важный момент — [grantType]. Ветка `password` у VK закрыта
+     * счётчиком `password_bruteforce_attempt`: на живом прогоне аккаунт с
+     * исчерпанным счётчиком получал `HTTP 401 {"error":"9;Flood control"}`
+     * на каждый `grant_type=password`, тогда как `phone_confirmation_sid`
+     * в тех же условиях пароль заново не проверяет. Выбор grant_type —
+     * в [vk.mint.auth.AuthViewModel.exchangeAuthCodeTokenWithPassword].
+     *
+     * @param grantType `password` | `without_password` | `phone_confirmation_sid`.
+     */
+    suspend fun authCodeToken(
+        grantType: String,
+        login: String,
+        anonymToken: String,
+        session: AuthCodeSession,
+        deviceId: String,
+        password: String? = null,
+        code: String? = null,
+        sakVersion: String? = BuildConfig.VK_SAK_VERSION,
+        flowType: String = FLOW_TG,
+    ): JsonObject = postForm(
+        url = AuthDomainsConfig.authCodeTokenUrl(),
+        form = formBody {
+            add("grant_type", grantType)
+            add("api_id", BuildConfig.VK_CLIENT_ID)
+            add("username", login)
+            add("2fa_supported", "1")
+            add("scope", "all")
+            add("device_id", deviceId)
+            add("lang", DEVICE_LANG)
+            add("https", "1")
+            add("v", BuildConfig.VK_API_VERSION)
+            add("sid", session.sidForNextCall())
+            add("flow_type", flowType)
+            add("anonymous_token", anonymToken)
+            if (!password.isNullOrEmpty()) add("password", password)
+            if (!code.isNullOrEmpty()) add("code", code)
+            if (!sakVersion.isNullOrBlank()) add("sak_version", sakVersion)
+        },
+    )
+
     /**
      * Mirrors AuthByExchangeToken$Initiator from decompiled VK 8.178.
      * NO_INITIATOR has value=null (VK sends no initiator param for initial auth).
@@ -621,5 +820,27 @@ class ExchangeAuthApi(
          */
         val EXCHANGE_TOKEN_ENDPOINT: String
             get() = AuthDomainsConfig.idExchangeTokenUrl()
+
+        /** Язык запросов к auth-эндпоинтам — VK ждёт ISO-639-1. */
+        const val DEVICE_LANG = "ru"
+
+        /**
+         * Способы подтверждения, которые мы просим у VK.
+         * Порядок = приоритет отображения. `password` добавляет экран пароля,
+         * остальные — варианты кодового подтверждения.
+         */
+        const val DEFAULT_SUPPORTED_WAYS =
+            "push,email,sms,callreset,password,reserve_code,codegen"
+
+        /** Flow-тип для [validateAccount]: «вход без пароля» (сначала код). */
+        const val FLOW_WITHOUT_PASSWORD = "auth_without_password"
+
+        /**
+         * Flow-тип финального обмена ([authCodeToken]).
+         *
+         * Fenrir шлёт ровно `tg_flow` (DirectAuthIdVKPresenter.kt:496). Значение
+         * от VK, не наше — не подменяем.
+         */
+        const val FLOW_TG = "tg_flow"
     }
 }

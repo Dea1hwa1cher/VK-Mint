@@ -335,6 +335,26 @@ object AuthDomainsConfig {
     fun apiMethodUrl(methodName: String): String = "https://${current.apiHost}/method/$methodName"
 
     /**
+     * Auth-code OAuth URL — https://<apiHost>/oauth/<name>
+     *
+     * ВАЖНО: это НЕ `oauthHost`. Auth-code флоу (get_anonym_token, token)
+     * живёт под API-хостом в подпапке `/oauth` — так же, как в Fenrir-for-VK,
+     * где `authDomain = "api.vk.ru/oauth"` (MainSettings.kt:458-460).
+     * Старый Direct Auth ходил на `oauth.vk.com/access_token` — это другой
+     * эндпоинт, и перепутать их легко.
+     */
+    fun apiOauthUrl(name: String): String = "https://${current.apiHost}/oauth/$name"
+
+    /**
+     * Auth-code token URL — https://<apiHost>/oauth/token
+     *
+     * Финальный обмен `auth_code`/пароля на access_token. Отличается от
+     * [oauthAccessTokenUrl] (`oauth.vk.com/access_token`) — сюда обязательно
+     * передаётся `anonymous_token`.
+     */
+    fun authCodeTokenUrl(): String = apiOauthUrl("token")
+
+    /**
      * Web client_id — из текущего snapshot (может быть переопределён пользователем).
      */
     fun webClientId(): String = current.webClientId

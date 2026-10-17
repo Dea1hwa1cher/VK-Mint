@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -42,13 +44,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import vk.mint.BuildConfig
 import vk.mint.R
 import vk.mint.VkMintApp
 import vk.mint.auth.exchange.AuthDomainsConfig
@@ -166,7 +171,19 @@ class AuthActivity : ComponentActivity() {
         }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        AppLog.i(TAG, "onCreate — WebView m.vk.ru (primary) + Direct Auth (deep fallback)")
+
+        // #AUTH-LOGGING: во время авторизации нужен ПОЛНЫЙ лог, а не только
+        // ERROR — прежде всего тела ответов VK из ExchangeAuthApi.postForm
+        // (flow_name / sid / code_length / тексты ошибок) и выбранный шаг
+        // auth-code flow. По умолчанию AppLog пишет только ERROR (quiet mode),
+        // из-за чего диагностика входа невозможна. В debug-сборке включаем
+        // принудительно; в release поведение остаётся пользовательской
+        // настройкой.
+        if (BuildConfig.DEBUG) {
+            AppLog.setErrorsOnly(false)
+        }
+
+        AppLog.i(TAG, "onCreate — native VK X flow (welcome → login → step-by-step auth)")
         // #P2-8: VkAuthWebViewFactoryState.reset() удалён вместе с мёртвым V1.
 
         // Fix #176 УДАЛЕН (2026-08-06, #WEBVIEW-FIRST-LOAD-HANG):
@@ -428,7 +445,66 @@ class AuthActivity : ComponentActivity() {
     }
 }
 
-private enum class AuthPhase { VK_ID_WEB, SUCCESS }
+/**
+ * Фазы нативного флоу авторизации.
+ *
+ * Верхнеуровневый порядок — «одно действие — один экран» (как в VK X).
+ * Начиная с [WAITING_STEP] порядок шагов определяет **сервер**: мы спрашиваем
+ * `auth.validateAccount` и уходим либо в [PASSWORD], либо в [CODE], либо в
+ * [SELECT_METHOD] — в зависимости от `flow_name` и `next_step` в ответе.
+ *
+ * [VK_ID_WEB] — запасной и восстановительный путь через веб-форму VK ID.
+ * [SUCCESS] — терминальный экран «Вход выполнен» перед закрытием Activity.
+ */
+private enum class AuthPhase {
+    WELCOME,
+    LOGIN,
+
+    /** Ждём ответа `auth.validateAccount`. */
+    WAITING_STEP,
+
+    /** VK разрешил несколько способов подтверждения. */
+    SELECT_METHOD,
+
+    PASSWORD,
+    CODE,
+    VK_ID_WEB,
+    SUCCESS,
+}
+
+/** Фазы, на которых показывается нативная форма ввода. */
+private val AuthPhase.isNativeForm: Boolean
+    get() = this == AuthPhase.LOGIN || this == AuthPhase.PASSWORD ||
+        this == AuthPhase.CODE || this == AuthPhase.SELECT_METHOD ||
+        this == AuthPhase.WAITING_STEP
+
+/** Предыдущая фаза для системной кнопки «назад». */
+private fun AuthPhase.previous(): AuthPhase = when (this) {
+    AuthPhase.SELECT_METHOD, AuthPhase.PASSWORD, AuthPhase.CODE, AuthPhase.WAITING_STEP ->
+        AuthPhase.LOGIN
+    else -> AuthPhase.WELCOME
+}
+
+/**
+ * Куда уводить пользователя по ответу `auth.validateAccount`.
+ *
+ * Порядок решений:
+ *  1. VK разрешил больше одного способа подтверждения → экран выбора.
+ *  2. Пароля нет вовсе, либо сервер просит его следующим → экран пароля.
+ *  3. Иначе → поле кода для `next_step.verification_method`.
+ *
+ * Отдельно [AuthPhase.WAITING_STEP]: когда сервер сообщил, что альтернативные
+ * способы есть, но список с ними ещё не догружен, показываем индикатор, а НЕ
+ * экран кода. Иначе пользователь на 200 мс увидит поле ввода, которое тут же
+ * сменится экраном выбора.
+ */
+private fun routeOf(v: AuthState.NeedValidation): AuthPhase = when {
+    v.supportedMethods.size > 1 -> AuthPhase.SELECT_METHOD
+    v.hasAnotherMethods && v.supportedMethods.isEmpty() -> AuthPhase.WAITING_STEP
+    v.nextStepMethod == null ||
+        v.nextStepMethod == AuthViewModel.ValidationMethodNames.PASSWORD -> AuthPhase.PASSWORD
+    else -> AuthPhase.CODE
+}
 
 @Composable
 private fun AuthScreen(
@@ -441,18 +517,85 @@ private fun AuthScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
 
-    var phase by rememberSaveable(silentMode) {
-        mutableStateOf(AuthPhase.VK_ID_WEB)
+    // #AUTH-UX-NATIVE (2026-10): нативный флоу по референсу VK X.
+    // В silent-режиме и после logout сразу уходим в WebView VK ID — там же
+    // живёт очистка web_token из localStorage m.vk.ru (#LOGOUT-WEBTOKEN-CLEAR)
+    // и фоновый silent-обмен remixsid → токен.
+    val initialPhase = if (silentMode || clearStoredWebToken) {
+        AuthPhase.VK_ID_WEB
+    } else {
+        AuthPhase.WELCOME
     }
 
+    var phase by rememberSaveable(silentMode, clearStoredWebToken) {
+        mutableStateOf(initialPhase)
+    }
+    var login by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var code by rememberSaveable { mutableStateOf("") }
+    var authError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    /**
+     * Предыдущее значение [_state]-а — нужно, чтобы отличить «ошибка в ответ на
+     * наш запрос» от «ошибка фонового обновления токена».
+     */
+    var previousState by remember { mutableStateOf<AuthState?>(null) }
+
+    /**
+     * Способ подтверждения, выбранный сервером (auth-code флоу).
+     *
+     * `null` означает легаси-ветку `need_validation`, где код уходит
+     * через `grant_type=phone_confirmation_sid`. Не `null` — код проверяется
+     * через `ecosystem.checkOtp`.
+     */
+    var currentMethod by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val keyboard = LocalSoftwareKeyboardController.current
+    val loginFocus = remember { FocusRequester() }
+    val passwordFocus = remember { FocusRequester() }
+    val codeFocus = remember { FocusRequester() }
+
+    // Код приходит от VK только после успешного логина/пароля.
+    val validation = (state as? AuthState.NeedValidation)
+    val isLoading = state is AuthState.Loading && phase.isNativeForm
+
     LaunchedEffect(Unit) {
+        // Префилл сохранённого телефона — если пользователь уже уходил
+        // на web-форму и вернулся, поле не придётся вводить заново.
+        if (login.isBlank()) {
+            val saved = viewModel.savedPhone
+            if (saved.isNotBlank()) login = saved
+        }
         if (silentMode) {
             AppLog.i("AuthActivity", "Silent mode — attempting silent auto-login")
             viewModel.tryAutoLogin()
         }
     }
 
+    // Автофокус на поле активного шага + подъём клавиатуры.
+    LaunchedEffect(phase) {
+        // #AUTH-STALE-ERROR: баннер об ошибке не должен переезжать на следующий
+        // экран. Раньше authError жил, пока кто-нибудь явно его не сбросил, и
+        // ошибка, полученная на одном шаге, показывалась на следующем.
+        authError = null
+        when (phase) {
+            AuthPhase.LOGIN -> loginFocus.requestFocus()
+            AuthPhase.PASSWORD -> passwordFocus.requestFocus()
+            AuthPhase.CODE -> codeFocus.requestFocus()
+            else -> Unit
+        }
+    }
+
+    // Системная кнопка «назад» листает шаги, а не закрывает Activity.
+    BackHandler(enabled = phase != AuthPhase.SUCCESS && phase != AuthPhase.VK_ID_WEB) {
+        keyboard?.hide()
+        authError = null
+        phase = phase.previous()
+    }
+
     LaunchedEffect(state) {
+        val prev = previousState
+        previousState = state
         when (state) {
             is AuthState.Success -> {
                 phase = AuthPhase.SUCCESS
@@ -472,6 +615,51 @@ private fun AuthScreen(
                         AppLog.w("AuthActivity", "Toast display failed: ${e.message}")
                     }
                     onCancel()
+                } else if (phase.isNativeForm) {
+                    // #AUTH-UX-NATIVE: раньше AuthState.Error в ручном режиме
+                    // нигде не отрисовывался — пользователь видел только тост
+                    // в silent-режиме и немую кнопку. Теперь ошибка показывается
+                    // баннером под полем на текущем шаге.
+                    val humanized = humanizeError((state as AuthState.Error).message)
+                    // #AUTH-STALE-ERROR: показываем только то, что пришло в ответ
+                    // на наш собственный запрос, т.е. после Loading. Ошибки фонового
+                    // обновления токена (ensureFreshToken из MainActivity за спиной)
+                    // тоже эмитятся в этот же state — раньше они вылезали баннером
+                    // на экране пароля, хотя пользователь ничего не вводил.
+                    if (prev is AuthState.Loading) {
+                        AppLog.w("AuthActivity", "Auth error on phase=$phase: $humanized")
+                        authError = humanized
+                    } else {
+                        AppLog.w(
+                            "AuthActivity",
+                            "Auth error ignored (not user-initiated, prev=$prev, phase=$phase): $humanized",
+                        )
+                    }
+                }
+            }
+            is AuthState.NeedValidation -> {
+                val v = state as AuthState.NeedValidation
+                val route = routeOf(v)
+                if (phase == AuthPhase.CODE && route == AuthPhase.CODE) {
+                    // Тот же шаг: обновляем только sid/подсказку/длину кода.
+                    // Перерисовывать фазу нельзя — потеряем введённый код.
+                    AppLog.i("AuthActivity", "NeedValidation обновляет текущий шаг CODE (method=$currentMethod)")
+                } else {
+                    AppLog.i(
+                        "AuthActivity",
+                        "#AUTH-CODE-FLOW: шаг=${v.nextStepMethod} flow=${v.flowName} " +
+                            "способов=${v.supportedMethods.size} → $route",
+                    )
+                    // Список способов приходит отдельным вызовом с приоритетами,
+                    // если сервер сообщил, что альтернативы есть. Тогда
+                    // NeedValidation придёт второй раз — уже со списком.
+                    if (v.supportedMethods.isEmpty() && v.hasAnotherMethods) {
+                        viewModel.loadVerificationMethods()
+                    }
+                    currentMethod = v.nextStepMethod ?: currentMethod
+                    code = ""
+                    authError = null
+                    phase = route
                 }
             }
             is AuthState.OfflineWithCache -> {
@@ -487,6 +675,183 @@ private fun AuthScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (phase) {
+            // ── Экран приветствия ────────────────────────────────────────────
+            AuthPhase.WELCOME -> AuthWelcomeScreen(
+                onSignIn = {
+                    authError = null
+                    phase = AuthPhase.LOGIN
+                },
+                onOpenVkId = {
+                    authError = null
+                    phase = AuthPhase.VK_ID_WEB
+                },
+                onRestorePassword = {
+                    authError = null
+                    phase = AuthPhase.VK_ID_WEB
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            // ── Шаг 1: телефон или почта ─────────────────────────────────────
+            AuthPhase.LOGIN -> AuthLoginScreen(
+                login = login,
+                onLoginChange = {
+                    login = it
+                    authError = null
+                },
+                onContinue = {
+                    authError = null
+                    // #AUTH-CODE-FLOW: раньше здесь был безусловный переход на
+                    // PASSWORD. Теперь спрашиваем у VK, что делать дальше —
+                    // куда идти дальше, решает validateAccount (см. LaunchedEffect).
+                    phase = AuthPhase.WAITING_STEP
+                    viewModel.beginAccountValidation(login.trim())
+                },
+                onOpenVkId = {
+                    authError = null
+                    phase = AuthPhase.VK_ID_WEB
+                },
+                onBack = {
+                    keyboard?.hide()
+                    authError = null
+                    phase = AuthPhase.WELCOME
+                },
+                errorMessage = authError,
+                keyboardActions = KeyboardActions(
+                    onNext = { passwordFocus.requestFocus() },
+                ),
+                focusRequester = loginFocus,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            // ── Ожидаем решения VK (auth.validateAccount) ───────────────────
+            AuthPhase.WAITING_STEP -> AuthWaitingScreen(
+                message = "Проверяем аккаунт…",
+                onCancel = {
+                    viewModel.cancel()
+                    phase = AuthPhase.LOGIN
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            // ── Выбор способа подтверждения ────────────────────────────────
+            AuthPhase.SELECT_METHOD -> AuthMethodSelectScreen(
+                methods = validation?.supportedMethods.orEmpty(),
+                onSelect = { method ->
+                    authError = null
+                    viewModel.sendOtp(method)
+                    currentMethod = method
+                    phase = AuthPhase.CODE
+                },
+                onBack = {
+                    keyboard?.hide()
+                    authError = null
+                    phase = AuthPhase.LOGIN
+                },
+                loading = isLoading,
+                errorMessage = authError,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            // ── Шаг 2: пароль ───────────────────────────────────────────────
+            AuthPhase.PASSWORD -> AuthPasswordScreen(
+                password = password,
+                onPasswordChange = {
+                    password = it
+                    authError = null
+                },
+                onSubmit = {
+                    keyboard?.hide()
+                    authError = null
+                    // #AUTH-CODE-FLOW: если мы пришли сюда из auth-code
+                    // сессии (currentMethod != null), обмен идёт через
+                    // {api}/oauth/token с anonymous_token + auth_hash.
+                    // Иначе — легаси grant_type=password на oauth.vk.com.
+                    if (currentMethod != null) {
+                        viewModel.exchangeAuthCodeTokenWithPassword(password)
+                    } else {
+                        viewModel.submitCredentials(login.trim(), password)
+                    }
+                },
+                onBack = {
+                    keyboard?.hide()
+                    authError = null
+                    phase = AuthPhase.LOGIN
+                },
+                onForgotPassword = {
+                    authError = null
+                    phase = AuthPhase.VK_ID_WEB
+                },
+                loading = isLoading,
+                errorMessage = authError,
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (password.isNotBlank()) {
+                            keyboard?.hide()
+                            authError = null
+                            if (currentMethod != null) {
+                                viewModel.exchangeAuthCodeTokenWithPassword(password)
+                            } else {
+                                viewModel.submitCredentials(login.trim(), password)
+                            }
+                        }
+                    },
+                ),
+                focusRequester = passwordFocus,
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            // ── Шаг 3: код 2FA ──────────────────────────────────────────────
+            AuthPhase.CODE -> AuthCodeScreen(
+                code = code,
+                onCodeChange = {
+                    code = it
+                    authError = null
+                },
+                onSubmit = {
+                    keyboard?.hide()
+                    authError = null
+                    // #AUTH-CODE-FLOW: auth-code путь принимает код через
+                    // ecosystem.checkOtp; легаси need_validation — через
+                    // grant_type=phone_confirmation_sid. Разводим по факту
+                    // наличия sid от validateAccount.
+                    if (currentMethod != null) {
+                        viewModel.checkOtp(currentMethod!!, code)
+                    } else {
+                        viewModel.submit2FaCode(CodeFormatter.parse(code))
+                    }
+                },
+                onResend = { method ->
+                    authError = null
+                    currentMethod = method
+                    viewModel.sendOtp(method)
+                },
+                onBack = {
+                    keyboard?.hide()
+                    authError = null
+                    phase = AuthPhase.LOGIN
+                },
+                method = currentMethod,
+                validation = validation,
+                loading = isLoading,
+                errorMessage = authError,
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (code.count { it.isLetterOrDigit() } >= 4) {
+                            keyboard?.hide()
+                            authError = null
+                            if (currentMethod != null) {
+                                viewModel.checkOtp(currentMethod!!, code)
+                            } else {
+                                viewModel.submit2FaCode(CodeFormatter.parse(code))
+                            }
+                        }
+                    },
+                ),
+                focusRequester = codeFocus,
+                modifier = Modifier.fillMaxSize(),
+            )
+
             AuthPhase.VK_ID_WEB -> VkAuthWebViewScreenV2(
                 isLoading = state is AuthState.Loading,
                 startUrl = AuthDomainsConfig.vkIdLoginUrl(),
@@ -499,8 +864,15 @@ private fun AuthScreen(
                     viewModel.submitWebToken(remixsid, webView)
                 },
                 onBack = {
-                    viewModel.cancel()
-                    onCancel()
+                    // В silent-режиме WebView — единственный экран, «назад» закрывает
+                    // Activity. В ручном режиме возвращаем на welcome, а не выкидываем.
+                    if (silentMode) {
+                        viewModel.cancel()
+                        onCancel()
+                    } else {
+                        authError = null
+                        phase = AuthPhase.WELCOME
+                    }
                 },
                 onCancel = {
                     viewModel.cancel()

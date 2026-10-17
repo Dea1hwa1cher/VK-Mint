@@ -154,6 +154,39 @@ class ExchangeTokenStorage(
     }
 
     // =====================================================================
+    // Anonym token (auth-code flow)
+    // =====================================================================
+
+    /**
+     * Анонимный токен auth-code флоу (`POST {api}/oauth/get_anonym_token`).
+     *
+     * Живёт недолго, поэтому хранится с `expired_at` и дозапрашивается при
+     * необходимости. Кладём в те же prefs, что и остальная сессия, чтобы
+     * [clear] на logout сносил его автоматически — иначе после выхода из
+     * аккаунта останется токен, выданный на непоняком чём.
+     */
+    fun anonymToken(): AnonymToken? {
+        val token = prefs.getString(KEY_ANONYM_TOKEN, null)?.takeIf { it.isNotBlank() } ?: return null
+        val expiresAt = prefs.getLong(KEY_ANONYM_TOKEN_EXPIRES_AT, 0L)
+        if (expiresAt <= 0L) return null
+        return AnonymToken(token, expiresAt)
+    }
+
+    fun saveAnonymToken(value: AnonymToken) {
+        prefs.edit()
+            .putString(KEY_ANONYM_TOKEN, value.token)
+            .putLong(KEY_ANONYM_TOKEN_EXPIRES_AT, value.expiresAt)
+            .apply()
+    }
+
+    fun clearAnonymToken() {
+        prefs.edit()
+            .remove(KEY_ANONYM_TOKEN)
+            .remove(KEY_ANONYM_TOKEN_EXPIRES_AT)
+            .apply()
+    }
+
+    // =====================================================================
     // Token accessors
     // =====================================================================
 
@@ -1052,6 +1085,10 @@ class ExchangeTokenStorage(
         const val KEY_SECRET              = "secret"
         const val KEY_TRUSTED_HASH        = "trusted_hash"
         const val KEY_DEVICE_ID           = "device_id"
+
+        // Auth-code flow (анонимный токен для auth.validateAccount / ecosystem.*)
+        const val KEY_ANONYM_TOKEN        = "anonym_token"
+        const val KEY_ANONYM_TOKEN_EXPIRES_AT = "anonym_token_expires_at"
 
         // Credentials
         const val KEY_LAST_PHONE          = "last_phone"

@@ -42,6 +42,30 @@ sealed interface AuthState {
         val allowedWays: List<ValidationType> = emptyList(),
         /** OTP resend info — e.g. when the next SMS can be sent. */
         val sendOtpInfo: SendOtpInfo? = null,
+
+        // ── Auth-code flow (VK ID «Direct Auth»), см. AuthCodeRepository ──
+        //
+        // Заполняются из auth.validateAccount. Нужны UI-агенту, чтобы рисеть
+        // тот экран, который попросил сервер, а не зашитый порядок шагов.
+
+        /** `flow_name` VK: need_password / need_password_and_validation / need_registration. */
+        val flowName: String? = null,
+        /** `next_step.verification_method` — что VK просит проверить первым. */
+        val nextStepMethod: String? = null,
+        /** Способы подтверждения из ecosystem.getVerificationMethods, по приоритету VK. */
+        val supportedMethods: List<VerificationMethod> = emptyList(),
+        /**
+         * `next_step.has_another_verification_methods` — VK говорит, что способов
+         * больше одного. Список приходит отдельным вызовом, поэтому это флаг
+         * «нужно догрузить», а не «список уже готов».
+         */
+        val hasAnotherMethods: Boolean = false,
+        /** Текст от VK для показа пользователю («Код отправлен на +7…06»). */
+        val otpInfo: String? = null,
+        /** Длина кода, если VK её сообщил (callreset / reserve_code). */
+        val otpCodeLength: Int = 0,
+        /** `can_skip_password` — пароль можно не спрашивать, обменивать сразу. */
+        val canSkipPassword: Boolean = false,
     ) : AuthState
 
     /** User is banned / deactivated / needs sign up. */
