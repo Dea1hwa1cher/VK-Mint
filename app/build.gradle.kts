@@ -47,15 +47,16 @@ android {
         buildConfigField("String", "VK_CLIENT_SECRET", "\"hHbZxrka2uZ6jB1inYsH\"")
         buildConfigField("String", "VK_API_VERSION", "\"5.289\"")
         buildConfigField("String", "VK_API_HOST", "\"https://api.vk.com\"")
-        // ДИАГНОСТИКА (временно, 2026-10-18): sak_version — версия официального
-        // приложения VK Android, которую VK ждёт от клиента с api_id 2274003.
-        // Без неё VK отклоняет обмен токена по паролю как
-        // password_bruteforce_attempt (воспроизведено18.10 на ДВУХ разных
-        // аккаунтах → счётчик не на аккаунте, а на клиенте).
-        // Эталон Fenrir шлёт ровно это значение (Constants.kt:21).
-        // Чтобы снять — присвоить пустую строку ниже, отправка уже
-        // проверяет на пустоту (см. ExchangeAuthApi.authCodeToken).
-        buildConfigField("String", "VK_SAK_VERSION", "\"15.0.2\"")
+        // sak_version — версия официального приложения VK Android. Эталон
+        // Fenrir её шлёт (Constants.kt:21, "15.0.2"), но подделывать чужую
+        // строку версии смысла нет, поэтому по умолчанию пусто и параметр не
+        // уходит вовсе.
+        //
+        // Проверено 18.10 и исключено: гипотеза «без sak_version VK ловит
+        // password_bruteforce_attempt» оказалась неверной. Со значением
+        // "15.0.2" на провод ответ был тем же 401. Возвращать значение имеет
+        // смысл только вместе с доказанной причиной, которой пока нет.
+        buildConfigField("String", "VK_SAK_VERSION", "\"\"")
         // VK OAuth endpoint (oauth.vk.com) — Implicit Grant flow, password auth, 2FA.
         // НЕ id.vk.com — id.vk.com это VK ID endpoint (только exchange_token refresh).
         buildConfigField("String", "VK_OAUTH_HOST", "\"https://oauth.vk.com\"")

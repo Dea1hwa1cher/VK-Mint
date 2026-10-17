@@ -198,6 +198,7 @@ class AuthCodeRepository(
         code: String? = null,
     ): AuthCodeTokenResult {
         val token = anonymToken()
+        val sak = BuildConfig.VK_SAK_VERSION.ifBlank { "нет" }
         // Диагностика: печатаем длину, НЕ сам пароль. Пустой или обрезанный
         // пароль VK трактует как неверный и увеличивает счётчик bruteforce.
         AppLog.i(
@@ -205,7 +206,7 @@ class AuthCodeRepository(
             "oauth/token: grant=$grantType sid=${session.sidForNextCall().take(10)}… " +
                 "pass=${if (password.isNullOrEmpty()) "ПУСТО" else "len=${password.length}"} " +
                 "auth_hash=${if (session.authHash.isNullOrBlank()) "нет" else "есть"} " +
-                "sak=${BuildConfig.VK_SAK_VERSION}",
+                "sak=$sak",
         )
         val json = withContext(Dispatchers.IO) {
             api.authCodeToken(
@@ -225,8 +226,7 @@ class AuthCodeRepository(
             AppLog.w(
                 TAG,
                 "oauth/token: отказ — ${result.error} type=${result.errorType} " +
-                    "grant=$grantType sak=${if (BuildConfig.VK_SAK_VERSION.isBlank()) "нет" else BuildConfig.VK_SAK_VERSION} " +
-                    "${result.errorDescription.orEmpty()}",
+                    "grant=$grantType sak=$sak ${result.errorDescription.orEmpty()}",
             )
         }
         return result
